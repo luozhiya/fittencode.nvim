@@ -6,7 +6,7 @@ local M = {}
 M.config = {}
 
 function M.setup(cfg)
-  Sessions.read_local_api_key()
+  Sessions.load_last_session()
   Bindings.setup_autocmds()
   Bindings.setup_commands()
   Bindings.setup_keymaps()

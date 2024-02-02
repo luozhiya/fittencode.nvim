@@ -24,7 +24,9 @@ function M.map(mode, lhs, rhs, opts)
 end
 
 function M.hide(namespace, bufnr)
-  api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
+  if namespace ~= nil then
+    api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
+  end
 end
 
 local timer = nil
@@ -59,12 +61,8 @@ end
 
 function M.write_file(data, path, callback)
   uv.fs_open(path, 'w', 438, function(_, fd)
-    -- print('File opened')
     if fd ~= nil then
-      -- print('Writing data to file')
       uv.fs_write(fd, data, -1, function(_, _)
-        -- print('Data written to file')
-        -- print(vim.inspect(path))
         uv.fs_close(fd, function(_, _) end)
         if callback then
           vim.schedule(function()
@@ -78,23 +76,29 @@ end
 
 function M.write(data, dir, path, callback)
   uv.fs_mkdir(dir, 448, function(_, _)
-    -- print('Directory created')
     M.write_file(data, path, callback)
   end)
 end
 
-function M.write_temp_file(data, callback)
-  -- print('Writing data to temp file')
-  local tempfile = fn.tempname()
-  M.write_file(data, tempfile, callback)
+function M.read(path, callback)
+  uv.fs_open(path, 'r', 438, function(_, fd)
+    if fd ~= nil then
+      uv.fs_fstat(fd, function(_, stat)
+        if stat ~= nil then
+          uv.fs_read(fd, stat.size, -1, function(_, data)
+            uv.fs_close(fd, function(_, _) end)
+            vim.schedule(function()
+              callback(data)
+            end)
+          end)
+        end
+      end)
+    end
+  end)
+end
 
-  -- uv.fs_mkstemp(tempfile, function(err, tempfile)
-  --   if err then
-  --     -- TODO: Handle errors
-  --   else
-  --     M.write_file(data, tempfile, callback)
-  --   end
-  -- end)
+function M.write_temp_file(data, callback)
+  M.write_file(data, fn.tempname(), callback)
 end
 
 function M.augroup(name)
@@ -104,21 +108,27 @@ end
 function M.nt_sep()
   return '\\'
 end
+
 function M.kernel_sep()
   return '/'
 end
+
 function M.is_windows()
   return vim.loop.os_uname().sysname == 'Windows_NT'
 end
+
 function M.is_kernel()
   return vim.loop.os_uname().sysname == 'Linux'
 end
+
 function M.to_nt(s)
   return s:gsub(M.kernel_sep(), M.nt_sep())
 end
+
 function M.to_kernel(s)
   return s:gsub(M.nt_sep(), M.kernel_sep())
 end
+
 function M.to_native(s)
   return M.is_windows() and M.to_nt(s) or M.to_kernel(s)
 end

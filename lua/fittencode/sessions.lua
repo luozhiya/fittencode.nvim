@@ -12,29 +12,14 @@ local function read_api_key(data)
 end
 
 local function get_api_key_store_path()
-  local root = fn.stdpath('data') .. '/fittencode'
-  local api_key_file = root .. '/api_key'
-  return root, api_key_file
+  local dir = fn.stdpath('data') .. '/fittencode'
+  local path = dir .. '/api_key'
+  return root, path
 end
 
-function M.read_local_api_key()
-  local root, api_key_file = get_api_key_store_path()
-  uv.fs_mkdir(root, 448, function(_, _)
-    uv.fs_open(api_key_file, 'r', 438, function(_, fd)
-      if fd ~= nil then
-        uv.fs_fstat(fd, function(_, stat)
-          if stat ~= nil then
-            uv.fs_read(fd, stat.size, -1, function(_, data)
-              uv.fs_close(fd, function(_, _) end)
-              vim.schedule(function()
-                read_api_key(data)
-              end)
-            end)
-          end
-        end)
-      end
-    end)
-  end)
+local function read_local_api_key_file()
+  local _, path = get_api_key_store_path()
+  Base.read(path, read_api_key)
 end
 
 local function on_curl_signal_callback(signal, output)
@@ -42,13 +27,11 @@ local function on_curl_signal_callback(signal, output)
 end
 
 local function write_api_key(api_key)
-  local root, api_key_file = get_api_key_store_path()
-  Base.write(api_key, root, api_key_file)
+  local dir, path = get_api_key_store_path()
+  Base.write(api_key, dir, path)
 end
 
 local function on_login_api_key_callback(exit_code, output)
-  -- print('on_login_api_key_callback')
-  -- print(vim.inspect(output))
   local fico_data = fn.json_decode(output)
   if fico_data.status_code == nil or fico_data.status_code ~= 0 then
     -- TODO: Handle errors
@@ -60,8 +43,6 @@ local function on_login_api_key_callback(exit_code, output)
   end
   local api_key = fico_data.data.fico_token
   M.api_key = api_key
-  -- print('api_key')
-  -- print(api_key)
   write_api_key(api_key)
 end
 
@@ -69,15 +50,12 @@ local function login_with_api_key(user_token)
   M.user_token = user_token
 
   local fico_url = 'https://codeuser.fittentech.cn:14443/get_ft_token'
-  -- local fico_command = 'curl -s -H "Authorization: Bearer ' . l:user_token . '" ' . l:fico_url
   local fico_args = {
     '-s',
     '-H',
     'Authorization: Bearer ' .. user_token,
     fico_url,
   }
-  -- print('fico_args')
-  -- print(vim.inspect(fico_args))
   Rest.send({
     cmd = 'curl',
     args = fico_args,
@@ -90,9 +68,12 @@ local function on_login_callback(exit_code, output)
   if login_data.code == nil or login_data.code ~= 200 then
     return
   end
-  -- print(vim.inspect(login_data))
   local api_key = login_data.data.token
   login_with_api_key(api_key)
+end
+
+function M.load_last_session()
+  read_local_api_key_file()
 end
 
 function M.login(name, password)
@@ -102,7 +83,6 @@ function M.login(name, password)
     password = password,
   }
   local json_data = fn.json_encode(data)
-  -- print(vim.inspect(json_data))
   local login_args = {
     '-s',
     '-X',
@@ -113,7 +93,6 @@ function M.login(name, password)
     json_data,
     login_url,
   }
-  -- print(vim.inspect(login_args))
   Rest.send({
     cmd = 'curl',
     args = login_args,
@@ -121,8 +100,8 @@ function M.login(name, password)
 end
 
 function M.logout()
-  local _, api_key_file = get_api_key_store_path()
-  uv.fs_unlink(api_key_file, function(err)
+  local _, path = get_api_key_store_path()
+  uv.fs_unlink(path, function(err)
     if err then
       -- TODO: Handle errors
     else
@@ -132,33 +111,48 @@ function M.logout()
 end
 
 local function on_completion_callback(exit_code, response)
-  -- print('on_completion_callback')
-  -- print(vim.inspect(response))
   local completion_data = fn.json_decode(response)
   if completion_data.generated_text == nil then
     return
   end
-  if (M.namespace ~= nil) then
+  if M.namespace ~= nil then
     Base.hide(M.namespace, 0)
   else
     M.namespace = api.nvim_create_namespace('Fittencode')
   end
-  -- local cursor = api.nvim_win_get_cursor(0)
-  -- local lnum = cursor[1] - 1
-  -- local col = cursor[2]
-  -- print('completion_data.generated_text')
-  -- print(vim.inspect(completion_data.generated_text))
+
   local generated_text = fn.substitute(completion_data.generated_text, '<.endoftext.>', '', 'g')
-  -- print(vim.inspect(virt_lines))
+  local lines = vim.split(generated_text, '\n')
+  M.complete_lines = lines
 
   local virt_lines = {}
-  table.insert(virt_lines, { generated_text, 'LspCodeLens' })
+  for _, line in ipairs(lines) do
+    table.insert(virt_lines, { { line, 'Comment' } })
+  end
 
-  api.nvim_buf_set_extmark(0, M.namespace, fn.line('.'), fn.col('.'), {
-    virt_text = virt_lines,
-    -- virt_text_pos = "overlay",
-    hl_mode = 'combine',
-  })
+  local count = vim.tbl_count(virt_lines)
+  print(count)
+  if count > 0 then
+    if count == 1 then
+      api.nvim_buf_set_extmark(0, M.namespace, fn.line('.') - 1, fn.col('.') - 1, {
+        virt_text = virt_lines[1],
+        virt_text_pos = 'overlay',
+        hl_mode = 'combine',
+      })
+    else
+      local row = fn.line('.') - 1
+      for _, line in ipairs(virt_lines) do
+        if row < vim.api.nvim_buf_line_count(0) then
+          api.nvim_buf_set_extmark(0, M.namespace, row, 0, {
+            virt_text = virt_lines[1],
+            virt_text_pos = 'overlay',
+            hl_mode = 'combine',
+          })
+        end
+        row = row + 1
+      end
+    end
+  end
 end
 
 local function on_completion_delete_tempfile_callback(path)
@@ -172,8 +166,7 @@ local function on_completion_delete_tempfile_callback(path)
 end
 
 function M.completion_request()
-  -- print('completion_request')
-  if M.api_key == nil or M.user_token == nil or M.api_key == '' then
+  if M.api_key == nil or M.api_key == '' then
     return
   end
 
@@ -188,15 +181,14 @@ function M.completion_request()
 
   local prompt = '!FCPREFIX!' .. prefix .. '!FCSUFFIX!' .. suffix .. '!FCMIDDLE!'
   local escaped_prompt = string.gsub(prompt, '"', '\\"')
-  -- tempdata = string.gsub(tempdata, '"', '\\"')
   local params = {
     inputs = escaped_prompt,
     meta_datas = {
       filename = filename,
     },
   }
-  local tempdata = fn.json_encode(params)
-  Base.write_temp_file(tempdata, function(path)
+  local encoded_params = fn.json_encode(params)
+  Base.write_temp_file(encoded_params, function(path)
     local server_addr = 'https://codeapi.fittentech.cn:13443/generate_one_stage/'
     local completion_args = {
       '-s',
@@ -208,33 +200,44 @@ function M.completion_request()
       '@' .. Base.to_native(path),
       server_addr .. M.api_key .. '?ide=vim&v=0.1.0',
     }
-    -- print(vim.inspect(completion_args))
-    Rest.send(
-      {
-        cmd = 'curl',
-        args = completion_args,
-        data = path,
-      },
-      on_completion_callback,
-      on_curl_signal_callback
-      -- on_completion_delete_tempfile_callback
-    )
+    Rest.send({
+      cmd = 'curl',
+      args = completion_args,
+      data = path,
+    }, on_completion_callback, on_curl_signal_callback, on_completion_delete_tempfile_callback)
   end)
 end
 
-function M.chaining_complete()
-  local bufnr = api.nvim_get_current_buf()
-  local cursor = api.nvim_win_get_cursor(0)
-  local line_num = cursor[1]
-  local col_num = cursor[2]
+function M.clear()
+  Base.hide(M.namespace, 0)
+end
 
-  if M.namespace ~= nil then
-    vim.cmd([[silent! undojoin]])
-    api.nvim_buf_set_text(bufnr, line_num - 1, col_num - 1, line_num - 1, col_num - 1, M.complete_items)
-    -- api.nvim_win_set_cursor(0, { e.context.cursor.row, e.context.cursor.col - 1 })
+function M.chaining_complete()
+  if vim.tbl_count(M.complete_lines) == 0 then
+    return
   end
 
-  Base.hide(M.namespace, bufnr)
+  M.clear()
+
+  local cursor = api.nvim_win_get_cursor(0)
+  local row = cursor[1]
+  local col = cursor[2]
+
+  local line_number = line_num
+  vim.cmd([[silent! undojoin]])
+  vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col, M.complete_lines)
+  local count = vim.tbl_count(M.complete_lines)
+  if count == 1 then
+    local s = string.len(M.complete_lines[1])
+    vim.api.nvim_win_set_cursor(0, { row, col + s })
+  else
+    local erow = row + count - 1
+    if erow < vim.api.nvim_buf_line_count(0) then
+      vim.api.nvim_win_set_cursor(0, { erow, s - 1 })
+    end
+  end
+
+  M.complete_lines = {}
   M.completion_request()
 end
 

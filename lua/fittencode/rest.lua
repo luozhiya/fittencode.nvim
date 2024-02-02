@@ -32,13 +32,12 @@ function M.send(params, on_success, on_error, on_exit)
       check:stop()
       if signal ~= 0 then
         -- TODO: Handle error
-        if on_success then
+        if on_error then
           vim.schedule(function()
-            on_success(signal, output)
+            on_error(signal, output)
           end)
         end
       else
-        -- output = output:gsub('[^\r\n]+\r', '')
         if on_success then
           vim.schedule(function()
             on_success(exit_code, output)
