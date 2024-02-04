@@ -128,15 +128,24 @@ local function on_completion_callback(exit_code, response)
     M.namespace = api.nvim_create_namespace('Fittencode')
   end
 
-  local generated_text = fn.substitute(completion_data.generated_text, '<.endoftext.>', '', 'g')
-  local lines = vim.split(generated_text, '\n')
-  if vim.tbl_count(lines) > 0 and string.len(lines[#lines]) == 0 then
-    local removed = table.remove(lines)
-  end
+  M.complete_lines = {}
 
+  local generated_text = fn.substitute(completion_data.generated_text, '<.endoftext.>', '', 'g')
+  local lines = vim.split(generated_text, '\r')
+
+  -- M.complete_lines = ''
+
+  -- print('lines v')
+  -- print(vim.inspect(lines))
+  -- print('lines ^')
   local virt_lines = {}
   for _, line in ipairs(lines) do
-    table.insert(virt_lines, { { line, 'Comment' } })
+    -- M.complete_lines = M.complete_lines.. line
+    local parts = vim.split(line, '\n')
+    for _, part in ipairs(parts) do
+      table.insert(virt_lines, { { part, 'Comment' } })
+      table.insert(M.complete_lines, part)
+    end
   end
 
   -- virtual line not rendering if it's beyond the last line · Issue #20179 · neovim/neovim
@@ -155,22 +164,21 @@ local function on_completion_callback(exit_code, response)
       first_line = false
       api.nvim_buf_set_extmark(0, M.namespace, fn.line('.') - 1, fn.col('.') - 1, {
         virt_text = line,
-        virt_text_pos = 'inline',
+        virt_text_pos = 'overlay',
         hl_mode = 'combine',
       })
     else
       local row = fn.line('.') - 2 + i
       if row < api.nvim_buf_line_count(0) then
+        -- api.nvim_win_set_cursor(0, { row, 0 })
         api.nvim_buf_set_extmark(0, M.namespace, row, 0, {
           virt_text = line,
-          virt_text_pos = 'inline',
+          virt_text_pos = 'overlay',
           hl_mode = 'combine',
         })
       end
     end
   end
-
-  M.complete_lines = lines
 end
 
 local function on_completion_delete_tempfile_callback(path)
@@ -234,6 +242,8 @@ local function local_fmt_clear()
   vim.bo.autoindent = false
   vim.bo.smartindent = false
   vim.bo.formatoptions = ''
+  vim.bo.textwidth = 0
+  -- vim.bo.backspace = 2
 end
 
 local function local_fmt_recover()
@@ -242,21 +252,46 @@ local function local_fmt_recover()
   vim.bo.formatoptions = vim.o.formatoptions
 end
 
+_G.__fittencode_commit_lines = function()
+  print('__fittencode_commit_lines 1')
+  -- print(vim.inspect(M.complete_lines))
+  local_fmt_clear()
+
+  local content = ''
+  for i = 1, #M.complete_lines, 1 do
+    local line = M.complete_lines[i]
+    if string.len(line) == 0 then
+      local keys = vim.api.nvim_replace_termcodes('<Space><Backspace><CR>', true, false, true)
+      vim.api.nvim_feedkeys(keys, 'i', true)
+    else
+      api.nvim_feedkeys(line, 'i', false)
+    end
+    -- api.nvim_feedkeys(line .. '\n', 'i', false)
+    -- content = content .. line
+  end
+
+  -- print(vim.inspect(content))
+  -- local keys = vim.api.nvim_replace_termcodes(content, true, false, true)
+  -- api.nvim_feedkeys(keys, 'i', false)
+
+  local_fmt_recover()
+  M.complete_lines = {}
+  -- M.complete_lines = ''
+  print('__fittencode_commit_lines 2')
+end
+
 function M.chaining_complete()
+  -- if string.len(M.complete_lines) == 0 then
+  --   return
+  -- end
+
   if vim.tbl_count(M.complete_lines) == 0 then
     return
   end
 
   M.clear()
-
-  local_fmt_clear()
-  for i = #M.complete_lines, 1, -1 do
-    local line = M.complete_lines[i] .. '\n'
-    vim.api.nvim_feedkeys(line, 'i', true)
-  end
-  local_fmt_recover()
-
-  M.complete_lines = {}
+  local keys = vim.api.nvim_replace_termcodes('<Cmd>call v:lua.__fittencode_commit_lines()<CR>', true, false, true)
+  api.nvim_feedkeys(keys, 'n', true)
 end
 
 return M
