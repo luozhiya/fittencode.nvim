@@ -45,11 +45,25 @@ function M.clear_virt_text()
   clear_ns(M.namespace, 0)
 end
 
+local function center_cursor(height)
+  local current_line = fn.line('.') - 1
+  local win_height = api.nvim_win_get_height(0)
+  local center = math.floor(win_height / 2)
+  if current_line + height > win_height then
+    vim.cmd([[:normal! zvzz]])
+    -- local diff = current_line + height - win_height
+    -- api.nvim_win_set_cursor(0, { diff, 0 })
+  else
+    -- api.nvim_win_set_cursor(0, { center, 0 })
+  end
+end
+
 function M.render_virt_text(virt_text)
   if virt_text == nil then
     return
   end
   reset_ns()
+  -- center_cursor(vim.tbl_count(virt_text))
   draw_virt_text(virt_text)
 end
 
