@@ -311,7 +311,10 @@ function M.accept_line()
     return
   end
 
-  event_filter_count = 3
+  Log.debug('accept_line 1')
+
+  -- InsertLeave CursorMoved InsertLeave CursorHoldI
+  event_filter_count = 4
   View.clear_virt_text()
 
   local line = table.remove(M.fitten_suggestion, 1)
@@ -334,6 +337,9 @@ function M.accept_line()
   else
     M.reset_completion()
   end
+
+  Log.debug('accept_line 2')
+
 end
 
 local function is_alpha(char)
@@ -368,6 +374,9 @@ function M.accept_word()
     return
   end
 
+  Log.debug('accept_word 1')
+
+  -- InsertLeave CursorMoved CursorMovedI CursorHoldI
   event_filter_count = 4
   View.clear_virt_text()
 
@@ -393,10 +402,13 @@ function M.accept_word()
   else
     M.reset_completion()
   end
+
+  Log.debug('accept_word 2')
 end
 
-function M.fetch_sub_efc()
+function M.fetch_sub_efc(event)
   local v = event_filter_count
+  Log.debug('fetch_sub_efc event: {}, v: {}', event, v)
   event_filter_count = math.max(event_filter_count - 1, 0)
   return v
 end
