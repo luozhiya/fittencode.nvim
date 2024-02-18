@@ -11,21 +11,20 @@ local M = {}
 ---@class SuggestionCache
 local cache = nil
 
----@class TaskScheduler
-local tasks = nil
-
 function M.setup()
   cache = SuggestionCache:new()
-  tasks = TaskScheduler:new()
-  tasks:setup()
+  TaskScheduler.setup()
 end
 
 ---@param task_id integer
 ---@param suggestion Suggestion
 local function on_suggestion(task_id, suggestion)
   local row, col = Base.get_cursor()
-  if not tasks:match_clean(task_id, row, col) then
-    Log.debug('Completion request is outdated, discarding; task_id: {}, row: {}, col: {}', task_id, row, col)
+  local resolved, dealy = TaskScheduler.is_resolved(task_id, row, col)
+  if not resolved then
+    Log.debug('Task not resolved yet; time elapsed: [ ' .. dealy .. ' ms ]' .. '; row: ' .. row .. '; col: ' .. col)
+  else
+    Log.debug('Task already resolved; task_id: {}, row: {}, col: {}', task_id, row, col)
     return
   end
 
@@ -42,7 +41,8 @@ function M.generate_one_stage(row, col, force)
     return
   end
 
-  local task_id = tasks:create(row, col)
+  local task_id = TaskScheduler.resolve_task(row, col)
+  Log.debug('Add task; task_id: {}, row: {}, col: {}', task_id, row, col)
   cache:flush()
 
   if not Lsp.is_active() then

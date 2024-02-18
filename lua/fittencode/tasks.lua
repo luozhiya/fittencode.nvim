@@ -1,5 +1,7 @@
 local uv = vim.uv
+local api = vim.api
 
+local Base = require('fittencode.base')
 local Log = require('fittencode.log')
 
 ---@class Task
@@ -9,86 +11,50 @@ local Log = require('fittencode.log')
 
 ---@class TaskScheduler
 ---@field list table<integer, Task>
----@field threshold? integer
----@field timeout_recycling_timer? uv_timer_t
 
 ---@class TaskScheduler
-local TaskScheduler = {}
+local M = {}
 
 local MS_TO_NS = 1000000
-local TASK_TIMEOUT = 6000 * MS_TO_NS
-local RECYCLING_CYCLE = 1000
+local RESOLVE_TIMEOUT = 600 * MS_TO_NS
 
-function TaskScheduler.new()
-  local self = setmetatable({}, { __index = TaskScheduler })
-  self.list = {}
-  self.threshold = nil
-  self.timeout_recycling_timer = nil
-  return self
+M.list = {}
+
+function M.setup()
+  api.nvim_create_autocmd({ 'TextChangedI', 'CursorMovedI' }, {
+    group = Base.augroup('ClearingTasks'),
+    pattern = '*',
+    callback = function(args)
+      M.list = {}
+      Log.debug('Clearing tasks; event: {}', args.event)
+    end,
+    desc = 'Clearing tasks',
+  })
 end
 
-function TaskScheduler:setup()
-  self.list = {}
-  self.timeout_recycling_timer = uv.new_timer()
-  if self.timeout_recycling_timer then
-    self.timeout_recycling_timer:start(RECYCLING_CYCLE, RECYCLING_CYCLE, function()
-      self:timeout_recycling()
-    end)
-  else
-    Log.error('Failed to create timeout recycling timer')
-  end
+local function delay(timestamp)
+  return string.format('%4d', math.floor((uv.hrtime() - timestamp) / MS_TO_NS))
 end
 
----@param row integer
----@param col integer
-function TaskScheduler:create(row, col)
-  local timestamp = uv.hrtime()
-  table.insert(self.list, #self.list + 1, { row = row, col = col, timestamp = timestamp })
-  Log.debug('Task created; row: ' .. row .. '; col: ' .. col)
-  return timestamp
-end
-
----@param task_id integer
-function TaskScheduler:schedule_clean(task_id)
-  self.threshold = task_id
-  if not self.timeout_recycling_timer then
-    self:timeout_recycling()
-  end
-end
-
----@param task_id integer
----@param row integer
----@param col integer
----@return boolean
-function TaskScheduler:match_clean(task_id, row, col)
-  local match_found = false
-  for i = #self.list, 1, -1 do
-    local task = self.list[i]
-    if task.timestamp == task_id and task.row == row and task.col == col then
-      local ms = string.format('%4d', math.floor((uv.hrtime() - task.timestamp) / MS_TO_NS))
-      Log.debug('Task matched; time elapsed: [ ' .. ms .. ' ms ]' .. '; row: ' .. row .. '; col: ' .. col)
-      match_found = true
-      break
+function M.is_resolved(task_id, row, col)
+  for _, t in ipairs(M.list) do
+    if t.row == row and t.col == col then
+      if t.timestamp ~= task_id then
+        return true
+      end
     end
   end
-  self:schedule_clean(task_id)
-  return match_found
+  return false, delay(task_id)
 end
 
----@param timestamp integer
----@return boolean
-local function is_timeout(timestamp)
-  return uv.hrtime() - timestamp > TASK_TIMEOUT
+function M.resolve_task(row, col)
+  local task = {
+    row = row,
+    col = col,
+    timestamp = uv.hrtime(),
+  }
+  table.insert(M.list, task)
+  return task.timestamp
 end
 
-function TaskScheduler:timeout_recycling()
-  for i, task in ipairs(self.list) do
-    if is_timeout(task.timestamp) or (self.threshold and task.timestamp <= self.threshold) then
-      table.remove(self.list, i)
-      -- Log.debug('Task removed; row: ' .. task.row .. '; col: ' .. task.col)
-    end
-  end
-  self.threshold = nil
-end
-
-return TaskScheduler
+return M
