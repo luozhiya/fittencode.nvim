@@ -1,3 +1,5 @@
+print('loading api.lua')
+
 local Sessions = require('fittencode.sessions')
 local Log = require('fittencode.log')
 

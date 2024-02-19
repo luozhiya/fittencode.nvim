@@ -14,15 +14,15 @@ function M.setup(opts)
 
   opts = opts or {}
 
-  -- Initialize modules
-  require('fittencode.log').setup(opts.log)
-  require('fittencode.engine').setup()
-  require('fittencode.color').setup_highlight()
-  local Bindings = require('fittencode.bindings')
-  Bindings.setup_autocmds()
-  Bindings.setup_commands()
-  Bindings.setup_keymaps()
-  require('fittencode.sessions').request_load_last_session()
+  -- -- Initialize modules
+  -- require('fittencode.log').setup(opts.log)
+  -- require('fittencode.engine').setup()
+  -- require('fittencode.color').setup_highlight()
+  -- local Bindings = require('fittencode.bindings')
+  -- Bindings.setup_autocmds()
+  -- Bindings.setup_commands()
+  -- Bindings.setup_keymaps()
+  -- require('fittencode.sessions').request_load_last_session()
 end
 
 setmetatable(M, {
