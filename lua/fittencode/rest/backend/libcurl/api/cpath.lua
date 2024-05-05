@@ -1,1 +1,0 @@
-local M = {  cpath = '/home/qx/DataCenter/onWorking/fittencode.nvim/lua/fittencode/rest/backend/libcurl/api/?.so' } return M

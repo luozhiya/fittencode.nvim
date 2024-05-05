@@ -8,7 +8,7 @@
 int main() {
     std::filesystem::path ExePath = std::filesystem::canonical(std::filesystem::current_path());
     std::string Prefix = "local M = {  cpath = '";
-    std::string Suffix = "/?.so' } return M";
+    std::string Suffix = "/?.so' } return M\n";
     std::string Path = ExePath.string();
     for (size_t i = 0; (i = Path.find("\\", i)) != std::string::npos;) {
         Path.replace(i, 1, "/");

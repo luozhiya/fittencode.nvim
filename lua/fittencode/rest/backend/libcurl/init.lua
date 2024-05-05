@@ -20,4 +20,3 @@ function M:post(url, data, on_success, on_error)
 end
 
 return M
-

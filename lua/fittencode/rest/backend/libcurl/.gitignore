@@ -2,3 +2,4 @@ cc/build
 cc/3rd
 api/gencpath
 api/libcurlua.so
+api/cpath.lua
