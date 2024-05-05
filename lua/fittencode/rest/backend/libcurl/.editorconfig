@@ -2,19 +2,6 @@
 # https://luals.github.io/wiki/formatter/
 # https://github.com/CppCXY/EmmyLuaCodeStyle/blob/master/lua.template.editorconfig
 
-root = true
-
-[*]
-end_of_line = lf
-charset = utf-8
-trim_trailing_whitespace = true
-insert_final_newline = true
-indent_style = space
-indent_size = 2
-
-[*.lua]
-quote_style = single
-
-[Makefile]
+[*.{cc,cpp,c,h}]
 indent_size = 4
-indent_style = tab
+indent_style = space

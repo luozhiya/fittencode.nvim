@@ -38,6 +38,9 @@ function M.setup(opts)
     Log.error('Invalid backend: {}, fallback to {}', opts.backend, fallback_backend)
     opts.backend = fallback_backend
   end
+  if opts.backend == 'libcurl' then
+    require('fittencode.rest.backend.libcurl.global_init').setup()
+  end
   ctx = opts
 end
 
