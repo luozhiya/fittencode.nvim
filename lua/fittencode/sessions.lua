@@ -78,9 +78,15 @@ end
 ---@param generated_text string
 ---@return Suggestions?
 local function generate_suggestions(generated_text)
-  local generated_text = fn.substitute(generated_text, '<.endoftext.>', '', 'g') or ''
-  local lines = vim.split(generated_text, '\r')
-  if vim.tbl_count(lines) == 0 or (vim.tbl_count(lines) == 1 and string.len(lines[1]) == 0) then
+  local generated_text = fn.substitute(generated_text, '<.endoftext.>', '', 'g')
+  if not generated_text or generated_text == '' then
+    return
+  end
+
+  Log.debug('Generated text: {}', generated_text)
+  local lines = vim.split(generated_text, '\n')
+  Log.debug('Lines: {}', lines)
+  if vim.tbl_count(lines) == 1 and string.len(lines[1]) == 0 then
     return
   end
 
@@ -91,10 +97,7 @@ local function generate_suggestions(generated_text)
   ---@type Suggestions
   local suggestions = {}
   for _, line in ipairs(lines) do
-    local parts = vim.split(line, '\n')
-    for _, part in ipairs(parts) do
-      table.insert(suggestions, part)
-    end
+    table.insert(suggestions, line)
   end
   return suggestions
 end
