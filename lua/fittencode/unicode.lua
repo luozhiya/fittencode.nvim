@@ -1,6 +1,6 @@
 local M = {}
 
-function M.calculate_utf8_index(line)
+function M.calculate_utf_startpoints(line)
   local index = {}
   for i = 1, #line do
     table.insert(index, #index + 1, vim.str_utf_start(line, i))
@@ -8,10 +8,10 @@ function M.calculate_utf8_index(line)
   return index
 end
 
-function M.calculate_utf8_index_tbl(lines)
+function M.calculate_utf_startpoints_tbl(lines)
   local index = {}
   for i, line in ipairs(lines) do
-    local line_index = M.calculate_utf8_index(line)
+    local line_index = M.calculate_utf_startpoints(line)
     index[i] = line_index
   end
   return index
@@ -31,7 +31,6 @@ function M.find_first_character(s, tbl, start_index)
   end
 
   local v1 = find_zero(tbl, start_index)
-  assert(v1 == start_index)
   if v1 == nil then
     -- Invalid UTF-8 sequence
     return nil
