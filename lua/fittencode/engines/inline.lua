@@ -369,41 +369,6 @@ function M.accept_line()
   end)
 end
 
--- Calculate the next word index, split by word boundary
----@param line string
-local function calculate_next_word_index(line, utf8_index)
-  local prev_ctype = nil
-  for i = 1, string.len(line) do
-    local char, pos = Unicode.find_first_character(line, utf8_index, i)
-    if not pos or not char then
-      break
-    end
-    if pos[1] ~= pos[2] then
-      if not prev_ctype then
-        return pos[2]
-      else
-        return pos[1] - 1
-      end
-    end
-
-    local is_alpha = Base.is_alpha(char)
-    local is_space = Base.is_space(char)
-
-    if not is_alpha and not is_space then
-      return prev_ctype and i - 1 or 1
-    end
-    if prev_ctype then
-      if is_alpha and prev_ctype ~= 'alpha' then
-        return i - 1
-      elseif is_space and prev_ctype ~= 'space' then
-        return i - 1
-      end
-    end
-    prev_ctype = is_alpha and 'alpha' or is_space and 'space'
-  end
-  return string.len(line)
-end
-
 function M.accept_word()
   Log.debug('Accept word...')
 
@@ -426,7 +391,7 @@ function M.accept_word()
       Log.debug('No line cached')
       return
     end
-    local utf8_index = Unicode.calculate_utf8_index(line)
+    local utf8_index = Unicode.calculate_utf_startpoints(line)
     local next_word_index = calculate_next_word_index(line, utf8_index)
     local word = ''
     if next_word_index > 0 then
@@ -566,6 +531,28 @@ end
 ---@return integer
 function M.get_status()
   return status:get_current()
+end
+
+---@class AccpetOptions
+---@field mode string
+---@field forward boolean
+
+---@param opts AccpetOptions
+function M.accept(opts)
+  if opts.mode == 'line' then
+    cache:commit_line(opts.forward)
+  elseif opts.mode == 'word' then
+    cache:commit_word(opts.forward)
+  elseif opts.mode == 'all' then
+    cache:commit_all()
+  end
+  if cache:is_commit_reach_end() then
+    Lines.set_text(cache.lines)
+    cache:flush()
+    generate_one_stage_at_cursor()
+  else
+    Lines.render_virt_text(cache.lines, cache.commit_cursor)
+  end
 end
 
 return M

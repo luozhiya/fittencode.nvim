@@ -192,7 +192,7 @@ function M.set_text(lines)
 end
 
 ---@param suggestions? Suggestions
-function M.render_virt_text(suggestions)
+function M.render_virt_text(suggestions, commit_cursor)
   committed_virt_text = generate_virt_text(suggestions)
   move_to_center_vertical(vim.tbl_count(committed_virt_text or {}))
   -- api.nvim_command('redraw!')
