@@ -219,6 +219,13 @@ function M.setup_keymaps()
   end)
   Base.map('i', '<C-Down>', API.accept_line)
   Base.map('i', '<C-Right>', API.accept_word)
+  -- Base.map('i', '<CR>', function ()
+  --   if API.has_suggestions() then
+  --     API.accept_suggestion()
+  --   else
+  --     Lines.enter()
+  --   end
+  -- end)
 end
 
 function M.setup_keyfilters()
