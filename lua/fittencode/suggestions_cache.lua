@@ -60,7 +60,7 @@ end
 -- 1  第一个字符
 -- n  第n个字符
 -- n+1 超出了当前行，需要跳到下一行的开始，如果没有下一行了，则设置col为末尾
-local function postcommit(lines, next_row, next_col)
+local function postcommit(lines, next_row, next_col, forward)
   if next_col == -1 then
     next_row = next_row - 1
     if next_row <= 0 then
@@ -87,12 +87,12 @@ local function postcommit(lines, next_row, next_col)
       end
     end
   elseif next_col == 0 then
-    -- if next_row == #lines + 1 then
-    --   next_row = #lines
-    --   next_col = string.len(lines[next_row])
-    -- elseif next_row == 1 then
-    --   next_row = 0
-    -- end
+    if next_row == #lines + 1 then
+      next_row = #lines
+      next_col = string.len(lines[next_row])
+    elseif next_row == 1 then
+      next_row = 0
+    end
   end
   return next_row, next_col
 end
@@ -155,9 +155,6 @@ local function calculate_next_col_by_word(line, utf_sp, next_col, forward)
 end
 
 local function find_zero_reverse(tbl, start)
-  if not start then
-    return
-  end
   for i = start, 1, -1 do
     if tbl[i] == 0 then
       return i
@@ -211,6 +208,8 @@ local function calculate_offset(unit, line, utf_sp, col, forward)
       local x = find_zero_reverse(utf_sp, col - 1)
       if x then
         offset = x - col
+      else
+        offset = - col
       end
     end
   end
@@ -272,14 +271,14 @@ function SuggestionsCache:commit_char(forward)
   next_row, next_col = precommit(self.lines, next_row, next_col, forward)
 
   -- 2. Compute next_col
-  local offset = (forward and 1 or -1)
+  local offset = 0
   if next_row >= 1 and next_row <= #self.lines then
     offset = calculate_offset('char', self.lines[next_row], self.utf_startpoints[next_row], next_col, forward)
   end
   next_col = next_col + offset
 
   -- 3. Fixup next_row and next_col
-  next_row, next_col = postcommit(self.lines, next_row, next_col)
+  next_row, next_col = postcommit(self.lines, next_row, next_col, forward)
   self.commit_cursor = { next_row, next_col }
 end
 
@@ -288,7 +287,11 @@ function SuggestionsCache:commit_word(forward)
   local next_col = self.commit_cursor[2]
 
   next_row, next_col = precommit(self.lines, next_row, next_col, forward)
-  local offset = calculate_offset('word', self.lines[next_row], self.utf_startpoints[next_row], next_col, forward)
+
+  local offset = 0
+  if next_row >= 1 and next_row <= #self.lines then
+    offset = calculate_offset('word', self.lines[next_row], self.utf_startpoints[next_row], next_col, forward)
+  end
   next_col = next_col + offset
 
   next_row, next_col = postcommit(self.lines, next_row, next_col)
