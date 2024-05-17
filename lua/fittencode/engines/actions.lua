@@ -235,17 +235,11 @@ function ActionsEngine.start_action(action, opts)
 
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
-  local sln, eln = api.nvim_buf_get_mark(buffer, '<')[1], api.nvim_buf_get_mark(buffer, '>')[1]
 
-  Log.debug('sln: {}, eln: {}', sln, eln)
-
-  local vmode = { 'v', 'V', '<C-V>' }
-  Log.debug('mode: {}', api.nvim_get_mode().mode)
-  if vim.tbl_contains(vmode, api.nvim_get_mode().mode) then
-    sln = fn.getpos("'<")[2]
-    eln = fn.getpos("'>")[2]
-    Log.debug('v mode sln: {}, eln: {}', sln, eln)
-  end
+  api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
+  local marks = { '<', '>' }
+  local sln, eln = api.nvim_buf_get_mark(0, marks[1])[1], api.nvim_buf_get_mark(0, marks[2])[1]
+  Log.debug('Action range: {}-{}', sln, eln)
 
   chat:show()
   fn.win_gotoid(window)
