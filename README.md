@@ -168,18 +168,21 @@ require('cmp').setup({
 | `Fitten logout`   | Logout account                                                     |
 
 ### Action Commands
+- Try the command `Fitten generate_unit_test <test_framework> <language>` to generate unit test with specific test framework and language.
 
-| Command                     | Description                                                                                                                                                  |
-|-----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `Fitten document_code`      | Document code                                                                                                                                                |
-| `Fitten edit_code`          | Edit code                                                                                                                                                    |
-| `Fitten explain_code`       | Explain code                                                                                                                                                 |
-| `Fitten find_bugs`          | Find bugs                                                                                                                                                    |
-| `Fitten generate_unit_test` | Generate unit test. Try the command `Fitten generate_unit_test <test_framework> <language>` to generate unit test with specific test framework and language. |
-| `Fitten implement_features` | Implement features                                                                                                                                           |
-| `Fitten improve_code`       | Improve code                                                                                                                                                 |
-| `Fitten refactor_code`      | Refactor code                                                                                                                                                |
-| `Fitten start_chat`         | Start chat                                                                                                                                                   |
+| Command                             | Description                |
+|-------------------------------------|----------------------------|
+| `Fitten document_code`              | Document code              |
+| `Fitten edit_code`                  | Edit code                  |
+| `Fitten explain_code`               | Explain code               |
+| `Fitten find_bugs`                  | Find bugs                  |
+| `Fitten generate_unit_test`         | Generate unit test         |
+| `Fitten implement_features`         | Implement features         |
+| `Fitten improve_code`               | Improve code               |
+| `Fitten refactor_code`              | Refactor code              |
+| `Fitten guess_programming_language` | Guess programming language |
+| `Fitten analyze_data`               | Analyze data               |
+| `Fitten start_chat`                 | Start chat                 |
 
 ### Default Mappings
 
@@ -243,6 +246,8 @@ vim.log = {
 | `implement_features(ImplementFeaturesOptions)` | Implement features                                              |
 | `improve_code(ActionOptions)`                  | Improve code                                                    |
 | `refactor_code(ActionOptions)`                 | Refactor code                                                   |
+| `guess_programming_language(ActionOptions)`    | Guess programming language                                      |
+| `analyze_data(ActionOptions)`                  | Analyze data                                                    |
 | `start_chat(ActionOptions)`                    | Start chat                                                      |
 | `stop_eval()`                                  | Stop the evaluation                                             |
 
