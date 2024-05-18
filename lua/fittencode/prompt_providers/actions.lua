@@ -58,6 +58,32 @@ end
 
 local NO_LANG_ACTIONS = { 'StartChat', 'GuessProgrammingLanguage', 'AnalyzeData' }
 
+local MAP_ACTION_PROMPTS = {
+  StartChat = 'Answers the question above',
+  DocumentCode = 'Document the code above',
+  EditCode = function(opts)
+    -- ctx.prompt
+  end,
+  ExplainCode = 'Explain the code above',
+  FindBugs = 'Find bugs in the code above',
+  GenerateUnitTest = function(opts)
+    opts = opts or {}
+    if opts.test_framework then
+      return 'Generate a unit test for the code above with ' .. opts.test_framework
+    end
+    return 'Generate a unit test for the code above'
+  end,
+  ImplementFeatures = function(opts)
+    opts = opts or {}
+    local feature_type = opts.feature_type or 'code'
+    return 'Implement the ' .. feature_type .. ' mentioned in the code above'
+  end,
+  ImproveCode = 'Improve the code above',
+  RefactorCode = 'Refactor the code above',
+  GuessProgrammingLanguage = 'Guess the programming language of the code above',
+  AnalyzeData = 'Analyze the data above and provide your feedback',
+}
+
 ---@param ctx PromptContext
 ---@return Prompt?
 function M:execute(ctx)
@@ -97,30 +123,8 @@ function M:execute(ctx)
       content_prefix = '```' .. language
     end
     content = content_prefix .. '\n' .. content .. '\n' .. content_suffix
-    local map_action_prompt = {
-      StartChat = 'Answers the question above',
-      DocumentCode = 'Document the code above',
-      EditCode = ctx.prompt,
-      ExplainCode = 'Explain the code above',
-      FindBugs = 'Find bugs in the code above',
-      GenerateUnitTest = function(opts)
-        opts = opts or {}
-        if opts.test_framework then
-          return 'Generate a unit test for the code above with ' .. opts.test_framework
-        end
-        return 'Generate a unit test for the code above'
-      end,
-      ImplementFeatures = function(opts)
-        opts = opts or {}
-        local feature_type = opts.feature_type or 'code'
-        return 'Implement the ' .. feature_type .. ' mentioned in the code above'
-      end,
-      ImproveCode = 'Improve the code above',
-      RefactorCode = 'Refactor the code above',
-      GuessProgrammingLanguage = 'Guess the programming language of the code above',
-      AnalyzeData = 'Analyze the data above and provide your feedback',
-    }
-    local key = map_action_prompt[name]
+
+    local key = MAP_ACTION_PROMPTS[name]
     local lang_suffix = ''
     if not no_lang then
       lang_suffix = #language > 0 and ' in ' .. language or ''
