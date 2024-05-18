@@ -82,7 +82,7 @@ M.open = function(uri)
   if uri == nil then
     return
   end
-  -- Perfer using nvim-0.10's built-in function
+  -- Preferred using Neovim 0.10's built-in function
   if fn.has('nvim-0.10') == 1 then
     vim.ui.open(uri)
     return
