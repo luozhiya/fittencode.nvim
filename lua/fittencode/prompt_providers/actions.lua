@@ -61,20 +61,20 @@ local NO_LANG_ACTIONS = { 'StartChat', 'GuessProgrammingLanguage', 'AnalyzeData'
 local MAP_ACTION_PROMPTS = {
   StartChat = 'Answers the question above',
   DocumentCode = 'Document the code above',
-  EditCode = function(opts)
-    -- ctx.prompt
+  EditCode = function(ctx)
+    return ctx.prompt
   end,
   ExplainCode = 'Explain the code above',
   FindBugs = 'Find bugs in the code above',
-  GenerateUnitTest = function(opts)
-    opts = opts or {}
+  GenerateUnitTest = function(ctx)
+    local opts = ctx.action_opts or {}
     if opts.test_framework then
       return 'Generate a unit test for the code above with ' .. opts.test_framework
     end
     return 'Generate a unit test for the code above'
   end,
-  ImplementFeatures = function(opts)
-    opts = opts or {}
+  ImplementFeatures = function(ctx)
+    local opts = ctx.action_opts or {}
     local feature_type = opts.feature_type or 'code'
     return 'Implement the ' .. feature_type .. ' mentioned in the code above'
   end,
@@ -117,7 +117,7 @@ local function make_prompt(ctx, name, language, no_lang)
   if not no_lang then
     lang_suffix = #language > 0 and ' in ' .. language or ''
   end
-  local prompt = ctx.prompt or ((type(key) == 'function' and key(ctx.action_opts) or key) .. lang_suffix)
+  local prompt = ctx.prompt or ((type(key) == 'function' and key(ctx) or key) .. lang_suffix)
   return prompt
 end
 
