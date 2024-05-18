@@ -81,14 +81,14 @@ local MAP_ACTION_PROMPTS = {
   ImproveCode = 'Improve the code above',
   RefactorCode = 'Refactor the code above',
   GuessProgrammingLanguage = 'Guess the programming language of the code above',
-  AnalyzeData = 'Analyze the data above and provide your feedback',
+  AnalyzeData = 'Analyze the data above',
 }
 
 local function make_language(ctx)
   local filetype = ctx.filetype or ''
-  Log.debug('Action Filetype: {}', filetype)
+  -- Log.debug('Action Filetype: {}', filetype)
   local language = ctx.action_opts.language or filetype
-  Log.debug('Action Language: {}', language)
+  -- Log.debug('Action Language: {}', language)
   return language
 end
 
@@ -124,7 +124,17 @@ end
 local function make_prefix(content, prompt)
   local start_question = '# Question:\n'
   local start_answer = '# Answer:\n'
-  local prefix = start_question .. content .. '\n' .. start_answer .. 'Dear FittenCode, Please ' .. prompt .. ':\n'
+
+  local prefix = table.concat({
+    start_question,
+    content,
+    '\n',
+    start_answer,
+    'Dear FittenCode, Please ',
+    prompt,
+    -- ' and provide your feedback',
+    ':',
+  }, '')
   return prefix
 end
 
@@ -136,14 +146,12 @@ function M:execute(ctx)
   end
 
   local name = ctx.prompt_ty:sub(#NAME + 2)
-  Log.debug('Action Name: {}', name)
   local no_lang = vim.tbl_contains(NO_LANG_ACTIONS, name)
 
   local filename = ''
   if ctx.buffer then
     filename = Path.name(ctx.buffer, no_lang)
   end
-
   local within_the_line = false
   local content = ''
 
@@ -154,13 +162,9 @@ function M:execute(ctx)
     local language = make_language(ctx)
     content = make_content_with_prefix_suffix(ctx, language, no_lang)
     local prompt = make_prompt(ctx, name, language, no_lang)
-    -- Log.debug('Action Prompt: {}', prompt)
     prefix = make_prefix(content, prompt)
   end
   local suffix = ''
-
-  -- Log.debug('Action Prefix: {}', prefix)
-  -- Log.debug('Action Suffix: {}', suffix)
 
   return {
     name = self.name,
