@@ -1,17 +1,19 @@
 local api = vim.api
 
-local ActionsEngine = require('fittencode.engines.actions')
 local API = require('fittencode.api').api
 local Base = require('fittencode.base')
+local Config = require('fittencode.config')
 local InlineEngine = require('fittencode.engines.inline')
-local Log = require('fittencode.log')
 local Lines = require('fittencode.views.lines')
+local Log = require('fittencode.log')
 
 local M = {}
 
 local ignore = false
 
+-- Debounce time for advance function, in milliseconds
 local ADVANCE_DEBOUNCE_TIME = 120
+
 ---@type uv_timer_t
 local advance_timer = nil
 
@@ -221,25 +223,26 @@ function M.setup_keymaps()
   Base.map('i', '<C-Right>', API.accept_word)
 end
 
-function M.setup_keyfilters()
-  -- '<80>kd', '<80>kD' in Lua
-  local keycodes = {
-    '<Backspace>',
-    '<Delete>',
-  }
-  local internal_keys = {}
-  vim.tbl_map(function(trigger)
-    internal_keys[#internal_keys + 1] = api.nvim_replace_termcodes(trigger, true, true, true)
-  end, keycodes)
+-- '<80>kd', '<80>kD' in Lua
+local FILTERED_KEYS = {}
+vim.tbl_map(function(trigger)
+  FILTERED_KEYS[#FILTERED_KEYS + 1] = api.nvim_replace_termcodes(trigger, true, true, true)
+end, {
+  '<Backspace>',
+  '<Delete>',
+})
 
+function M.setup_keyfilters()
   vim.on_key(function(key)
     vim.schedule(function()
       if api.nvim_get_mode().mode == 'i' then
-        if vim.tbl_contains(internal_keys, key) then
-          -- Log.debug('Ignore key: {}', key)
-          ignore = true
+        if vim.tbl_contains(FILTERED_KEYS, key) then
+          Log.debug('Delete key pressed, resetting inline completion')
+          InlineEngine.reset()
+          if Config.options.inline_completion.disable_completion_when_delete then
+            ignore = true
+          end
         else
-          -- Log.debug('Accept key: {}', key)
           ignore = false
         end
       end

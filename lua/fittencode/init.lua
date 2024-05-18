@@ -22,11 +22,9 @@ function M.setup(opts)
 
   if Config.options.completion_mode == 'inline' then
     Bindings.setup_autocmds()
+    Bindings.setup_keyfilters()
     if Config.options.use_default_keymaps then
       Bindings.setup_keymaps()
-    end
-    if Config.options.inline_completion.disable_completion_when_delete then
-      Bindings.setup_keyfilters()
     end
   elseif Config.options.completion_mode == 'source' then
     require('fittencode.sources').setup()
