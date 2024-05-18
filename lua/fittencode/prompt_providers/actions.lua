@@ -84,6 +84,14 @@ local MAP_ACTION_PROMPTS = {
   AnalyzeData = 'Analyze the data above and provide your feedback',
 }
 
+local function make_language(ctx)
+  local filetype = ctx.filetype or ''
+  Log.debug('Action Filetype: {}', filetype)
+  local language = ctx.action_opts.language or filetype
+  Log.debug('Action Language: {}', language)
+  return language
+end
+
 ---@param ctx PromptContext
 ---@return Prompt?
 function M:execute(ctx)
@@ -113,10 +121,8 @@ function M:execute(ctx)
       content = get_range_content(ctx.buffer, ctx.range)
     end
 
-    local filetype = ctx.filetype or ''
-    Log.debug('Action Filetype: {}', filetype)
-    local language = ctx.action_opts.language or filetype
-    Log.debug('Action Language: {}', language)
+    local language = make_language(ctx)
+
     local content_prefix = '```'
     local content_suffix = '```'
     if not no_lang then
