@@ -80,7 +80,7 @@ function M:commit(text, linebreak)
     return
   end
   if linebreak and #self.text > 0 and #lines > 0 then
-    if lines[1] ~= '' and not string.match(lines[1], '^```') and self.text[#self.text] ~= '' and not string.match(self.text[#self.text], '^```') then
+    if lines[1] ~= '' and self.text[#self.text] ~= '' then
       table.insert(lines, 1, '')
     end
   end

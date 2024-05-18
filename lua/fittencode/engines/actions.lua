@@ -135,7 +135,7 @@ local function chain_actions(action, solved_prefix, on_error)
       else
         elapsed_time = elapsed_time + ms
         depth = depth + 1
-        chat:commit(lines)
+        chat:commit(lines, true)
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n') .. '\n'
         chain_actions(action, new_solved_prefix, on_error)
       end
@@ -245,74 +245,20 @@ local function make_range(buffer)
   return range
 end
 
----@param action number
----@param opts? ActionOptions
----@return nil
-function ActionsEngine.start_action(action, opts)
-  opts = opts or {}
-
-  local action_name = get_action_name(action)
-  if not action_name then
-    Log.error('Invalid action: {}', action)
-    return
-  end
-
-  Log.debug('Start Action({})...', action_name)
-
-  if lock then
-    Log.debug('Action is locked, skipping')
-    return
-  end
-
-  lock = true
-  elapsed_time = 0
-  depth = 0
-
-  status:update(SC.GENERATING)
-
-  local window = api.nvim_get_current_win()
-  local buffer = api.nvim_win_get_buf(window)
-
-  local range = make_range(buffer)
-  Log.debug('Action range: {}', range)
-
-  chat:show()
-  fn.win_gotoid(window)
-
+local function make_filetype(buffer, range)
   local filetype = api.nvim_get_option_value('filetype', { buf = buffer })
-  Log.debug('Action filetype: {}', filetype)
+  Log.debug('Action option filetype: {}', filetype)
   local langs = get_tslangs(buffer, range)
   Log.debug('Action langs: {}', langs)
-  -- Markdown embeded code block
-  -- HTML embeded js or css
+  -- Markdown contains blocks of code
+  -- JS or CSS is embedded in the HTML
   if #langs >= 2 then
     filetype = vim.tbl_filter(function(lang) return lang ~= filetype end, langs)[1]
   end
-  Log.debug('Action real filetype: {}', filetype)
+  return filetype
+end
 
-  local prompt_opts = {
-    window = window,
-    buffer = buffer,
-    range = range,
-    filetype = filetype,
-    prompt_ty = get_action_type(action),
-    solved_content = opts and opts.content,
-    solved_prefix = nil,
-    prompt = opts and opts.prompt,
-    action_opts = opts,
-  }
-  local prompt_preview = PromptProviders.get_prompt_one(prompt_opts)
-  if #prompt_preview.filename == 0 then
-    prompt_preview.filename = 'unnamed'
-  end
-  local source_info = ' (' .. prompt_preview.filename .. ' ' .. range.start[1] .. ':' .. range['end'][1] .. ')'
-
-  local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info
-  chat:commit(c_in)
-  chat:commit(prompt_preview.content)
-  local c_out = '# Out`[' .. current_eval .. ']`='
-  chat:commit(c_out)
-
+local function _start_action(action, prompt_opts)
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, prompt_opts, function(_, prompt, suggestions)
@@ -336,6 +282,71 @@ function ActionsEngine.start_action(action, opts)
     schedule(on_error, err)
   end
   )
+end
+
+local function chat_commit_inout(action_name, prompt_opts, range)
+  local prompt_preview = PromptProviders.get_prompt_one(prompt_opts)
+  if #prompt_preview.filename == 0 then
+    prompt_preview.filename = 'unnamed'
+  end
+  local source_info = ' (' .. prompt_preview.filename .. ' ' .. range.start[1] .. ':' .. range['end'][1] .. ')'
+  local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info
+  chat:commit(c_in)
+  chat:commit(prompt_preview.content)
+  local c_out = '# Out`[' .. current_eval .. ']`='
+  chat:commit(c_out)
+end
+
+---@param action number
+---@param opts? ActionOptions
+---@return nil
+function ActionsEngine.start_action(action, opts)
+  opts = opts or {}
+
+  local action_name = get_action_name(action)
+  if not action_name then
+    Log.error('Invalid Action: {}', action)
+    return
+  end
+  Log.debug('Start Action({})...', action_name)
+
+  if lock then
+    Log.debug('Action is locked, skipping')
+    return
+  end
+
+  lock = true
+  elapsed_time = 0
+  depth = 0
+
+  status:update(SC.GENERATING)
+
+  local window = api.nvim_get_current_win()
+  local buffer = api.nvim_win_get_buf(window)
+
+  chat:show()
+  fn.win_gotoid(window)
+
+  local range = make_range(buffer)
+  Log.debug('Action range: {}', range)
+
+  local filetype = make_filetype(buffer, range)
+  Log.debug('Action real filetype: {}', filetype)
+
+  local prompt_opts = {
+    window = window,
+    buffer = buffer,
+    range = range,
+    filetype = filetype,
+    prompt_ty = get_action_type(action),
+    solved_content = opts and opts.content,
+    solved_prefix = nil,
+    prompt = opts and opts.prompt,
+    action_opts = opts,
+  }
+
+  chat_commit_inout(action_name, prompt_opts, range)
+  _start_action(action, prompt_opts)
 end
 
 ---@param opts? ActionOptions
