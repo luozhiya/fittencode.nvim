@@ -92,6 +92,25 @@ local function make_language(ctx)
   return language
 end
 
+local function make_content_with_prefix_suffix(ctx, language, no_lang)
+  local content = ''
+
+  if ctx.solved_content then
+    content = ctx.solved_content
+  else
+    content = get_range_content(ctx.buffer, ctx.range)
+  end
+
+  local content_prefix = '```'
+  local content_suffix = '```'
+  if not no_lang then
+    content_prefix = '```' .. language
+  end
+  content = content_prefix .. '\n' .. content .. '\n' .. content_suffix
+
+  return content
+end
+
 ---@param ctx PromptContext
 ---@return Prompt?
 function M:execute(ctx)
@@ -115,20 +134,8 @@ function M:execute(ctx)
   if ctx.solved_prefix then
     prefix = ctx.solved_prefix
   else
-    if ctx.solved_content then
-      content = ctx.solved_content
-    else
-      content = get_range_content(ctx.buffer, ctx.range)
-    end
-
     local language = make_language(ctx)
-
-    local content_prefix = '```'
-    local content_suffix = '```'
-    if not no_lang then
-      content_prefix = '```' .. language
-    end
-    content = content_prefix .. '\n' .. content .. '\n' .. content_suffix
+    content = make_content_with_prefix_suffix(ctx, language, no_lang)
 
     local key = MAP_ACTION_PROMPTS[name]
     local lang_suffix = ''
