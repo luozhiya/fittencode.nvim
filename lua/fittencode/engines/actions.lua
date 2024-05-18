@@ -135,7 +135,7 @@ local function chain_actions(action, solved_prefix, on_error)
       else
         elapsed_time = elapsed_time + ms
         depth = depth + 1
-        chat:commit(lines)
+        chat:commit(lines, true)
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n') .. '\n'
         chain_actions(action, new_solved_prefix, on_error)
       end
