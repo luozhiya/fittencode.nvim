@@ -111,6 +111,16 @@ local function make_content_with_prefix_suffix(ctx, language, no_lang)
   return content
 end
 
+local function make_prompt(ctx, name, language, no_lang)
+  local key = MAP_ACTION_PROMPTS[name]
+  local lang_suffix = ''
+  if not no_lang then
+    lang_suffix = #language > 0 and ' in ' .. language or ''
+  end
+  local prompt = ctx.prompt or ((type(key) == 'function' and key(ctx.action_opts) or key) .. lang_suffix)
+  return prompt
+end
+
 ---@param ctx PromptContext
 ---@return Prompt?
 function M:execute(ctx)
@@ -136,13 +146,7 @@ function M:execute(ctx)
   else
     local language = make_language(ctx)
     content = make_content_with_prefix_suffix(ctx, language, no_lang)
-
-    local key = MAP_ACTION_PROMPTS[name]
-    local lang_suffix = ''
-    if not no_lang then
-      lang_suffix = #language > 0 and ' in ' .. language or ''
-    end
-    local prompt = ctx.prompt or ((type(key) == 'function' and key(ctx.action_opts) or key) .. lang_suffix)
+    local prompt = make_prompt(ctx, name, language, no_lang)
     -- Log.debug('Action Prompt: {}', prompt)
     local start_question = '# Question:\n'
     local start_answer = '# Answer:\n'
