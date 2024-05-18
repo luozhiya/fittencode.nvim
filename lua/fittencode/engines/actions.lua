@@ -62,7 +62,7 @@ local lock = false
 
 local elapsed_time = 0
 local depth = 0
-local MAX_DEPTH = 10
+local MAX_DEPTH = 20
 
 local stop_eval = false
 
