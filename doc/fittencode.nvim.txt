@@ -149,7 +149,10 @@ DEFAULTS ~
       completion_mode = 'inline',
       ---@class LogOptions
       log = {
+        -- Log level.
         level = vim.log.levels.WARN,
+        -- Max log file size in MB, default is 10MB
+        max_size = 10,
       },
     }
 <
