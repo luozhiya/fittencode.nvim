@@ -283,10 +283,12 @@ function ActionsEngine.start_action(action, opts)
   Log.debug('Action filetype: {}', filetype)
   local langs = get_tslangs(buffer, range)
   Log.debug('Action langs: {}', langs)
-  if filetype == 'markdown' and #langs >= 2 then
-    filetype = vim.tbl_filter(function(lang) return lang ~= 'markdown' end, langs)[1]
+  -- Markdown embeded code block
+  -- HTML embeded js or css
+  if #langs >= 2 then
+    filetype = vim.tbl_filter(function(lang) return lang ~= filetype end, langs)[1]
   end
-  Log.debug('Action filetype: {}', filetype)
+  Log.debug('Action real filetype: {}', filetype)
 
   local prompt_opts = {
     window = window,
