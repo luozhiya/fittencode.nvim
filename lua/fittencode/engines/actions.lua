@@ -258,6 +258,32 @@ local function make_filetype(buffer, range)
   return filetype
 end
 
+local function _start_action(action, prompt_opts)
+  Promise:new(function(resolve, reject)
+    local task_id = tasks:create(0, 0)
+    Sessions.request_generate_one_stage(task_id, prompt_opts, function(_, prompt, suggestions)
+      -- Log.debug('Suggestions for Actions: {}', suggestions)
+      local lines, ms = filter_suggestions(task_id, suggestions)
+      elapsed_time = elapsed_time + ms
+      if not lines or #lines == 0 then
+        reject()
+      else
+        depth = depth + 1
+        chat:commit(lines, true)
+        local solved_prefix = prompt.prefix .. table.concat(lines, '\n') .. '\n'
+        resolve(solved_prefix)
+      end
+    end, function(err)
+      reject(err)
+    end)
+  end):forward(function(solved_prefix)
+    chain_actions(action, solved_prefix, on_error)
+  end, function(err)
+    schedule(on_error, err)
+  end
+  )
+end
+
 ---@param action number
 ---@param opts? ActionOptions
 ---@return nil
@@ -306,6 +332,7 @@ function ActionsEngine.start_action(action, opts)
     prompt = opts and opts.prompt,
     action_opts = opts,
   }
+  
   local prompt_preview = PromptProviders.get_prompt_one(prompt_opts)
   if #prompt_preview.filename == 0 then
     prompt_preview.filename = 'unnamed'
@@ -318,29 +345,7 @@ function ActionsEngine.start_action(action, opts)
   local c_out = '# Out`[' .. current_eval .. ']`='
   chat:commit(c_out)
 
-  Promise:new(function(resolve, reject)
-    local task_id = tasks:create(0, 0)
-    Sessions.request_generate_one_stage(task_id, prompt_opts, function(_, prompt, suggestions)
-      -- Log.debug('Suggestions for Actions: {}', suggestions)
-      local lines, ms = filter_suggestions(task_id, suggestions)
-      elapsed_time = elapsed_time + ms
-      if not lines or #lines == 0 then
-        reject()
-      else
-        depth = depth + 1
-        chat:commit(lines, true)
-        local solved_prefix = prompt.prefix .. table.concat(lines, '\n') .. '\n'
-        resolve(solved_prefix)
-      end
-    end, function(err)
-      reject(err)
-    end)
-  end):forward(function(solved_prefix)
-    chain_actions(action, solved_prefix, on_error)
-  end, function(err)
-    schedule(on_error, err)
-  end
-  )
+  _start_action(action, prompt_opts)
 end
 
 ---@param opts? ActionOptions
