@@ -245,6 +245,19 @@ local function make_range(buffer)
   return range
 end
 
+local function make_filetype(buffer, range)
+  local filetype = api.nvim_get_option_value('filetype', { buf = buffer })
+  Log.debug('Action option filetype: {}', filetype)
+  local langs = get_tslangs(buffer, range)
+  Log.debug('Action langs: {}', langs)
+  -- Markdown contains blocks of code
+  -- JS or CSS is embedded in the HTML
+  if #langs >= 2 then
+    filetype = vim.tbl_filter(function(lang) return lang ~= filetype end, langs)[1]
+  end
+  return filetype
+end
+
 ---@param action number
 ---@param opts? ActionOptions
 ---@return nil
@@ -279,15 +292,7 @@ function ActionsEngine.start_action(action, opts)
   chat:show()
   fn.win_gotoid(window)
 
-  local filetype = api.nvim_get_option_value('filetype', { buf = buffer })
-  Log.debug('Action filetype: {}', filetype)
-  local langs = get_tslangs(buffer, range)
-  Log.debug('Action langs: {}', langs)
-  -- Markdown embeded code block
-  -- HTML embeded js or css
-  if #langs >= 2 then
-    filetype = vim.tbl_filter(function(lang) return lang ~= filetype end, langs)[1]
-  end
+  local filetype = make_filetype(buffer, range)
   Log.debug('Action real filetype: {}', filetype)
 
   local prompt_opts = {
