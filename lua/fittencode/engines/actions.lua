@@ -284,6 +284,19 @@ local function _start_action(action, prompt_opts)
   )
 end
 
+local function chat_commit_inout(action_name, prompt_opts, range)
+  local prompt_preview = PromptProviders.get_prompt_one(prompt_opts)
+  if #prompt_preview.filename == 0 then
+    prompt_preview.filename = 'unnamed'
+  end
+  local source_info = ' (' .. prompt_preview.filename .. ' ' .. range.start[1] .. ':' .. range['end'][1] .. ')'
+  local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info
+  chat:commit(c_in)
+  chat:commit(prompt_preview.content)
+  local c_out = '# Out`[' .. current_eval .. ']`='
+  chat:commit(c_out)
+end
+
 ---@param action number
 ---@param opts? ActionOptions
 ---@return nil
@@ -292,10 +305,9 @@ function ActionsEngine.start_action(action, opts)
 
   local action_name = get_action_name(action)
   if not action_name then
-    Log.error('Invalid action: {}', action)
+    Log.error('Invalid Action: {}', action)
     return
   end
-
   Log.debug('Start Action({})...', action_name)
 
   if lock then
@@ -332,19 +344,8 @@ function ActionsEngine.start_action(action, opts)
     prompt = opts and opts.prompt,
     action_opts = opts,
   }
-  
-  local prompt_preview = PromptProviders.get_prompt_one(prompt_opts)
-  if #prompt_preview.filename == 0 then
-    prompt_preview.filename = 'unnamed'
-  end
-  local source_info = ' (' .. prompt_preview.filename .. ' ' .. range.start[1] .. ':' .. range['end'][1] .. ')'
 
-  local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info
-  chat:commit(c_in)
-  chat:commit(prompt_preview.content)
-  local c_out = '# Out`[' .. current_eval .. ']`='
-  chat:commit(c_out)
-
+  chat_commit_inout(action_name, prompt_opts, range)
   _start_action(action, prompt_opts)
 end
 
