@@ -60,7 +60,9 @@ function M:close()
   if self.win == nil then
     return
   end
-  api.nvim_win_close(self.win, true)
+  if api.nvim_win_is_valid(self.win) then
+    api.nvim_win_close(self.win, true)
+  end
   self.win = nil
   -- api.nvim_buf_delete(self.buffer, { force = true })
   -- self.buffer = nil
@@ -92,7 +94,10 @@ function M:commit(text, linebreak)
     api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
   end
   table.move(lines, 1, #lines, #self.text + 1, self.text)
-  api.nvim_win_set_cursor(self.win, { #self.text, 0 })
+
+  if api.nvim_win_is_valid(self.win) then
+    api.nvim_win_set_cursor(self.win, { #self.text, 0 })
+  end
 end
 
 local function _sub_match(s, pattern)

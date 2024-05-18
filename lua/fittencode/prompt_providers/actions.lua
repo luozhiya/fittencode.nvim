@@ -28,6 +28,34 @@ function M:get_priority()
   return self.priority
 end
 
+local function max_len(buffer, row, len)
+  local max = string.len(api.nvim_buf_get_lines(buffer, row - 1, row, false)[1])
+  if len > max then
+    return max
+  end
+  return len
+end
+
+---@param buffer integer
+---@param range ActionRange
+---@return string
+local function get_range_content(buffer, range)
+  local lines = {}
+  if range.vmode then
+    lines = range.region
+  else
+    -- lines = api.nvim_buf_get_text(buffer, range.start[1] - 1, 0, range.start[1] - 1, -1, {})
+    local end_col = max_len(buffer, range['end'][1], range['end'][2])
+    lines = api.nvim_buf_get_text(
+      buffer,
+      range.start[1] - 1,
+      range.start[2],
+      range['end'][1] - 1,
+      end_col + 1, {})
+  end
+  return table.concat(lines, '\n')
+end
+
 ---@param ctx PromptContext
 ---@return Prompt?
 function M:execute(ctx)
@@ -47,15 +75,10 @@ function M:execute(ctx)
   if ctx.solved_prefix then
     prefix = ctx.solved_prefix
   else
-    -- FIXME: Improve prompt construction! full content with line:col info?
-    ---@diagnostic disable-next-line: param-type-mismatch
     if ctx.solved_content then
       content = ctx.solved_content
     else
-      -- if ctx.range[1] == ctx.range[2] then
-      -- content = api.nvim_buf_get_lines(ctx.buffer, ctx.range[1], ctx.range[1] + 1, false)[1]
-      -- content = table.concat(api.nvim_buf_get_text(ctx.buffer, 0, 0, -1, -1, {}), '\n')
-      content = table.concat(api.nvim_buf_get_text(ctx.buffer, ctx.range[1], 0, ctx.range[2], -1, {}), '\n')
+      content = get_range_content(ctx.buffer, ctx.range)
     end
     local name = ctx.prompt_ty:sub(#NAME + 2)
     Log.debug('Action Name: {}', name)
