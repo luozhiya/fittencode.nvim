@@ -45,6 +45,8 @@ local Actions = {
   ImplementFeatures = 6,
   ImproveCode = 7,
   RefactorCode = 8,
+  GuessProgrammingLanguage = 9,
+  AnalyzeData = 10,
 }
 
 local current_eval = 1
@@ -440,6 +442,22 @@ function ActionsEngine.refactor_code(opts)
   }
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
   ActionsEngine.start_action(Actions.RefactorCode, merged)
+end
+
+---@param opts? ActionOptions
+function ActionsEngine.guess_programming_language(opts)
+  local defaults = {
+  }
+  local merged = vim.tbl_deep_extend('force', defaults, opts or {})
+  ActionsEngine.start_action(Actions.GuessProgrammingLanguage, merged)
+end
+
+---@param opts? ActionOptions
+function ActionsEngine.analyze_data(opts)
+  local defaults = {
+  }
+  local merged = vim.tbl_deep_extend('force', defaults, opts or {})
+  ActionsEngine.start_action(Actions.AnalyzeData, merged)
 end
 
 -- API: ActionOptions.content

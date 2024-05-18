@@ -56,6 +56,8 @@ local function get_range_content(buffer, range)
   return table.concat(lines, '\n')
 end
 
+local NO_LANG_ACTIONS = { 'StartChat', 'GuessProgrammingLanguage', 'AnalyzeData' }
+
 ---@param ctx PromptContext
 ---@return Prompt?
 function M:execute(ctx)
@@ -63,9 +65,13 @@ function M:execute(ctx)
     return
   end
 
+  local name = ctx.prompt_ty:sub(#NAME + 2)
+  Log.debug('Action Name: {}', name)
+  local no_lang = vim.tbl_contains(NO_LANG_ACTIONS, name)
+
   local filename = ''
   if ctx.buffer then
-    filename = Path.name(ctx.buffer)
+    filename = Path.name(ctx.buffer, no_lang)
   end
 
   local within_the_line = false
@@ -80,15 +86,14 @@ function M:execute(ctx)
     else
       content = get_range_content(ctx.buffer, ctx.range)
     end
-    local name = ctx.prompt_ty:sub(#NAME + 2)
-    Log.debug('Action Name: {}', name)
+
     local filetype = ctx.filetype or ''
     Log.debug('Action Filetype: {}', filetype)
     local language = ctx.action_opts.language or filetype
     Log.debug('Action Language: {}', language)
     local content_prefix = '```'
     local content_suffix = '```'
-    if name ~= 'StartChat' then
+    if not no_lang then
       content_prefix = '```' .. language
     end
     content = content_prefix .. '\n' .. content .. '\n' .. content_suffix
@@ -112,10 +117,12 @@ function M:execute(ctx)
       end,
       ImproveCode = 'Improve the code above',
       RefactorCode = 'Refactor the code above',
+      GuessProgrammingLanguage = 'Guess the programming language of the code above',
+      AnalyzeData = 'Analyze the data above and provide your feedback',
     }
     local key = map_action_prompt[name]
     local lang_suffix = ''
-    if name ~= 'StartChat' then
+    if not no_lang then
       lang_suffix = #language > 0 and ' in ' .. language or ''
     end
     local prompt = ctx.prompt or ((type(key) == 'function' and key(ctx.action_opts) or key) .. lang_suffix)
