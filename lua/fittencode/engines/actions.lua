@@ -180,10 +180,12 @@ local function find_nospace(line)
 end
 
 ---@param buffer number
----@param start_row number
----@param end_row number
+---@param range ActionRange
 ---@return string[]
-local function get_tslangs(buffer, start_row, end_row)
+local function get_tslangs(buffer, range)
+  local start_row = range.start[1] - 1
+  local end_row = range['end'][1] - 1
+
   local row = start_row
   local col = 0
 
@@ -208,7 +210,38 @@ local function get_tslangs(buffer, start_row, end_row)
   return langs
 end
 
-local vmode = { ['v']=true, ['V']=true, ['<C-V>']=true }
+---@class ActionRange
+---@field start integer[]
+---@field end integer[]
+---@field vmode boolean
+---@field region string[]
+
+local VMODE = { ['v'] = true, ['V'] = true, [api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
+
+local function make_range(buffer)
+  local in_v = false
+  local region = {}
+
+  local mode = api.nvim_get_mode().mode
+  Log.debug('Action mode: {}', mode)
+  if VMODE[mode] then
+    in_v = true
+    region = fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
+  end
+
+  api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
+
+  local start = api.nvim_buf_get_mark(buffer, '<')
+  local end_ = api.nvim_buf_get_mark(buffer, '>')
+
+  local range = {
+    start = start,
+    ['end'] = end_,
+    vmode = in_v,
+    region = region,
+  }
+  return range
+end
 
 ---@param action number
 ---@param opts? ActionOptions
@@ -237,21 +270,16 @@ function ActionsEngine.start_action(action, opts)
 
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
-  local sln, eln = api.nvim_buf_get_mark(buffer, '<')[1], api.nvim_buf_get_mark(buffer, '>')[1]
 
-  Log.debug('mode: {}', api.nvim_get_mode().mode)
-  if vmode[api.nvim_get_mode().mode] then
-    api.nvim_feedkeys('', 'nx', false)
-  end
-  sln, eln = api.nvim_buf_get_mark(buffer, '<')[1], api.nvim_buf_get_mark(buffer, '>')[1]
-  Log.debug('sln: {}, eln: {}', sln, eln)
+  local range = make_range(buffer)
+  Log.debug('Action range: {}', range)
 
   chat:show()
   fn.win_gotoid(window)
 
   local filetype = api.nvim_get_option_value('filetype', { buf = buffer })
   Log.debug('Action filetype: {}', filetype)
-  local langs = get_tslangs(buffer, sln - 1, eln - 1)
+  local langs = get_tslangs(buffer, range)
   Log.debug('Action langs: {}', langs)
   if filetype == 'markdown' and #langs >= 2 then
     filetype = vim.tbl_filter(function(lang) return lang ~= 'markdown' end, langs)[1]
@@ -261,7 +289,7 @@ function ActionsEngine.start_action(action, opts)
   local prompt_opts = {
     window = window,
     buffer = buffer,
-    range = { sln - 1, eln - 1 },
+    range = range,
     filetype = filetype,
     prompt_ty = get_action_type(action),
     solved_content = opts and opts.content,
@@ -273,7 +301,7 @@ function ActionsEngine.start_action(action, opts)
   if #prompt_preview.filename == 0 then
     prompt_preview.filename = 'unnamed'
   end
-  local source_info = ' (' .. prompt_preview.filename .. ' ' .. sln .. ':' .. eln .. ')'
+  local source_info = ' (' .. prompt_preview.filename .. ' ' .. range.start[1] .. ':' .. range['end'][1] .. ')'
 
   local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info
   chat:commit(c_in)

@@ -21,7 +21,7 @@ local M = {}
 ---@field prompt_ty? string
 ---@field row? integer
 ---@field col? integer
----@field range? table
+---@field range? ActionRange
 ---@field prompt? string
 ---@field solved_prefix? string
 ---@field solved_content? string
