@@ -42,7 +42,7 @@ end
 local function get_range_content(buffer, range)
   local lines = {}
   if range.vmode then
-    lines = range.region
+    lines = range.region or {}
   else
     -- lines = api.nvim_buf_get_text(buffer, range.start[1] - 1, 0, range.start[1] - 1, -1, {})
     local end_col = max_len(buffer, range['end'][1], range['end'][2])

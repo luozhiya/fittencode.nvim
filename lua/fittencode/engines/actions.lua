@@ -214,19 +214,21 @@ end
 ---@field start integer[]
 ---@field end integer[]
 ---@field vmode boolean
----@field region string[]
+---@field region? string[]
 
 local VMODE = { ['v'] = true, ['V'] = true, [api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
 
 local function make_range(buffer)
   local in_v = false
-  local region = {}
+  local region = nil
 
   local mode = api.nvim_get_mode().mode
   Log.debug('Action mode: {}', mode)
   if VMODE[mode] then
     in_v = true
-    region = fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
+    if fn.has('nvim-0.10') == 1 then
+      region = fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
+    end
   end
 
   api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)

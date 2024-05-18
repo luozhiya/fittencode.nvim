@@ -48,10 +48,11 @@ end
 ---@param name string
 ---@param hi table
 function M.set_hi(name, hi)
+  -- Neovim 0.10.0 has been released on 2024-05-16.
   if fn.has('nvim-0.10') == 1 then
     -- https://github.com/neovim/neovim/pull/25229
     -- https://github.com/luozhiya/fittencode.nvim/issues/20
-    -- hi.force = true
+    hi.force = true
   end
   hi.cterm = hi.cterm or {}
   api.nvim_set_hl(0, name, hi)
