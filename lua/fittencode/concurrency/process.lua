@@ -82,6 +82,11 @@ M.open = function(uri)
   if uri == nil then
     return
   end
+  -- Perfer using nvim-0.10's built-in function
+  if fn.has('nvim-0.10') == 1 then
+    vim.ui.open(uri)
+    return
+  end
   local cmd = nil
   local args = {}
   if Base.is_windows() then
