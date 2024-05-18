@@ -190,27 +190,58 @@ require('cmp').setup({
 
 `fittencode.nvim` provides a set of APIs to help you integrate it with other plugins or scripts.
 
-| API                      | Description                            |
-|--------------------------|----------------------------------------|
-| `login`                  | Login to Fitten                        |
-| `logout`                 | Logout from Fitten                     |
-| `register`               | Register to Fitten                     |
-| `set_log_level`          | Set the log level                      |
-| `get_current_status`     | Get the current status of the `Engine` |
-| `has_suggestion`         | Check if there is a suggestion         |
-| `accept_all_suggestions` | Accept all suggestions                 |
-| `accept_line`            | Accept line                            |
-| `accept_word`            | Accept word                            |
-| `document_code`          | Document code                          |
-| `edit_code`              | Edit code                              |
-| `explain_code`           | Explain code                           |
-| `find_bugs`              | Find bugs                              |
-| `generate_unit_test`     | Generate unit test                     |
-| `implement_features`     | Implement features                     |
-| `improve_code`           | Improve code                           |
-| `refactor_code`          | Refactor code                          |
-| `start_chat`             | Start chat                             |
-| `stop_eval`              | Stop the evaluation                    |
+- Access the APIs by calling `require('fittencode').<api_name>()`.
+
+### Parameters Types
+
+```lua
+-- Log levels
+vim.log = {
+  levels = {
+    TRACE = 0,
+    DEBUG = 1,
+    INFO = 2,
+    WARN = 3,
+    ERROR = 4,
+    OFF = 5,
+  },
+}
+
+---@class ActionOptions
+---@field prompt? string
+---@field content? string
+---@field language? string
+
+---@class GenerateUnitTestOptions : ActionOptions
+---@field test_framework string
+
+---@class ImplementFeaturesOptions : ActionOptions
+---@field feature_type string
+```
+
+### List of APIs
+
+| API                      | Prototype                                      | Description                                                     |
+|--------------------------|------------------------------------------------|-----------------------------------------------------------------|
+| `login`                  | `login(username, password)`                    | Login to Fitten Code AI                                         |
+| `logout`                 | `logout()`                                     | Logout from Fitten Code AI                                      |
+| `register`               | `register()`                                   | Register to Fitten Code AI                                      |
+| `set_log_level`          | `set_log_level(level)`                         | Set the log level                                               |
+| `get_current_status`     | `get_current_status()`                         | Get the current status of the `InlineEngine` and `ActionEngine` |
+| `has_suggestion`         | `has_suggestion()`                             | Check if there is a suggestion                                  |
+| `accept_all_suggestions` | `accept_all_suggestions()`                     | Accept all suggestions                                          |
+| `accept_line`            | `accept_line()`                                | Accept line                                                     |
+| `accept_word`            | `accept_word()`                                | Accept word                                                     |
+| `document_code`          | `document_code(ActionOptions)`                 | Document code                                                   |
+| `edit_code`              | `edit_code(ActionOptions)`                     | Edit code                                                       |
+| `explain_code`           | `explain_code(ActionOptions)`                  | Explain code                                                    |
+| `find_bugs`              | `find_bugs(ActionOptions)`                     | Find bugs                                                       |
+| `generate_unit_test`     | `generate_unit_test(GenerateUnitTestOptions)`  | Generate unit test                                              |
+| `implement_features`     | `implement_features(ImplementFeaturesOptions)` | Implement features                                              |
+| `improve_code`           | `improve_code(ActionOptions)`                  | Improve code                                                    |
+| `refactor_code`          | `refactor_code(ActionOptions)`                 | Refactor code                                                   |
+| `start_chat`             | `start_chat(ActionOptions)`                    | Start chat                                                      |
+| `stop_eval`              | `stop_eval()`                                  | Stop the evaluation                                             |
 
 ## 🎉 Special Thanks
 
