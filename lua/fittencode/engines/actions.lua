@@ -218,6 +218,31 @@ end
 
 local VMODE = { ['v'] = true, ['V'] = true, [api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
 
+local function make_range(buffer)
+  local in_v = false
+  local region = {}
+
+  local mode = api.nvim_get_mode().mode
+  Log.debug('Action mode: {}', mode)
+  if VMODE[mode] then
+    in_v = true
+    region = fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
+  end
+
+  api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
+
+  local start = api.nvim_buf_get_mark(buffer, '<')
+  local end_ = api.nvim_buf_get_mark(buffer, '>')
+
+  local range = {
+    start = start,
+    ['end'] = end_,
+    vmode = in_v,
+    region = region,
+  }
+  return range
+end
+
 ---@param action number
 ---@param opts? ActionOptions
 ---@return nil
@@ -246,27 +271,7 @@ function ActionsEngine.start_action(action, opts)
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
 
-  local in_v = false
-  local region = {}
-
-  local mode = api.nvim_get_mode().mode
-  Log.debug('Action mode: {}', mode)
-  if VMODE[mode] then
-    in_v = true
-    region = fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
-  end
-
-  api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
-
-  local start = api.nvim_buf_get_mark(buffer, '<')
-  local end_ = api.nvim_buf_get_mark(buffer, '>')
-
-  local range = {
-    start = start,
-    ['end'] = end_,
-    vmode = in_v,
-    region = region,
-  }
+  local range = make_range(buffer)
   Log.debug('Action range: {}', range)
 
   chat:show()
