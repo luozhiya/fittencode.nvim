@@ -121,6 +121,13 @@ local function make_prompt(ctx, name, language, no_lang)
   return prompt
 end
 
+local function make_prefix(content, prompt)
+  local start_question = '# Question:\n'
+  local start_answer = '# Answer:\n'
+  local prefix = start_question .. content .. '\n' .. start_answer .. 'Dear FittenCode, Please ' .. prompt .. ':\n'
+  return prefix
+end
+
 ---@param ctx PromptContext
 ---@return Prompt?
 function M:execute(ctx)
@@ -148,9 +155,7 @@ function M:execute(ctx)
     content = make_content_with_prefix_suffix(ctx, language, no_lang)
     local prompt = make_prompt(ctx, name, language, no_lang)
     -- Log.debug('Action Prompt: {}', prompt)
-    local start_question = '# Question:\n'
-    local start_answer = '# Answer:\n'
-    prefix = start_question .. content .. '\n' .. start_answer .. 'Dear FittenCode, Please ' .. prompt .. ':\n'
+    prefix = make_prefix(content, prompt)
   end
   local suffix = ''
 
