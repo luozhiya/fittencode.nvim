@@ -1,7 +1,7 @@
 local M = {}
 
 ---@class FittenCodeOptions
-M.options = {
+local defaults = {
   -- Same options as `fittentech.fitten-code` in vscode
   action = {
     document_code = {
@@ -78,7 +78,7 @@ M.options = {
     -- Rest backend to use. Available options:
     -- * 'curl'
     -- * 'libcurl'
-    -- * 'node'
+    -- * 'libuv'
     backend = 'curl',
   },
   syntax_highlighting = {
@@ -87,7 +87,14 @@ M.options = {
   },
   ---@class LogOptions
   log = {
+    -- Log level.
     level = vim.log.levels.WARN,
+    -- Max log file size in MB, default is 10MB
+    max_size = 10,
+    -- Create new log file on startup, for debugging purposes.
+    new_file_on_startup = false,
+    -- TODO: Aynchronous logging.
+    async = true,
   },
 }
 
@@ -100,7 +107,7 @@ M.internal = {
 
 ---@param opts? FittenCodeOptions
 function M.setup(opts)
-  M.options = vim.tbl_deep_extend('force', M.options, opts or {})
+  M.options = vim.tbl_deep_extend('force', defaults, opts or {})
 end
 
 return M

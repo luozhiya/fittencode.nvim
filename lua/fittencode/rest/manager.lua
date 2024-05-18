@@ -12,8 +12,8 @@ local builtin_backends = {
   ['libcurl'] = function()
     return require('fittencode.rest.backend.libcurl'):new()
   end,
-  ['node'] = function()
-    return require('fittencode.rest.backend.node'):new()
+  ['libuv'] = function()
+    return require('fittencode.rest.backend.libuv'):new()
   end,
 }
 

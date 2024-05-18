@@ -261,4 +261,22 @@ function M.delete(path, on_success, on_error)
   end)
 end
 
+function M.stat(path, on_success, on_error)
+  Promise:new(function(resolve, reject)
+    uv.fs_stat(
+      path,
+      function(err, stat)
+        if err then
+          reject(err)
+        else
+          resolve(stat)
+        end
+      end)
+  end):forward(function(stat)
+    schedule(on_success, stat)
+  end, function(err)
+    schedule(on_error, uv_err(err))
+  end)
+end
+
 return M
