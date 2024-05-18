@@ -39,7 +39,7 @@ end
 ---@param buffer integer
 ---@param range ActionRange
 ---@return string
-local function get_range_content(buffer, range)
+local function make_range_content(buffer, range)
   local lines = {}
   if range.vmode then
     lines = range.region or {}
@@ -98,7 +98,7 @@ local function make_content_with_prefix_suffix(ctx, language, no_lang)
   if ctx.solved_content then
     content = ctx.solved_content
   else
-    content = get_range_content(ctx.buffer, ctx.range)
+    content = make_range_content(ctx.buffer, ctx.range)
   end
 
   local content_prefix = '```'
