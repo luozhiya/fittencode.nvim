@@ -221,27 +221,27 @@ vim.log = {
 
 ### List of APIs
 
-| API                      | Prototype                                      | Description                                                     |
-|--------------------------|------------------------------------------------|-----------------------------------------------------------------|
-| `login`                  | `login(username, password)`                    | Login to Fitten Code AI                                         |
-| `logout`                 | `logout()`                                     | Logout from Fitten Code AI                                      |
-| `register`               | `register()`                                   | Register to Fitten Code AI                                      |
-| `set_log_level`          | `set_log_level(level)`                         | Set the log level                                               |
-| `get_current_status`     | `get_current_status()`                         | Get the current status of the `InlineEngine` and `ActionEngine` |
-| `has_suggestion`         | `has_suggestion()`                             | Check if there is a suggestion                                  |
-| `accept_all_suggestions` | `accept_all_suggestions()`                     | Accept all suggestions                                          |
-| `accept_line`            | `accept_line()`                                | Accept line                                                     |
-| `accept_word`            | `accept_word()`                                | Accept word                                                     |
-| `document_code`          | `document_code(ActionOptions)`                 | Document code                                                   |
-| `edit_code`              | `edit_code(ActionOptions)`                     | Edit code                                                       |
-| `explain_code`           | `explain_code(ActionOptions)`                  | Explain code                                                    |
-| `find_bugs`              | `find_bugs(ActionOptions)`                     | Find bugs                                                       |
-| `generate_unit_test`     | `generate_unit_test(GenerateUnitTestOptions)`  | Generate unit test                                              |
-| `implement_features`     | `implement_features(ImplementFeaturesOptions)` | Implement features                                              |
-| `improve_code`           | `improve_code(ActionOptions)`                  | Improve code                                                    |
-| `refactor_code`          | `refactor_code(ActionOptions)`                 | Refactor code                                                   |
-| `start_chat`             | `start_chat(ActionOptions)`                    | Start chat                                                      |
-| `stop_eval`              | `stop_eval()`                                  | Stop the evaluation                                             |
+| API Prototype                                  | Description                                                     |
+|------------------------------------------------|-----------------------------------------------------------------|
+| `login(username, password)`                    | Login to Fitten Code AI                                         |
+| `logout()`                                     | Logout from Fitten Code AI                                      |
+| `register()`                                   | Register to Fitten Code AI                                      |
+| `set_log_level(level)`                         | Set the log level                                               |
+| `get_current_status()`                         | Get the current status of the `InlineEngine` and `ActionEngine` |
+| `has_suggestion()`                             | Check if there is a suggestion                                  |
+| `accept_all_suggestions()`                     | Accept all suggestions                                          |
+| `accept_line()`                                | Accept line                                                     |
+| `accept_word()`                                | Accept word                                                     |
+| `document_code(ActionOptions)`                 | Document code                                                   |
+| `edit_code(ActionOptions)`                     | Edit code                                                       |
+| `explain_code(ActionOptions)`                  | Explain code                                                    |
+| `find_bugs(ActionOptions)`                     | Find bugs                                                       |
+| `generate_unit_test(GenerateUnitTestOptions)`  | Generate unit test                                              |
+| `implement_features(ImplementFeaturesOptions)` | Implement features                                              |
+| `improve_code(ActionOptions)`                  | Improve code                                                    |
+| `refactor_code(ActionOptions)`                 | Refactor code                                                   |
+| `start_chat(ActionOptions)`                    | Start chat                                                      |
+| `stop_eval()`                                  | Stop the evaluation                                             |
 
 ## 🎉 Special Thanks
 
