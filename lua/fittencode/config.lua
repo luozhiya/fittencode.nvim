@@ -78,7 +78,7 @@ M.options = {
     -- Rest backend to use. Available options:
     -- * 'curl'
     -- * 'libcurl'
-    -- * 'node'
+    -- * 'libuv'
     backend = 'curl',
   },
   syntax_highlighting = {
@@ -87,7 +87,14 @@ M.options = {
   },
   ---@class LogOptions
   log = {
+    -- Log level.
     level = vim.log.levels.WARN,
+    -- Max log file size in MB, default is 10MB
+    max_size = 10,
+    -- Create new log file on startup, for debugging purposes.
+    new_file_on_startup = false,
+    -- TODO: Aynchronous logging.
+    async = true,
   },
 }
 

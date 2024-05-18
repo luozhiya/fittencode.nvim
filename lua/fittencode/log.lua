@@ -116,9 +116,16 @@ local function do_log(level, msg)
   log_file(msg)
 end
 
+local function size_over_limit()
+  local size = fn.getfsize(LOG_PATH)
+  return size > Config.options.log.max_size * 1024 * 1024
+end
+
 function M.setup()
-  local LOG_HOME = fn.fnamemodify(LOG_PATH, ':h')
-  fn.mkdir(LOG_HOME, 'p')
+  fn.mkdir(fn.fnamemodify(LOG_PATH, ':h'), 'p')
+  if Config.options.log.new_file_on_startup or size_over_limit() then
+    fn.delete(LOG_PATH)
+  end
 end
 
 ---@param level integer @one of the `vim.log.levels` values
