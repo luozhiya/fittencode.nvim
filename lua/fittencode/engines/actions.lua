@@ -324,11 +324,11 @@ function ActionsEngine.start_action(action, opts)
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
 
-  local range = make_range(buffer)
-  Log.debug('Action range: {}', range)
-
   chat:show()
   fn.win_gotoid(window)
+
+  local range = make_range(buffer)
+  Log.debug('Action range: {}', range)
 
   local filetype = make_filetype(buffer, range)
   Log.debug('Action real filetype: {}', filetype)
