@@ -47,10 +47,7 @@ function M:show()
     end, { buffer = self.buffer })
 
     if #self.text > 0 then
-      -- api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
-      -- api.nvim_buf_set_lines(self.buffer, 0, -1, false, self.text)
       api.nvim_win_set_cursor(self.win, { #self.text, 0 })
-      -- api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
     end
   end
 end
@@ -83,33 +80,9 @@ end
 ---@field force? boolean
 ---@field fenced_code? boolean
 
-local function set_lines(self, lines)
-  if self.buffer then
-    api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
-    if #self.text == 0 then
-      api.nvim_buf_set_lines(self.buffer, 0, -1, false, lines)
-    else
-      api.nvim_buf_set_lines(self.buffer, -1, -1, false, lines)
-    end
-    api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
-  end
-  table.move(lines, 1, #lines, #self.text + 1, self.text)
-
-  if api.nvim_win_is_valid(self.win) then
-    api.nvim_win_set_cursor(self.win, { #self.text, 0 })
-  end
-end
-
----@param opts? ChatCommitOptions|string
-function M:commit(opts)
-  if not opts then
-    return
-  end
-
-  if type(opts) == 'string' then
-    opts = { text = opts }
-  end
-
+---@param self Chat
+---@param opts ChatCommitOptions
+local function make_lines(self, opts)
   local text = opts.text
   local linebreak = opts.linebreak
   local force = opts.force
@@ -137,9 +110,51 @@ function M:commit(opts)
     end
   end
   if linebreak and #self.text > 0 and #lines > 0 then
-    if lines[1] ~= '' and not string.match(lines[1], '^```') and self.text[#self.text] ~= '' and not string.match(self.text[#self.text], '^```') then
+    if lines[1] ~= '' and
+        not string.match(lines[1], '^```') and
+        self.text[#self.text] ~= '' and
+        not string.match(self.text[#self.text], '^```') then
       table.insert(lines, 1, '')
     end
+  end
+
+  return lines
+end
+
+---@param self Chat
+---@param lines string[]
+local function set_lines(self, lines)
+  table.move(lines, 1, #lines, #self.text + 1, self.text)
+
+  if self.buffer and api.nvim_buf_is_valid(self.buffer) then
+    api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
+    api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
+    if #self.text == 0 then
+      api.nvim_buf_set_lines(self.buffer, 0, -1, false, lines)
+    else
+      api.nvim_buf_set_lines(self.buffer, -1, -1, false, lines)
+    end
+    api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
+  end
+
+  if api.nvim_win_is_valid(self.win) then
+    api.nvim_win_set_cursor(self.win, { #self.text, 0 })
+  end
+end
+
+---@param opts? ChatCommitOptions|string
+function M:commit(opts)
+  if not opts then
+    return
+  end
+
+  if type(opts) == 'string' then
+    opts = { text = opts }
+  end
+
+  local lines = make_lines(self, opts)
+  if not lines then
+    return
   end
   set_lines(self, lines)
 end
