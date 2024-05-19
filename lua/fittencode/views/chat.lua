@@ -81,7 +81,8 @@ end
 ---@param text? string|string[]
 ---@param linebreak? boolean
 ---@param force? boolean
-function M:commit(text, linebreak, force)
+---@param fenced_code? boolean
+function M:commit(text, linebreak, force, fenced_code)
   local lines = nil
   if type(text) == 'string' then
     lines = vim.split(text, '\n')
@@ -95,8 +96,13 @@ function M:commit(text, linebreak, force)
       push_stack(x)
     end
   end, lines)
-  if #stack > 0 and not force then
-    linebreak = false
+  if #stack > 0 then
+    if not force then
+      linebreak = false
+    end
+    if fenced_code then
+      table.insert(lines, 1, '```')
+    end
   end
   if linebreak and #self.text > 0 and #lines > 0 then
     if lines[1] ~= '' and not string.match(lines[1], '^```') and self.text[#self.text] ~= '' and not string.match(self.text[#self.text], '^```') then

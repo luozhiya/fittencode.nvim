@@ -164,7 +164,7 @@ local function on_error(err)
   end
   Log.debug('Action elapsed time: {}', elapsed_time)
   Log.debug('Action depth: {}', depth)
-  chat:commit('> Q.E.D.' .. '(' .. elapsed_time .. ' ms)' .. '\n', true, true)
+  chat:commit('> Q.E.D.' .. '(' .. elapsed_time .. ' ms)' .. '\n', true, true, true)
   current_eval = current_eval + 1
 end
 
