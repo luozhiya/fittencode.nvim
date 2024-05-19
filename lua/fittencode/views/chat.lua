@@ -69,7 +69,7 @@ local stack = {}
 
 local function push_stack(x)
   if #stack == 0 then
-    table.insert(stack, x)
+    table.insert(stack, #stack + 1, x)
   else
     table.remove(stack)
   end
@@ -97,6 +97,7 @@ local function make_lines(self, opts)
   else
     return
   end
+  Log.debug('Action Chat commit lines: {}', lines)
   vim.tbl_map(function(x)
     if x:match('^```') then
       push_stack(x)
@@ -107,7 +108,9 @@ local function make_lines(self, opts)
       linebreak = false
     end
     if fenced_code then
-      table.insert(lines, 1, '```')
+      local fence = '```'
+      table.insert(lines, 1, fence)
+      push_stack(fence)
     end
   end
   if linebreak and #self.text > 0 and #lines > 0 then
