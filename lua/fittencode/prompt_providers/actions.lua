@@ -60,7 +60,7 @@ local NO_LANG_ACTIONS = { 'StartChat', 'GuessProgrammingLanguage', 'AnalyzeData'
 
 local MAP_ACTION_PROMPTS = {
   StartChat = 'Answers the question above',
-  DocumentCode = 'Document the code above',
+  DocumentCode = 'Document the code above, commenting line by line',
   EditCode = function(ctx)
     return ctx.prompt
   end,
