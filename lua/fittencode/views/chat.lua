@@ -91,7 +91,7 @@ function M:commit(text, linebreak, force)
     return
   end
   vim.tbl_map(function(x)
-    if x == '```' then
+    if x:match('^```') then
       push_stack(x)
     end
   end, lines)
