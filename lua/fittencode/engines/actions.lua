@@ -45,6 +45,8 @@ local Actions = {
   ImplementFeatures = 6,
   ImproveCode = 7,
   RefactorCode = 8,
+  GuessProgrammingLanguage = 9,
+  AnalyzeData = 10,
 }
 
 local current_eval = 1
@@ -60,7 +62,7 @@ local lock = false
 
 local elapsed_time = 0
 local depth = 0
-local MAX_DEPTH = 10
+local MAX_DEPTH = 20
 
 local stop_eval = false
 
@@ -162,7 +164,7 @@ local function on_error(err)
   end
   Log.debug('Action elapsed time: {}', elapsed_time)
   Log.debug('Action depth: {}', depth)
-  chat:commit('> Q.E.D.' .. '(' .. elapsed_time .. ' ms)' .. '\n', true)
+  chat:commit('> Q.E.D.' .. '(' .. elapsed_time .. ' ms)' .. '\n', true, true)
   current_eval = current_eval + 1
 end
 
@@ -440,6 +442,22 @@ function ActionsEngine.refactor_code(opts)
   }
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
   ActionsEngine.start_action(Actions.RefactorCode, merged)
+end
+
+---@param opts? ActionOptions
+function ActionsEngine.guess_programming_language(opts)
+  local defaults = {
+  }
+  local merged = vim.tbl_deep_extend('force', defaults, opts or {})
+  ActionsEngine.start_action(Actions.GuessProgrammingLanguage, merged)
+end
+
+---@param opts? ActionOptions
+function ActionsEngine.analyze_data(opts)
+  local defaults = {
+  }
+  local merged = vim.tbl_deep_extend('force', defaults, opts or {})
+  ActionsEngine.start_action(Actions.AnalyzeData, merged)
 end
 
 -- API: ActionOptions.content

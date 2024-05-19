@@ -142,6 +142,23 @@ local function _start_chat(...)
   return _action_apis_wrap(API.start_chat, ...)
 end
 
+local function _action_apis_wrap_content(fx, ...)
+  local args = { ... }
+  ---@type ActionOptions
+  local opts = {
+    content = args[1],
+  }
+  return fx(opts)
+end
+
+local function _guess_programming_language(...)
+  return _action_apis_wrap_content(API.guess_programming_language, ...)
+end
+
+local function _analyze_data(...)
+  return _action_apis_wrap_content(API.analyze_data, ...)
+end
+
 function M.setup_commands()
   ---@type FittenCommands
   local commands = {
@@ -171,6 +188,10 @@ function M.setup_commands()
     improve_code = _improve_code,
     -- Arguments: language
     refactor_code = _refactor_code,
+    -- Arguments: code
+    guess_programming_language = _guess_programming_language,
+    -- Arguments: data
+    analyze_data = _analyze_data,
     -- Arguments: language
     start_chat = _start_chat,
     -- Arguments: Nop

@@ -80,6 +80,14 @@ M.api = {
     return ActionsEngine.refactor_code(opts)
   end,
   ---@param opts? ActionOptions
+  guess_programming_language = function(opts)
+    return ActionsEngine.guess_programming_language(opts)
+  end,
+  ---@param opts? ActionOptions
+  analyze_data = function(opts)
+    return ActionsEngine.analyze_data(opts)
+  end,
+  ---@param opts? ActionOptions
   start_chat = function(opts)
     return ActionsEngine.start_chat(opts)
   end,

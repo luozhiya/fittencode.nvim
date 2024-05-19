@@ -40,8 +40,11 @@ function M.nvim_sep()
   return M.nt_sep()
 end
 
-function M.name(buffer)
+function M.name(buffer, without_ext)
   local path = api.nvim_buf_get_name(buffer)
+  if without_ext then
+    return fn.fnamemodify(path, ':t:r')
+  end
   return fn.fnamemodify(path, ':t')
 end
 
