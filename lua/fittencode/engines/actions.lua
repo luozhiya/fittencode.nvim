@@ -10,6 +10,7 @@ local Promise = require('fittencode.concurrency.promise')
 local PromptProviders = require('fittencode.prompt_providers')
 local Sessions = require('fittencode.sessions')
 local Status = require('fittencode.status')
+local SuggestionsPreprocessing = require('fittencode.suggestions_preprocessing')
 local TaskScheduler = require('fittencode.tasks')
 
 local schedule = Base.schedule
@@ -93,22 +94,22 @@ end
 ---@param task_id integer
 ---@param suggestions Suggestions
 ---@return Suggestions?, integer?
-local function filter_suggestions(task_id, suggestions)
-  if not suggestions then
-    return
-  end
+local function filter_suggestions(window, buffer, task_id, suggestions)
   local matched, ms = tasks:match_clean(task_id, 0, 0)
   if not matched then
     Log.debug('Action request is outdated, discarding task: {}', task_id)
-    return
+    return nil, ms
   end
-  return vim.tbl_filter(function(s) return #s > 0 end, suggestions), ms
+  if not suggestions then
+    return nil, ms
+  end
+  return SuggestionsPreprocessing.run(window, buffer, suggestions), ms
 end
 
 ---@param action integer
 ---@param solved_prefix string
 ---@param on_error function
-local function chain_actions(action, solved_prefix, on_error)
+local function chain_actions(window, buffer, action, solved_prefix, on_error)
   Log.debug('Chain Action({})...', get_action_name(action))
   if depth >= MAX_DEPTH then
     Log.debug('Max depth reached, stopping evaluation')
@@ -127,7 +128,7 @@ local function chain_actions(action, solved_prefix, on_error)
     solved_prefix = solved_prefix,
   }, function(_, prompt, suggestions)
     -- Log.debug('Suggestions for Actions: {}', suggestions)
-    local lines, ms = filter_suggestions(task_id, suggestions)
+    local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
     if not lines or #lines == 0 then
       schedule(on_error)
     else
@@ -137,12 +138,9 @@ local function chain_actions(action, solved_prefix, on_error)
       else
         elapsed_time = elapsed_time + ms
         depth = depth + 1
-        chat:commit({
-          text = lines,
-          linebreak = true,
-        })
-        local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n') .. '\n'
-        chain_actions(action, new_solved_prefix, on_error)
+        chat:commit(lines)
+        local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
+        chain_actions(window, buffer, action, new_solved_prefix, on_error)
       end
     end
   end, function(err)
@@ -167,13 +165,8 @@ local function on_error(err)
   end
   Log.debug('Action elapsed time: {}', elapsed_time)
   Log.debug('Action depth: {}', depth)
-  local qed = '> Q.E.D.' .. '(' .. elapsed_time .. ' ms)' .. '\n'
-  chat:commit({
-    text = qed,
-    linebreak = true,
-    force = true,
-    fenced_code = true,
-  })
+  local qed = '\n\n' .. '> Q.E.D.' .. '(' .. elapsed_time .. ' ms)' .. '\n\n'
+  chat:commit(qed)
   current_eval = current_eval + 1
 end
 
@@ -269,29 +262,26 @@ local function make_filetype(buffer, range)
   return filetype
 end
 
-local function _start_action(action, prompt_opts)
+local function _start_action(window, buffer, action, prompt_opts)
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, prompt_opts, function(_, prompt, suggestions)
       -- Log.debug('Suggestions for Actions: {}', suggestions)
-      local lines, ms = filter_suggestions(task_id, suggestions)
+      local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
         reject()
       else
         depth = depth + 1
-        chat:commit({
-          text = lines,
-          linebreak = true,
-        })
-        local solved_prefix = prompt.prefix .. table.concat(lines, '\n') .. '\n'
+        chat:commit(lines)
+        local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         resolve(solved_prefix)
       end
     end, function(err)
       reject(err)
     end)
   end):forward(function(solved_prefix)
-    chain_actions(action, solved_prefix, on_error)
+    chain_actions(window, buffer, action, solved_prefix, on_error)
   end, function(err)
     schedule(on_error, err)
   end
@@ -304,10 +294,10 @@ local function chat_commit_inout(action_name, prompt_opts, range)
     prompt_preview.filename = 'unnamed'
   end
   local source_info = ' (' .. prompt_preview.filename .. ' ' .. range.start[1] .. ':' .. range['end'][1] .. ')'
-  local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info
+  local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info .. '\n'
   chat:commit(c_in)
-  chat:commit(prompt_preview.content)
-  local c_out = '# Out`[' .. current_eval .. ']`='
+  chat:commit(prompt_preview.content .. '\n')
+  local c_out = '# Out`[' .. current_eval .. ']`=' .. '\n'
   chat:commit(c_out)
 end
 
@@ -360,7 +350,7 @@ function ActionsEngine.start_action(action, opts)
   }
 
   chat_commit_inout(action_name, prompt_opts, range)
-  _start_action(action, prompt_opts)
+  _start_action(chat.win, chat.buffer, action, prompt_opts)
 end
 
 ---@param opts? ActionOptions

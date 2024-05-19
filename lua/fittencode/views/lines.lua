@@ -118,25 +118,25 @@ end
 ---@param row integer
 ---@param col integer
 ---@param lines string[]
-local function append_text_at_pos(row, col, lines)
+local function append_text_at_pos(buffer, row, col, lines)
   local count = vim.tbl_count(lines)
   for i = 1, count, 1 do
     local line = lines[i]
     local len = string.len(line)
     if i == 1 then
       if len ~= 0 then
-        api.nvim_buf_set_text(0, row, col, row, col, { line })
+        api.nvim_buf_set_text(buffer, row, col, row, col, { line })
       end
     else
-      local max = api.nvim_buf_line_count(0)
+      local max = api.nvim_buf_line_count(buffer)
       local try_row = row + i - 1
       if try_row >= max then
-        api.nvim_buf_set_lines(0, max, max, false, { line })
+        api.nvim_buf_set_lines(buffer, max, max, false, { line })
       else
-        if string.len(api.nvim_buf_get_lines(0, try_row, try_row + 1, false)[1]) ~= 0 then
-          api.nvim_buf_set_lines(0, try_row, try_row, false, { line })
+        if string.len(api.nvim_buf_get_lines(buffer, try_row, try_row + 1, false)[1]) ~= 0 then
+          api.nvim_buf_set_lines(buffer, try_row, try_row, false, { line })
         else
-          api.nvim_buf_set_text(0, try_row, 0, try_row, 0, { line })
+          api.nvim_buf_set_text(buffer, try_row, 0, try_row, 0, { line })
         end
       end
     end
@@ -146,16 +146,16 @@ end
 ---@param row integer
 ---@param col integer
 ---@param lines string[]
-local function move_cursor_to_text_end(row, col, lines)
+local function move_cursor_to_text_end(window, row, col, lines)
   local count = vim.tbl_count(lines)
   if count == 1 then
     local first_len = string.len(lines[1])
     if first_len ~= 0 then
-      api.nvim_win_set_cursor(0, { row + 1, col + first_len })
+      api.nvim_win_set_cursor(window, { row + 1, col + first_len })
     end
   else
     local last_len = string.len(lines[count])
-    api.nvim_win_set_cursor(0, { row + count, last_len })
+    api.nvim_win_set_cursor(window, { row + count, last_len })
   end
 end
 
@@ -185,13 +185,19 @@ local function format_wrap(fx)
 end
 
 ---@param lines string[]
-function M.set_text(lines)
+function M.set_text(window, buffer, lines, is_chat, is_last)
   format_wrap(function()
-    local row, col = Base.get_cursor()
-    undojoin()
+    local row, col = Base.get_cursor(window)
+    if is_last then
+      row = api.nvim_buf_line_count(buffer) - 1 or 0
+      col = string.len(api.nvim_buf_get_lines(buffer, row, row + 1, false)[1])
+    end
+    if not is_chat then
+      undojoin()
+    end
     -- Emit events `CursorMovedI` `CursorHoldI`
-    append_text_at_pos(row, col, lines)
-    move_cursor_to_text_end(row, col, lines)
+    append_text_at_pos(buffer, row, col, lines)
+    move_cursor_to_text_end(window, row, col, lines)
   end)
 end
 

@@ -9,6 +9,7 @@ local NetworkError = require('fittencode.client.network_error')
 local Sessions = require('fittencode.sessions')
 local Status = require('fittencode.status')
 local SuggestionsCache = require('fittencode.suggestions_cache')
+local SuggestionsPreprocessing = require('fittencode.suggestions_preprocessing')
 local TaskScheduler = require('fittencode.tasks')
 local PromptProviders = require('fittencode.prompt_providers')
 local Unicode = require('fittencode.unicode')
@@ -28,6 +29,12 @@ local tasks = nil
 ---@type Status
 local status = nil
 
+local function _set_text(lines)
+  local window = api.nvim_get_current_win()
+  local buffer = api.nvim_win_get_buf(window)
+  Lines.set_text(window, buffer, lines)
+end
+
 function M.setup()
   cache = SuggestionsCache:new()
   tasks = TaskScheduler:new()
@@ -35,112 +42,13 @@ function M.setup()
   status = Status:new({ tag = 'InlineEngine' })
 end
 
----@param suggestions string[]
-local function condense_nl(suggestions)
-  if not suggestions or #suggestions == 0 then
-    return
-  end
-
-  local is_all_empty = true
-  for _, suggestion in ipairs(suggestions) do
-    if #suggestion ~= 0 then
-      is_all_empty = false
-      break
-    end
-  end
-
-  if is_all_empty then
-    return {}
-  end
-
-  local row, col = Base.get_cursor()
-  local prev_line = nil
-  local cur_line = api.nvim_buf_get_lines(0, row, row + 1, false)[1]
-  if row > 1 then
-    prev_line = api.nvim_buf_get_lines(0, row - 1, row, false)[1]
-  end
-
-  local nls = {}
-  local remove_all = false
-  local keep_first = false
-
-  if vim.bo.filetype == 'TelescopePrompt' then
-    remove_all = true
-  end
-
-  if #cur_line == 0 then
-    if not prev_line or #prev_line == 0 then
-      remove_all = true
-    end
-  else
-    if col == #cur_line then
-      keep_first = true
-    end
-  end
-
-  if not remove_all and not keep_first then
-    return suggestions
-  end
-
-  Log.debug('remove_all: {}, keep_first: {}', remove_all, keep_first)
-
-  local is_processed = false
-  for i, suggestion in ipairs(suggestions) do
-    if #suggestion == 0 and not is_processed then
-      if remove_all then
-        -- ignore
-      elseif keep_first and i ~= 1 then
-        -- ignore
-      else
-        table.insert(nls, suggestion)
-      end
-    else
-      is_processed = true
-      table.insert(nls, suggestion)
-    end
-  end
-
-  if vim.bo.filetype == 'TelescopePrompt' then
-    nls = { nls[1] }
-  end
-
-  return nls
-end
-
----@param suggestions string[]
-local function normalize_indent(suggestions)
-  if not suggestions or #suggestions == 0 then
-    return
-  end
-  if not vim.bo.expandtab then
-    return
-  end
-  local nor = {}
-  for i, suggestion in ipairs(suggestions) do
-    -- replace `\t` with space
-    suggestion = suggestion:gsub('\t', string.rep(' ', vim.bo.tabstop))
-    nor[i] = suggestion
-  end
-  return nor
-end
-
-local function replace_slash(suggestions)
-  if not suggestions or #suggestions == 0 then
-    return
-  end
-  local slash = {}
-  for i, suggestion in ipairs(suggestions) do
-    suggestion = suggestion:gsub('\\"', '"')
-    slash[i] = suggestion
-  end
-  return slash
-end
-
 ---@param task_id integer
 ---@param suggestions? Suggestions
 ---@return Suggestions?
 local function process_suggestions(task_id, suggestions)
-  local row, col = Base.get_cursor()
+  local window = api.nvim_get_current_win()
+  local buffer = api.nvim_win_get_buf(window)
+  local row, col = Base.get_cursor(window)
   if not tasks:match_clean(task_id, row, col) then
     Log.debug('Completion request is outdated, discarding; task_id: {}, row: {}, col: {}', task_id, row, col)
     return
@@ -153,28 +61,7 @@ local function process_suggestions(task_id, suggestions)
 
   Log.debug('Suggestions received; task_id: {}, suggestions: {}', task_id, suggestions)
 
-  local nls = condense_nl(suggestions)
-  if nls then
-    suggestions = nls
-  end
-
-  local nor = normalize_indent(suggestions)
-  if nor then
-    suggestions = nor
-  end
-
-  local slash = replace_slash(suggestions)
-  if slash then
-    suggestions = slash
-  end
-
-  if #suggestions == 0 then
-    return
-  end
-
-  Log.debug('Processed suggestions: {}', suggestions)
-
-  return suggestions
+  return SuggestionsPreprocessing.run(window, buffer, suggestions)
 end
 
 local function apply_suggestion(task_id, row, col, suggestion)
@@ -310,7 +197,7 @@ function M.accept_all_suggestions()
   Log.debug('Pretreatment cached lines: {}', cache:get_lines())
 
   Lines.clear_virt_text()
-  Lines.set_text(cache:get_lines())
+  _set_text(cache:get_lines())
 
   M.reset()
 
@@ -356,16 +243,16 @@ function M.accept_line()
     local stage = cache:get_count() - 1
 
     if cur == stage then
-      Lines.set_text({ line })
+      _set_text({ line })
       Log.debug('Set line: {}', line)
-      Lines.set_text({ '', '' })
+      _set_text({ '', '' })
       Log.debug('Set empty new line')
     else
       if cur == 0 then
-        Lines.set_text({ line })
+        _set_text({ line })
         Log.debug('Set line: {}', line)
       else
-        Lines.set_text({ line, '' })
+        _set_text({ line, '' })
         Log.debug('Set line and empty new line; line: {}', line)
       end
     end
@@ -454,15 +341,15 @@ function M.accept_word()
     if string.len(line) == 0 then
       cache:remove_line(1)
       if M.has_suggestions() then
-        Lines.set_text({ word, '' })
+        _set_text({ word, '' })
         Log.debug('Set word and empty new line, word: {}', word)
       else
-        Lines.set_text({ word })
+        _set_text({ word })
         Log.debug('Set word: {}', word)
       end
     else
       cache:update_line(1, line)
-      Lines.set_text({ word })
+      _set_text({ word })
       Log.debug('Set word: {}', word)
     end
 

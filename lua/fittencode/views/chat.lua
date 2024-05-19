@@ -1,6 +1,7 @@
 local api = vim.api
 
 local Base = require('fittencode.base')
+local Lines = require('fittencode.views.lines')
 local Log = require('fittencode.log')
 
 ---@class Chat
@@ -48,7 +49,7 @@ function M:show()
     end, { buffer = self.buffer })
 
     if #self.text > 0 then
-      api.nvim_win_set_cursor(self.win, { #self.text, 0 })
+      api.nvim_win_set_cursor(self.win, { #self.text, self.text[#self.text]:len() })
     end
   end
 end
@@ -142,26 +143,27 @@ local function set_lines(self, lines)
     api.nvim_set_option_value('readonly', true, { buf = self.buffer })
   end
 
-  if api.nvim_win_is_valid(self.win) then
-    api.nvim_win_set_cursor(self.win, { #self.text, 0 })
-  end
+  -- if api.nvim_win_is_valid(self.win) then
+  --   api.nvim_win_set_cursor(self.win, { #self.text, self.text[#self.text]:len() })
+  -- end
 end
 
----@param opts? ChatCommitOptions|string
-function M:commit(opts)
-  if not opts then
-    return
+function M:commit(lines)
+  if type(lines) == 'string' then
+    lines = vim.split(lines, '\n')
   end
-
-  if type(opts) == 'string' then
-    opts = { text = opts }
+  if api.nvim_buf_is_valid(self.buffer) and api.nvim_win_is_valid(self.win) then
+    -- local count = api.nvim_buf_line_count(self.buffer)
+    -- if count > 0 then
+    --   local last_line = api.nvim_buf_get_lines(self.buffer, count - 1, count, false)[1]
+    --   api.nvim_win_set_cursor(self.win, { count, #last_line + 1 })
+    -- end
+    api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
+    api.nvim_set_option_value('readonly', false, { buf = self.buffer })
+    Lines.set_text(self.win, self.buffer, lines, true, true)
+    api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
+    api.nvim_set_option_value('readonly', true, { buf = self.buffer })
   end
-
-  local lines = make_lines(self, opts)
-  if not lines then
-    return
-  end
-  set_lines(self, lines)
 end
 
 local function _sub_match(s, pattern)
