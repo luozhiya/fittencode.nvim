@@ -71,7 +71,7 @@ end
 local stack = {}
 
 local function push_stack(x)
-  if #stack == 0 or stack[#stack] ~= x then
+  if #stack == 0 then
     table.insert(stack, x)
   else
     table.remove(stack)
