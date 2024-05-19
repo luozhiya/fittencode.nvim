@@ -41,8 +41,9 @@ function M.tab()
 end
 
 ---@param suggestions? Suggestions
+---@param hi? string
 ---@return VirtText|nil
-local function generate_virt_text(suggestions)
+local function generate_virt_text(suggestions, hi)
   if suggestions == nil then
     return
   end
@@ -53,12 +54,13 @@ local function generate_virt_text(suggestions)
     if is_whitespace_line(line) then
       color = Color.FittenSuggestionWhitespace
     end
+    color = hi or color
     table.insert(virt_text, { { line, color } })
   end
   return virt_text
 end
 
-local function set_extmark(virt_text)
+local function set_extmark(virt_text, hl_mode)
   if virt_text == nil or vim.tbl_count(virt_text) == 0 then
     return
   end
@@ -67,18 +69,20 @@ local function set_extmark(virt_text)
 
   local row, col = Base.get_cursor()
 
+  hl_mode = hl_mode or 'combine'
+
   if Config.internal.virtual_text.inline then
     api.nvim_buf_set_extmark(0, namespace, row, col, {
       virt_text = virt_text[1],
       virt_text_pos = 'inline',
-      hl_mode = 'combine',
+      hl_mode = hl_mode,
     })
   else
     api.nvim_buf_set_extmark(0, namespace, row, col, {
       virt_text = virt_text[1],
       -- eol will added space to the end of the line
       virt_text_pos = 'overlay',
-      hl_mode = 'combine',
+      hl_mode = hl_mode,
     })
   end
 
@@ -87,7 +91,7 @@ local function set_extmark(virt_text)
   if vim.tbl_count(virt_text) > 0 then
     api.nvim_buf_set_extmark(0, namespace, row, 0, {
       virt_lines = virt_text,
-      hl_mode = 'combine',
+      hl_mode = hl_mode,
     })
   end
 end
@@ -192,12 +196,21 @@ function M.set_text(lines)
 end
 
 ---@param suggestions? Suggestions
-function M.render_virt_text(suggestions)
-  committed_virt_text = generate_virt_text(suggestions)
+---@param show_time? integer
+---@param hi? string
+---@param hl_mode? string
+function M.render_virt_text(suggestions, show_time, hi, hl_mode)
+  committed_virt_text = generate_virt_text(suggestions, hi)
   move_to_center_vertical(vim.tbl_count(committed_virt_text or {}))
   -- api.nvim_command('redraw!')
   api.nvim_buf_clear_namespace(0, namespace, 0, -1)
-  set_extmark(committed_virt_text)
+  set_extmark(committed_virt_text, hl_mode)
+
+  if show_time and show_time > 0 then
+    vim.defer_fn(function()
+      M.clear_virt_text()
+    end, show_time)
+  end
 end
 
 function M.clear_virt_text()

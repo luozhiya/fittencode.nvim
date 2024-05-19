@@ -2,6 +2,7 @@ local api = vim.api
 
 local Base = require('fittencode.base')
 local Config = require('fittencode.config')
+local Color = require('fittencode.color')
 local Lines = require('fittencode.views.lines')
 local Log = require('fittencode.log')
 local NetworkError = require('fittencode.client.network_error')
@@ -11,6 +12,8 @@ local SuggestionsCache = require('fittencode.suggestions_cache')
 local TaskScheduler = require('fittencode.tasks')
 local PromptProviders = require('fittencode.prompt_providers')
 local Unicode = require('fittencode.unicode')
+
+local schedule = Base.schedule
 
 local SC = Status.C
 
@@ -194,21 +197,18 @@ local function _generate_one_stage(row, col, on_success, on_error)
   Sessions.request_generate_one_stage(task_id, PromptProviders.get_current_prompt_ctx(), function(id, _, suggestions)
     local processed = process_suggestions(id, suggestions)
     if processed then
-      apply_suggestion(task_id, row, col, processed)
       status:update(SC.SUGGESTIONS_READY)
+      apply_suggestion(task_id, row, col, processed)
+      schedule(on_success, processed)
     else
       status:update(SC.NO_MORE_SUGGESTIONS)
-    end
-    if on_success then
-      on_success(processed)
+      schedule(on_error)
     end
   end, function(err)
     if type(err) == 'table' and getmetatable(err) == NetworkError then
       status:update(SC.NETWORK_ERROR)
     end
-    if on_error then
-      on_error()
-    end
+    schedule(on_error)
   end)
 end
 
@@ -228,14 +228,12 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   Log.debug('Cached row: {}, col: {}', cache:get_cursor())
 
   if not force and cache:equal_cursor(row, col) and M.has_suggestions() then
+    status:update(SC.SUGGESTIONS_READY)
     Log.debug('Cached cursor matches requested cursor')
     if M.is_inline_enabled() then
       Lines.render_virt_text(cache:get_lines())
     end
-    status:update(SC.SUGGESTIONS_READY)
-    if on_error then
-      on_error()
-    end
+    schedule(on_error)
     return
   else
     Log.debug('Cached cursor is outdated')
@@ -248,9 +246,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
 
   if not Sessions.ready_for_generate() then
     Log.debug('Not ready for generate')
-    if on_error then
-      on_error()
-    end
+    schedule(on_error)
     return
   end
 
@@ -274,11 +270,29 @@ function M.get_suggestions()
   return cache
 end
 
-local function generate_one_stage_at_cursor()
+local function generate_one_stage_at_cursor(on_success, on_error)
   M.reset()
 
   local row, col = Base.get_cursor()
-  M.generate_one_stage(row, col, true)
+  M.generate_one_stage(row, col, true, 0, on_success, on_error)
+end
+
+-- When manually triggering completion, if no suggestions are generated, a prompt will appear to the right of the cursor.
+function M.triggering_completion()
+  Log.debug('Triggering completion...')
+
+  if not M.is_inline_enabled() then
+    return
+  end
+
+  if M.has_suggestions() then
+    return
+  end
+
+  local prompt = ' (Currently no completion options available)'
+  generate_one_stage_at_cursor(nil, function()
+    Lines.render_virt_text({ prompt }, 2000, Color.FittenNoMoreSuggestion, 'replace')
+  end)
 end
 
 function M.accept_all_suggestions()
@@ -466,11 +480,11 @@ function M.accept_word()
 end
 
 function M.reset()
+  status:update(SC.IDLE)
   if M.is_inline_enabled() then
     Lines.clear_virt_text()
   end
   cache:flush()
-  status:update(SC.IDLE)
 end
 
 function M.advance()

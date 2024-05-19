@@ -186,11 +186,12 @@ require('cmp').setup({
 
 ### Default Mappings
 
-| Mappings    | Action                 |
-|-------------|------------------------|
-| `Tab`       | Accept all suggestions |
-| `Ctrl + 🡫` | Accept line            |
-| `Ctrl + 🡪` | Accept word            |
+| Mappings    | Action                         |
+|-------------|--------------------------------|
+| `Tab`       | Accept all suggestions         |
+| `Ctrl + 🡫` | Accept line                    |
+| `Ctrl + 🡪` | Accept word                    |
+| `Alt + \`   | Manually triggering completion |
 
 ## ✏️ APIs
 
@@ -234,6 +235,7 @@ vim.log = {
 | `register()`                                   | Register to Fitten Code AI                                      |
 | `set_log_level(level)`                         | Set the log level                                               |
 | `get_current_status()`                         | Get the current status of the `InlineEngine` and `ActionEngine` |
+| `triggering_completion()`                      | Manually triggering completion                                  |
 | `has_suggestion()`                             | Check if there is a suggestion                                  |
 | `accept_all_suggestions()`                     | Accept all suggestions                                          |
 | `accept_line()`                                | Accept line                                                     |
