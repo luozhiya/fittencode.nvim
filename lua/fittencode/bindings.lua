@@ -242,6 +242,7 @@ function M.setup_keymaps()
   end)
   Base.map('i', '<C-Down>', API.accept_line)
   Base.map('i', '<C-Right>', API.accept_word)
+  Base.map('i', '<A-\\>', API.triggering_completion)
 end
 
 -- '<80>kd', '<80>kD' in Lua

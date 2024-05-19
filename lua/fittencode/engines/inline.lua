@@ -2,6 +2,7 @@ local api = vim.api
 
 local Base = require('fittencode.base')
 local Config = require('fittencode.config')
+local Color = require('fittencode.color')
 local Lines = require('fittencode.views.lines')
 local Log = require('fittencode.log')
 local NetworkError = require('fittencode.client.network_error')
@@ -11,6 +12,8 @@ local SuggestionsCache = require('fittencode.suggestions_cache')
 local TaskScheduler = require('fittencode.tasks')
 local PromptProviders = require('fittencode.prompt_providers')
 local Unicode = require('fittencode.unicode')
+
+local schedule = Base.schedule
 
 local SC = Status.C
 
@@ -196,11 +199,14 @@ local function _generate_one_stage(row, col, on_success, on_error)
     if processed then
       apply_suggestion(task_id, row, col, processed)
       status:update(SC.SUGGESTIONS_READY)
+      if on_success then
+        on_success(processed)
+      end
     else
       status:update(SC.NO_MORE_SUGGESTIONS)
-    end
-    if on_success then
-      on_success(processed)
+      if on_error then
+        on_error()
+      end
     end
   end, function(err)
     if type(err) == 'table' and getmetatable(err) == NetworkError then
@@ -274,11 +280,29 @@ function M.get_suggestions()
   return cache
 end
 
-local function generate_one_stage_at_cursor()
+local function generate_one_stage_at_cursor(on_success, on_error)
   M.reset()
 
   local row, col = Base.get_cursor()
-  M.generate_one_stage(row, col, true)
+  M.generate_one_stage(row, col, true, 0, on_success, on_error)
+end
+
+-- When manually triggering completion, if no suggestions are generated, a prompt will appear to the right of the cursor.
+function M.triggering_completion()
+  Log.debug('Triggering completion...')
+
+  if not M.is_inline_enabled() then
+    return
+  end
+
+  if M.has_suggestions() then
+    return
+  end
+
+  local prompt = ' (Currently no completion options available)'
+  generate_one_stage_at_cursor(nil, function()
+    Lines.render_virt_text({ prompt }, 2000, Color.FittenNoMoreSuggestion, 'replace')
+  end)
 end
 
 function M.accept_all_suggestions()

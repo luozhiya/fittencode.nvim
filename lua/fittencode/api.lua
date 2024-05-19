@@ -26,6 +26,9 @@ M.api = {
   get_current_status = function()
     return Engines.get_status()
   end,
+  triggering_completion = function()
+    InlineEngine.triggering_completion()
+  end,
   ---@return boolean
   has_suggestions = function()
     return InlineEngine.has_suggestions()
