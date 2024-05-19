@@ -199,22 +199,16 @@ local function _generate_one_stage(row, col, on_success, on_error)
     if processed then
       apply_suggestion(task_id, row, col, processed)
       status:update(SC.SUGGESTIONS_READY)
-      if on_success then
-        on_success(processed)
-      end
+      schedule(on_success, processed)
     else
       status:update(SC.NO_MORE_SUGGESTIONS)
-      if on_error then
-        on_error()
-      end
+      schedule(on_error)
     end
   end, function(err)
     if type(err) == 'table' and getmetatable(err) == NetworkError then
       status:update(SC.NETWORK_ERROR)
     end
-    if on_error then
-      on_error()
-    end
+    schedule(on_error)
   end)
 end
 
@@ -239,9 +233,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
       Lines.render_virt_text(cache:get_lines())
     end
     status:update(SC.SUGGESTIONS_READY)
-    if on_error then
-      on_error()
-    end
+    schedule(on_error)
     return
   else
     Log.debug('Cached cursor is outdated')
@@ -254,9 +246,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
 
   if not Sessions.ready_for_generate() then
     Log.debug('Not ready for generate')
-    if on_error then
-      on_error()
-    end
+    schedule(on_error)
     return
   end
 
