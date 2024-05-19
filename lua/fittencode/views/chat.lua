@@ -83,6 +83,23 @@ end
 ---@field force? boolean
 ---@field fenced_code? boolean
 
+local function set_lines(self, lines)
+  if self.buffer then
+    api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
+    if #self.text == 0 then
+      api.nvim_buf_set_lines(self.buffer, 0, -1, false, lines)
+    else
+      api.nvim_buf_set_lines(self.buffer, -1, -1, false, lines)
+    end
+    api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
+  end
+  table.move(lines, 1, #lines, #self.text + 1, self.text)
+
+  if api.nvim_win_is_valid(self.win) then
+    api.nvim_win_set_cursor(self.win, { #self.text, 0 })
+  end
+end
+
 ---@param opts? ChatCommitOptions|string
 function M:commit(opts)
   if not opts then
@@ -124,20 +141,7 @@ function M:commit(opts)
       table.insert(lines, 1, '')
     end
   end
-  if self.buffer then
-    api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
-    if #self.text == 0 then
-      api.nvim_buf_set_lines(self.buffer, 0, -1, false, lines)
-    else
-      api.nvim_buf_set_lines(self.buffer, -1, -1, false, lines)
-    end
-    api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
-  end
-  table.move(lines, 1, #lines, #self.text + 1, self.text)
-
-  if api.nvim_win_is_valid(self.win) then
-    api.nvim_win_set_cursor(self.win, { #self.text, 0 })
-  end
+  set_lines(self, lines)
 end
 
 local function _sub_match(s, pattern)
