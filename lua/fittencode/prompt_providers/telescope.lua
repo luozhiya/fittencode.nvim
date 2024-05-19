@@ -36,7 +36,7 @@ function M:execute(ctx)
     return
   end
 
-  local filename = 'Telescope.md'
+  local filename = ''
 
   local row = ctx.row
   local col = ctx.col

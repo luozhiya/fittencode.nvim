@@ -25,10 +25,24 @@ function M:get_priority()
   return self.priority
 end
 
----@param ctx PromptContext
+---@class PromptContextDefault : PromptContext
+---@field max_lines? number
+---@field max_chars? number
+
+local MAX_LINES = 10000
+local MAX_CHARS = MAX_LINES * 100
+
+---@param ctx PromptContextDefault
 ---@return Prompt?
 function M:execute(ctx)
   if not api.nvim_buf_is_valid(ctx.buffer) or ctx.row == nil or ctx.col == nil then
+    return
+  end
+
+  local max_lines = ctx.max_lines or MAX_LINES
+  local current_lines = api.nvim_buf_line_count(ctx.buffer)
+  if current_lines > max_lines then
+    Log.warn('Your buffer has too many lines({}), prompt generation has been disabled.', current_lines)
     return
   end
 
@@ -46,6 +60,12 @@ function M:execute(ctx)
   local prefix = table.concat(api.nvim_buf_get_text(ctx.buffer, 0, 0, row, col, {}), '\n')
   ---@diagnostic disable-next-line: param-type-mismatch
   local suffix = table.concat(api.nvim_buf_get_text(ctx.buffer, row, col, -1, -1, {}), '\n')
+
+  local current_chars = string.len(prefix) + string.len(suffix)
+  if current_chars > MAX_CHARS then
+    Log.warn('Your buffer has too many characters({}), prompt generation has been disabled.', current_chars)
+    return
+  end
 
   return {
     name = self.name,
