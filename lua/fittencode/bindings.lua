@@ -26,6 +26,9 @@ function M.setup_autocmds()
       if not InlineEngine.is_inline_enabled() then
         return
       end
+      if not Config.options.inline_completion.auto_triggering_completion then
+        return
+      end
       if ignore then
         return
       end
@@ -40,6 +43,9 @@ function M.setup_autocmds()
     pattern = '*',
     callback = function()
       -- Log.debug('CursorMovedI')
+      if not Config.options.inline_completion.auto_triggering_completion then
+        return
+      end
       if ignore then
         return
       end
@@ -55,6 +61,9 @@ function M.setup_autocmds()
     pattern = '*',
     callback = function()
       -- Log.debug('TextChangedI')
+      if not Config.options.inline_completion.auto_triggering_completion then
+        return
+      end
       if ignore then
         return
       end
@@ -247,8 +256,8 @@ end
 
 -- '<80>kd', '<80>kD' in Lua
 local FILTERED_KEYS = {}
-vim.tbl_map(function(trigger)
-  FILTERED_KEYS[#FILTERED_KEYS + 1] = api.nvim_replace_termcodes(trigger, true, true, true)
+vim.tbl_map(function(key)
+  FILTERED_KEYS[#FILTERED_KEYS + 1] = api.nvim_replace_termcodes(key, true, true, true)
 end, {
   '<Backspace>',
   '<Delete>',

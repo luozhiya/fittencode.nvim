@@ -106,6 +106,9 @@ use {
     -- Disable auto completion when pressing Backspace or Delete.
     ---@type boolean
     disable_completion_when_delete = false,
+    -- Auto triggering completion
+    ---@type boolean
+    auto_triggering_completion = true,
   },
   delay_completion = {
     -- Delay time for inline completion (in milliseconds).
@@ -121,8 +124,8 @@ use {
   },
   -- Set the mode of the completion.
   -- Available options:
-  -- - 'inline' (default)
-  -- - 'source'
+  -- - 'inline' (VSCode style inline completion)
+  -- - 'source' (integrates into other completion plugins)
   completion_mode = 'inline',
   ---@class LogOptions
   log = {

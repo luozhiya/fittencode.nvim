@@ -44,6 +44,9 @@ local defaults = {
     -- Disable auto completion when pressing Backspace or Delete.
     ---@type boolean
     disable_completion_when_delete = false,
+    -- Auto triggering completion
+    ---@type boolean
+    auto_triggering_completion = true,
   },
   delay_completion = {
     -- Delay time for inline completion (in milliseconds).
