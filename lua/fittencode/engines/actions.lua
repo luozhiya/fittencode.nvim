@@ -137,7 +137,10 @@ local function chain_actions(action, solved_prefix, on_error)
       else
         elapsed_time = elapsed_time + ms
         depth = depth + 1
-        chat:commit(lines, true)
+        chat:commit({
+          text = lines,
+          linebreak = true,
+        })
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n') .. '\n'
         chain_actions(action, new_solved_prefix, on_error)
       end
@@ -164,7 +167,13 @@ local function on_error(err)
   end
   Log.debug('Action elapsed time: {}', elapsed_time)
   Log.debug('Action depth: {}', depth)
-  chat:commit('> Q.E.D.' .. '(' .. elapsed_time .. ' ms)' .. '\n', true, true, true)
+  local qed = '> Q.E.D.' .. '(' .. elapsed_time .. ' ms)' .. '\n'
+  chat:commit({
+    text = qed,
+    linebreak = true,
+    force = true,
+    fenced_code = true,
+  })
   current_eval = current_eval + 1
 end
 
@@ -271,7 +280,10 @@ local function _start_action(action, prompt_opts)
         reject()
       else
         depth = depth + 1
-        chat:commit(lines, true)
+        chat:commit({
+          text = lines,
+          linebreak = true,
+        })
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n') .. '\n'
         resolve(solved_prefix)
       end

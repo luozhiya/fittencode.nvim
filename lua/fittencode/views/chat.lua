@@ -6,11 +6,10 @@ local Log = require('fittencode.log')
 ---@class Chat
 ---@field win? integer
 ---@field buffer? integer
----@field text? string
+---@field text string[]
 ---@field show function
 ---@field commit function
 ---@field is_repeated function
-
 local M = {}
 
 function M:new()
@@ -78,11 +77,27 @@ local function push_stack(x)
   end
 end
 
----@param text? string|string[]
----@param linebreak? boolean
----@param force? boolean
----@param fenced_code? boolean
-function M:commit(text, linebreak, force, fenced_code)
+---@class ChatCommitOptions
+---@field text? string|string[]
+---@field linebreak? boolean
+---@field force? boolean
+---@field fenced_code? boolean
+
+---@param opts? ChatCommitOptions|string
+function M:commit(opts)
+  if not opts then
+    return
+  end
+
+  if type(opts) == 'string' then
+    opts = { text = opts }
+  end
+
+  local text = opts.text
+  local linebreak = opts.linebreak
+  local force = opts.force
+  local fenced_code = opts.fenced_code
+
   local lines = nil
   if type(text) == 'string' then
     lines = vim.split(text, '\n')
