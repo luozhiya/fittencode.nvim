@@ -33,6 +33,7 @@ function M:show()
     api.nvim_win_set_buf(self.win, self.buffer)
 
     api.nvim_set_option_value('filetype', 'markdown', { buf = self.buffer })
+    api.nvim_set_option_value('readonly', true, { buf = self.buffer })
     api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
     api.nvim_set_option_value('wrap', true, { win = self.win })
     api.nvim_set_option_value('linebreak', true, { win = self.win })
@@ -128,13 +129,14 @@ local function set_lines(self, lines)
 
   if self.buffer and api.nvim_buf_is_valid(self.buffer) then
     api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
-    api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
+    api.nvim_set_option_value('readonly', false, { buf = self.buffer })
     if #self.text == 0 then
       api.nvim_buf_set_lines(self.buffer, 0, -1, false, lines)
     else
       api.nvim_buf_set_lines(self.buffer, -1, -1, false, lines)
     end
     api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
+    api.nvim_set_option_value('readonly', true, { buf = self.buffer })
   end
 
   if api.nvim_win_is_valid(self.win) then
