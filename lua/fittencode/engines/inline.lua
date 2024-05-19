@@ -197,8 +197,8 @@ local function _generate_one_stage(row, col, on_success, on_error)
   Sessions.request_generate_one_stage(task_id, PromptProviders.get_current_prompt_ctx(), function(id, _, suggestions)
     local processed = process_suggestions(id, suggestions)
     if processed then
-      apply_suggestion(task_id, row, col, processed)
       status:update(SC.SUGGESTIONS_READY)
+      apply_suggestion(task_id, row, col, processed)
       schedule(on_success, processed)
     else
       status:update(SC.NO_MORE_SUGGESTIONS)
@@ -228,11 +228,11 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   Log.debug('Cached row: {}, col: {}', cache:get_cursor())
 
   if not force and cache:equal_cursor(row, col) and M.has_suggestions() then
+    status:update(SC.SUGGESTIONS_READY)
     Log.debug('Cached cursor matches requested cursor')
     if M.is_inline_enabled() then
       Lines.render_virt_text(cache:get_lines())
     end
-    status:update(SC.SUGGESTIONS_READY)
     schedule(on_error)
     return
   else
@@ -480,11 +480,11 @@ function M.accept_word()
 end
 
 function M.reset()
+  status:update(SC.IDLE)
   if M.is_inline_enabled() then
     Lines.clear_virt_text()
   end
   cache:flush()
-  status:update(SC.IDLE)
 end
 
 function M.advance()
