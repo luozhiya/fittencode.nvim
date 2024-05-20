@@ -7,7 +7,7 @@ local Log = require('fittencode.log')
 ---@class Chat
 ---@field window? integer
 ---@field buffer? integer
----@field text string[]
+---@field content string[]
 ---@field show function
 ---@field commit function
 ---@field is_repeated function
@@ -15,31 +15,40 @@ local M = {}
 
 function M:new()
   local o = {
-    text = {}
+    content = {}
   }
   self.__index = self
   return setmetatable(o, self)
 end
 
-local function _commit(self, lines)
-  if api.nvim_buf_is_valid(self.buffer) and api.nvim_win_is_valid(self.win) then
-    api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
-    api.nvim_set_option_value('readonly', false, { buf = self.buffer })
-    Lines.set_text(self.win, self.buffer, lines, true, true)
-    api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
-    api.nvim_set_option_value('readonly', true, { buf = self.buffer })
+local function _commit(window, buffer, lines)
+  if api.nvim_buf_is_valid(buffer) and api.nvim_win_is_valid(window) then
+    api.nvim_set_option_value('modifiable', true, { buf = buffer })
+    api.nvim_set_option_value('readonly', false, { buf = buffer })
+    Lines.set_text({
+      window = window,
+      buffer = buffer,
+      lines = lines,
+      is_undo_disabled = true,
+      is_last = true
+    })
+    api.nvim_set_option_value('modifiable', false, { buf = buffer })
+    api.nvim_set_option_value('readonly', true, { buf = buffer })
   end
 end
 
-local function scroll_to_last(self)
-  if #self.text > 0 then
-    for _, lines in ipairs(self.text) do
-      _commit(self, lines)
+local function set_content(window, buffer, text)
+  if #text > 0 then
+    for _, lines in ipairs(text) do
+      _commit(window, buffer, lines)
     end
-    local row = math.max(api.nvim_buf_line_count(self.buffer), 1)
-    local col = api.nvim_buf_get_lines(self.buffer, row - 1, row, false)[1]:len()
-    api.nvim_win_set_cursor(self.win, { row, col })
   end
+end
+
+local function scroll_to_last(window, buffer)
+  local row = math.max(api.nvim_buf_line_count(buffer), 1)
+  local col = api.nvim_buf_get_lines(buffer, row - 1, row, false)[1]:len()
+  api.nvim_win_set_cursor(window, { row, col })
 end
 
 local function set_option_value(window, buffer)
@@ -70,10 +79,10 @@ function M:show()
   self.window = api.nvim_get_current_win()
   api.nvim_win_set_buf(self.window, self.buffer)
 
-  set_option_value(self.window, self.buffer)
   Base.map('n', 'q', function() self:close() end, { buffer = self.buffer })
 
-  scroll_to_last(self)
+  set_option_value(self.window, self.buffer)
+  scroll_to_last(self.window, self.buffer)
 end
 
 function M:close()
@@ -92,9 +101,9 @@ function M:commit(lines)
   if type(lines) == 'string' then
     lines = vim.split(lines, '\n')
   end
-  table.insert(self.text, lines)
-  _commit(self, lines)
-  Log.debug('Chat text: {}', self.text)
+  table.insert(self.content, lines)
+  _commit(self.window, self.buffer, lines)
+  Log.debug('Chat text: {}', self.content)
 end
 
 local function _sub_match(s, pattern)
@@ -123,13 +132,13 @@ function M:is_repeated(lines)
 end
 
 ---@return string[]
-function M:get_text()
-  return self.text
+function M:get_content()
+  return self.content
 end
 
 ---@return boolean
-function M:has_text()
-  return #self.text > 0
+function M:has_content()
+  return #self.content > 0
 end
 
 return M

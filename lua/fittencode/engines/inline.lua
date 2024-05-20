@@ -32,7 +32,11 @@ local status = nil
 local function _set_text(lines)
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
-  Lines.set_text(window, buffer, lines)
+  Lines.set_text({
+    window = window,
+    buffer = buffer,
+    lines = lines,
+  })
 end
 
 function M.setup()

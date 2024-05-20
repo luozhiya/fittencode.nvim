@@ -185,14 +185,20 @@ local function format_wrap(fx)
 end
 
 ---@class LinesSetTextOptions
----@field window? integer
----@field buffer? integer
+---@field window integer
+---@field buffer integer
 ---@field lines string[]
 ---@field is_undo_disabled? boolean
 ---@field is_last? boolean
 
----@param lines string[]
-function M.set_text(window, buffer, lines, is_undo_disabled, is_last)
+---@param opts LinesSetTextOptions
+function M.set_text(opts)
+  local window = opts.window
+  local buffer = opts.buffer
+  local lines = opts.lines or {}
+  local is_undo_disabled = opts.is_undo_disabled or false
+  local is_last = opts.is_last or false
+
   format_wrap(function()
     local row, col = Base.get_cursor(window)
     if is_last then
