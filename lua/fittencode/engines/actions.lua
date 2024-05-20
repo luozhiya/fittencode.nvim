@@ -36,7 +36,7 @@ local SC = Status.C
 ---@field refactor_code function
 local ActionsEngine = {}
 
-local Actions = {
+local ACTIONS = {
   StartChat = 0,
   DocumentCode = 1,
   EditCode = 2,
@@ -83,12 +83,17 @@ local status = nil
 
 ---@param action integer
 local function get_action_name(action)
-  return Base.tbl_key_by_value(Actions, action)
+  return Base.tbl_key_by_value(ACTIONS, action)
+end
+
+local ACTION_TYPES = {}
+for _, action in pairs(ACTIONS) do
+  ACTION_TYPES[action] = 'FittenCodePrompt/Actions/' .. get_action_name(action)
 end
 
 ---@param action integer
 local function get_action_type(action)
-  return 'FittenCodePrompt/Actions/' .. get_action_name(action)
+  return ACTION_TYPES[action]
 end
 
 ---@param task_id integer
@@ -284,8 +289,7 @@ local function _start_action(window, buffer, action, prompt_opts)
     chain_actions(window, buffer, action, solved_prefix, on_error)
   end, function(err)
     schedule(on_error, err)
-  end
-  )
+  end)
 end
 
 local function chat_commit_inout(action_name, prompt_opts, range)
@@ -301,7 +305,7 @@ local function chat_commit_inout(action_name, prompt_opts, range)
   chat:commit(c_out)
 end
 
----@param action number
+---@param action integer
 ---@param opts? ActionOptions
 ---@return nil
 function ActionsEngine.start_action(action, opts)
@@ -355,61 +359,59 @@ end
 
 ---@param opts? ActionOptions
 function ActionsEngine.document_code(opts)
-  local defaults = {
-  }
+  local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
-  ActionsEngine.start_action(Actions.DocumentCode, merged)
+  ActionsEngine.start_action(ACTIONS.DocumentCode, merged)
 end
 
 ---@param opts? ActionOptions
 function ActionsEngine.edit_code(opts)
-  local defaults = {
-  }
+  local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
   if merged.prompt == nil or #merged.prompt == 0 then
     local input_opts = { prompt = 'Prompt for FittenCode EditCode: ', default = '', }
     vim.ui.input(input_opts, function(prompt)
+      if not prompt or #prompt == 0 then
+        Log.debug('No Prompt for FittenCode EditCode')
+        return
+      end
       Log.debug('Prompt for FittenCode EditCode: ' .. prompt)
-      ActionsEngine.start_action(Actions.EditCode, {
+      ActionsEngine.start_action(ACTIONS.EditCode, {
         prompt = prompt,
         content = merged.content
       })
     end)
   else
-    ActionsEngine.start_action(Actions.EditCode, merged)
+    ActionsEngine.start_action(ACTIONS.EditCode, merged)
   end
 end
 
 ---@param opts? ActionOptions
 function ActionsEngine.explain_code(opts)
-  local defaults = {
-  }
+  local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
-  ActionsEngine.start_action(Actions.ExplainCode, merged)
+  ActionsEngine.start_action(ACTIONS.ExplainCode, merged)
 end
 
 ---@param opts? ActionOptions
 function ActionsEngine.find_bugs(opts)
-  local defaults = {
-  }
+  local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
-  ActionsEngine.start_action(Actions.FindBugs, merged)
+  ActionsEngine.start_action(ACTIONS.FindBugs, merged)
 end
 
 ---@param opts? GenerateUnitTestOptions
 function ActionsEngine.generate_unit_test(opts)
-  local defaults = {
-  }
+  local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
-  ActionsEngine.start_action(Actions.GenerateUnitTest, merged)
+  ActionsEngine.start_action(ACTIONS.GenerateUnitTest, merged)
 end
 
 ---@param opts? ImplementFeaturesOptions
 function ActionsEngine.implement_features(opts)
-  local defaults = {
-  }
+  local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
-  ActionsEngine.start_action(Actions.ImplementFeatures, merged)
+  ActionsEngine.start_action(ACTIONS.ImplementFeatures, merged)
 end
 
 ---@param opts? ImplementFeaturesOptions
@@ -432,52 +434,51 @@ end
 
 ---@param opts? ActionOptions
 function ActionsEngine.improve_code(opts)
-  local defaults = {
-  }
+  local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
-  ActionsEngine.start_action(Actions.ImproveCode, merged)
+  ActionsEngine.start_action(ACTIONS.ImproveCode, merged)
 end
 
 ---@param opts? ActionOptions
 function ActionsEngine.refactor_code(opts)
-  local defaults = {
-  }
+  local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
-  ActionsEngine.start_action(Actions.RefactorCode, merged)
+  ActionsEngine.start_action(ACTIONS.RefactorCode, merged)
 end
 
 ---@param opts? ActionOptions
 function ActionsEngine.guess_programming_language(opts)
-  local defaults = {
-  }
+  local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
-  ActionsEngine.start_action(Actions.GuessProgrammingLanguage, merged)
+  ActionsEngine.start_action(ACTIONS.GuessProgrammingLanguage, merged)
 end
 
 ---@param opts? ActionOptions
 function ActionsEngine.analyze_data(opts)
-  local defaults = {
-  }
+  local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
-  ActionsEngine.start_action(Actions.AnalyzeData, merged)
+  ActionsEngine.start_action(ACTIONS.AnalyzeData, merged)
 end
 
 -- API: ActionOptions.content
 ---@param opts? ActionOptions
 function ActionsEngine.start_chat(opts)
-  local defaults = {
-  }
+  local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
   if merged.content == nil or #merged.content == 0 then
     local input_opts = { prompt = 'Ask... (Fitten Code Fast): ', default = '', }
     vim.ui.input(input_opts, function(content)
+      if not content or #content == 0 then
+        Log.debug('No Content for FittenCode StartChat')
+        return
+      end
       Log.debug('Ask... (Fitten Code Fast): ' .. content)
-      ActionsEngine.start_action(Actions.StartChat, {
+      ActionsEngine.start_action(ACTIONS.StartChat, {
         content = content }
       )
     end)
   else
-    ActionsEngine.start_action(Actions.StartChat, merged)
+    ActionsEngine.start_action(ACTIONS.StartChat, merged)
   end
 end
 

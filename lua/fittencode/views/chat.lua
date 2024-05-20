@@ -66,7 +66,10 @@ end
 
 function M:show()
   if self.window then
-    return
+    if api.nvim_win_is_valid(self.window) and api.nvim_win_get_buf(self.window) == self.buffer then
+      return
+    end
+    self.window = nil
   end
 
   if not self.buffer then
