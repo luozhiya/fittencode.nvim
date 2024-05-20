@@ -59,12 +59,12 @@ end
 local NO_LANG_ACTIONS = { 'StartChat', 'GuessProgrammingLanguage', 'AnalyzeData' }
 
 local MAP_ACTION_PROMPTS = {
-  StartChat = 'Answers the question above',
-  DocumentCode = 'Document the code above, commenting line by line',
+  StartChat = 'Answer the question above',
+  DocumentCode = 'Document the code above, Comment each line to show the results',
   EditCode = function(ctx)
     return ctx.prompt
   end,
-  ExplainCode = 'Explain the code above',
+  ExplainCode = 'Explain the code above, Break it down step by step',
   FindBugs = 'Find bugs in the code above',
   GenerateUnitTest = function(ctx)
     local opts = ctx.action_opts or {}
