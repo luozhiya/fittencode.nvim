@@ -108,7 +108,12 @@ local function filter_suggestions(window, buffer, task_id, suggestions)
   if not suggestions then
     return nil, ms
   end
-  return SuggestionsPreprocessing.run(window, buffer, suggestions), ms
+  return SuggestionsPreprocessing.run({
+    window = window,
+    buffer = buffer,
+    suggestions = suggestions,
+    condense_nl = 'all'
+  }), ms
 end
 
 ---@param action integer
@@ -145,6 +150,9 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
         depth = depth + 1
         chat:commit({
           lines = lines,
+          format = {
+            -- firstlinebreak = true,
+          }
         })
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         chain_actions(window, buffer, action, new_solved_prefix, on_error)
