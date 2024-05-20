@@ -49,19 +49,20 @@ local function condense_nl(window, buffer, suggestions)
 
   Log.debug('remove_all: {}, keep_first: {}', remove_all, keep_first)
 
-  local count = 0
-  for _, suggestion in ipairs(suggestions) do
+  -- local count = 0
+  for i, suggestion in ipairs(suggestions) do
     if #suggestion == 0 then
       if remove_all then
         -- ignore
-      elseif keep_first and count ~= 0 then
+        -- elseif keep_first and count ~= 0 then
+      elseif keep_first and i ~= 1 then
         -- ignore
       else
         table.insert(nls, suggestion)
       end
-      count = count + 1
+      -- count = count + 1
     else
-      count = 0
+      -- count = 0
       table.insert(nls, suggestion)
     end
   end
