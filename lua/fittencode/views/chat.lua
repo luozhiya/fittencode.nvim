@@ -1,122 +1,109 @@
 local api = vim.api
 
 local Base = require('fittencode.base')
+local Lines = require('fittencode.views.lines')
 local Log = require('fittencode.log')
 
 ---@class Chat
----@field win? integer
+---@field window? integer
 ---@field buffer? integer
----@field text? string
+---@field content string[]
 ---@field show function
 ---@field commit function
 ---@field is_repeated function
-
 local M = {}
 
 function M:new()
   local o = {
-    text = {}
+    content = {}
   }
   self.__index = self
   return setmetatable(o, self)
 end
 
-function M:show()
-  if self.win == nil then
-    if not self.buffer then
-      self.buffer = api.nvim_create_buf(false, true)
-      api.nvim_buf_set_name(self.buffer, 'FittenCodeChat')
-    end
+local function _commit(window, buffer, lines)
+  if api.nvim_buf_is_valid(buffer) and api.nvim_win_is_valid(window) then
+    api.nvim_set_option_value('modifiable', true, { buf = buffer })
+    api.nvim_set_option_value('readonly', false, { buf = buffer })
+    Lines.set_text({
+      window = window,
+      buffer = buffer,
+      lines = lines,
+      is_undo_disabled = true,
+      is_last = true
+    })
+    api.nvim_set_option_value('modifiable', false, { buf = buffer })
+    api.nvim_set_option_value('readonly', true, { buf = buffer })
+  end
+end
 
-    vim.cmd('topleft vsplit')
-    vim.cmd('vertical resize ' .. 40)
-    self.win = api.nvim_get_current_win()
-    api.nvim_win_set_buf(self.win, self.buffer)
-
-    api.nvim_set_option_value('filetype', 'markdown', { buf = self.buffer })
-    api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
-    api.nvim_set_option_value('wrap', true, { win = self.win })
-    api.nvim_set_option_value('linebreak', true, { win = self.win })
-    api.nvim_set_option_value('cursorline', true, { win = self.win })
-    api.nvim_set_option_value('spell', false, { win = self.win })
-    api.nvim_set_option_value('number', false, { win = self.win })
-    api.nvim_set_option_value('relativenumber', false, { win = self.win })
-    api.nvim_set_option_value('conceallevel', 3, { win = self.win })
-
-    Base.map('n', 'q', function()
-      self:close()
-    end, { buffer = self.buffer })
-
-    if #self.text > 0 then
-      -- api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
-      -- api.nvim_buf_set_lines(self.buffer, 0, -1, false, self.text)
-      api.nvim_win_set_cursor(self.win, { #self.text, 0 })
-      -- api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
+local function set_content(window, buffer, text)
+  if #text > 0 then
+    for _, lines in ipairs(text) do
+      _commit(window, buffer, lines)
     end
   end
 end
 
-function M:close()
-  if self.win == nil then
+local function scroll_to_last(window, buffer)
+  local row = math.max(api.nvim_buf_line_count(buffer), 1)
+  local col = api.nvim_buf_get_lines(buffer, row - 1, row, false)[1]:len()
+  api.nvim_win_set_cursor(window, { row, col })
+end
+
+local function set_option_value(window, buffer)
+  api.nvim_set_option_value('filetype', 'markdown', { buf = buffer })
+  api.nvim_set_option_value('readonly', true, { buf = buffer })
+  api.nvim_set_option_value('modifiable', false, { buf = buffer })
+  api.nvim_set_option_value('wrap', true, { win = window })
+  api.nvim_set_option_value('linebreak', true, { win = window })
+  api.nvim_set_option_value('cursorline', true, { win = window })
+  api.nvim_set_option_value('spell', false, { win = window })
+  api.nvim_set_option_value('number', false, { win = window })
+  api.nvim_set_option_value('relativenumber', false, { win = window })
+  api.nvim_set_option_value('conceallevel', 3, { win = window })
+end
+
+function M:show()
+  if self.window then
     return
   end
-  if api.nvim_win_is_valid(self.win) then
-    api.nvim_win_close(self.win, true)
+
+  if not self.buffer then
+    self.buffer = api.nvim_create_buf(false, true)
+    api.nvim_buf_set_name(self.buffer, 'FittenCodeChat')
   end
-  self.win = nil
+
+  vim.cmd('topleft vsplit')
+  vim.cmd('vertical resize ' .. 42)
+  self.window = api.nvim_get_current_win()
+  api.nvim_win_set_buf(self.window, self.buffer)
+
+  Base.map('n', 'q', function() self:close() end, { buffer = self.buffer })
+
+  set_option_value(self.window, self.buffer)
+  scroll_to_last(self.window, self.buffer)
+end
+
+function M:close()
+  if self.window == nil then
+    return
+  end
+  if api.nvim_win_is_valid(self.window) then
+    api.nvim_win_close(self.window, true)
+  end
+  self.window = nil
   -- api.nvim_buf_delete(self.buffer, { force = true })
   -- self.buffer = nil
 end
 
-local stack = {}
-
-local function push_stack(x)
-  if #stack == 0 then
-    table.insert(stack, x)
-  else
-    table.remove(stack)
+function M:commit(lines)
+  if type(lines) == 'string' then
+    lines = vim.split(lines, '\n')
   end
-end
-
----@param text? string|string[]
----@param linebreak? boolean
----@param force? boolean
-function M:commit(text, linebreak, force)
-  local lines = nil
-  if type(text) == 'string' then
-    lines = vim.split(text, '\n')
-  elseif type(text) == 'table' then
-    lines = text
-  else
-    return
-  end
-  vim.tbl_map(function(x)
-    if x:match('^```') then
-      push_stack(x)
-    end
-  end, lines)
-  if #stack > 0 and not force then
-    linebreak = false
-  end
-  if linebreak and #self.text > 0 and #lines > 0 then
-    if lines[1] ~= '' and not string.match(lines[1], '^```') and self.text[#self.text] ~= '' and not string.match(self.text[#self.text], '^```') then
-      table.insert(lines, 1, '')
-    end
-  end
-  if self.buffer then
-    api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
-    if #self.text == 0 then
-      api.nvim_buf_set_lines(self.buffer, 0, -1, false, lines)
-    else
-      api.nvim_buf_set_lines(self.buffer, -1, -1, false, lines)
-    end
-    api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
-  end
-  table.move(lines, 1, #lines, #self.text + 1, self.text)
-
-  if api.nvim_win_is_valid(self.win) then
-    api.nvim_win_set_cursor(self.win, { #self.text, 0 })
-  end
+  table.insert(self.content, lines)
+  _commit(self.window, self.buffer, lines)
+  Log.debug('Chat text: {}', self.content)
 end
 
 local function _sub_match(s, pattern)
@@ -145,13 +132,13 @@ function M:is_repeated(lines)
 end
 
 ---@return string[]
-function M:get_text()
-  return self.text
+function M:get_content()
+  return self.content
 end
 
 ---@return boolean
-function M:has_text()
-  return #self.text > 0
+function M:has_content()
+  return #self.content > 0
 end
 
 return M
