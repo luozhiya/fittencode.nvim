@@ -62,6 +62,7 @@ local function set_option_value(window, buffer)
   api.nvim_set_option_value('number', false, { win = window })
   api.nvim_set_option_value('relativenumber', false, { win = window })
   api.nvim_set_option_value('conceallevel', 3, { win = window })
+  -- api.nvim_set_option_value('scrolloff', 8, { win = window })
 end
 
 function M:show()
@@ -144,14 +145,17 @@ local function format_lines(opts, content)
   local fenced_sloved = false
   if fenced_code_open then
     if fenced_code then
-      table.insert(lines, 1, '')
+      if lines[1] ~= '' then
+        table.insert(lines, 1, '')
+      end
       table.insert(lines, 2, '```')
       fenced_code_open = false
       fenced_sloved = true
     end
   end
 
-  if not fenced_sloved and firstlinebreak and #content > 0 and #lines > 1 then
+  if not fenced_code_open and not fenced_sloved and firstlinebreak and
+      #content > 0 and #lines > 1 then
     local last_lines = content[#content]
     local last_line = last_lines[#last_lines]
     if not string.match(lines[2], '^```') and not string.match(last_line, '^```') then
@@ -174,7 +178,6 @@ function M:commit(opts)
   if not lines then
     return
   end
-  Log.debug('Chat Lines: {}', lines)
 
   table.insert(self.content, lines)
   _commit(self.window, self.buffer, lines)
