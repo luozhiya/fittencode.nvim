@@ -129,6 +129,7 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
   }, function(_, prompt, suggestions)
     -- Log.debug('Suggestions for Actions: {}', suggestions)
     local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
+    elapsed_time = elapsed_time + ms
     if not lines or #lines == 0 then
       schedule(on_error)
     else
@@ -136,7 +137,6 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
         Log.debug('Repeated suggestions')
         schedule(on_error)
       else
-        elapsed_time = elapsed_time + ms
         depth = depth + 1
         chat:commit(lines)
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
