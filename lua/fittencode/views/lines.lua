@@ -184,15 +184,22 @@ local function format_wrap(fx)
   return ret
 end
 
+---@class LinesSetTextOptions
+---@field window? integer
+---@field buffer? integer
+---@field lines string[]
+---@field is_undo_disabled? boolean
+---@field is_last? boolean
+
 ---@param lines string[]
-function M.set_text(window, buffer, lines, is_chat, is_last)
+function M.set_text(window, buffer, lines, is_undo_disabled, is_last)
   format_wrap(function()
     local row, col = Base.get_cursor(window)
     if is_last then
-      row = api.nvim_buf_line_count(buffer) - 1 or 0
-      col = string.len(api.nvim_buf_get_lines(buffer, row, row + 1, false)[1])
+      row = math.max(api.nvim_buf_line_count(buffer) - 1, 0)
+      col = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]:len()
     end
-    if not is_chat then
+    if not is_undo_disabled then
       undojoin()
     end
     -- Emit events `CursorMovedI` `CursorHoldI`

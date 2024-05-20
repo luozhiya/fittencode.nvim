@@ -350,7 +350,7 @@ function ActionsEngine.start_action(action, opts)
   }
 
   chat_commit_inout(action_name, prompt_opts, range)
-  _start_action(chat.win, chat.buffer, action, prompt_opts)
+  _start_action(chat.window, chat.buffer, action, prompt_opts)
 end
 
 ---@param opts? ActionOptions
