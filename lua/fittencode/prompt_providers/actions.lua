@@ -127,10 +127,10 @@ local function make_prompt(ctx, name, language, no_lang)
   return prompt
 end
 
-local function make_prefix(content, prompt, source_type)
+local function make_prefix(content, prompt, source_type, instruction_type)
   local mark_source = '# ' .. source_type .. '\n'
-  local mark_reading = 'Dear FittenCode, Please Reading the' .. source_type .. ' below:\n'
-  local mark_instructions = '# INSTRUCTIONS\n'
+  local mark_reading = 'Dear FittenCode, Please Reading the ' .. source_type .. ' below:\n'
+  local mark_instructions = '# ' .. instruction_type .. '\n'
   local mark_prompt_prefix = 'Dear FittenCode, Please '
 
   local prefix = table.concat({
@@ -150,11 +150,20 @@ local function make_source_type(no_lang, name)
   if no_lang then
     if name == 'AnalyzeData' then
       return 'DATA'
+    elseif name == 'StartChat' then
+      return 'QUESTION'
     else
       return 'TEXT'
     end
   end
   return 'CODE'
+end
+
+local function make_instruction_type(name)
+  if name == 'StartChat' then
+    return 'ANSWER'
+  end
+  return 'INSTRUCTIONS'
 end
 
 ---@param ctx PromptContext
@@ -167,6 +176,7 @@ function M:execute(ctx)
   local name = ctx.prompt_ty:sub(#NAME + 2)
   local no_lang = vim.tbl_contains(NO_LANG_ACTIONS, name)
   local source_type = make_source_type(no_lang, name)
+  local instruction_type = make_instruction_type(name)
 
   local filename = ''
   if ctx.buffer then
@@ -182,7 +192,7 @@ function M:execute(ctx)
     local language = make_language(ctx)
     content = make_content_with_prefix_suffix(ctx, language, no_lang)
     local prompt = make_prompt(ctx, name, language, no_lang)
-    prefix = make_prefix(content, prompt, source_type)
+    prefix = make_prefix(content, prompt, source_type, instruction_type)
   end
   local suffix = ''
 
