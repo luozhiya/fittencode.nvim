@@ -1,8 +1,11 @@
 local fn = vim.fn
 local uv = vim.uv or vim.loop
 
+local Base = require('fittencode.base')
 local FS = require('fittencode.fs')
 local Log = require('fittencode.log')
+
+local schedule = Base.schedule
 
 ---@class Key
 ---@field name string|nil
@@ -33,30 +36,22 @@ function KeyStorage:load(on_success, on_error)
   Log.debug('Loading key file: {}', self.path)
   if not FS.exists(self.path) then
     Log.error('Key file not found')
-    if on_error then
-      on_error()
-    end
+    schedule(on_error)
     return
   end
   FS.read(self.path, function(data)
     local success, result = pcall(fn.json_decode, data)
     if success == false then
       Log.error('Failed to parse key file; error: {}', result)
-      if on_error then
-        on_error()
-      end
+      schedule(on_error)
       return
     end
     self.keys = result
     Log.debug('Key file loaded successful')
-    if on_success ~= nil then
-      on_success(self.keys.name)
-    end
+    schedule(on_success, self.keys.name)
   end, function(err)
     Log.error('Failed to load Key file; error: {}', err)
-    if on_error then
-      on_error()
-    end
+    schedule(on_error)
   end)
 end
 
@@ -64,17 +59,18 @@ end
 ---@param on_error function|nil
 function KeyStorage:save(on_success, on_error)
   Log.debug('Saving key file: {}', self.path)
-  local encode_keys = fn.json_encode(self.keys)
+  local success, encode_keys = pcall(fn.json_encode, self.keys)
+  if not success then
+    Log.error('Failed to encode key file; error: {}', encode_keys)
+    schedule(on_error)
+    return
+  end
   FS.write_mkdir(encode_keys, self.path, function()
     Log.info('Key file saved successful')
-    if on_success ~= nil then
-      on_success()
-    end
+    schedule(on_success)
   end, function(err)
     Log.error('Failed to save key file; error: {}', err)
-    if on_error then
-      on_error()
-    end
+    schedule(on_error)
   end)
 end
 
@@ -86,14 +82,10 @@ function KeyStorage:clear(on_success, on_error)
   uv.fs_unlink(self.path, function(err)
     if err then
       Log.error('Failed to delete key file; error: {}', err)
-      if on_error then
-        on_error()
-      end
+      schedule(on_error)
     else
       Log.info('Delete key file successful')
-      if on_success then
-        on_success()
-      end
+      schedule(on_success)
     end
   end)
 end
