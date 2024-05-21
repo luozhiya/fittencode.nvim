@@ -185,6 +185,9 @@ require('cmp').setup({
 | `Fitten refactor_code`              | Refactor code              |
 | `Fitten guess_programming_language` | Guess programming language |
 | `Fitten analyze_data`               | Analyze data               |
+| `Fitten translate_text`             | Translate text             |
+| `Fitten translate_text_to_chinese`  | Translate text to Chinese  |
+| `Fitten translate_text_to_english`  | Translate text to English  |
 | `Fitten start_chat`                 | Start chat                 |
 
 ### Default Mappings
@@ -227,34 +230,40 @@ vim.log = {
 
 ---@class ImplementFeaturesOptions : ActionOptions
 ---@field feature_type string
+
+---@class TranslateTextOptions : ActionOptions
+---@field target_language string
 ```
 
 ### List of APIs
 
-| API Prototype                                  | Description                                                     |
-|------------------------------------------------|-----------------------------------------------------------------|
-| `login(username, password)`                    | Login to Fitten Code AI                                         |
-| `logout()`                                     | Logout from Fitten Code AI                                      |
-| `register()`                                   | Register to Fitten Code AI                                      |
-| `set_log_level(level)`                         | Set the log level                                               |
-| `get_current_status()`                         | Get the current status of the `InlineEngine` and `ActionEngine` |
-| `triggering_completion()`                      | Manually triggering completion                                  |
-| `has_suggestion()`                             | Check if there is a suggestion                                  |
-| `accept_all_suggestions()`                     | Accept all suggestions                                          |
-| `accept_line()`                                | Accept line                                                     |
-| `accept_word()`                                | Accept word                                                     |
-| `document_code(ActionOptions)`                 | Document code                                                   |
-| `edit_code(ActionOptions)`                     | Edit code                                                       |
-| `explain_code(ActionOptions)`                  | Explain code                                                    |
-| `find_bugs(ActionOptions)`                     | Find bugs                                                       |
-| `generate_unit_test(GenerateUnitTestOptions)`  | Generate unit test                                              |
-| `implement_features(ImplementFeaturesOptions)` | Implement features                                              |
-| `improve_code(ActionOptions)`                  | Improve code                                                    |
-| `refactor_code(ActionOptions)`                 | Refactor code                                                   |
-| `guess_programming_language(ActionOptions)`    | Guess programming language                                      |
-| `analyze_data(ActionOptions)`                  | Analyze data                                                    |
-| `start_chat(ActionOptions)`                    | Start chat                                                      |
-| `stop_eval()`                                  | Stop the evaluation                                             |
+| API Prototype                                     | Description                                                     |
+|---------------------------------------------------|-----------------------------------------------------------------|
+| `login(username, password)`                       | Login to Fitten Code AI                                         |
+| `logout()`                                        | Logout from Fitten Code AI                                      |
+| `register()`                                      | Register to Fitten Code AI                                      |
+| `set_log_level(level)`                            | Set the log level                                               |
+| `get_current_status()`                            | Get the current status of the `InlineEngine` and `ActionEngine` |
+| `triggering_completion()`                         | Manually triggering completion                                  |
+| `has_suggestion()`                                | Check if there is a suggestion                                  |
+| `accept_all_suggestions()`                        | Accept all suggestions                                          |
+| `accept_line()`                                   | Accept line                                                     |
+| `accept_word()`                                   | Accept word                                                     |
+| `document_code(ActionOptions)`                    | Document code                                                   |
+| `edit_code(ActionOptions)`                        | Edit code                                                       |
+| `explain_code(ActionOptions)`                     | Explain code                                                    |
+| `find_bugs(ActionOptions)`                        | Find bugs                                                       |
+| `generate_unit_test(GenerateUnitTestOptions)`     | Generate unit test                                              |
+| `implement_features(ImplementFeaturesOptions)`    | Implement features                                              |
+| `improve_code(ActionOptions)`                     | Improve code                                                    |
+| `refactor_code(ActionOptions)`                    | Refactor code                                                   |
+| `guess_programming_language(ActionOptions)`       | Guess programming language                                      |
+| `analyze_data(ActionOptions)`                     | Analyze data                                                    |
+| `translate_text(TranslateTextOptions)`            | Translate text                                                  |
+| `translate_text_to_chinese(TranslateTextOptions)` | Translate text to Chinese                                       |
+| `translate_text_to_english(TranslateTextOptions)` | Translate text to English                                       |
+| `start_chat(ActionOptions)`                       | Start chat                                                      |
+| `stop_eval()`                                     | Stop the evaluation                                             |
 
 ## 🎉 Special Thanks
 

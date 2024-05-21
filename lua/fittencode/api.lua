@@ -90,6 +90,20 @@ M.api = {
   analyze_data = function(opts)
     return ActionsEngine.analyze_data(opts)
   end,
+  ---@param opts? TranslateTextOptions
+  translate_text = function(opts)
+    return ActionsEngine.translate_text(opts)
+  end,
+  ---@param opts? TranslateTextOptions
+  translate_text_to_chinese = function(opts)
+    opts.target_language = 'Chinese'
+    return ActionsEngine.translate_text(opts)
+  end,
+  ---@param opts? TranslateTextOptions
+  translate_text_to_english = function(opts)
+    opts.target_language = 'English'
+    return ActionsEngine.translate_text(opts)
+  end,
   ---@param opts? ActionOptions
   start_chat = function(opts)
     return ActionsEngine.start_chat(opts)
