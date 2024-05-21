@@ -41,7 +41,7 @@ end
 ---@return string
 local function make_range_content(buffer, range)
   local lines = {}
-  if range.vmode then
+  if range.vmode and range.region then
     lines = range.region or {}
   else
     -- lines = api.nvim_buf_get_text(buffer, range.start[1] - 1, 0, range.start[1] - 1, -1, {})
@@ -56,11 +56,11 @@ local function make_range_content(buffer, range)
   return table.concat(lines, '\n')
 end
 
-local NO_LANG_ACTIONS = { 'StartChat', 'GuessProgrammingLanguage', 'AnalyzeData', 'TranslateText' }
+local NO_LANG_ACTIONS = { 'StartChat', 'GuessProgrammingLanguage', 'AnalyzeData', 'TranslateText', 'SummarizeText' }
 
 local MAP_ACTION_PROMPTS = {
   StartChat = 'Answer the question above',
-  DocumentCode = 'Document the code above, Comment each line to show the results',
+  DocumentCode = 'Document the code above, Add comments to every line of the code',
   EditCode = function(ctx)
     return ctx.prompt
   end,
@@ -81,12 +81,13 @@ local MAP_ACTION_PROMPTS = {
   ImproveCode = 'Improve the code above',
   RefactorCode = 'Refactor the code above',
   GuessProgrammingLanguage = 'Guess the programming language of the code above',
-  AnalyzeData = 'Analyze the data above',
+  AnalyzeData = 'Analyze the data above and Give the pattern of the data',
   TranslateText = function(ctx)
     assert(ctx.action_opts)
     assert(ctx.action_opts.target_language)
-    return 'TranslateText the text above' .. ' to ' .. ctx.action_opts.target_language
-  end
+    return 'Translate the text above' .. ' into ' .. ctx.action_opts.target_language
+  end,
+  SummarizeText = 'Summarize the text above and then represent the outline in a multi-level sequence',
 }
 
 local function make_language(ctx)
@@ -126,21 +127,43 @@ local function make_prompt(ctx, name, language, no_lang)
   return prompt
 end
 
-local function make_prefix(content, prompt)
-  local start_question = '# Question:\n'
-  local start_answer = '# Answer:\n'
+local function make_prefix(content, prompt, source_type, instruction_type)
+  local mark_source = '# ' .. source_type .. '\n'
+  local mark_reading = 'Dear FittenCode, Please Reading the ' .. source_type .. ' below:\n'
+  local mark_instructions = '# ' .. instruction_type .. '\n'
+  local mark_prompt_prefix = 'Dear FittenCode, Please '
 
   local prefix = table.concat({
-    start_question,
+    mark_source,
+    mark_reading,
     content,
     '\n',
-    start_answer,
-    'Dear FittenCode, Please ',
+    mark_instructions,
+    mark_prompt_prefix,
     prompt,
-    -- ' and provide your feedback',
     ':',
   }, '')
   return prefix
+end
+
+local function make_source_type(no_lang, name)
+  if no_lang then
+    if name == 'AnalyzeData' then
+      return 'DATA'
+    elseif name == 'StartChat' then
+      return 'QUESTION'
+    else
+      return 'TEXT'
+    end
+  end
+  return 'CODE'
+end
+
+local function make_instruction_type(name)
+  if name == 'StartChat' then
+    return 'ANSWER'
+  end
+  return 'INSTRUCTIONS'
 end
 
 ---@param ctx PromptContext
@@ -152,6 +175,8 @@ function M:execute(ctx)
 
   local name = ctx.prompt_ty:sub(#NAME + 2)
   local no_lang = vim.tbl_contains(NO_LANG_ACTIONS, name)
+  local source_type = make_source_type(no_lang, name)
+  local instruction_type = make_instruction_type(name)
 
   local filename = ''
   if ctx.buffer then
@@ -167,7 +192,7 @@ function M:execute(ctx)
     local language = make_language(ctx)
     content = make_content_with_prefix_suffix(ctx, language, no_lang)
     local prompt = make_prompt(ctx, name, language, no_lang)
-    prefix = make_prefix(content, prompt)
+    prefix = make_prefix(content, prompt, source_type, instruction_type)
   end
   local suffix = ''
 

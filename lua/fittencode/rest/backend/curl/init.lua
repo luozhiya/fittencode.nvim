@@ -94,7 +94,12 @@ local function post_largedata(url, encoded_data, on_success, on_error)
 end
 
 function M:post(url, data, on_success, on_error)
-  local encoded_data = fn.json_encode(data)
+  local success, encoded_data = pcall(fn.json_encode, data)
+  if not success then
+    Log.error('Failed to encode data: {}', data)
+    schedule(on_error)
+    return
+  end
   if #encoded_data > 200 then
     return post_largedata(url, encoded_data, on_success, on_error)
   end
