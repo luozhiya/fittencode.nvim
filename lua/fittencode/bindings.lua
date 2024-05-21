@@ -168,6 +168,24 @@ local function _analyze_data(...)
   return _action_apis_wrap_content(API.analyze_data, ...)
 end
 
+local function _translate_text(...)
+  local args = { ... }
+  ---@type TranslateTextOptions
+  local opts = {
+    target_language = args[1],
+    content = args[2],
+  }
+  return API.translate_text(opts)
+end
+
+local function _translate_text_to_chinese(...)
+  return _action_apis_wrap_content(API.translate_text_to_chinese, ...)
+end
+
+local function _translate_text_to_english(...)
+  return _action_apis_wrap_content(API.translate_text_to_english, ...)
+end
+
 function M.setup_commands()
   ---@type FittenCommands
   local commands = {
@@ -201,6 +219,12 @@ function M.setup_commands()
     guess_programming_language = _guess_programming_language,
     -- Arguments: data
     analyze_data = _analyze_data,
+    -- Arguments: traget_language, text
+    translate_text = _translate_text,
+    -- Arguments: text
+    translate_text_to_chinese = _translate_text_to_chinese,
+    -- Arguments: text
+    translate_text_to_english = _translate_text_to_english,
     -- Arguments: language
     start_chat = _start_chat,
     -- Arguments: Nop

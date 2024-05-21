@@ -34,6 +34,9 @@ local SC = Status.C
 ---@field implement_features function
 ---@field improve_code function
 ---@field refactor_code function
+---@field guess_programming_language function
+---@field analyze_data function
+---@field translate_text function
 local ActionsEngine = {}
 
 local ACTIONS = {
@@ -48,6 +51,7 @@ local ACTIONS = {
   RefactorCode = 8,
   GuessProgrammingLanguage = 9,
   AnalyzeData = 10,
+  TranslateText = 11,
 }
 
 local current_eval = 1
@@ -80,6 +84,9 @@ local status = nil
 
 ---@class ImplementFeaturesOptions : ActionOptions
 ---@field feature_type string
+
+---@class TranslateTextOptions : ActionOptions
+---@field target_language string
 
 ---@param action integer
 local function get_action_name(action)
@@ -483,6 +490,17 @@ function ActionsEngine.analyze_data(opts)
   local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
   ActionsEngine.start_action(ACTIONS.AnalyzeData, merged)
+end
+
+---@param opts? TranslateTextOptions
+function ActionsEngine.translate_text(opts)
+  local defaults = {}
+  local merged = vim.tbl_deep_extend('force', defaults, opts or {})
+  if merged.target_language == nil or #merged.target_language == 0 then
+    return
+  end
+  assert(merged.target_language)
+  ActionsEngine.start_action(ACTIONS.TranslateText, merged)
 end
 
 -- API: ActionOptions.content
