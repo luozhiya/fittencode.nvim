@@ -41,7 +41,7 @@ end
 ---@return string
 local function make_range_content(buffer, range)
   local lines = {}
-  if range.vmode then
+  if range.vmode and range.region then
     lines = range.region or {}
   else
     -- lines = api.nvim_buf_get_text(buffer, range.start[1] - 1, 0, range.start[1] - 1, -1, {})
