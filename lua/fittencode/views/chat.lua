@@ -137,7 +137,7 @@ local function format_lines(opts, content)
   end
 
   vim.tbl_map(function(x)
-    if x:match('^```') then
+    if x:match('^```') or x:match('```$') then
       fenced_code_open = not fenced_code_open
     end
   end, lines)
