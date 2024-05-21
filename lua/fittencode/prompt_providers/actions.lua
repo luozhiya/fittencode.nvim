@@ -56,7 +56,7 @@ local function make_range_content(buffer, range)
   return table.concat(lines, '\n')
 end
 
-local NO_LANG_ACTIONS = { 'StartChat', 'GuessProgrammingLanguage', 'AnalyzeData', 'TranslateText' }
+local NO_LANG_ACTIONS = { 'StartChat', 'GuessProgrammingLanguage', 'AnalyzeData', 'TranslateText', 'SummarizeText' }
 
 local MAP_ACTION_PROMPTS = {
   StartChat = 'Answer the question above',
@@ -86,7 +86,8 @@ local MAP_ACTION_PROMPTS = {
     assert(ctx.action_opts)
     assert(ctx.action_opts.target_language)
     return 'TranslateText the text above' .. ' to ' .. ctx.action_opts.target_language
-  end
+  end,
+  SummarizeText = 'Summarize the text above and then represent the outline in a multi-level sequence',
 }
 
 local function make_language(ctx)

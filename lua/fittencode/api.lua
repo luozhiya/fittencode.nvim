@@ -105,6 +105,10 @@ M.api = {
     return ActionsEngine.translate_text(opts)
   end,
   ---@param opts? ActionOptions
+  summarize_text = function(opts)
+    return ActionsEngine.summarize_text(opts)
+  end,
+  ---@param opts? ActionOptions
   start_chat = function(opts)
     return ActionsEngine.start_chat(opts)
   end,

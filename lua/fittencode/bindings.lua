@@ -186,6 +186,10 @@ local function _translate_text_to_english(...)
   return _action_apis_wrap_content(API.translate_text_to_english, ...)
 end
 
+local function _summarize_text(...)
+  return _action_apis_wrap_content(API.summarize_text, ...)
+end
+
 function M.setup_commands()
   ---@type FittenCommands
   local commands = {
@@ -225,6 +229,8 @@ function M.setup_commands()
     translate_text_to_chinese = _translate_text_to_chinese,
     -- Arguments: text
     translate_text_to_english = _translate_text_to_english,
+    -- Arguments: text
+    summarize_text = _summarize_text,
     -- Arguments: language
     start_chat = _start_chat,
     -- Arguments: Nop

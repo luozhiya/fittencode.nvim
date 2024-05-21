@@ -52,6 +52,7 @@ local ACTIONS = {
   GuessProgrammingLanguage = 9,
   AnalyzeData = 10,
   TranslateText = 11,
+  SummarizeText = 12,
 }
 
 local current_eval = 1
@@ -501,6 +502,13 @@ function ActionsEngine.translate_text(opts)
   end
   assert(merged.target_language)
   ActionsEngine.start_action(ACTIONS.TranslateText, merged)
+end
+
+---@param opts? ActionOptions
+function ActionsEngine.summarize_text(opts)
+  local defaults = {}
+  local merged = vim.tbl_deep_extend('force', defaults, opts or {})
+  ActionsEngine.start_action(ACTIONS.SummarizeText, merged)
 end
 
 -- API: ActionOptions.content
