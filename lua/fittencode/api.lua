@@ -95,12 +95,12 @@ M.api = {
     return ActionsEngine.translate_text(opts)
   end,
   ---@param opts? TranslateTextOptions
-  translate_text_to_chinese = function(opts)
+  translate_text_into_chinese = function(opts)
     opts.target_language = 'Chinese'
     return ActionsEngine.translate_text(opts)
   end,
   ---@param opts? TranslateTextOptions
-  translate_text_to_english = function(opts)
+  translate_text_into_english = function(opts)
     opts.target_language = 'English'
     return ActionsEngine.translate_text(opts)
   end,

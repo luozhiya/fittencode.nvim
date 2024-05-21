@@ -178,12 +178,12 @@ local function _translate_text(...)
   return API.translate_text(opts)
 end
 
-local function _translate_text_to_chinese(...)
-  return _action_apis_wrap_content(API.translate_text_to_chinese, ...)
+local function _translate_text_into_chinese(...)
+  return _action_apis_wrap_content(API.translate_text_into_chinese, ...)
 end
 
-local function _translate_text_to_english(...)
-  return _action_apis_wrap_content(API.translate_text_to_english, ...)
+local function _translate_text_into_english(...)
+  return _action_apis_wrap_content(API.translate_text_into_english, ...)
 end
 
 local function _summarize_text(...)
@@ -226,9 +226,9 @@ function M.setup_commands()
     -- Arguments: traget_language, text
     translate_text = _translate_text,
     -- Arguments: text
-    translate_text_to_chinese = _translate_text_to_chinese,
+    translate_text_into_chinese = _translate_text_into_chinese,
     -- Arguments: text
-    translate_text_to_english = _translate_text_to_english,
+    translate_text_into_english = _translate_text_into_english,
     -- Arguments: text
     summarize_text = _summarize_text,
     -- Arguments: language
