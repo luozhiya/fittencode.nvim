@@ -5,8 +5,19 @@ local Log = require('fittencode.log')
 
 local M = {}
 
----@param suggestions string[]
-local function condense_nl(window, buffer, suggestions)
+---@class SuggestionsPreprocessingOptions
+---@field window number
+---@field buffer number
+---@field suggestions string[]
+---@field condense_nl? string
+
+---@param opts SuggestionsPreprocessingOptions
+local function condense_nl(opts)
+  local window = opts.window
+  local buffer = opts.buffer
+  local suggestions = opts.suggestions
+  local mode = opts.condense_nl
+
   if not suggestions or #suggestions == 0 then
     return
   end
@@ -18,9 +29,19 @@ local function condense_nl(window, buffer, suggestions)
       break
     end
   end
-
   if is_all_empty then
     return {}
+  end
+
+  local non_empty = 0
+  for i = #suggestions, 1, -1 do
+    if #suggestions[i] ~= 0 then
+      non_empty = i
+      break
+    end
+  end
+  for i = non_empty + 3, #suggestions do
+    table.remove(suggestions, non_empty + 3)
   end
 
   local row, col = Base.get_cursor(window)
@@ -29,8 +50,6 @@ local function condense_nl(window, buffer, suggestions)
   if row > 1 then
     prev_line = api.nvim_buf_get_lines(buffer, row - 1, row, false)[1]
   end
-
-  Log.debug('prev_line: {}, cur_line: {}, col: {}', prev_line, cur_line, col)
 
   local nls = {}
   local remove_all = false
@@ -49,20 +68,54 @@ local function condense_nl(window, buffer, suggestions)
 
   Log.debug('remove_all: {}, keep_first: {}', remove_all, keep_first)
 
-  local count = 0
-  for _, suggestion in ipairs(suggestions) do
-    if #suggestion == 0 then
-      if remove_all then
-        -- ignore
-      elseif keep_first and count ~= 0 then
-        -- ignore
+  mode = mode or 'first'
+
+  if mode == 'all' then
+    for i, suggestion in ipairs(suggestions) do
+      if #suggestion == 0 then
+        if remove_all then
+          -- ignore
+        elseif keep_first and i ~= 1 then
+          -- ignore
+        else
+          table.insert(nls, suggestion)
+        end
       else
         table.insert(nls, suggestion)
       end
-      count = count + 1
-    else
-      count = 0
-      table.insert(nls, suggestion)
+    end
+  elseif mode == 'per-segments' then
+    local count = 0
+    for i, suggestion in ipairs(suggestions) do
+      if #suggestion == 0 then
+        if remove_all then
+          -- ignore
+        elseif keep_first and count ~= 0 then
+          -- ignore
+        else
+          table.insert(nls, suggestion)
+        end
+        count = count + 1
+      else
+        count = 0
+        table.insert(nls, suggestion)
+      end
+    end
+  elseif mode == 'first' then
+    local is_processed = false
+    for i, suggestion in ipairs(suggestions) do
+      if #suggestion == 0 and not is_processed then
+        if remove_all then
+          -- ignore
+        elseif keep_first and i ~= 1 then
+          -- ignore
+        else
+          table.insert(nls, suggestion)
+        end
+      else
+        is_processed = true
+        table.insert(nls, suggestion)
+      end
     end
   end
 
@@ -104,8 +157,12 @@ local function replace_slash(suggestions)
   return slash
 end
 
-function M.run(window, buffer, suggestions)
-  local nls = condense_nl(window, buffer, suggestions)
+---@param opts SuggestionsPreprocessingOptions
+function M.run(opts)
+  local buffer = opts.buffer
+  local suggestions = opts.suggestions
+
+  local nls = condense_nl(opts)
   if nls then
     suggestions = nls
   end

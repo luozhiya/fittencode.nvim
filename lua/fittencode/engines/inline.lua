@@ -65,7 +65,11 @@ local function process_suggestions(task_id, suggestions)
 
   Log.debug('Suggestions received; task_id: {}, suggestions: {}', task_id, suggestions)
 
-  return SuggestionsPreprocessing.run(window, buffer, suggestions)
+  return SuggestionsPreprocessing.run({
+    window = window,
+    buffer = buffer,
+    suggestions = suggestions,
+  })
 end
 
 local function apply_suggestion(task_id, row, col, suggestion)

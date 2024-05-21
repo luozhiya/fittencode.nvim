@@ -108,7 +108,12 @@ local function filter_suggestions(window, buffer, task_id, suggestions)
   if not suggestions then
     return nil, ms
   end
-  return SuggestionsPreprocessing.run(window, buffer, suggestions), ms
+  return SuggestionsPreprocessing.run({
+    window = window,
+    buffer = buffer,
+    suggestions = suggestions,
+    condense_nl = 'all'
+  }), ms
 end
 
 ---@param action integer
@@ -143,7 +148,12 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
       else
         elapsed_time = elapsed_time + ms
         depth = depth + 1
-        chat:commit(lines)
+        chat:commit({
+          lines = lines,
+          format = {
+            -- firstlinebreak = true,
+          }
+        })
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         chain_actions(window, buffer, action, new_solved_prefix, on_error)
       end
@@ -170,8 +180,18 @@ local function on_error(err)
   end
   Log.debug('Action elapsed time: {}', elapsed_time)
   Log.debug('Action depth: {}', depth)
-  local qed = '\n\n' .. '> Q.E.D.' .. '(' .. elapsed_time .. ' ms)' .. '\n\n'
-  chat:commit(qed)
+  chat:commit({
+    lines = {
+      '',
+      '> Q.E.D.' .. '(' .. elapsed_time .. ' ms)',
+      '',
+      '',
+    },
+    format = {
+      firstlinebreak = true,
+      fenced_code = true,
+    }
+  })
   current_eval = current_eval + 1
 end
 
@@ -278,7 +298,12 @@ local function _start_action(window, buffer, action, prompt_opts)
         reject()
       else
         depth = depth + 1
-        chat:commit(lines)
+        chat:commit({
+          lines = lines,
+          format = {
+            firstlinecompress = true,
+          }
+        })
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         resolve(solved_prefix)
       end
