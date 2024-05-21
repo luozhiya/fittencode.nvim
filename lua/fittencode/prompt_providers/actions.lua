@@ -85,7 +85,7 @@ local MAP_ACTION_PROMPTS = {
   TranslateText = function(ctx)
     assert(ctx.action_opts)
     assert(ctx.action_opts.target_language)
-    return 'TranslateText the text above' .. ' into ' .. ctx.action_opts.target_language
+    return 'Translate the text above' .. ' into ' .. ctx.action_opts.target_language
   end,
   SummarizeText = 'Summarize the text above and then represent the outline in a multi-level sequence',
 }
