@@ -128,17 +128,19 @@ local function make_prompt(ctx, name, language, no_lang)
 end
 
 local function make_prefix(content, prompt, source_type)
-  local start_question = '# ' .. source_type .. '\n'
-  local start_answer = '# INSTRUCTIONS\n'
+  local mark_source = '# ' .. source_type .. '\n'
+  local mark_reading = 'Dear FittenCode, Please Reading the' .. source_type .. ' below:\n'
+  local mark_instructions = '# INSTRUCTIONS\n'
+  local mark_prompt_prefix = 'Dear FittenCode, Please '
 
   local prefix = table.concat({
-    start_question,
+    mark_source,
+    mark_reading,
     content,
     '\n',
-    start_answer,
-    'Dear FittenCode, Please ',
+    mark_instructions,
+    mark_prompt_prefix,
     prompt,
-    -- ' and provide your feedback',
     ':',
   }, '')
   return prefix
