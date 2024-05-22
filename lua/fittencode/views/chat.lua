@@ -11,6 +11,7 @@ local Log = require('fittencode.log')
 ---@field show function
 ---@field commit function
 ---@field is_repeated function
+---@field last_cursor? table
 local M = {}
 
 function M:new()
@@ -86,7 +87,12 @@ function M:show()
   Base.map('n', 'q', function() self:close() end, { buffer = self.buffer })
 
   set_option_value(self.window, self.buffer)
-  scroll_to_last(self.window, self.buffer)
+
+  if self.last_cursor then
+    api.nvim_win_set_cursor(self.window, { self.last_cursor[1] + 1, self.last_cursor[2] })
+  else
+    scroll_to_last(self.window, self.buffer)
+  end
 end
 
 function M:close()
@@ -94,6 +100,7 @@ function M:close()
     return
   end
   if api.nvim_win_is_valid(self.window) then
+    M.last_cursor = { Base.get_cursor(self.window) }
     api.nvim_win_close(self.window, true)
   end
   self.window = nil
