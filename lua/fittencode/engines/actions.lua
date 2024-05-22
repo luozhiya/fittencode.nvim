@@ -193,8 +193,6 @@ local function on_error(err)
     lines = {
       '',
       '> Q.E.D.' .. '(' .. elapsed_time .. ' ms)',
-      '',
-      '',
     },
     format = {
       firstlinebreak = true,
@@ -369,6 +367,8 @@ local function _start_action(window, buffer, action, prompt_opts)
   end)
 end
 
+local first_commit = true
+
 local function chat_commit_inout(action_name, prompt_opts, range)
   local prompt_preview = PromptProviders.get_prompt_one(prompt_opts)
   if #prompt_preview.filename == 0 then
@@ -376,6 +376,11 @@ local function chat_commit_inout(action_name, prompt_opts, range)
   end
   local source_info = ' (' .. prompt_preview.filename .. ' ' .. range.start[1] .. ':' .. range['end'][1] .. ')'
   local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info .. '\n'
+  if not first_commit then
+    chat:commit('\n\n')
+  else
+    first_commit = false
+  end
   chat:commit(c_in)
   chat:commit(prompt_preview.content .. '\n')
   local c_out = '# Out`[' .. current_eval .. ']`=' .. '\n'
