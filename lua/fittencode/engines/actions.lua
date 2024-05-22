@@ -260,6 +260,10 @@ local VMODE = { ['v'] = true, ['V'] = true, [api.nvim_replace_termcodes('<C-V>',
 ---@param buffer number
 ---@param range ActionRange
 local function normalize_range(buffer, range)
+  if range.start[1] == 0 and range.start[2] == 0 and range['end'][1] == 0 and range['end'][2] == 0 then
+    return
+  end
+
   local start = range.start
   local end_ = range['end']
 
@@ -273,6 +277,9 @@ local function normalize_range(buffer, range)
 
   local utf_end_byte = function(row, col)
     local line = api.nvim_buf_get_lines(buffer, row - 1, row, false)[1]
+    if not line then
+      return col
+    end
     if #line == 0 then
       return 1
     end
