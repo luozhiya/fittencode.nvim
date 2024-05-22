@@ -302,7 +302,7 @@ local function make_range(buffer)
   if VMODE[mode] then
     in_v = true
     if fn.has('nvim-0.10') == 1 then
-      region = fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
+      region = fn.getregion(fn.getpos('.'), fn.getpos('v'), { type = fn.mode() })
     end
   end
 
