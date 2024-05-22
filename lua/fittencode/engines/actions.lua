@@ -38,6 +38,8 @@ local SC = Status.C
 ---@field guess_programming_language function
 ---@field analyze_data function
 ---@field translate_text function
+---@field summarize_text function
+---@field generate_code function
 local ActionsEngine = {}
 
 local ACTIONS = {
@@ -54,6 +56,7 @@ local ACTIONS = {
   AnalyzeData = 10,
   TranslateText = 11,
   SummarizeText = 12,
+  GenerateCode = 13,
 }
 
 local current_eval = 1
@@ -257,6 +260,10 @@ local VMODE = { ['v'] = true, ['V'] = true, [api.nvim_replace_termcodes('<C-V>',
 ---@param buffer number
 ---@param range ActionRange
 local function normalize_range(buffer, range)
+  if range.start[1] == 0 and range.start[2] == 0 and range['end'][1] == 0 and range['end'][2] == 0 then
+    return
+  end
+
   local start = range.start
   local end_ = range['end']
 
@@ -270,6 +277,9 @@ local function normalize_range(buffer, range)
 
   local utf_end_byte = function(row, col)
     local line = api.nvim_buf_get_lines(buffer, row - 1, row, false)[1]
+    if not line then
+      return col
+    end
     if #line == 0 then
       return 1
     end
@@ -558,6 +568,27 @@ function ActionsEngine.summarize_text(opts)
   local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
   ActionsEngine.start_action(ACTIONS.SummarizeText, merged)
+end
+
+---@param opts? ActionOptions
+function ActionsEngine.generate_code(opts)
+  local defaults = {}
+  local merged = vim.tbl_deep_extend('force', defaults, opts or {})
+  if merged.content == nil or #merged.content == 0 then
+    local input_opts = { prompt = 'Enter instructions: ', default = '', }
+    vim.ui.input(input_opts, function(content)
+      if not content or #content == 0 then
+        Log.debug('No Content for FittenCode GenerateCode')
+        return
+      end
+      Log.debug('Enter instructions: ' .. content)
+      ActionsEngine.start_action(ACTIONS.GenerateCode, {
+        content = content }
+      )
+    end)
+  else
+    ActionsEngine.start_action(ACTIONS.GenerateCode, merged)
+  end
 end
 
 -- API: ActionOptions.content

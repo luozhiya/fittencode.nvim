@@ -78,6 +78,7 @@ local MAP_ACTION_PROMPTS = {
     return 'Translate the text above' .. ' into ' .. ctx.action_opts.target_language
   end,
   SummarizeText = 'Summarize the text above and then represent the outline in a multi-level sequence',
+  GenerateCode = 'Generate code based on the description above',
 }
 
 local function make_language(ctx)
@@ -145,6 +146,9 @@ local function make_source_type(no_lang, name)
     else
       return 'TEXT'
     end
+  end
+  if name == 'GenerateCode' then
+    return 'TEXT'
   end
   return 'CODE'
 end
