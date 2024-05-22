@@ -272,6 +272,9 @@ local function normalize_range(buffer, range)
 
   local utf_end_byte = function(row, col)
     local line = api.nvim_buf_get_lines(buffer, row - 1, row, false)[1]
+    if #line == 0 then
+      return 1
+    end
     local byte_start = math.min(col + 1, #line)
     local utf_index = Unicode.calculate_utf8_index(line)
     local flag = utf_index[byte_start]
