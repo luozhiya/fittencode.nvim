@@ -28,14 +28,6 @@ function M:get_priority()
   return self.priority
 end
 
-local function max_len(buffer, row, len)
-  local max = string.len(api.nvim_buf_get_lines(buffer, row - 1, row, false)[1])
-  if len > max then
-    return max
-  end
-  return len
-end
-
 ---@param buffer integer
 ---@param range ActionRange
 ---@return string
@@ -44,14 +36,12 @@ local function make_range_content(buffer, range)
   if range.vmode and range.region then
     lines = range.region or {}
   else
-    -- lines = api.nvim_buf_get_text(buffer, range.start[1] - 1, 0, range.start[1] - 1, -1, {})
-    local end_col = max_len(buffer, range['end'][1], range['end'][2])
     lines = api.nvim_buf_get_text(
       buffer,
       range.start[1] - 1,
       range.start[2],
       range['end'][1] - 1,
-      end_col + 1, {})
+      range['end'][2], {})
   end
   return table.concat(lines, '\n')
 end
