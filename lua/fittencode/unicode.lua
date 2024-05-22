@@ -17,7 +17,7 @@ function M.calculate_utf8_index_tbl(lines)
   return index
 end
 
-local function find_zero(tbl, start_index)
+function M.find_zero(tbl, start_index)
   for i = start_index, #tbl do
     if tbl[i] == 0 then
       return i
@@ -30,14 +30,14 @@ function M.find_first_character(s, tbl, start_index)
     return nil
   end
 
-  local v1 = find_zero(tbl, start_index)
+  local v1 = M.find_zero(tbl, start_index)
   assert(v1 == start_index)
   if v1 == nil then
     -- Invalid UTF-8 sequence
     return nil
   end
 
-  local v2 = find_zero(tbl, v1 + 1)
+  local v2 = M.find_zero(tbl, v1 + 1)
   if v2 == nil then
     v2 = #tbl
   else

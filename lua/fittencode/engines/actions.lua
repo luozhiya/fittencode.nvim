@@ -12,6 +12,7 @@ local Sessions = require('fittencode.sessions')
 local Status = require('fittencode.status')
 local SuggestionsPreprocessing = require('fittencode.suggestions_preprocessing')
 local TaskScheduler = require('fittencode.tasks')
+local Unicode = require('fittencode.unicode')
 
 local schedule = Base.schedule
 
@@ -255,6 +256,40 @@ end
 
 local VMODE = { ['v'] = true, ['V'] = true, [api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
 
+---@param buffer number
+---@param range ActionRange
+local function normalize_range(buffer, range)
+  local start = range.start
+  local end_ = range['end']
+
+  if end_[1] < start[1] then
+    start[1], end_[1] = end_[1], start[1]
+    start[2], end_[2] = end_[2], start[2]
+  end
+  if end_[2] < start[2] and end_[1] == start[1] then
+    start[2], end_[2] = end_[2], start[2]
+  end
+
+  local utf_end_byte = function(row, col)
+    local line = api.nvim_buf_get_lines(buffer, row - 1, row, false)[1]
+    local byte_start = math.min(col + 1, #line)
+    local utf_index = Unicode.calculate_utf8_index(line)
+    local flag = utf_index[byte_start]
+    assert(flag == 0)
+    local byte_end = #line
+    local next = Unicode.find_zero(utf_index, byte_start + 1)
+    if next then
+      byte_end = next - 1
+    end
+    return byte_end
+  end
+
+  end_[2] = utf_end_byte(end_[1], end_[2])
+
+  range.start = start
+  range['end'] = end_
+end
+
 local function make_range(buffer)
   local in_v = false
   local region = nil
@@ -273,12 +308,15 @@ local function make_range(buffer)
   local start = api.nvim_buf_get_mark(buffer, '<')
   local end_ = api.nvim_buf_get_mark(buffer, '>')
 
+  ---@type ActionRange
   local range = {
     start = start,
     ['end'] = end_,
     vmode = in_v,
     region = region,
   }
+  normalize_range(buffer, range)
+
   return range
 end
 
