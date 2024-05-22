@@ -151,6 +151,10 @@ local function _start_chat(...)
   return _action_apis_wrap(API.start_chat, ...)
 end
 
+local function _generate_code(...)
+  return _action_apis_wrap(API.generate_code, ...)
+end
+
 local function _action_apis_wrap_content(fx, ...)
   local args = { ... }
   ---@type ActionOptions
@@ -231,6 +235,8 @@ function M.setup_commands()
     translate_text_into_english = _translate_text_into_english,
     -- Arguments: text
     summarize_text = _summarize_text,
+    -- Arguments: language
+    generate_code = _generate_code,
     -- Arguments: language
     start_chat = _start_chat,
     -- Arguments: Nop

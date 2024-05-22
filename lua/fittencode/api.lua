@@ -109,6 +109,10 @@ M.api = {
     return ActionsEngine.summarize_text(opts)
   end,
   ---@param opts? ActionOptions
+  generate_code = function(opts)
+    return ActionsEngine.generate_code(opts)
+  end,
+  ---@param opts? ActionOptions
   start_chat = function(opts)
     return ActionsEngine.start_chat(opts)
   end,
