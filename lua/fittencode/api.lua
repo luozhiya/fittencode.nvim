@@ -75,8 +75,8 @@ M.api = {
     return ActionsEngine.implement_classes(opts)
   end,
   ---@param opts? ActionOptions
-  improve_code = function(opts)
-    return ActionsEngine.improve_code(opts)
+  optimize_code = function(opts)
+    return ActionsEngine.optimize_code(opts)
   end,
   ---@param opts? ActionOptions
   refactor_code = function(opts)

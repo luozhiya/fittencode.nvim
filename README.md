@@ -15,7 +15,7 @@ Fitten Code AI Programming Assistant for Neovim, helps you to use AI for automat
   - 4️⃣ Find bugs
   - 5️⃣ Generate unit test
   - 6️⃣ Implement features
-  - 7️⃣ Improve code
+  - 7️⃣ Optimize code
   - 8️⃣ Refactor code
   - 9️⃣ Start chat
 - ⭐️ Accept all suggestions with `Tab`
@@ -181,7 +181,7 @@ require('cmp').setup({
 | `Fitten find_bugs`                   | Find bugs                   |
 | `Fitten generate_unit_test`          | Generate unit test          |
 | `Fitten implement_features`          | Implement features          |
-| `Fitten improve_code`                | Improve code                |
+| `Fitten optimize_code`               | Optimize code               |
 | `Fitten refactor_code`               | Refactor code               |
 | `Fitten guess_programming_language`  | Guess programming language  |
 | `Fitten analyze_data`                | Analyze data                |
@@ -255,7 +255,7 @@ vim.log = {
 | `find_bugs(ActionOptions)`                          | Find bugs                                                       |
 | `generate_unit_test(GenerateUnitTestOptions)`       | Generate unit test                                              |
 | `implement_features(ImplementFeaturesOptions)`      | Implement features                                              |
-| `improve_code(ActionOptions)`                       | Improve code                                                    |
+| `optimize_code(ActionOptions)`                      | Optimize code                                                   |
 | `refactor_code(ActionOptions)`                      | Refactor code                                                   |
 | `guess_programming_language(ActionOptions)`         | Guess programming language                                      |
 | `analyze_data(ActionOptions)`                       | Analyze data                                                    |

@@ -33,7 +33,7 @@ local SC = Status.C
 ---@field find_bugs function
 ---@field generate_unit_test function
 ---@field implement_features function
----@field improve_code function
+---@field optimize_code function
 ---@field refactor_code function
 ---@field guess_programming_language function
 ---@field analyze_data function
@@ -50,7 +50,7 @@ local ACTIONS = {
   FindBugs = 4,
   GenerateUnitTest = 5,
   ImplementFeatures = 6,
-  ImproveCode = 7,
+  OptimizeCode = 7,
   RefactorCode = 8,
   GuessProgrammingLanguage = 9,
   AnalyzeData = 10,
@@ -525,10 +525,10 @@ function ActionsEngine.implement_classes(opts)
 end
 
 ---@param opts? ActionOptions
-function ActionsEngine.improve_code(opts)
+function ActionsEngine.optimize_code(opts)
   local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
-  ActionsEngine.start_action(ACTIONS.ImproveCode, merged)
+  ActionsEngine.start_action(ACTIONS.OptimizeCode, merged)
 end
 
 ---@param opts? ActionOptions

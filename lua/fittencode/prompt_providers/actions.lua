@@ -73,7 +73,7 @@ local MAP_ACTION_PROMPTS = {
     local feature_type = opts.feature_type or 'code'
     return 'Implement the ' .. feature_type .. ' mentioned in the code above'
   end,
-  ImproveCode = 'Improve the code above',
+  OptimizeCode = 'Optimize the code above to make it faster and more efficient',
   RefactorCode = 'Refactor the code above',
   GuessProgrammingLanguage = 'Guess the programming language of the code above',
   AnalyzeData = 'Analyze the data above and Give the pattern of the data',

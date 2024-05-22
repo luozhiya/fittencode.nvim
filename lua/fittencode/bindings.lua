@@ -139,8 +139,8 @@ local function _find_bugs(...)
   return _action_apis_wrap(API.find_bugs, ...)
 end
 
-local function _improve_code(...)
-  return _action_apis_wrap(API.improve_code, ...)
+local function _optimize_code(...)
+  return _action_apis_wrap(API.optimize_code, ...)
 end
 
 local function _refactor_code(...)
@@ -220,7 +220,7 @@ function M.setup_commands()
     -- Arguments: language
     implement_class = _implement_class,
     -- Arguments: language
-    improve_code = _improve_code,
+    optimize_code = _optimize_code,
     -- Arguments: language
     refactor_code = _refactor_code,
     -- Arguments: code
