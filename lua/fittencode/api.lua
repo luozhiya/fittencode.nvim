@@ -115,6 +115,9 @@ M.api = {
   stop_eval = function()
     return ActionsEngine.stop_eval()
   end,
+  show_chat = function()
+    return ActionsEngine.show_chat()
+  end,
 }
 
 return M

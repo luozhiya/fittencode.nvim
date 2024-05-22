@@ -635,4 +635,8 @@ function ActionsEngine.stop_eval()
   stop_eval = true
 end
 
+function ActionsEngine.show_chat()
+  chat:show()
+end
+
 return ActionsEngine
