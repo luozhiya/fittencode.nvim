@@ -36,12 +36,17 @@ local function make_range_content(buffer, range)
   if range.vmode and range.region then
     lines = range.region or {}
   else
-    lines = api.nvim_buf_get_text(
+    local success, result = pcall(api.nvim_buf_get_text,
       buffer,
       range.start[1] - 1,
       range.start[2],
       range['end'][1] - 1,
       range['end'][2], {})
+    if success then
+      lines = result
+    else
+      Log.error('Error getting content: {}, with range: {}', result, range)
+    end
   end
   return table.concat(lines, '\n')
 end
@@ -103,7 +108,10 @@ local function make_content_with_prefix_suffix(ctx, language, no_lang)
   if not no_lang then
     content_prefix = '```' .. language
   end
-  content = content_prefix .. '\n' .. content .. '\n' .. content_suffix
+  if #content > 0 then
+    content = content .. '\n'
+  end
+  content = content_prefix .. '\n' .. content .. content_suffix
 
   return content
 end
