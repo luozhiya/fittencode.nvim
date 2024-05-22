@@ -35,7 +35,7 @@ local SC = Status.C
 ---@field implement_features function
 ---@field optimize_code function
 ---@field refactor_code function
----@field guess_programming_language function
+---@field identify_programming_language function
 ---@field analyze_data function
 ---@field translate_text function
 ---@field summarize_text function
@@ -52,7 +52,7 @@ local ACTIONS = {
   ImplementFeatures = 6,
   OptimizeCode = 7,
   RefactorCode = 8,
-  GuessProgrammingLanguage = 9,
+  IdentifyProgrammingLanguage = 9,
   AnalyzeData = 10,
   TranslateText = 11,
   SummarizeText = 12,
@@ -539,10 +539,10 @@ function ActionsEngine.refactor_code(opts)
 end
 
 ---@param opts? ActionOptions
-function ActionsEngine.guess_programming_language(opts)
+function ActionsEngine.identify_programming_language(opts)
   local defaults = {}
   local merged = vim.tbl_deep_extend('force', defaults, opts or {})
-  ActionsEngine.start_action(ACTIONS.GuessProgrammingLanguage, merged)
+  ActionsEngine.start_action(ACTIONS.IdentifyProgrammingLanguage, merged)
 end
 
 ---@param opts? ActionOptions

@@ -217,7 +217,7 @@ ACTION COMMANDS ~
   Fitten implement_features            Implement features
   Fitten improve_code                  Improve code
   Fitten refactor_code                 Refactor code
-  Fitten guess_programming_language    Guess programming language
+  Fitten identify_programming_language    Guess programming language
   Fitten analyze_data                  Analyze data
   Fitten translate_text                Translate text
   Fitten translate_text_into_chinese   Translate text into Chinese
@@ -314,7 +314,7 @@ LIST OF APIS ~
 
   refactor_code(ActionOptions)                        Refactor code
 
-  guess_programming_language(ActionOptions)           Guess programming language
+  identify_programming_language(ActionOptions)           Guess programming language
 
   analyze_data(ActionOptions)                         Analyze data
 

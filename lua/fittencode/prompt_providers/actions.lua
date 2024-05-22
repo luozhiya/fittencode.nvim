@@ -51,7 +51,7 @@ local function make_range_content(buffer, range)
   return table.concat(lines, '\n')
 end
 
-local NO_LANG_ACTIONS = { 'StartChat', 'GuessProgrammingLanguage', 'AnalyzeData', 'TranslateText', 'SummarizeText' }
+local NO_LANG_ACTIONS = { 'StartChat', 'IdentifyProgrammingLanguage', 'AnalyzeData', 'TranslateText', 'SummarizeText' }
 
 local MAP_ACTION_PROMPTS = {
   StartChat = 'Answer the question above',
@@ -75,7 +75,7 @@ local MAP_ACTION_PROMPTS = {
   end,
   OptimizeCode = 'Optimize the code above to make it faster and more efficient',
   RefactorCode = 'Refactor the code above',
-  GuessProgrammingLanguage = 'Guess the programming language of the code above',
+  IdentifyProgrammingLanguage = 'Identify the language used in the code above',
   AnalyzeData = 'Analyze the data above and Give the pattern of the data',
   TranslateText = function(ctx)
     assert(ctx.action_opts)

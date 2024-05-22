@@ -173,22 +173,22 @@ require('cmp').setup({
 ### Action Commands
 - Try the command `Fitten generate_unit_test <test_framework> <language>` to generate unit test with specific test framework and language.
 
-| Command                              | Description                 |
-|--------------------------------------|-----------------------------|
-| `Fitten document_code`               | Document code               |
-| `Fitten edit_code`                   | Edit code                   |
-| `Fitten explain_code`                | Explain code                |
-| `Fitten find_bugs`                   | Find bugs                   |
-| `Fitten generate_unit_test`          | Generate unit test          |
-| `Fitten implement_features`          | Implement features          |
-| `Fitten optimize_code`               | Optimize code               |
-| `Fitten refactor_code`               | Refactor code               |
-| `Fitten guess_programming_language`  | Guess programming language  |
-| `Fitten analyze_data`                | Analyze data                |
-| `Fitten translate_text`              | Translate text              |
-| `Fitten translate_text_into_chinese` | Translate text into Chinese |
-| `Fitten translate_text_into_english` | Translate text into English |
-| `Fitten start_chat`                  | Start chat                  |
+| Command                                | Description                   |
+|----------------------------------------|-------------------------------|
+| `Fitten document_code`                 | Document code                 |
+| `Fitten edit_code`                     | Edit code                     |
+| `Fitten explain_code`                  | Explain code                  |
+| `Fitten find_bugs`                     | Find bugs                     |
+| `Fitten generate_unit_test`            | Generate unit test            |
+| `Fitten implement_features`            | Implement features            |
+| `Fitten optimize_code`                 | Optimize code                 |
+| `Fitten refactor_code`                 | Refactor code                 |
+| `Fitten identify_programming_language` | Identify programming language |
+| `Fitten analyze_data`                  | Analyze data                  |
+| `Fitten translate_text`                | Translate text                |
+| `Fitten translate_text_into_chinese`   | Translate text into Chinese   |
+| `Fitten translate_text_into_english`   | Translate text into English   |
+| `Fitten start_chat`                    | Start chat                    |
 
 ### Default Mappings
 
@@ -257,7 +257,7 @@ vim.log = {
 | `implement_features(ImplementFeaturesOptions)`      | Implement features                                              |
 | `optimize_code(ActionOptions)`                      | Optimize code                                                   |
 | `refactor_code(ActionOptions)`                      | Refactor code                                                   |
-| `guess_programming_language(ActionOptions)`         | Guess programming language                                      |
+| `identify_programming_language(ActionOptions)`      | Identify programming language                                   |
 | `analyze_data(ActionOptions)`                       | Analyze data                                                    |
 | `translate_text(TranslateTextOptions)`              | Translate text                                                  |
 | `translate_text_into_chinese(TranslateTextOptions)` | Translate text into Chinese                                     |

@@ -164,8 +164,8 @@ local function _action_apis_wrap_content(fx, ...)
   return fx(opts)
 end
 
-local function _guess_programming_language(...)
-  return _action_apis_wrap_content(API.guess_programming_language, ...)
+local function _identify_programming_language(...)
+  return _action_apis_wrap_content(API.identify_programming_language, ...)
 end
 
 local function _analyze_data(...)
@@ -224,7 +224,7 @@ function M.setup_commands()
     -- Arguments: language
     refactor_code = _refactor_code,
     -- Arguments: code
-    guess_programming_language = _guess_programming_language,
+    identify_programming_language = _identify_programming_language,
     -- Arguments: data
     analyze_data = _analyze_data,
     -- Arguments: traget_language, text

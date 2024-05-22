@@ -83,8 +83,8 @@ M.api = {
     return ActionsEngine.refactor_code(opts)
   end,
   ---@param opts? ActionOptions
-  guess_programming_language = function(opts)
-    return ActionsEngine.guess_programming_language(opts)
+  identify_programming_language = function(opts)
+    return ActionsEngine.identify_programming_language(opts)
   end,
   ---@param opts? ActionOptions
   analyze_data = function(opts)
