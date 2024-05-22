@@ -278,11 +278,14 @@ local function normalize_range(buffer, range)
     local byte_start = math.min(col + 1, #line)
     local utf_index = Unicode.calculate_utf8_index(line)
     local flag = utf_index[byte_start]
-    assert(flag == 0)
     local byte_end = #line
-    local next = Unicode.find_zero(utf_index, byte_start + 1)
-    if next then
-      byte_end = next - 1
+    if flag == 0 then
+      local next = Unicode.find_zero(utf_index, byte_start + 1)
+      if next then
+        byte_end = next - 1
+      end
+    else
+      byte_end = byte_start
     end
     return byte_end
   end
