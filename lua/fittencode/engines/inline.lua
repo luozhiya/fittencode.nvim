@@ -380,6 +380,7 @@ function M.reset()
     Lines.clear_virt_text()
   end
   cache:flush()
+  tasks:clear()
 end
 
 function M.advance()

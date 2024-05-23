@@ -11,6 +11,7 @@ local Log = require('fittencode.log')
 ---@field list table<integer, Task> @list of tasks
 ---@field threshold? integer @threshold for clean up
 ---@field timeout_recycling_timer? uv_timer_t @timer for recycling timeout tasks
+---@field clear function
 
 ---@class TaskScheduler
 local TaskScheduler = {}
@@ -18,7 +19,7 @@ local TaskScheduler = {}
 local MS_TO_NS = 1000000
 -- TODO: make this configurable
 local TASK_TIMEOUT = 6000 * MS_TO_NS
-local RECYCLING_CYCLE = 1000
+local RECYCLING_CYCLE = 100
 
 function TaskScheduler.new()
   local self = setmetatable({}, { __index = TaskScheduler })
@@ -86,13 +87,22 @@ local function is_timeout(timestamp)
 end
 
 function TaskScheduler:timeout_recycling()
-  for i, task in ipairs(self.list) do
-    if is_timeout(task.timestamp) or (self.threshold and task.timestamp <= self.threshold) then
-      table.remove(self.list, i)
-      -- Log.debug('Task removed; row: ' .. task.row .. ', col: ' .. task.col)
+  if self.threshold == -1 then
+    self.list = {}
+    -- Log.debug('All tasks removed')
+  else
+    for i, task in ipairs(self.list) do
+      if is_timeout(task.timestamp) or (self.threshold and task.timestamp <= self.threshold) then
+        table.remove(self.list, i)
+        -- Log.debug('Task removed; row: ' .. task.row .. ', col: ' .. task.col)
+      end
     end
   end
   self.threshold = nil
+end
+
+function TaskScheduler:clear()
+  self:schedule_clean(-1)
 end
 
 return TaskScheduler
