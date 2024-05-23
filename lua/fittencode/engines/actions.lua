@@ -79,10 +79,14 @@ local stop_eval = false
 ---@type Status
 local status = nil
 
+local last_suggestions = {}
+
 ---@class ActionOptions
 ---@field prompt? string
 ---@field content? string
 ---@field language? string
+---@field on_success? function @function Callback when suggestions are ready
+---@field on_error? function @function Callback when an error occurs or no more suggestions
 
 ---@class GenerateUnitTestOptions : ActionOptions
 ---@field test_framework string
@@ -158,6 +162,7 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
         Log.debug('Repeated suggestions')
         schedule(on_error)
       else
+        last_suggestions[#last_suggestions + 1] = lines
         elapsed_time = elapsed_time + ms
         depth = depth + 1
         chat:commit({
@@ -175,19 +180,36 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
   end)
 end
 
-local function on_error(err)
+local merge_lines = function(suggestions)
+  local merged = {}
+  for _, lines in ipairs(suggestions) do
+    for i, line in ipairs(lines) do
+      if i == 1 and #merged ~= 0 then
+        merged[#merged] = merged[#merged] .. line
+      else
+        merged[#merged + 1] = line
+      end
+    end
+  end
+  return merged
+end
+
+local function on_stage_error(prompt_opts, err)
   lock = false
   if type(err) == 'table' and getmetatable(err) == NetworkError then
     status:update(SC.NETWORK_ERROR)
     -- Log.error('Error in Action: {}', err)
     chat:commit('```\nError: fetch failed.\n```')
+    schedule(prompt_opts.action_opts.on_error)
   else
     if depth == 0 then
       status:update(SC.NO_MORE_SUGGESTIONS)
       chat:commit('```\nNo more suggestions.\n```')
       Log.debug('Action: No more suggestions')
+      schedule(prompt_opts.action_opts.on_error)
     else
       status:update(SC.SUGGESTIONS_READY)
+      schedule(prompt_opts.action_opts.on_success, merge_lines(last_suggestions))
     end
   end
   Log.debug('Action elapsed time: {}', elapsed_time)
@@ -348,6 +370,9 @@ local function make_filetype(buffer, range)
 end
 
 local function _start_action(window, buffer, action, prompt_opts)
+  local on_stage_error_wrap = function(err)
+    on_stage_error(prompt_opts, err)
+  end
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, prompt_opts, function(_, prompt, suggestions)
@@ -357,6 +382,7 @@ local function _start_action(window, buffer, action, prompt_opts)
       if not lines or #lines == 0 then
         reject()
       else
+        last_suggestions[#last_suggestions + 1] = lines
         depth = depth + 1
         chat:commit({
           lines = lines,
@@ -371,9 +397,9 @@ local function _start_action(window, buffer, action, prompt_opts)
       reject(err)
     end)
   end):forward(function(solved_prefix)
-    chain_actions(window, buffer, action, solved_prefix, on_error)
+    chain_actions(window, buffer, action, solved_prefix, on_stage_error_wrap)
   end, function(err)
-    schedule(on_error, err)
+    schedule(on_stage_error_wrap, err)
   end)
 end
 
@@ -418,6 +444,7 @@ function ActionsEngine.start_action(action, opts)
   lock = true
   elapsed_time = 0
   depth = 0
+  last_suggestions = {}
 
   status:update(SC.GENERATING)
 
@@ -444,6 +471,7 @@ function ActionsEngine.start_action(action, opts)
     prompt = opts and opts.prompt,
     action_opts = opts,
   }
+  Log.debug('Action prompt_opts: {}', prompt_opts)
 
   chat_commit_inout(action_name, prompt_opts, range)
   _start_action(chat.window, chat.buffer, action, prompt_opts)
