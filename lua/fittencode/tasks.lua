@@ -91,18 +91,17 @@ function TaskScheduler:timeout_recycling()
     self.list = {}
     -- Log.debug('All tasks removed')
   else
-    for i, task in ipairs(self.list) do
-      if is_timeout(task.timestamp) or (self.threshold and task.timestamp <= self.threshold) then
-        table.remove(self.list, i)
-        -- Log.debug('Task removed; row: ' .. task.row .. ', col: ' .. task.col)
-      end
-    end
+    self.list = vim.tbl_filter(function(task)
+      return not is_timeout(task.timestamp) and (not self.threshold or task.timestamp > self.threshold)
+    end, self.list)
+    -- Log.debug('Tasks recycled')
   end
   self.threshold = nil
 end
 
 function TaskScheduler:clear()
-  self:schedule_clean(-1)
+  -- self:schedule_clean(-1)
+  self.list = {}
 end
 
 return TaskScheduler
