@@ -51,7 +51,13 @@ local function make_range_content(buffer, range)
   return table.concat(lines, '\n')
 end
 
-local NO_LANG_ACTIONS = { 'StartChat', 'IdentifyProgrammingLanguage', 'AnalyzeData', 'TranslateText', 'SummarizeText' }
+local NO_LANG_ACTIONS = {
+  'StartChat',
+  'IdentifyProgrammingLanguage',
+  'AnalyzeData',
+  'TranslateText',
+  'SummarizeText',
+  'GenerateCode' }
 
 local MAP_ACTION_PROMPTS = {
   StartChat = 'Answer the question above',
