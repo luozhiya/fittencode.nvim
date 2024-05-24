@@ -4,6 +4,7 @@ local fn = vim.fn
 local Base = require('fittencode.base')
 local Chat = require('fittencode.views.chat')
 local Config = require('fittencode.config')
+local ContentControl = require('fittencode.engines.actions.content_control')
 local Log = require('fittencode.log')
 local NetworkError = require('fittencode.client.network_error')
 local Promise = require('fittencode.concurrency.promise')
@@ -63,6 +64,9 @@ local current_eval = 1
 
 ---@type Chat
 local chat = nil
+
+---@type ActionsContentControl
+local content_control = nil
 
 ---@class TaskScheduler
 local tasks = nil
@@ -165,7 +169,7 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
         last_suggestions[#last_suggestions + 1] = lines
         elapsed_time = elapsed_time + ms
         depth = depth + 1
-        chat:commit({
+        content_control:commit({
           lines = lines,
           format = {
             -- firstlinebreak = true,
@@ -199,12 +203,12 @@ local function on_stage_error(prompt_opts, err)
   if type(err) == 'table' and getmetatable(err) == NetworkError then
     status:update(SC.NETWORK_ERROR)
     -- Log.error('Error in Action: {}', err)
-    chat:commit('```\nError: fetch failed.\n```')
+    content_control:commit('```\nError: fetch failed.\n```')
     schedule(prompt_opts.action_opts.on_error)
   else
     if depth == 0 then
       status:update(SC.NO_MORE_SUGGESTIONS)
-      chat:commit('```\nNo more suggestions.\n```')
+      content_control:commit('```\nNo more suggestions.\n```')
       Log.debug('Action: No more suggestions')
       schedule(prompt_opts.action_opts.on_error)
     else
@@ -214,7 +218,7 @@ local function on_stage_error(prompt_opts, err)
   end
   Log.debug('Action elapsed time: {}', elapsed_time)
   Log.debug('Action depth: {}', depth)
-  chat:commit({
+  content_control:commit({
     lines = {
       '',
       '> Q.E.D.' .. '(' .. elapsed_time .. ' ms)',
@@ -384,7 +388,7 @@ local function _start_action(window, buffer, action, prompt_opts)
       else
         last_suggestions[#last_suggestions + 1] = lines
         depth = depth + 1
-        chat:commit({
+        content_control:commit({
           lines = lines,
           format = {
             firstlinecompress = true,
@@ -413,14 +417,14 @@ local function chat_commit_inout(action_name, prompt_opts, range)
   local source_info = ' (' .. prompt_preview.filename .. ' ' .. range.start[1] .. ':' .. range['end'][1] .. ')'
   local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info .. '\n'
   if not first_commit then
-    chat:commit('\n\n')
+    content_control:commit('\n\n')
   else
     first_commit = false
   end
-  chat:commit(c_in)
-  chat:commit(prompt_preview.content .. '\n')
+  content_control:commit(c_in)
+  content_control:commit(prompt_preview.content .. '\n')
   local c_out = '# Out`[' .. current_eval .. ']`=' .. '\n'
-  chat:commit(c_out)
+  content_control:commit(c_out)
 end
 
 ---@param action integer
@@ -676,6 +680,7 @@ end
 
 function ActionsEngine.setup()
   chat = Chat:new()
+  content_control = ContentControl:new(chat)
   tasks = TaskScheduler:new()
   tasks:setup()
   status = Status:new({
