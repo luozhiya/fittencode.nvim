@@ -199,7 +199,6 @@ function M:on_end(opts)
     },
   })
   self.cursors[self.current_eval][ViewBlock.QED] = cursor
-  Log.debug('STOP: {}', self)
 end
 
 local function merge_cursors(c1, c2)

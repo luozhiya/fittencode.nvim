@@ -97,12 +97,10 @@ local function _generate_one_stage(row, col, on_success, on_error)
       schedule(on_success, processed)
     else
       status:update(SC.NO_MORE_SUGGESTIONS)
-      schedule(on_error)
+      schedule(on_success)
     end
-  end, function(err)
-    if type(err) == 'table' and getmetatable(err) == NetworkError then
-      status:update(SC.NETWORK_ERROR)
-    end
+  end, function()
+    status:update(SC.ERROR)
     schedule(on_error)
   end)
 end
@@ -128,7 +126,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
     if M.is_inline_enabled() then
       Lines.render_virt_text(cache:get_lines())
     end
-    schedule(on_error)
+    schedule(on_success, M.get_suggestions():get_lines())
     return
   else
     Log.debug('Cached cursor is outdated')
@@ -185,8 +183,15 @@ function M.triggering_completion()
   end
 
   local prompt = ' (Currently no completion options available)'
-  generate_one_stage_at_cursor(nil, function()
+  local fx = function()
     Lines.render_virt_text({ prompt }, 2000, Color.FittenNoMoreSuggestion, 'replace')
+  end
+  generate_one_stage_at_cursor(function(suggestions)
+    if not suggestions then
+      fx()
+    end
+  end, function()
+    fx()
   end)
 end
 

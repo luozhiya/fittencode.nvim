@@ -135,11 +135,45 @@ local function filter_suggestions(window, buffer, task_id, suggestions)
   }), ms
 end
 
+local function on_stage_end(is_error, on_success, on_error)
+  Log.debug('Action elapsed time: {}', elapsed_time)
+  Log.debug('Action depth: {}', depth)
+
+  content:on_end({
+    elapsed_time = elapsed_time,
+    depth = depth,
+  })
+
+  if is_error then
+    status:update(SC.ERROR)
+    local err_msg = 'Error: fetch failed.'
+    content:on_status(err_msg)
+    schedule(on_error)
+  else
+    if depth == 0 then
+      status:update(SC.NO_MORE_SUGGESTIONS)
+      local msg = 'No more suggestions.'
+      content:on_status(msg)
+      schedule(on_success)
+    else
+      status:update(SC.SUGGESTIONS_READY)
+      schedule(on_success, content:get_current_suggestions())
+    end
+  end
+
+  current_eval = current_eval + 1
+  lock = false
+end
+
 ---@param action integer
 ---@param solved_prefix string
 ---@param on_error function
-local function chain_actions(window, buffer, action, solved_prefix, on_error)
+local function chain_actions(window, buffer, action, solved_prefix, on_success, on_error)
   Log.debug('Chain Action({})...', get_action_name(action))
+  if not solved_prefix then
+    on_stage_end(false, on_success, on_error)
+    return
+  end
   if depth >= MAX_DEPTH then
     Log.debug('Max depth reached, stopping evaluation')
     schedule(on_error)
@@ -158,13 +192,13 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
   }, function(_, prompt, suggestions)
     local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
     if not lines or #lines == 0 then
-      schedule(on_error)
+      schedule(on_success)
     else
       elapsed_time = elapsed_time + ms
       depth = depth + 1
       content:on_suggestions(lines)
       local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-      chain_actions(window, buffer, action, new_solved_prefix, on_error)
+      chain_actions(window, buffer, action, new_solved_prefix, on_success, on_error)
     end
   end, function(err)
     schedule(on_error, err)
@@ -172,32 +206,13 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
 end
 
 local function on_stage_error(prompt_opts, err)
-  Log.debug('Action elapsed time: {}', elapsed_time)
-  Log.debug('Action depth: {}', depth)
-  content:on_end({
-    elapsed_time = elapsed_time,
-    depth = depth,
-  })
+  local action_opts = prompt_opts.action_opts or {}
+  on_stage_end(true, action_opts.on_success, action_opts.on_error)
+end
 
-  if type(err) == 'table' and getmetatable(err) == NetworkError then
-    status:update(SC.NETWORK_ERROR)
-    local err_msg = 'Error: fetch failed.'
-    content:on_status(err_msg)
-    schedule(prompt_opts.action_opts.on_error)
-  else
-    if depth == 0 then
-      status:update(SC.NO_MORE_SUGGESTIONS)
-      local msg = 'No more suggestions.'
-      content:on_status(msg)
-      schedule(prompt_opts.action_opts.on_success)
-    else
-      status:update(SC.SUGGESTIONS_READY)
-      schedule(prompt_opts.action_opts.on_success, content:get_current_suggestions())
-    end
-  end
-
-  current_eval = current_eval + 1
-  lock = false
+local function on_stage_success(prompt_opts, suggestions)
+  local action_opts = prompt_opts.action_opts or {}
+  on_stage_end(false, action_opts.on_success, action_opts.on_error)
 end
 
 ---@param line? string
@@ -346,13 +361,16 @@ local function _start_action(window, buffer, action, prompt_opts)
   local on_stage_error_wrap = function(err)
     on_stage_error(prompt_opts, err)
   end
+  local on_stage_success_wrap = function(suggestions)
+    on_stage_success(prompt_opts, suggestions)
+  end
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, prompt_opts, function(_, prompt, suggestions)
       local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
-        reject()
+        resolve()
       else
         depth = depth + 1
         content:on_suggestions(lines)
@@ -363,7 +381,7 @@ local function _start_action(window, buffer, action, prompt_opts)
       reject(err)
     end)
   end):forward(function(solved_prefix)
-    chain_actions(window, buffer, action, solved_prefix, on_stage_error_wrap)
+    chain_actions(window, buffer, action, solved_prefix, on_stage_success_wrap, on_stage_error_wrap)
   end, function(err)
     schedule(on_stage_error_wrap, err)
   end)

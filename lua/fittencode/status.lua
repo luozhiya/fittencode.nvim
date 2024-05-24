@@ -19,7 +19,7 @@ local M = {}
 local C = {
   IDLE = 0,
   GENERATING = 1,
-  NETWORK_ERROR = 2,
+  ERROR = 2,
   NO_MORE_SUGGESTIONS = 3,
   SUGGESTIONS_READY = 4,
 }
@@ -34,7 +34,7 @@ function M:new(opts)
     ---@type uv_timer_t
     idle_timer = nil,
     IDLE_CYCLE = 5000, -- ms
-    filters = { C.NETWORK_ERROR, C.NO_MORE_SUGGESTIONS }
+    filters = { C.ERROR, C.NO_MORE_SUGGESTIONS }
   }
   if obj.ready_idle then
     table.insert(obj.filters, #obj.filters + 1, C.SUGGESTIONS_READY)
