@@ -120,14 +120,6 @@ function M:commit(opts)
   return self.chat:commit(lines), lines
 end
 
-function M:get_prev_conversation(row, col)
-
-end
-
-function M:get_next_conversation(row, col)
-
-end
-
 function M:on_start(opts)
   if not opts then
     return
@@ -264,6 +256,14 @@ end
 
 function M:get_current_suggestions()
   return merge_lines(self.conversations[self.current_eval].suggestions)
+end
+
+function M:get_prev_conversation(row, col)
+
+end
+
+function M:get_next_conversation(row, col)
+
 end
 
 return M
