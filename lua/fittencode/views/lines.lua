@@ -206,13 +206,14 @@ function M.set_text(opts)
       row = math.max(api.nvim_buf_line_count(buffer) - 1, 0)
       col = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]:len()
     end
-    curosr = { row, col }
+    curosr[1] = { row, col }
     if not is_undo_disabled then
       undojoin()
     end
     -- Emit events `CursorMovedI` `CursorHoldI`
     append_text_at_pos(buffer, row, col, lines)
     move_cursor_to_text_end(window, row, col, lines)
+    curosr[2] = { Base.get_cursor(window) }
   end)
   return curosr
 end

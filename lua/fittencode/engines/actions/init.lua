@@ -173,7 +173,7 @@ end
 local function on_stage_error(prompt_opts, err)
   Log.debug('Action elapsed time: {}', elapsed_time)
   Log.debug('Action depth: {}', depth)
-  content:on_stop({
+  content:on_end({
     elapsed_time = elapsed_time,
     depth = depth,
   })
@@ -186,8 +186,8 @@ local function on_stage_error(prompt_opts, err)
   else
     if depth == 0 then
       status:update(SC.NO_MORE_SUGGESTIONS)
-      local err_msg = 'No more suggestions.'
-      content:on_status(err_msg)
+      local msg = 'No more suggestions.'
+      content:on_status(msg)
       schedule(prompt_opts.action_opts.on_success)
     else
       status:update(SC.SUGGESTIONS_READY)

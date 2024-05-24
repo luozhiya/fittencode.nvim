@@ -3,7 +3,7 @@ local Log = require('fittencode.log')
 
 ---@class ActionsContent
 ---@field chat Chat
----@field content string[][]
+---@field buffer_content string[][]
 ---@field conversations Conversation[]
 ---@field has_suggestions boolean[]
 ---@field current_eval number
@@ -12,7 +12,7 @@ local Log = require('fittencode.log')
 ---@field on_start function
 ---@field on_suggestions function
 ---@field on_status function
----@field on_stop function
+---@field on_end function
 ---@field get_current_suggestions function
 local M = {}
 
@@ -27,7 +27,7 @@ local ViewBlock = {
 function M:new(chat)
   local obj = {
     chat = chat,
-    content = {},
+    buffer_content = {},
     conversations = {},
     current_eval = nil,
     cursors = {},
@@ -111,12 +111,12 @@ end
 
 ---@param opts? ChatCommitOptions|string
 function M:commit(opts)
-  local lines = format_lines(opts, self.content)
+  local lines = format_lines(opts, self.buffer_content)
   if not lines then
     return
   end
 
-  table.insert(self.content, lines)
+  table.insert(self.buffer_content, lines)
   return self.chat:commit(lines), lines
 end
 
@@ -147,6 +147,11 @@ function M:on_start(opts)
   local cursor = self:commit({
     lines = {
       c_in,
+    }
+  })
+  self:commit({
+    lines = {
+      '',
       '',
     }
   })
@@ -166,27 +171,18 @@ function M:on_start(opts)
   cursor = self:commit({
     lines = {
       c_out,
+    }
+  })
+  self:commit({
+    lines = {
+      '',
       '',
     }
   })
   self.cursors[self.current_eval][ViewBlock.OUT] = cursor
 end
 
-local function merge_lines(suggestions)
-  local merged = {}
-  for _, lines in ipairs(suggestions) do
-    for i, line in ipairs(lines) do
-      if i == 1 and #merged ~= 0 then
-        merged[#merged] = merged[#merged] .. line
-      else
-        merged[#merged + 1] = line
-      end
-    end
-  end
-  return merged
-end
-
-function M:on_stop(opts)
+function M:on_end(opts)
   if not opts then
     return
   end
@@ -214,10 +210,19 @@ function M:on_stop(opts)
   Log.debug('STOP: {}', self)
 end
 
+local function merge_cursors(c1, c2)
+  if c1[2][1] == c2[1][1] then
+    return { { c1[1][1], c1[1][2] }, { c2[2][1], c2[2][2] } }
+  end
+  return c1
+end
+
 function M:on_suggestions(suggestions)
   if not suggestions then
     return
   end
+  self.conversations[self.current_eval].suggestions[#self.conversations[self.current_eval].suggestions + 1] = suggestions
+
   if not self.has_suggestions[self.current_eval] then
     self.has_suggestions[self.current_eval] = true
     local cursor = self:commit({
@@ -231,8 +236,9 @@ function M:on_suggestions(suggestions)
     local cursor = self:commit({
       lines = suggestions,
     })
+    self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = merge_cursors(
+      self.cursors[self.current_eval][ViewBlock.OUT_CONTENT], cursor)
   end
-  self.conversations[self.current_eval].suggestions[#self.conversations[self.current_eval].suggestions + 1] = suggestions
 end
 
 function M:on_status(msg)
@@ -240,6 +246,20 @@ function M:on_status(msg)
     return
   end
   self:commit('```\n' .. msg .. '\n```')
+end
+
+local function merge_lines(suggestions)
+  local merged = {}
+  for _, lines in ipairs(suggestions) do
+    for i, line in ipairs(lines) do
+      if i == 1 and #merged ~= 0 then
+        merged[#merged] = merged[#merged] .. line
+      else
+        merged[#merged + 1] = line
+      end
+    end
+  end
+  return merged
 end
 
 function M:get_current_suggestions()
