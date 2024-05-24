@@ -1,13 +1,38 @@
----@class ActionsContentControl
+local Conversation = require('fittencode.engines.actions.conversation')
+local Log = require('fittencode.log')
+
+---@class ActionsContent
 ---@field chat Chat
----@field content string[]
+---@field content string[][]
+---@field conversations Conversation[]
+---@field has_suggestions boolean[]
+---@field current_eval number
+---@field cursors table[]
+---@field first_commit boolean
+---@field on_start function
+---@field on_suggestions function
+---@field on_status function
+---@field on_stop function
+---@field get_current_suggestions function
 local M = {}
 
-function M:new(chat, conventions)
+local ViewBlock = {
+  IN = 1,
+  IN_CONTENT = 2,
+  OUT = 3,
+  OUT_CONTENT = 4,
+  QED = 5,
+}
+
+function M:new(chat)
   local obj = {
     chat = chat,
     content = {},
-    conventions = conventions,
+    conversations = {},
+    current_eval = nil,
+    cursors = {},
+    has_suggestions = {},
+    first_commit = true,
   }
   self.__index = self
   return setmetatable(obj, self)
@@ -101,6 +126,124 @@ end
 
 function M:get_next_conversation(row, col)
 
+end
+
+function M:on_start(opts)
+  if not opts then
+    return
+  end
+  self.current_eval = opts.current_eval
+  self.conversations[self.current_eval] = Conversation:new(self.current_eval, opts.action)
+  self.conversations[self.current_eval].location = opts.location
+  self.conversations[self.current_eval].prompt = opts.prompt
+
+  local source_info = ' (' .. opts.location[1] .. ' ' .. opts.location[2] .. ':' .. opts.location[3] .. ')'
+  local c_in = '# In`[' .. self.current_eval .. ']`:= ' .. opts.action .. source_info
+  if not self.first_commit then
+    self:commit('\n\n')
+  else
+    self.first_commit = false
+  end
+  local cursor = self:commit({
+    lines = {
+      c_in,
+      '',
+    }
+  })
+  self.cursors[self.current_eval] = {}
+  self.cursors[self.current_eval][ViewBlock.IN] = cursor
+  cursor = self:commit({
+    lines = opts.prompt
+  })
+  self.cursors[self.current_eval][ViewBlock.IN_CONTENT] = cursor
+  self:commit({
+    lines = {
+      '',
+      '',
+    }
+  })
+  local c_out = '# Out`[' .. self.current_eval .. ']`='
+  cursor = self:commit({
+    lines = {
+      c_out,
+      '',
+    }
+  })
+  self.cursors[self.current_eval][ViewBlock.OUT] = cursor
+end
+
+local function merge_lines(suggestions)
+  local merged = {}
+  for _, lines in ipairs(suggestions) do
+    for i, line in ipairs(lines) do
+      if i == 1 and #merged ~= 0 then
+        merged[#merged] = merged[#merged] .. line
+      else
+        merged[#merged + 1] = line
+      end
+    end
+  end
+  return merged
+end
+
+function M:on_stop(opts)
+  if not opts then
+    return
+  end
+
+  self.conversations[self.current_eval].elapsed_time = opts.elapsed_time
+  self.conversations[self.current_eval].depth = opts.depth
+
+  self:commit({
+    lines = {
+      '',
+      '',
+    },
+    format = {
+      firstlinebreak = true,
+      fenced_code = true,
+    }
+  })
+  local qed = '> Q.E.D.' .. '(' .. opts.elapsed_time .. ' ms)'
+  local cursor = self:commit({
+    lines = {
+      qed,
+    },
+  })
+  self.cursors[self.current_eval][ViewBlock.QED] = cursor
+  Log.debug('STOP: {}', self)
+end
+
+function M:on_suggestions(suggestions)
+  if not suggestions then
+    return
+  end
+  if not self.has_suggestions[self.current_eval] then
+    self.has_suggestions[self.current_eval] = true
+    local cursor = self:commit({
+      lines = suggestions,
+      format = {
+        firstlinecompress = true,
+      }
+    })
+    self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = cursor
+  else
+    local cursor = self:commit({
+      lines = suggestions,
+    })
+  end
+  self.conversations[self.current_eval].suggestions[#self.conversations[self.current_eval].suggestions + 1] = suggestions
+end
+
+function M:on_status(msg)
+  if not msg then
+    return
+  end
+  self:commit('```\n' .. msg .. '\n```')
+end
+
+function M:get_current_suggestions()
+  return merge_lines(self.conversations[self.current_eval].suggestions)
 end
 
 return M

@@ -4,8 +4,7 @@ local fn = vim.fn
 local Base = require('fittencode.base')
 local Chat = require('fittencode.views.chat')
 local Config = require('fittencode.config')
-local ContentControl = require('fittencode.engines.actions.content')
-local Conversation = require('fittencode.engines.actions.conversation')
+local Content = require('fittencode.engines.actions.content')
 local Log = require('fittencode.log')
 local NetworkError = require('fittencode.client.network_error')
 local Promise = require('fittencode.concurrency.promise')
@@ -66,11 +65,8 @@ local current_eval = 1
 ---@type Chat
 local chat = nil
 
----@type ActionsContentControl
-local content_control = nil
-
----@type Conversation[]
-local conversations = {}
+---@type ActionsContent
+local content = nil
 
 ---@class TaskScheduler
 local tasks = nil
@@ -159,17 +155,13 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
     prompt_ty = get_action_type(action),
     solved_prefix = solved_prefix,
   }, function(_, prompt, suggestions)
-    -- Log.debug('Suggestions for Actions: {}', suggestions)
     local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
     if not lines or #lines == 0 then
       schedule(on_error)
     else
       elapsed_time = elapsed_time + ms
       depth = depth + 1
-      local cursor, formatted = content_control:commit({
-        lines = lines,
-      })
-      conversations[current_eval]:update(Conversation.ViewBlock.OUT_CONTENT, formatted, cursor)
+      content:on_suggestions(lines)
       local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
       chain_actions(window, buffer, action, new_solved_prefix, on_error)
     end
@@ -178,60 +170,33 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
   end)
 end
 
-local merge_lines = function(suggestions)
-  local merged = {}
-  for _, lines in ipairs(suggestions) do
-    for i, line in ipairs(lines) do
-      if i == 1 and #merged ~= 0 then
-        merged[#merged] = merged[#merged] .. line
-      else
-        merged[#merged + 1] = line
-      end
-    end
-  end
-  return merged
-end
-
 local function on_stage_error(prompt_opts, err)
-  lock = false
+  Log.debug('Action elapsed time: {}', elapsed_time)
+  Log.debug('Action depth: {}', depth)
+  content:on_stop({
+    elapsed_time = elapsed_time,
+    depth = depth,
+  })
+
   if type(err) == 'table' and getmetatable(err) == NetworkError then
     status:update(SC.NETWORK_ERROR)
-    -- Log.error('Error in Action: {}', err)
-    content_control:commit('```\nError: fetch failed.\n```')
+    local err_msg = 'Error: fetch failed.'
+    content:on_status(err_msg)
     schedule(prompt_opts.action_opts.on_error)
   else
     if depth == 0 then
       status:update(SC.NO_MORE_SUGGESTIONS)
-      content_control:commit('```\nNo more suggestions.\n```')
-      Log.debug('Action: No more suggestions')
-      schedule(prompt_opts.action_opts.on_error)
+      local err_msg = 'No more suggestions.'
+      content:on_status(err_msg)
+      schedule(prompt_opts.action_opts.on_success)
     else
       status:update(SC.SUGGESTIONS_READY)
-      local merged = merge_lines(conversations[current_eval]:get_block(Conversation.ViewBlock.OUT_CONTENT))
-      schedule(prompt_opts.action_opts.on_success, merged)
+      schedule(prompt_opts.action_opts.on_success, content:get_current_suggestions())
     end
   end
-  Log.debug('Action elapsed time: {}', elapsed_time)
-  Log.debug('Action depth: {}', depth)
-  content_control:commit({
-    lines = {
-      '',
-      '',
-    },
-    format = {
-      firstlinebreak = true,
-      fenced_code = true,
-    }
-  })
-  local qed = '> Q.E.D.' .. '(' .. elapsed_time .. ' ms)'
-  local cursor = content_control:commit({
-    lines = {
-      qed,
-    },
-  })
-  conversations[current_eval]:update(Conversation.ViewBlock.QED, qed, cursor)
-  Log.debug('Action Conversation: {}', conversations[current_eval])
+
   current_eval = current_eval + 1
+  lock = false
 end
 
 ---@param line? string
@@ -383,20 +348,13 @@ local function _start_action(window, buffer, action, prompt_opts)
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, prompt_opts, function(_, prompt, suggestions)
-      -- Log.debug('Suggestions for Actions: {}', suggestions)
       local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
         reject()
       else
         depth = depth + 1
-        local cursor, formatted = content_control:commit({
-          lines = lines,
-          format = {
-            firstlinecompress = true,
-          }
-        })
-        conversations[current_eval]:update(Conversation.ViewBlock.OUT_CONTENT, formatted, cursor)
+        content:on_suggestions(lines)
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         resolve(solved_prefix)
       end
@@ -410,44 +368,21 @@ local function _start_action(window, buffer, action, prompt_opts)
   end)
 end
 
-local first_commit = true
-
-local function chat_commit_inout(action_name, prompt_opts, range)
+local function start_content(action_name, prompt_opts, range)
   local prompt_preview = PromptProviders.get_prompt_one(prompt_opts)
   if #prompt_preview.filename == 0 then
     prompt_preview.filename = 'unnamed'
   end
-  local source_info = ' (' .. prompt_preview.filename .. ' ' .. range.start[1] .. ':' .. range['end'][1] .. ')'
-  local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info
-  if not first_commit then
-    content_control:commit('\n\n')
-  else
-    first_commit = false
-  end
-  local cursor = content_control:commit({
-    lines = {
-      c_in,
-      '',
+  content:on_start({
+    current_eval = current_eval,
+    action = action_name,
+    prompt = vim.split(prompt_preview.content, '\n'),
+    location = {
+      prompt_preview.filename,
+      range.start[1],
+      range['end'][1],
     }
   })
-  conversations[current_eval] = Conversation:new(current_eval, action_name)
-  conversations[current_eval]:update(Conversation.ViewBlock.IN, c_in, cursor)
-  cursor = content_control:commit(prompt_preview.content)
-  content_control:commit({
-    lines = {
-      '',
-      '',
-    }
-  })
-  conversations[current_eval]:update(Conversation.ViewBlock.IN_CONTENT, prompt_preview.content, cursor)
-  local c_out = '# Out`[' .. current_eval .. ']`='
-  cursor = content_control:commit({
-    lines = {
-      c_out,
-      '',
-    }
-  })
-  conversations[current_eval]:update(Conversation.ViewBlock.OUT, c_out, cursor)
 end
 
 ---@param action integer
@@ -499,7 +434,7 @@ function ActionsEngine.start_action(action, opts)
   }
   Log.debug('Action prompt_opts: {}', prompt_opts)
 
-  chat_commit_inout(action_name, prompt_opts, range)
+  start_content(action_name, prompt_opts, range)
   _start_action(chat.window, chat.buffer, action, prompt_opts)
 end
 
@@ -702,16 +637,16 @@ end
 
 local chat_callbacks = {
   goto_prev_conversation = function(row, col)
-    return content_control:get_prev_conversation(row, col)
+    return content:get_prev_conversation(row, col)
   end,
   goto_next_conversation = function(row, col)
-    return content_control:get_next_conversation(row, col)
+    return content:get_next_conversation(row, col)
   end,
 }
 
 function ActionsEngine.setup()
   chat = Chat:new(chat_callbacks)
-  content_control = ContentControl:new(chat, conversations)
+  content = Content:new(chat)
   tasks = TaskScheduler:new()
   tasks:setup()
   status = Status:new({
