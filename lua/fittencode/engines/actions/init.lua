@@ -4,6 +4,7 @@ local fn = vim.fn
 local Base = require('fittencode.base')
 local Chat = require('fittencode.views.chat')
 local Config = require('fittencode.config')
+local Content = require('fittencode.engines.actions.content')
 local Log = require('fittencode.log')
 local NetworkError = require('fittencode.client.network_error')
 local Promise = require('fittencode.concurrency.promise')
@@ -64,6 +65,9 @@ local current_eval = 1
 ---@type Chat
 local chat = nil
 
+---@type ActionsContent
+local content = nil
+
 ---@class TaskScheduler
 local tasks = nil
 
@@ -79,14 +83,13 @@ local stop_eval = false
 ---@type Status
 local status = nil
 
-local last_suggestions = {}
-
 ---@class ActionOptions
 ---@field prompt? string
 ---@field content? string
 ---@field language? string
+---@field headless? boolean
 ---@field on_success? function @function Callback when suggestions are ready
----@field on_error? function @function Callback when an error occurs or no more suggestions
+---@field on_error? function @function Callback when an error occurs
 
 ---@class GenerateUnitTestOptions : ActionOptions
 ---@field test_framework string
@@ -132,11 +135,45 @@ local function filter_suggestions(window, buffer, task_id, suggestions)
   }), ms
 end
 
+local function on_stage_end(is_error, on_success, on_error)
+  Log.debug('Action elapsed time: {}', elapsed_time)
+  Log.debug('Action depth: {}', depth)
+
+  content:on_end({
+    elapsed_time = elapsed_time,
+    depth = depth,
+  })
+
+  if is_error then
+    status:update(SC.ERROR)
+    local err_msg = 'Error: fetch failed.'
+    content:on_status(err_msg)
+    schedule(on_error)
+  else
+    if depth == 0 then
+      status:update(SC.NO_MORE_SUGGESTIONS)
+      local msg = 'No more suggestions.'
+      content:on_status(msg)
+      schedule(on_success)
+    else
+      status:update(SC.SUGGESTIONS_READY)
+      schedule(on_success, content:get_current_suggestions())
+    end
+  end
+
+  current_eval = current_eval + 1
+  lock = false
+end
+
 ---@param action integer
 ---@param solved_prefix string
 ---@param on_error function
-local function chain_actions(window, buffer, action, solved_prefix, on_error)
+local function chain_actions(window, buffer, action, solved_prefix, on_success, on_error)
   Log.debug('Chain Action({})...', get_action_name(action))
+  if not solved_prefix then
+    on_stage_end(false, on_success, on_error)
+    return
+  end
   if depth >= MAX_DEPTH then
     Log.debug('Max depth reached, stopping evaluation')
     schedule(on_error)
@@ -153,78 +190,29 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
     prompt_ty = get_action_type(action),
     solved_prefix = solved_prefix,
   }, function(_, prompt, suggestions)
-    -- Log.debug('Suggestions for Actions: {}', suggestions)
     local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
     if not lines or #lines == 0 then
-      schedule(on_error)
+      schedule(on_success)
     else
-      if chat:is_repeated(lines) then
-        Log.debug('Repeated suggestions')
-        schedule(on_error)
-      else
-        last_suggestions[#last_suggestions + 1] = lines
-        elapsed_time = elapsed_time + ms
-        depth = depth + 1
-        chat:commit({
-          lines = lines,
-          format = {
-            -- firstlinebreak = true,
-          }
-        })
-        local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-        chain_actions(window, buffer, action, new_solved_prefix, on_error)
-      end
+      elapsed_time = elapsed_time + ms
+      depth = depth + 1
+      content:on_suggestions(lines)
+      local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
+      chain_actions(window, buffer, action, new_solved_prefix, on_success, on_error)
     end
   end, function(err)
     schedule(on_error, err)
   end)
 end
 
-local merge_lines = function(suggestions)
-  local merged = {}
-  for _, lines in ipairs(suggestions) do
-    for i, line in ipairs(lines) do
-      if i == 1 and #merged ~= 0 then
-        merged[#merged] = merged[#merged] .. line
-      else
-        merged[#merged + 1] = line
-      end
-    end
-  end
-  return merged
+local function on_stage_error(prompt_opts, err)
+  local action_opts = prompt_opts.action_opts or {}
+  on_stage_end(true, action_opts.on_success, action_opts.on_error)
 end
 
-local function on_stage_error(prompt_opts, err)
-  lock = false
-  if type(err) == 'table' and getmetatable(err) == NetworkError then
-    status:update(SC.NETWORK_ERROR)
-    -- Log.error('Error in Action: {}', err)
-    chat:commit('```\nError: fetch failed.\n```')
-    schedule(prompt_opts.action_opts.on_error)
-  else
-    if depth == 0 then
-      status:update(SC.NO_MORE_SUGGESTIONS)
-      chat:commit('```\nNo more suggestions.\n```')
-      Log.debug('Action: No more suggestions')
-      schedule(prompt_opts.action_opts.on_error)
-    else
-      status:update(SC.SUGGESTIONS_READY)
-      schedule(prompt_opts.action_opts.on_success, merge_lines(last_suggestions))
-    end
-  end
-  Log.debug('Action elapsed time: {}', elapsed_time)
-  Log.debug('Action depth: {}', depth)
-  chat:commit({
-    lines = {
-      '',
-      '> Q.E.D.' .. '(' .. elapsed_time .. ' ms)',
-    },
-    format = {
-      firstlinebreak = true,
-      fenced_code = true,
-    }
-  })
-  current_eval = current_eval + 1
+local function on_stage_success(prompt_opts, suggestions)
+  local action_opts = prompt_opts.action_opts or {}
+  on_stage_end(false, action_opts.on_success, action_opts.on_error)
 end
 
 ---@param line? string
@@ -373,23 +361,19 @@ local function _start_action(window, buffer, action, prompt_opts)
   local on_stage_error_wrap = function(err)
     on_stage_error(prompt_opts, err)
   end
+  local on_stage_success_wrap = function(suggestions)
+    on_stage_success(prompt_opts, suggestions)
+  end
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, prompt_opts, function(_, prompt, suggestions)
-      -- Log.debug('Suggestions for Actions: {}', suggestions)
       local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
-        reject()
+        resolve()
       else
-        last_suggestions[#last_suggestions + 1] = lines
         depth = depth + 1
-        chat:commit({
-          lines = lines,
-          format = {
-            firstlinecompress = true,
-          }
-        })
+        content:on_suggestions(lines)
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         resolve(solved_prefix)
       end
@@ -397,30 +381,27 @@ local function _start_action(window, buffer, action, prompt_opts)
       reject(err)
     end)
   end):forward(function(solved_prefix)
-    chain_actions(window, buffer, action, solved_prefix, on_stage_error_wrap)
+    chain_actions(window, buffer, action, solved_prefix, on_stage_success_wrap, on_stage_error_wrap)
   end, function(err)
     schedule(on_stage_error_wrap, err)
   end)
 end
 
-local first_commit = true
-
-local function chat_commit_inout(action_name, prompt_opts, range)
+local function start_content(action_name, prompt_opts, range)
   local prompt_preview = PromptProviders.get_prompt_one(prompt_opts)
   if #prompt_preview.filename == 0 then
     prompt_preview.filename = 'unnamed'
   end
-  local source_info = ' (' .. prompt_preview.filename .. ' ' .. range.start[1] .. ':' .. range['end'][1] .. ')'
-  local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info .. '\n'
-  if not first_commit then
-    chat:commit('\n\n')
-  else
-    first_commit = false
-  end
-  chat:commit(c_in)
-  chat:commit(prompt_preview.content .. '\n')
-  local c_out = '# Out`[' .. current_eval .. ']`=' .. '\n'
-  chat:commit(c_out)
+  content:on_start({
+    current_eval = current_eval,
+    action = action_name,
+    prompt = vim.split(prompt_preview.content, '\n'),
+    location = {
+      prompt_preview.filename,
+      range.start[1],
+      range['end'][1],
+    }
+  })
 end
 
 ---@param action integer
@@ -444,15 +425,17 @@ function ActionsEngine.start_action(action, opts)
   lock = true
   elapsed_time = 0
   depth = 0
-  last_suggestions = {}
 
   status:update(SC.GENERATING)
 
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
 
-  chat:show()
-  fn.win_gotoid(window)
+  chat:create()
+  if not opts.headless then
+    chat:show()
+    fn.win_gotoid(window)
+  end
 
   local range = make_range(buffer)
   Log.debug('Action range: {}', range)
@@ -473,7 +456,7 @@ function ActionsEngine.start_action(action, opts)
   }
   Log.debug('Action prompt_opts: {}', prompt_opts)
 
-  chat_commit_inout(action_name, prompt_opts, range)
+  start_content(action_name, prompt_opts, range)
   _start_action(chat.window, chat.buffer, action, prompt_opts)
 end
 
@@ -674,8 +657,18 @@ local function setup_actions_menu()
   end
 end
 
+local chat_callbacks = {
+  goto_prev_conversation = function(row, col)
+    return content:get_prev_conversation(row, col)
+  end,
+  goto_next_conversation = function(row, col)
+    return content:get_next_conversation(row, col)
+  end,
+}
+
 function ActionsEngine.setup()
-  chat = Chat:new()
+  chat = Chat:new(chat_callbacks)
+  content = Content:new(chat)
   tasks = TaskScheduler:new()
   tasks:setup()
   status = Status:new({

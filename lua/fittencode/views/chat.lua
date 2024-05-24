@@ -7,35 +7,37 @@ local Log = require('fittencode.log')
 ---@class Chat
 ---@field window? integer
 ---@field buffer? integer
----@field content string[]
 ---@field show function
 ---@field commit function
----@field is_repeated function
+---@field create function
 ---@field last_cursor? table
+---@field callbacks table
 local M = {}
 
-function M:new()
+function M:new(callbacks)
   local o = {
-    content = {}
+    callbacks = callbacks,
   }
   self.__index = self
   return setmetatable(o, self)
 end
 
 local function _commit(window, buffer, lines)
-  if api.nvim_buf_is_valid(buffer) and api.nvim_win_is_valid(window) then
+  local cursor = nil
+  if buffer and api.nvim_buf_is_valid(buffer) then
     api.nvim_set_option_value('modifiable', true, { buf = buffer })
     api.nvim_set_option_value('readonly', false, { buf = buffer })
-    Lines.set_text({
+    cursor = Lines.set_text({
       window = window,
       buffer = buffer,
       lines = lines,
       is_undo_disabled = true,
-      is_last = true
+      position = 'end',
     })
     api.nvim_set_option_value('modifiable', false, { buf = buffer })
     api.nvim_set_option_value('readonly', true, { buf = buffer })
   end
+  return cursor
 end
 
 local function set_content(window, buffer, text)
@@ -52,10 +54,13 @@ local function scroll_to_last(window, buffer)
   api.nvim_win_set_cursor(window, { row, col })
 end
 
-local function set_option_value(window, buffer)
+local function set_option_value_buf(buffer)
   api.nvim_set_option_value('filetype', 'markdown', { buf = buffer })
   api.nvim_set_option_value('readonly', true, { buf = buffer })
   api.nvim_set_option_value('modifiable', false, { buf = buffer })
+end
+
+local function set_option_value_win(window)
   api.nvim_set_option_value('wrap', true, { win = window })
   api.nvim_set_option_value('linebreak', true, { win = window })
   api.nvim_set_option_value('cursorline', true, { win = window })
@@ -66,6 +71,25 @@ local function set_option_value(window, buffer)
   -- api.nvim_set_option_value('scrolloff', 8, { win = window })
 end
 
+function M:create()
+  if self.buffer then
+    return
+  end
+
+  self.buffer = api.nvim_create_buf(false, true)
+  api.nvim_buf_set_name(self.buffer, 'FittenCodeChat')
+
+  Base.map('n', 'q', function() self:close() end, { buffer = self.buffer })
+  Base.map('n', '[c', function() self:goto_prev_conversation() end, { buffer = self.buffer })
+  Base.map('n', ']c', function() self:goto_next_conversation() end, { buffer = self.buffer })
+  Base.map('n', 'c', function() self:copy_conversation() end, { buffer = self.buffer })
+  Base.map('n', 'C', function() self:copy_all_conversations() end, { buffer = self.buffer })
+  -- Base.map('n', 'd', function() self:delete_conversation() end, { buffer = self.buffer })
+  -- Base.map('n', 'D', function() self:delete_all_conversations() end, { buffer = self.buffer })
+
+  set_option_value_buf(self.buffer)
+end
+
 function M:show()
   if self.window then
     if api.nvim_win_is_valid(self.window) and api.nvim_win_get_buf(self.window) == self.buffer then
@@ -74,24 +98,45 @@ function M:show()
     self.window = nil
   end
 
-  if not self.buffer then
-    self.buffer = api.nvim_create_buf(false, true)
-    api.nvim_buf_set_name(self.buffer, 'FittenCodeChat')
-  end
-
   vim.cmd('topleft vsplit')
   vim.cmd('vertical resize ' .. 42)
   self.window = api.nvim_get_current_win()
   api.nvim_win_set_buf(self.window, self.buffer)
 
-  Base.map('n', 'q', function() self:close() end, { buffer = self.buffer })
-
-  set_option_value(self.window, self.buffer)
+  set_option_value_win(self.window)
 
   if self.last_cursor then
     api.nvim_win_set_cursor(self.window, { self.last_cursor[1] + 1, self.last_cursor[2] })
   else
     scroll_to_last(self.window, self.buffer)
+  end
+end
+
+function M:goto_prev_conversation()
+  local row, col = self.callbacks['goto_prev_conversation'](Base.get_cursor(self.window))
+  if row and col then
+    api.nvim_win_set_cursor(self.window, { row + 1, col })
+  end
+end
+
+function M:goto_next_conversation()
+  local row, col = self.callbacks['goto_next_conversation'](Base.get_cursor(self.window))
+  if row and col then
+    api.nvim_win_set_cursor(self.window, { row + 1, col })
+  end
+end
+
+function M:copy_conversation()
+  local lines = self.callbacks['get_conversation'](Base.get_cursor(self.window))
+  if lines then
+    vim.fn.setreg('+', table.concat(lines, '\n'))
+  end
+end
+
+function M:copy_all_conversations()
+  local lines = self.callbacks['get_all_conversations']()
+  if lines then
+    vim.fn.setreg('+', table.concat(lines, '\n'))
   end
 end
 
@@ -108,121 +153,9 @@ function M:close()
   -- self.buffer = nil
 end
 
----@class ChatCommitFormat
----@field firstlinebreak? boolean
----@field firstlinecompress? boolean
----@field fenced_code? boolean
-
----@class ChatCommitOptions
----@field lines? string|string[]
----@field format? ChatCommitFormat
-
-local fenced_code_open = false
-
----@param opts? ChatCommitOptions|string
----@param content string[]
----@return string[]?
-local function format_lines(opts, content)
-  if not opts then
-    return
-  end
-
-  if type(opts) == 'string' then
-    ---@diagnostic disable-next-line: param-type-mismatch
-    opts = { lines = vim.split(opts, '\n') }
-  end
-
-  ---@type string[]
-  ---@diagnostic disable-next-line: assign-type-mismatch
-  local lines = opts.lines or {}
-  local firstlinebreak = opts.format and opts.format.firstlinebreak
-  local fenced_code = opts.format and opts.format.fenced_code
-  local firstlinecompress = opts.format and opts.format.firstlinecompress
-
-  if #lines == 0 then
-    return
-  end
-
-  vim.tbl_map(function(x)
-    if x:match('^```') or x:match('```$') then
-      fenced_code_open = not fenced_code_open
-    end
-  end, lines)
-
-  local fenced_sloved = false
-  if fenced_code_open then
-    if fenced_code then
-      if lines[1] ~= '' then
-        table.insert(lines, 1, '')
-      end
-      table.insert(lines, 2, '```')
-      fenced_code_open = false
-      fenced_sloved = true
-    end
-  end
-
-  if not fenced_code_open and not fenced_sloved and firstlinebreak and
-      #content > 0 and #lines > 1 then
-    local last_lines = content[#content]
-    local last_line = last_lines[#last_lines]
-    if not string.match(lines[2], '^```') and not string.match(last_line, '^```') then
-      table.insert(lines, 1, '')
-    end
-  end
-
-  if firstlinecompress and #lines > 1 then
-    if lines[1] == '' and string.match(lines[2], '^```') then
-      table.remove(lines, 1)
-    end
-  end
-
-  return lines
-end
-
----@param opts? ChatCommitOptions|string
-function M:commit(opts)
-  local lines = format_lines(opts, self.content)
-  if not lines then
-    return
-  end
-
-  table.insert(self.content, lines)
-  _commit(self.window, self.buffer, lines)
-end
-
-local function _sub_match(s, pattern)
-  if s == pattern then
-    return true
-  end
-  local rs = string.reverse(s)
-  local rp = string.reverse(pattern)
-  local i = 1
-  while i <= #rs and i <= #rp do
-    if rs:sub(i, i) ~= rp:sub(i, i) then
-      break
-    end
-    i = i + 1
-  end
-  if i > #rs * 0.8 or i > #rp * 0.8 then
-    return true
-  end
-  return false
-end
-
-function M:is_repeated(lines)
-  -- TODO: improve this
-  -- return _sub_match(self.text[#self.text], lines[1])
-  return false
-end
-
----@return string[]
-function M:get_content()
-  return self.content
-end
-
----@return boolean
-function M:has_content()
-  return #self.content > 0
+---@return integer[]?
+function M:commit(lines)
+  return _commit(self.window, self.buffer, lines)
 end
 
 return M
