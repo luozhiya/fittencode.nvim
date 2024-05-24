@@ -109,29 +109,4 @@ function M:commit(lines)
   _commit(self.window, self.buffer, lines)
 end
 
-local function _sub_match(s, pattern)
-  if s == pattern then
-    return true
-  end
-  local rs = string.reverse(s)
-  local rp = string.reverse(pattern)
-  local i = 1
-  while i <= #rs and i <= #rp do
-    if rs:sub(i, i) ~= rp:sub(i, i) then
-      break
-    end
-    i = i + 1
-  end
-  if i > #rs * 0.8 or i > #rp * 0.8 then
-    return true
-  end
-  return false
-end
-
-function M:is_repeated(lines)
-  -- TODO: improve this
-  -- return _sub_match(self.text[#self.text], lines[1])
-  return false
-end
-
 return M

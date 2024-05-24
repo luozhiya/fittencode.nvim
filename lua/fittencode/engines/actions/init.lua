@@ -162,22 +162,17 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
     if not lines or #lines == 0 then
       schedule(on_error)
     else
-      if chat:is_repeated(lines) then
-        Log.debug('Repeated suggestions')
-        schedule(on_error)
-      else
-        last_suggestions[#last_suggestions + 1] = lines
-        elapsed_time = elapsed_time + ms
-        depth = depth + 1
-        content_control:commit({
-          lines = lines,
-          format = {
-            -- firstlinebreak = true,
-          }
-        })
-        local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-        chain_actions(window, buffer, action, new_solved_prefix, on_error)
-      end
+      last_suggestions[#last_suggestions + 1] = lines
+      elapsed_time = elapsed_time + ms
+      depth = depth + 1
+      content_control:commit({
+        lines = lines,
+        format = {
+          -- firstlinebreak = true,
+        }
+      })
+      local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
+      chain_actions(window, buffer, action, new_solved_prefix, on_error)
     end
   end, function(err)
     schedule(on_error, err)
