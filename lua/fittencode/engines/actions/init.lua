@@ -87,8 +87,6 @@ local stop_eval = false
 ---@type Status
 local status = nil
 
-local last_suggestions = {}
-
 ---@class ActionOptions
 ---@field prompt? string
 ---@field content? string
@@ -166,15 +164,12 @@ local function chain_actions(window, buffer, action, solved_prefix, on_error)
     if not lines or #lines == 0 then
       schedule(on_error)
     else
-      last_suggestions[#last_suggestions + 1] = lines
       elapsed_time = elapsed_time + ms
       depth = depth + 1
-      content_control:commit({
+      local cursor, formatted = content_control:commit({
         lines = lines,
-        format = {
-          -- firstlinebreak = true,
-        }
       })
+      conversations[current_eval]:update(Conversation.ViewBlock.OUT_CONTENT, formatted, cursor)
       local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
       chain_actions(window, buffer, action, new_solved_prefix, on_error)
     end
@@ -212,8 +207,7 @@ local function on_stage_error(prompt_opts, err)
       schedule(prompt_opts.action_opts.on_error)
     else
       status:update(SC.SUGGESTIONS_READY)
-      local merged = merge_lines(last_suggestions)
-      conversations[current_eval]:update(Conversation.ViewBlock.OUT_CONTENT, merged)
+      local merged = merge_lines(conversations[current_eval]:get_block(Conversation.ViewBlock.OUT_CONTENT))
       schedule(prompt_opts.action_opts.on_success, merged)
     end
   end
@@ -395,15 +389,14 @@ local function _start_action(window, buffer, action, prompt_opts)
       if not lines or #lines == 0 then
         reject()
       else
-        last_suggestions[#last_suggestions + 1] = lines
         depth = depth + 1
-        local cursor = content_control:commit({
+        local cursor, formatted = content_control:commit({
           lines = lines,
           format = {
             firstlinecompress = true,
           }
         })
-        conversations[current_eval]:update(Conversation.ViewBlock.OUT_CONTENT, '', cursor)
+        conversations[current_eval]:update(Conversation.ViewBlock.OUT_CONTENT, formatted, cursor)
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         resolve(solved_prefix)
       end
@@ -478,7 +471,6 @@ function ActionsEngine.start_action(action, opts)
   lock = true
   elapsed_time = 0
   depth = 0
-  last_suggestions = {}
 
   status:update(SC.GENERATING)
 
@@ -708,9 +700,18 @@ local function setup_actions_menu()
   end
 end
 
+local chat_callbacks = {
+  goto_prev_conversation = function(row, col)
+    return content_control:get_prev_conversation(row, col)
+  end,
+  goto_next_conversation = function(row, col)
+    return content_control:get_next_conversation(row, col)
+  end,
+}
+
 function ActionsEngine.setup()
-  chat = Chat:new()
-  content_control = ContentControl:new(chat)
+  chat = Chat:new(chat_callbacks)
+  content_control = ContentControl:new(chat, conversations)
   tasks = TaskScheduler:new()
   tasks:setup()
   status = Status:new({

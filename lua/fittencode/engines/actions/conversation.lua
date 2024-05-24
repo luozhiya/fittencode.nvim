@@ -4,6 +4,7 @@
 ---@field references integer[]
 ---@field blocks table[]
 ---@field cursors integer[]
+---@field get_block function
 local M = {}
 
 local ViewBlock = {
@@ -32,10 +33,20 @@ function M:update(level, lines, cursor)
   if type(lines) == 'string' then
     lines = { lines }
   end
-  self.blocks[level] = lines
+  self:append(level, lines)
   if cursor then
     self.cursors[level] = cursor
   end
+end
+
+function M:append(level, lines)
+  local current = self.blocks[level] or {}
+  current[#current + 1] = lines
+  self.blocks[level] = current
+end
+
+function M:get_block(level)
+  return self.blocks[level]
 end
 
 return M

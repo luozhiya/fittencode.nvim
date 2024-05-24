@@ -11,10 +11,13 @@ local Log = require('fittencode.log')
 ---@field commit function
 ---@field is_repeated function
 ---@field last_cursor? table
+---@field callbacks table
 local M = {}
 
-function M:new()
-  local o = {}
+function M:new(callbacks)
+  local o = {
+    callbacks = callbacks,
+  }
   self.__index = self
   return setmetatable(o, self)
 end
@@ -84,6 +87,12 @@ function M:show()
   api.nvim_win_set_buf(self.window, self.buffer)
 
   Base.map('n', 'q', function() self:close() end, { buffer = self.buffer })
+  Base.map('n', '[c', function() self:goto_prev_conversation() end, { buffer = self.buffer })
+  Base.map('n', ']c', function() self:goto_next_conversation() end, { buffer = self.buffer })
+  Base.map('n', 'c', function() self:copy_conversation() end, { buffer = self.buffer })
+  Base.map('n', 'C', function() self:copy_all_conversations() end, { buffer = self.buffer })
+  -- Base.map('n', 'd', function() self:delete_conversation() end, { buffer = self.buffer })
+  -- Base.map('n', 'D', function() self:delete_all_conversations() end, { buffer = self.buffer })
 
   set_option_value(self.window, self.buffer)
 
@@ -91,6 +100,34 @@ function M:show()
     api.nvim_win_set_cursor(self.window, { self.last_cursor[1] + 1, self.last_cursor[2] })
   else
     scroll_to_last(self.window, self.buffer)
+  end
+end
+
+function M:goto_prev_conversation()
+  local row, col = self.callbacks['goto_prev_conversation'](Base.get_cursor(self.window))
+  if row and col then
+    api.nvim_win_set_cursor(self.window, { row + 1, col })
+  end
+end
+
+function M:goto_next_conversation()
+  local row, col = self.callbacks['goto_next_conversation'](Base.get_cursor(self.window))
+  if row and col then
+    api.nvim_win_set_cursor(self.window, { row + 1, col })
+  end
+end
+
+function M:copy_conversation()
+  local lines = self.callbacks['get_conversation'](Base.get_cursor(self.window))
+  if lines then
+    vim.fn.setreg('+', table.concat(lines, '\n'))
+  end
+end
+
+function M:copy_all_conversations()
+  local lines = self.callbacks['get_all_conversations']()
+  if lines then
+    vim.fn.setreg('+', table.concat(lines, '\n'))
   end
 end
 

@@ -3,10 +3,11 @@
 ---@field content string[]
 local M = {}
 
-function M:new(chat)
+function M:new(chat, conventions)
   local obj = {
     chat = chat,
     content = {},
+    conventions = conventions,
   }
   self.__index = self
   return setmetatable(obj, self)
@@ -91,7 +92,15 @@ function M:commit(opts)
   end
 
   table.insert(self.content, lines)
-  return self.chat:commit(lines)
+  return self.chat:commit(lines), lines
+end
+
+function M:get_prev_conversation(row, col)
+
+end
+
+function M:get_next_conversation(row, col)
+
 end
 
 return M
