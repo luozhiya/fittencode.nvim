@@ -57,7 +57,8 @@ local NO_LANG_ACTIONS = {
   'AnalyzeData',
   'TranslateText',
   'SummarizeText',
-  'GenerateCode' }
+  'GenerateCode'
+}
 
 local MAP_ACTION_PROMPTS = {
   StartChat = 'Answer the question above',
@@ -94,9 +95,7 @@ local MAP_ACTION_PROMPTS = {
 
 local function make_language(ctx)
   local filetype = ctx.filetype or ''
-  -- Log.debug('Action Filetype: {}', filetype)
   local language = ctx.action_opts.language or filetype
-  -- Log.debug('Action Language: {}', language)
   return language
 end
 
