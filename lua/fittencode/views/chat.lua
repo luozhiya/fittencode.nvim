@@ -24,7 +24,7 @@ end
 
 local function _commit(window, buffer, lines)
   local cursor = {}
-  if api.nvim_buf_is_valid(buffer) and api.nvim_win_is_valid(window) then
+  if window and buffer and api.nvim_buf_is_valid(buffer) and api.nvim_win_is_valid(window) then
     api.nvim_set_option_value('modifiable', true, { buf = buffer })
     api.nvim_set_option_value('readonly', false, { buf = buffer })
     cursor = Lines.set_text({

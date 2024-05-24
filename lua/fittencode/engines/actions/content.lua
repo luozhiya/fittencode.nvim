@@ -117,7 +117,7 @@ function M:commit(opts)
   end
 
   table.insert(self.buffer_content, lines)
-  return self.chat:commit(lines), lines
+  return self.chat:commit(lines)
 end
 
 function M:on_start(opts)

@@ -44,13 +44,6 @@ local function condense_nl(opts)
     table.remove(suggestions, non_empty + 3)
   end
 
-  local row, col = Base.get_cursor(window)
-  local prev_line = nil
-  local cur_line = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]
-  if row > 1 then
-    prev_line = api.nvim_buf_get_lines(buffer, row - 1, row, false)[1]
-  end
-
   local nls = {}
   local remove_all = false
   local keep_first = true
@@ -60,9 +53,18 @@ local function condense_nl(opts)
     remove_all = true
   end
 
-  if #cur_line == 0 then
-    if not prev_line or #prev_line == 0 then
-      remove_all = true
+  if window and buffer and api.nvim_buf_is_valid(buffer) and api.nvim_win_is_valid(window) then
+    local row, col = Base.get_cursor(window)
+    local prev_line = nil
+    local cur_line = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]
+    if row > 1 then
+      prev_line = api.nvim_buf_get_lines(buffer, row - 1, row, false)[1]
+    end
+
+    if #cur_line == 0 then
+      if not prev_line or #prev_line == 0 then
+        remove_all = true
+      end
     end
   end
 
