@@ -87,8 +87,9 @@ local status = nil
 ---@field prompt? string
 ---@field content? string
 ---@field language? string
+---@field headless? boolean
 ---@field on_success? function @function Callback when suggestions are ready
----@field on_error? function @function Callback when an error occurs or no more suggestions
+---@field on_error? function @function Callback when an error occurs
 
 ---@class GenerateUnitTestOptions : ActionOptions
 ---@field test_framework string
@@ -412,8 +413,11 @@ function ActionsEngine.start_action(action, opts)
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
 
-  chat:show()
-  fn.win_gotoid(window)
+  chat:create()
+  if not opts.headless then
+    chat:show()
+    fn.win_gotoid(window)
+  end
 
   local range = make_range(buffer)
   Log.debug('Action range: {}', range)

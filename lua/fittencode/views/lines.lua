@@ -147,16 +147,24 @@ end
 ---@param col integer
 ---@param lines string[]
 local function move_cursor_to_text_end(window, row, col, lines)
+  local cursor = { row, col }
   local count = vim.tbl_count(lines)
   if count == 1 then
     local first_len = string.len(lines[1])
     if first_len ~= 0 then
-      api.nvim_win_set_cursor(window, { row + 1, col + first_len })
+      cursor = { row + 1, col + first_len }
+      if window and api.nvim_win_is_valid(window) then
+        api.nvim_win_set_cursor(window, cursor)
+      end
     end
   else
     local last_len = string.len(lines[count])
-    api.nvim_win_set_cursor(window, { row + count, last_len })
+    cursor = { row + count, last_len }
+    if window and api.nvim_win_is_valid(window) then
+      api.nvim_win_set_cursor(window, { row + count, last_len })
+    end
   end
+  return { cursor[1] - 1, cursor[2] }
 end
 
 ---@param fx? function
@@ -189,31 +197,40 @@ end
 ---@field buffer integer
 ---@field lines string[]
 ---@field is_undo_disabled? boolean
----@field is_last? boolean
+---@field position? string -- 'end' | 'current' | 'cursor'
+---@field cursor? integer[]
 
 ---@param opts LinesSetTextOptions
+---@return integer[]?
 function M.set_text(opts)
   local window = opts.window
   local buffer = opts.buffer
   local lines = opts.lines or {}
   local is_undo_disabled = opts.is_undo_disabled or false
-  local is_last = opts.is_last or false
-
+  local row, col = nil, nil
+  local position = opts.position or 'current'
+  if position == 'end' then
+    row = math.max(api.nvim_buf_line_count(buffer) - 1, 0)
+    col = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]:len()
+  elseif position == 'current' and window and api.nvim_win_is_valid(window) then
+    row, col = Base.get_cursor(window)
+  elseif position == 'cursor' then
+    if opts.cursor then
+      row, col = unpack(opts.cursor)
+    end
+  end
+  if row == nil or col == nil then
+    return
+  end
   local curosr = {}
   format_wrap(function()
-    local row, col = Base.get_cursor(window)
-    if is_last then
-      row = math.max(api.nvim_buf_line_count(buffer) - 1, 0)
-      col = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]:len()
-    end
     curosr[1] = { row, col }
     if not is_undo_disabled then
       undojoin()
     end
     -- Emit events `CursorMovedI` `CursorHoldI`
     append_text_at_pos(buffer, row, col, lines)
-    move_cursor_to_text_end(window, row, col, lines)
-    curosr[2] = { Base.get_cursor(window) }
+    curosr[2] = move_cursor_to_text_end(window, row, col, lines)
   end)
   return curosr
 end

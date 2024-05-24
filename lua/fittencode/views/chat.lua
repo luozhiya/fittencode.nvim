@@ -9,7 +9,7 @@ local Log = require('fittencode.log')
 ---@field buffer? integer
 ---@field show function
 ---@field commit function
----@field is_repeated function
+---@field create function
 ---@field last_cursor? table
 ---@field callbacks table
 local M = {}
@@ -23,8 +23,8 @@ function M:new(callbacks)
 end
 
 local function _commit(window, buffer, lines)
-  local cursor = {}
-  if window and buffer and api.nvim_buf_is_valid(buffer) and api.nvim_win_is_valid(window) then
+  local cursor = nil
+  if buffer and api.nvim_buf_is_valid(buffer) then
     api.nvim_set_option_value('modifiable', true, { buf = buffer })
     api.nvim_set_option_value('readonly', false, { buf = buffer })
     cursor = Lines.set_text({
@@ -32,7 +32,7 @@ local function _commit(window, buffer, lines)
       buffer = buffer,
       lines = lines,
       is_undo_disabled = true,
-      is_last = true
+      position = 'end',
     })
     api.nvim_set_option_value('modifiable', false, { buf = buffer })
     api.nvim_set_option_value('readonly', true, { buf = buffer })
@@ -54,10 +54,13 @@ local function scroll_to_last(window, buffer)
   api.nvim_win_set_cursor(window, { row, col })
 end
 
-local function set_option_value(window, buffer)
+local function set_option_value_buf(buffer)
   api.nvim_set_option_value('filetype', 'markdown', { buf = buffer })
   api.nvim_set_option_value('readonly', true, { buf = buffer })
   api.nvim_set_option_value('modifiable', false, { buf = buffer })
+end
+
+local function set_option_value_win(window)
   api.nvim_set_option_value('wrap', true, { win = window })
   api.nvim_set_option_value('linebreak', true, { win = window })
   api.nvim_set_option_value('cursorline', true, { win = window })
@@ -68,23 +71,13 @@ local function set_option_value(window, buffer)
   -- api.nvim_set_option_value('scrolloff', 8, { win = window })
 end
 
-function M:show()
-  if self.window then
-    if api.nvim_win_is_valid(self.window) and api.nvim_win_get_buf(self.window) == self.buffer then
-      return
-    end
-    self.window = nil
+function M:create()
+  if self.buffer then
+    return
   end
 
-  if not self.buffer then
-    self.buffer = api.nvim_create_buf(false, true)
-    api.nvim_buf_set_name(self.buffer, 'FittenCodeChat')
-  end
-
-  vim.cmd('topleft vsplit')
-  vim.cmd('vertical resize ' .. 42)
-  self.window = api.nvim_get_current_win()
-  api.nvim_win_set_buf(self.window, self.buffer)
+  self.buffer = api.nvim_create_buf(false, true)
+  api.nvim_buf_set_name(self.buffer, 'FittenCodeChat')
 
   Base.map('n', 'q', function() self:close() end, { buffer = self.buffer })
   Base.map('n', '[c', function() self:goto_prev_conversation() end, { buffer = self.buffer })
@@ -94,7 +87,23 @@ function M:show()
   -- Base.map('n', 'd', function() self:delete_conversation() end, { buffer = self.buffer })
   -- Base.map('n', 'D', function() self:delete_all_conversations() end, { buffer = self.buffer })
 
-  set_option_value(self.window, self.buffer)
+  set_option_value_buf(self.buffer)
+end
+
+function M:show()
+  if self.window then
+    if api.nvim_win_is_valid(self.window) and api.nvim_win_get_buf(self.window) == self.buffer then
+      return
+    end
+    self.window = nil
+  end
+
+  vim.cmd('topleft vsplit')
+  vim.cmd('vertical resize ' .. 42)
+  self.window = api.nvim_get_current_win()
+  api.nvim_win_set_buf(self.window, self.buffer)
+
+  set_option_value_win(self.window)
 
   if self.last_cursor then
     api.nvim_win_set_cursor(self.window, { self.last_cursor[1] + 1, self.last_cursor[2] })
@@ -144,6 +153,7 @@ function M:close()
   -- self.buffer = nil
 end
 
+---@return integer[]?
 function M:commit(lines)
   return _commit(self.window, self.buffer, lines)
 end
