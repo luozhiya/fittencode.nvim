@@ -6,7 +6,7 @@ local M = {}
 function M:new(chat)
   local obj = {
     chat = chat,
-    content = {}
+    content = {},
   }
   self.__index = self
   return setmetatable(obj, self)
@@ -91,7 +91,7 @@ function M:commit(opts)
   end
 
   table.insert(self.content, lines)
-  self.chat:commit(lines)
+  return self.chat:commit(lines)
 end
 
 return M

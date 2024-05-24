@@ -5,6 +5,7 @@ local Base = require('fittencode.base')
 local Chat = require('fittencode.views.chat')
 local Config = require('fittencode.config')
 local ContentControl = require('fittencode.engines.actions.content_control')
+local Conversation = require('fittencode.engines.actions.conversation')
 local Log = require('fittencode.log')
 local NetworkError = require('fittencode.client.network_error')
 local Promise = require('fittencode.concurrency.promise')
@@ -67,6 +68,9 @@ local chat = nil
 
 ---@type ActionsContentControl
 local content_control = nil
+
+---@type Conversation[]
+local conversations = {}
 
 ---@class TaskScheduler
 local tasks = nil
@@ -208,7 +212,9 @@ local function on_stage_error(prompt_opts, err)
       schedule(prompt_opts.action_opts.on_error)
     else
       status:update(SC.SUGGESTIONS_READY)
-      schedule(prompt_opts.action_opts.on_success, merge_lines(last_suggestions))
+      local merged = merge_lines(last_suggestions)
+      conversations[current_eval]:update(Conversation.ViewBlock.OUT_CONTENT, merged)
+      schedule(prompt_opts.action_opts.on_success, merged)
     end
   end
   Log.debug('Action elapsed time: {}', elapsed_time)
@@ -216,13 +222,21 @@ local function on_stage_error(prompt_opts, err)
   content_control:commit({
     lines = {
       '',
-      '> Q.E.D.' .. '(' .. elapsed_time .. ' ms)',
+      '',
     },
     format = {
       firstlinebreak = true,
       fenced_code = true,
     }
   })
+  local qed = '> Q.E.D.' .. '(' .. elapsed_time .. ' ms)'
+  local cursor = content_control:commit({
+    lines = {
+      qed,
+    },
+  })
+  conversations[current_eval]:update(Conversation.ViewBlock.QED, qed, cursor)
+  Log.debug('Action Conversation: {}', conversations[current_eval])
   current_eval = current_eval + 1
 end
 
@@ -383,12 +397,13 @@ local function _start_action(window, buffer, action, prompt_opts)
       else
         last_suggestions[#last_suggestions + 1] = lines
         depth = depth + 1
-        content_control:commit({
+        local cursor = content_control:commit({
           lines = lines,
           format = {
             firstlinecompress = true,
           }
         })
+        conversations[current_eval]:update(Conversation.ViewBlock.OUT_CONTENT, '', cursor)
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         resolve(solved_prefix)
       end
@@ -410,16 +425,36 @@ local function chat_commit_inout(action_name, prompt_opts, range)
     prompt_preview.filename = 'unnamed'
   end
   local source_info = ' (' .. prompt_preview.filename .. ' ' .. range.start[1] .. ':' .. range['end'][1] .. ')'
-  local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info .. '\n'
+  local c_in = '# In`[' .. current_eval .. ']`:= ' .. action_name .. source_info
   if not first_commit then
     content_control:commit('\n\n')
   else
     first_commit = false
   end
-  content_control:commit(c_in)
-  content_control:commit(prompt_preview.content .. '\n')
-  local c_out = '# Out`[' .. current_eval .. ']`=' .. '\n'
-  content_control:commit(c_out)
+  local cursor = content_control:commit({
+    lines = {
+      c_in,
+      '',
+    }
+  })
+  conversations[current_eval] = Conversation:new(current_eval, action_name)
+  conversations[current_eval]:update(Conversation.ViewBlock.IN, c_in, cursor)
+  cursor = content_control:commit(prompt_preview.content)
+  content_control:commit({
+    lines = {
+      '',
+      '',
+    }
+  })
+  conversations[current_eval]:update(Conversation.ViewBlock.IN_CONTENT, prompt_preview.content, cursor)
+  local c_out = '# Out`[' .. current_eval .. ']`='
+  cursor = content_control:commit({
+    lines = {
+      c_out,
+      '',
+    }
+  })
+  conversations[current_eval]:update(Conversation.ViewBlock.OUT, c_out, cursor)
 end
 
 ---@param action integer

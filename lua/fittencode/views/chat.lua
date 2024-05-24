@@ -20,10 +20,11 @@ function M:new()
 end
 
 local function _commit(window, buffer, lines)
+  local cursor = {}
   if api.nvim_buf_is_valid(buffer) and api.nvim_win_is_valid(window) then
     api.nvim_set_option_value('modifiable', true, { buf = buffer })
     api.nvim_set_option_value('readonly', false, { buf = buffer })
-    Lines.set_text({
+    cursor = Lines.set_text({
       window = window,
       buffer = buffer,
       lines = lines,
@@ -33,6 +34,7 @@ local function _commit(window, buffer, lines)
     api.nvim_set_option_value('modifiable', false, { buf = buffer })
     api.nvim_set_option_value('readonly', true, { buf = buffer })
   end
+  return cursor
 end
 
 local function set_content(window, buffer, text)
@@ -106,7 +108,7 @@ function M:close()
 end
 
 function M:commit(lines)
-  _commit(self.window, self.buffer, lines)
+  return _commit(self.window, self.buffer, lines)
 end
 
 return M

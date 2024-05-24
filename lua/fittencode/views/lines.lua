@@ -199,12 +199,14 @@ function M.set_text(opts)
   local is_undo_disabled = opts.is_undo_disabled or false
   local is_last = opts.is_last or false
 
+  local curosr = {}
   format_wrap(function()
     local row, col = Base.get_cursor(window)
     if is_last then
       row = math.max(api.nvim_buf_line_count(buffer) - 1, 0)
       col = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]:len()
     end
+    curosr = { row, col }
     if not is_undo_disabled then
       undojoin()
     end
@@ -212,6 +214,7 @@ function M.set_text(opts)
     append_text_at_pos(buffer, row, col, lines)
     move_cursor_to_text_end(window, row, col, lines)
   end)
+  return curosr
 end
 
 ---@param suggestions? Suggestions
