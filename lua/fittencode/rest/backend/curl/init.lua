@@ -40,7 +40,7 @@ local function on_curl_signal(signal)
   Log.error('cURL failed due to signal: {}', signal)
 end
 
-local function _spawn(args, on_success, on_error)
+local function _spawn(args, on_success, on_error, on_exit)
   Process.spawn({
     cmd = CURL,
     args = args,
@@ -49,6 +49,8 @@ local function _spawn(args, on_success, on_error)
   end, function(signal)
     on_curl_signal(signal)
     schedule(on_error)
+  end, function()
+    schedule(on_exit)
   end)
 end
 
@@ -61,15 +63,7 @@ function M:get(url, headers, data, on_success, on_error)
     table.insert(args, v)
   end
   vim.list_extend(args, DEFAULT_ARGS)
-  Process.spawn({
-    cmd = CURL,
-    args = args,
-  }, function(exit_code, response, error)
-    on_curl_exitcode(exit_code, response, error, on_success, on_error)
-  end, function(signal)
-    on_curl_signal(signal)
-    schedule(on_error)
-  end)
+  _spawn(args, on_success, on_error)
 end
 
 local function post_largedata(url, encoded_data, on_success, on_error)
@@ -91,15 +85,7 @@ local function post_largedata(url, encoded_data, on_success, on_error)
         url,
       }
       vim.list_extend(args, DEFAULT_ARGS)
-      Process.spawn({
-        cmd = CURL,
-        args = args,
-      }, function(exit_code, response, error)
-        on_curl_exitcode(exit_code, response, error, on_success, on_error)
-      end, function(signal)
-        on_curl_signal(signal)
-        schedule(on_error)
-      end, function()
+      _spawn(args, on_success, on_error, function()
         FS.delete(path)
       end)
     end)
@@ -126,15 +112,7 @@ function M:post(url, data, on_success, on_error)
     url,
   }
   vim.list_extend(args, DEFAULT_ARGS)
-  Process.spawn({
-    cmd = CURL,
-    args = args,
-  }, function(exit_code, response, error)
-    on_curl_exitcode(exit_code, response, error, on_success, on_error)
-  end, function(signal)
-    on_curl_signal(signal)
-    schedule(on_error)
-  end)
+  _spawn(args, on_success, on_error)
 end
 
 return M
