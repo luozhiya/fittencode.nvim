@@ -15,6 +15,7 @@ local M = Rest:new('RestCurlBackend')
 local CURL = 'curl'
 local TIMEOUT = 5 -- 5 seconds
 local DEFAULT_ARGS = {
+  '-s',
   '--connect-timeout',
   TIMEOUT,
   '--show-error',
@@ -39,14 +40,7 @@ local function on_curl_signal(signal)
   Log.error('cURL failed due to signal: {}', signal)
 end
 
-function M:authorize(url, token, on_success, on_error)
-  local args = {
-    '-s',
-    '-H',
-    'Authorization: Bearer ' .. token,
-    url,
-  }
-  vim.list_extend(args, DEFAULT_ARGS)
+local function _spawn(args, on_success, on_error, on_exit)
   Process.spawn({
     cmd = CURL,
     args = args,
@@ -55,10 +49,24 @@ function M:authorize(url, token, on_success, on_error)
   end, function(signal)
     on_curl_signal(signal)
     schedule(on_error)
+  end, function()
+    schedule(on_exit)
   end)
 end
 
-local function post_largedata(url, encoded_data, on_success, on_error)
+function M:get(url, headers, data, on_success, on_error)
+  local args = {
+    url,
+  }
+  for _, v in ipairs(headers) do
+    table.insert(args, '-H')
+    table.insert(args, v)
+  end
+  vim.list_extend(args, DEFAULT_ARGS)
+  _spawn(args, on_success, on_error)
+end
+
+local function post_largedata(url, headers, encoded_data, on_success, on_error)
   Promise:new(function(resolve, reject)
     FS.write_temp_file(encoded_data, function(_, path)
       resolve(path)
@@ -66,34 +74,25 @@ local function post_largedata(url, encoded_data, on_success, on_error)
       schedule(on_error, e_tmpfile)
     end)
   end):forward(function(path)
-    return Promise:new(function(resolve, reject)
-      local args = {
-        '-s',
-        '-X',
-        'POST',
-        '-H',
-        'Content-Type: application/json',
-        '-d',
-        '@' .. path,
-        url,
-      }
-      vim.list_extend(args, DEFAULT_ARGS)
-      Process.spawn({
-        cmd = CURL,
-        args = args,
-      }, function(exit_code, response, error)
-        on_curl_exitcode(exit_code, response, error, on_success, on_error)
-      end, function(signal)
-        on_curl_signal(signal)
-        schedule(on_error)
-      end, function()
-        FS.delete(path)
-      end)
+    local args = {
+      '-X',
+      'POST',
+      '-d',
+      '@' .. path,
+      url,
+    }
+    for _, v in ipairs(headers) do
+      table.insert(args, '-H')
+      table.insert(args, v)
+    end
+    vim.list_extend(args, DEFAULT_ARGS)
+    _spawn(args, on_success, on_error, function()
+      FS.delete(path)
     end)
   end)
 end
 
-function M:post(url, data, on_success, on_error)
+function M:post(url, headers, data, on_success, on_error)
   local success, encoded_data = pcall(fn.json_encode, data)
   if not success then
     Log.error('Failed to encode data: {}', data)
@@ -101,28 +100,21 @@ function M:post(url, data, on_success, on_error)
     return
   end
   if #encoded_data > 200 then
-    return post_largedata(url, encoded_data, on_success, on_error)
+    return post_largedata(url, headers, encoded_data, on_success, on_error)
   end
   local args = {
-    '-s',
     '-X',
     'POST',
-    '-H',
-    'Content-Type: application/json',
     '-d',
     encoded_data,
     url,
   }
+  for _, v in ipairs(headers) do
+    table.insert(args, '-H')
+    table.insert(args, v)
+  end
   vim.list_extend(args, DEFAULT_ARGS)
-  Process.spawn({
-    cmd = CURL,
-    args = args,
-  }, function(exit_code, response, error)
-    on_curl_exitcode(exit_code, response, error, on_success, on_error)
-  end, function(signal)
-    on_curl_signal(signal)
-    schedule(on_error)
-  end)
+  _spawn(args, on_success, on_error)
 end
 
 return M

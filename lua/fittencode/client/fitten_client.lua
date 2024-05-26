@@ -38,7 +38,9 @@ function M:login(username, password, on_success, on_error)
     password = password,
   }
   Promise:new(function(resolve, reject)
-    self.rest:post(URL.LOGIN, data, function(response)
+    self.rest:post(URL.LOGIN, {
+      'Content-Type: application/json',
+    }, data, function(response)
       resolve(response)
     end, function()
       schedule(on_error)
@@ -54,7 +56,9 @@ function M:login(username, password, on_success, on_error)
     end)
   end):forward(function(token)
     return Promise:new(function(resolve, reject)
-      self.rest:authorize(URL.GET_FT_TOKEN, token, function(response)
+      self.rest:get(URL.GET_FT_TOKEN, {
+        'Authorization: Bearer ' .. token,
+      }, nil, function(response)
         resolve(response)
       end, function()
         schedule(on_error)
@@ -75,7 +79,9 @@ function M:generate_one_stage(api_key, params, on_success, on_error)
   local data = params
 
   Promise:new(function(resolve, _)
-    self.rest:post(url, data, function(response)
+    self.rest:post(url, {
+      'Content-Type: application/json',
+    }, data, function(response)
       resolve(response)
     end, function()
       schedule(on_error, NetworkError:new())

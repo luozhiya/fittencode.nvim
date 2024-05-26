@@ -15,10 +15,10 @@ function M:get_implementation_name()
   return self.impl_name
 end
 
-function M:authorize(url, token, on_success, on_error)
+function M:get(url, headers, data, on_success, on_error)
 end
 
-function M:post(url, data, on_success, on_error)
+function M:post(url, headers, data, on_success, on_error)
 end
 
 return M
