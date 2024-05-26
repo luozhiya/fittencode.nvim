@@ -54,7 +54,9 @@ function M:login(username, password, on_success, on_error)
     end)
   end):forward(function(token)
     return Promise:new(function(resolve, reject)
-      self.rest:authorize(URL.GET_FT_TOKEN, token, function(response)
+      self.rest:get(URL.GET_FT_TOKEN, {
+        'Authorization: Bearer ' .. token,
+      }, nil, function(response)
         resolve(response)
       end, function()
         schedule(on_error)

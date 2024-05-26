@@ -15,6 +15,7 @@ local M = Rest:new('RestCurlBackend')
 local CURL = 'curl'
 local TIMEOUT = 5 -- 5 seconds
 local DEFAULT_ARGS = {
+  '-s',
   '--connect-timeout',
   TIMEOUT,
   '--show-error',
@@ -39,13 +40,26 @@ local function on_curl_signal(signal)
   Log.error('cURL failed due to signal: {}', signal)
 end
 
-function M:authorize(url, token, on_success, on_error)
+local function _spawn(args, on_success, on_error)
+  Process.spawn({
+    cmd = CURL,
+    args = args,
+  }, function(exit_code, response, error)
+    on_curl_exitcode(exit_code, response, error, on_success, on_error)
+  end, function(signal)
+    on_curl_signal(signal)
+    schedule(on_error)
+  end)
+end
+
+function M:get(url, headers, data, on_success, on_error)
   local args = {
-    '-s',
-    '-H',
-    'Authorization: Bearer ' .. token,
     url,
   }
+  for _, v in ipairs(headers) do
+    table.insert(args, '-H')
+    table.insert(args, v)
+  end
   vim.list_extend(args, DEFAULT_ARGS)
   Process.spawn({
     cmd = CURL,
@@ -68,7 +82,6 @@ local function post_largedata(url, encoded_data, on_success, on_error)
   end):forward(function(path)
     return Promise:new(function(resolve, reject)
       local args = {
-        '-s',
         '-X',
         'POST',
         '-H',
@@ -104,7 +117,6 @@ function M:post(url, data, on_success, on_error)
     return post_largedata(url, encoded_data, on_success, on_error)
   end
   local args = {
-    '-s',
     '-X',
     'POST',
     '-H',
