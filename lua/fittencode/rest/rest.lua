@@ -18,7 +18,7 @@ end
 function M:get(url, headers, data, on_success, on_error)
 end
 
-function M:post(url, data, on_success, on_error)
+function M:post(url, headers, data, on_success, on_error)
 end
 
 return M

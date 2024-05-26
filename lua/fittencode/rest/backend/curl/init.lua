@@ -66,7 +66,7 @@ function M:get(url, headers, data, on_success, on_error)
   _spawn(args, on_success, on_error)
 end
 
-local function post_largedata(url, encoded_data, on_success, on_error)
+local function post_largedata(url, headers, encoded_data, on_success, on_error)
   Promise:new(function(resolve, reject)
     FS.write_temp_file(encoded_data, function(_, path)
       resolve(path)
@@ -77,12 +77,14 @@ local function post_largedata(url, encoded_data, on_success, on_error)
     local args = {
       '-X',
       'POST',
-      '-H',
-      'Content-Type: application/json',
       '-d',
       '@' .. path,
       url,
     }
+    for _, v in ipairs(headers) do
+      table.insert(args, '-H')
+      table.insert(args, v)
+    end
     vim.list_extend(args, DEFAULT_ARGS)
     _spawn(args, on_success, on_error, function()
       FS.delete(path)
@@ -90,7 +92,7 @@ local function post_largedata(url, encoded_data, on_success, on_error)
   end)
 end
 
-function M:post(url, data, on_success, on_error)
+function M:post(url, headers, data, on_success, on_error)
   local success, encoded_data = pcall(fn.json_encode, data)
   if not success then
     Log.error('Failed to encode data: {}', data)
@@ -98,17 +100,19 @@ function M:post(url, data, on_success, on_error)
     return
   end
   if #encoded_data > 200 then
-    return post_largedata(url, encoded_data, on_success, on_error)
+    return post_largedata(url, headers, encoded_data, on_success, on_error)
   end
   local args = {
     '-X',
     'POST',
-    '-H',
-    'Content-Type: application/json',
     '-d',
     encoded_data,
     url,
   }
+  for _, v in ipairs(headers) do
+    table.insert(args, '-H')
+    table.insert(args, v)
+  end
   vim.list_extend(args, DEFAULT_ARGS)
   _spawn(args, on_success, on_error)
 end
