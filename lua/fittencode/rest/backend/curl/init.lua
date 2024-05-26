@@ -74,20 +74,18 @@ local function post_largedata(url, encoded_data, on_success, on_error)
       schedule(on_error, e_tmpfile)
     end)
   end):forward(function(path)
-    return Promise:new(function(resolve, reject)
-      local args = {
-        '-X',
-        'POST',
-        '-H',
-        'Content-Type: application/json',
-        '-d',
-        '@' .. path,
-        url,
-      }
-      vim.list_extend(args, DEFAULT_ARGS)
-      _spawn(args, on_success, on_error, function()
-        FS.delete(path)
-      end)
+    local args = {
+      '-X',
+      'POST',
+      '-H',
+      'Content-Type: application/json',
+      '-d',
+      '@' .. path,
+      url,
+    }
+    vim.list_extend(args, DEFAULT_ARGS)
+    _spawn(args, on_success, on_error, function()
+      FS.delete(path)
     end)
   end)
 end
