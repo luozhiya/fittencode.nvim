@@ -54,15 +54,20 @@ local function _spawn(args, on_success, on_error, on_exit)
   end)
 end
 
-function M:get(url, headers, data, on_success, on_error)
-  local args = {
-    url,
-  }
+-- NOTE: This mutates dst!
+local function merge_args(args, headers, extra_args)
   for _, v in ipairs(headers) do
     table.insert(args, '-H')
     table.insert(args, v)
   end
-  vim.list_extend(args, DEFAULT_ARGS)
+  vim.list_extend(args, extra_args)
+end
+
+function M:get(url, headers, data, on_success, on_error)
+  local args = {
+    url,
+  }
+  merge_args(args, headers, DEFAULT_ARGS)
   _spawn(args, on_success, on_error)
 end
 
@@ -81,11 +86,7 @@ local function post_largedata(url, headers, encoded_data, on_success, on_error)
       '@' .. path,
       url,
     }
-    for _, v in ipairs(headers) do
-      table.insert(args, '-H')
-      table.insert(args, v)
-    end
-    vim.list_extend(args, DEFAULT_ARGS)
+    merge_args(args, headers, DEFAULT_ARGS)
     _spawn(args, on_success, on_error, function()
       FS.delete(path)
     end)
@@ -109,11 +110,7 @@ function M:post(url, headers, data, on_success, on_error)
     encoded_data,
     url,
   }
-  for _, v in ipairs(headers) do
-    table.insert(args, '-H')
-    table.insert(args, v)
-  end
-  vim.list_extend(args, DEFAULT_ARGS)
+  merge_args(args, headers, DEFAULT_ARGS)
   _spawn(args, on_success, on_error)
 end
 
