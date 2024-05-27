@@ -5,11 +5,13 @@ local M = {}
 M.FittenSuggestion = 'FittenSuggestion'
 M.FittenSuggestionWhitespace = 'FittenSuggestionWhitespace'
 M.FittenNoMoreSuggestion = 'FittenNoMoreSuggestion'
+M.FittenSuggestionStage = 'FittenSuggestionStage'
 
 -- Define FittenCode colors
 local colors = {}
 colors.gray = '#808080'
 colors.yellow = '#FFEBC7'
+colors.yellow2 = '#C6F0C2'
 
 function M.setup_highlight()
   Base.set_hi(M.FittenSuggestion, {
@@ -22,6 +24,10 @@ function M.setup_highlight()
   })
   Base.set_hi(M.FittenNoMoreSuggestion, {
     fg = colors.yellow,
+    ctermfg = 'LightYellow',
+  })
+  Base.set_hi(M.FittenSuggestionStage, {
+    fg = colors.yellow2,
     ctermfg = 'LightYellow',
   })
 end
