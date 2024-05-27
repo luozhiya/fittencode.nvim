@@ -42,6 +42,18 @@ M.api = {
   accept_word = function()
     InlineEngine.accept_word()
   end,
+  accept_char = function()
+    InlineEngine.accept_char()
+  end,
+  revoke_line = function()
+    InlineEngine.revoke_line()
+  end,
+  revoke_word = function()
+    InlineEngine.revoke_word()
+  end,
+  revoke_char = function()
+    InlineEngine.revoke_char()
+  end,
   ---@param opts? ActionOptions
   document_code = function(opts)
     return ActionsEngine.document_code(opts)

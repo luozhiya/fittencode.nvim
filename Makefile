@@ -1,6 +1,7 @@
 .PHONY: cf
 cf:
 	CodeFormat format -c .editorconfig -w lua/
+	CodeFormat format -c .editorconfig -w tests/
 
 .PHONY: sl
 sl:
@@ -9,3 +10,7 @@ sl:
 .PHONY: lint
 lint:
 	luacheck .
+
+.PHONY: test
+test:
+	nvim --headless -u tests/init.lua  -c 'qa'

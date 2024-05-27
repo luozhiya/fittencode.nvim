@@ -11,9 +11,6 @@ local M = {}
 ---@type integer
 local namespace = api.nvim_create_namespace('FittenCode/InlineCompletion')
 
----@type VirtText?
-local committed_virt_text = nil
-
 ---@class VirtLine
 ---@field text string
 ---@field hl string
@@ -22,7 +19,7 @@ local committed_virt_text = nil
 
 ---@param line string
 ---@return boolean
-local function is_whitespace_line(line)
+local function is_spaces_line(line)
   return string.len(line) == 0 or line:match('^%s*$') ~= nil
 end
 
@@ -40,47 +37,66 @@ function M.tab()
   feedkeys('<Tab>')
 end
 
----@param suggestions? Suggestions
----@param hi? string
----@return VirtText|nil
-local function generate_virt_text(suggestions, hi)
-  if suggestions == nil then
+---@param line string
+---@param hl string[]
+---@return string
+local function _make_hl(line, hl)
+  local fg = hl[1] and hl[1] or Color.FittenSuggestion
+  local bg = hl[2] and hl[2] or Color.FittenSuggestionSpacesLine
+  return not is_spaces_line(line) and fg or bg
+end
+
+---@param lines? string[][]
+---@param hls string[][]|string
+---@return VirtText?
+local function make_virt_text(lines, hls)
+  if lines == nil or #lines == 0 then
     return
+  end
+  if type(hls) == 'string' then
+    hls = { { hls, hls } }
   end
   ---@type VirtText
   local virt_text = {}
-  for _, line in ipairs(suggestions) do
-    local color = Color.FittenSuggestion
-    if is_whitespace_line(line) then
-      color = Color.FittenSuggestionWhitespace
+  local last = {}
+  for i, sub_lines in ipairs(lines) do
+    for j, line in ipairs(sub_lines) do
+      local sub_hls = hls[i] or hls[1] or {}
+      local hl = _make_hl(line, sub_hls)
+      if j == 1 then
+        table.insert(last, { line, hl })
+        if #sub_lines > 1 then
+          table.insert(virt_text, last)
+          last = {}
+        end
+      elseif j == #sub_lines then
+        last = { { line, hl } }
+      else
+        table.insert(virt_text, { { line, hl } })
+      end
     end
-    color = hi or color
-    table.insert(virt_text, { { line, color } })
   end
+  table.insert(virt_text, last)
   return virt_text
 end
 
+---@param virt_text VirtText
+---@param hl_mode string
+---@return integer[]
 local function set_extmark(virt_text, hl_mode)
-  if virt_text == nil or vim.tbl_count(virt_text) == 0 then
-    return
-  end
-
-  Log.debug('Setting extmark: {}', virt_text)
-
   local row, col = Base.get_cursor()
-
-  hl_mode = hl_mode or 'combine'
+  local ids = {}
 
   if Config.internal.virtual_text.inline then
-    api.nvim_buf_set_extmark(0, namespace, row, col, {
+    ids[#ids + 1] = api.nvim_buf_set_extmark(0, namespace, row, col, {
       virt_text = virt_text[1],
       virt_text_pos = 'inline',
       hl_mode = hl_mode,
     })
   else
-    api.nvim_buf_set_extmark(0, namespace, row, col, {
+    ids[#ids + 1] = api.nvim_buf_set_extmark(0, namespace, row, col, {
       virt_text = virt_text[1],
-      -- eol will added space to the end of the line
+      -- `eol` will added space to the end of the line
       virt_text_pos = 'overlay',
       hl_mode = hl_mode,
     })
@@ -89,11 +105,13 @@ local function set_extmark(virt_text, hl_mode)
   table.remove(virt_text, 1)
 
   if vim.tbl_count(virt_text) > 0 then
-    api.nvim_buf_set_extmark(0, namespace, row, 0, {
+    ids[#ids + 1] = api.nvim_buf_set_extmark(0, namespace, row, 0, {
       virt_lines = virt_text,
       hl_mode = hl_mode,
     })
   end
+
+  return ids
 end
 
 ---@param virt_height integer
@@ -149,13 +167,14 @@ end
 local function move_cursor_to_text_end(window, row, col, lines)
   local cursor = { row, col }
   local count = vim.tbl_count(lines)
+  if count == 0 then
+    return { row, col }
+  end
   if count == 1 then
     local first_len = string.len(lines[1])
-    if first_len ~= 0 then
-      cursor = { row + 1, col + first_len }
-      if window and api.nvim_win_is_valid(window) then
-        api.nvim_win_set_cursor(window, cursor)
-      end
+    cursor = { row + 1, col + first_len }
+    if window and api.nvim_win_is_valid(window) then
+      api.nvim_win_set_cursor(window, cursor)
     end
   else
     local last_len = string.len(lines[count])
@@ -169,7 +188,7 @@ end
 
 ---@param fx? function
 ---@return any
-local function format_wrap(fx)
+local function format_wrap(buffer, fx)
   local fmts = {
     { 'autoindent',    false },
     { 'smartindent',   false },
@@ -177,8 +196,8 @@ local function format_wrap(fx)
     { 'textwidth',     0 },
   }
   for _, fmt in ipairs(fmts) do
-    fmt[3] = vim.bo[fmt[1]]
-    vim.bo[fmt[1]] = fmt[2]
+    fmt[3] = api.nvim_get_option_value(fmt[1], { buf = buffer })
+    api.nvim_set_option_value(fmt[1], fmt[2], { buf = buffer })
   end
 
   local ret = nil
@@ -187,7 +206,7 @@ local function format_wrap(fx)
   end
 
   for _, fmt in ipairs(fmts) do
-    vim.bo[fmt[1]] = fmt[3]
+    api.nvim_set_option_value(fmt[1], fmt[3], { buf = buffer })
   end
   return ret
 end
@@ -201,7 +220,7 @@ end
 ---@field cursor? integer[]
 
 ---@param opts LinesSetTextOptions
----@return integer[]?
+---@return table[]?
 function M.set_text(opts)
   local window = opts.window
   local buffer = opts.buffer
@@ -209,21 +228,30 @@ function M.set_text(opts)
   local is_undo_disabled = opts.is_undo_disabled or false
   local row, col = nil, nil
   local position = opts.position or 'current'
+
+  if not buffer or not api.nvim_buf_is_valid(buffer) then
+    return
+  end
+  if position == 'current' and (not window or not api.nvim_win_is_valid(window)) then
+    return
+  end
+
   if position == 'end' then
     row = math.max(api.nvim_buf_line_count(buffer) - 1, 0)
     col = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]:len()
-  elseif position == 'current' and window and api.nvim_win_is_valid(window) then
+  elseif position == 'current' then
     row, col = Base.get_cursor(window)
   elseif position == 'cursor' then
     if opts.cursor then
       row, col = unpack(opts.cursor)
     end
   end
+
   if row == nil or col == nil then
     return
   end
   local curosr = {}
-  format_wrap(function()
+  format_wrap(buffer, function()
     curosr[1] = { row, col }
     if not is_undo_disabled then
       undojoin()
@@ -235,27 +263,84 @@ function M.set_text(opts)
   return curosr
 end
 
----@param suggestions? Suggestions
----@param show_time? integer
----@param hi? string
----@param hl_mode? string
-function M.render_virt_text(suggestions, show_time, hi, hl_mode)
-  committed_virt_text = generate_virt_text(suggestions, hi)
-  move_to_center_vertical(vim.tbl_count(committed_virt_text or {}))
-  -- api.nvim_command('redraw!')
-  api.nvim_buf_clear_namespace(0, namespace, 0, -1)
-  set_extmark(committed_virt_text, hl_mode)
+---@class RenderVirtTextOptions
+---@field buffer? integer
+---@field show_time? integer
+---@field lines? string[][]
+---@field hls? string[][]|string
+---@field hl_mode? string
+---@field center_vertical? boolean
 
-  if show_time and show_time > 0 then
+---@param opts? RenderVirtTextOptions
+---@return integer[]?
+function M.render_virt_text(opts)
+  opts = opts or {}
+  local buffer = opts.buffer
+  if not buffer or not api.nvim_buf_is_valid(buffer) then
+    return
+  end
+  local lines = opts.lines or {}
+  local show_time = opts.show_time or 0
+  local hls = opts.hls or {}
+  local hl_mode = opts.hl_mode or 'combine'
+  local center_vertical = opts.center_vertical ~= false or false
+
+  if #lines == 0 then
+    return
+  end
+
+  ---@type VirtText?
+  local virt_text = make_virt_text(lines, hls)
+  if not virt_text or vim.tbl_count(virt_text) == 0 then
+    return
+  end
+  if center_vertical then
+    move_to_center_vertical(vim.tbl_count(virt_text))
+  end
+  local ids = set_extmark(virt_text, hl_mode)
+  -- api.nvim_command('redraw!')
+
+  if show_time > 0 then
     vim.defer_fn(function()
-      M.clear_virt_text()
+      M.clear_virt_text({
+        buffer = buffer,
+        ids = ids,
+      })
     end, show_time)
+  end
+
+  return ids
+end
+
+---@class ClearVirtTextOptions
+---@field buffer? integer
+---@field ids? integer[]
+---@field clear_ns? boolean
+
+---@param opts? ClearVirtTextOptions
+function M.clear_virt_text(opts)
+  opts = opts or {}
+  local buffer = opts.buffer or 0
+  local ids = opts.ids or {}
+  local clear_ns = opts.clear_ns or false
+  if clear_ns then
+    api.nvim_buf_clear_namespace(0, namespace, 0, -1)
+  else
+    for _, id in ipairs(ids) do
+      api.nvim_buf_del_extmark(buffer, namespace, id)
+    end
   end
 end
 
-function M.clear_virt_text()
-  M.render_virt_text()
-  -- api.nvim_command('redraw!')
+function M.is_rendering(buffer, ids)
+  ids = ids or {}
+  for _, id in ipairs(ids) do
+    local details = api.nvim_buf_get_extmark_by_id(buffer, namespace, id, { details = true })
+    if #details > 0 then
+      return true
+    end
+  end
+  return false
 end
 
 -- When we edit some complex documents, extmark will not be able to draw correctly.
