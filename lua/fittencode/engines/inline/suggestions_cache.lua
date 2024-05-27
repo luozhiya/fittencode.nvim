@@ -1,9 +1,12 @@
 ---@class SuggestionsCache
----@field private task_id? integer
----@field private lines? string[]
----@field private row? integer
----@field private col? integer
----@field private count? integer
+---@field task_id? integer
+---@field lines? string[]
+---@field triggered_cursor? integer[]
+---@field commit_cursor? integer[]
+---@field stage_cursor? integer[]
+---@field utf_start? integer[][]
+---@field utf_end? integer[][]
+---@field utf_pos? integer[][]
 local SuggestionsCache = {}
 
 function SuggestionsCache.new()

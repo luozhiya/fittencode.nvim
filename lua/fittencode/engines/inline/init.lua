@@ -287,7 +287,7 @@ end
 local function calculate_next_word_index(line, utf8_index)
   local prev_ctype = nil
   for i = 1, string.len(line) do
-    local char, pos = Unicode.find_first_character(line, utf8_index, i)
+    local char, pos = Unicode.find_next_character(line, utf8_index, i)
     if not pos or not char then
       break
     end

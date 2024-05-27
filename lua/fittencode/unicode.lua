@@ -25,15 +25,21 @@ function M.find_zero(tbl, start_index)
   end
 end
 
-function M.find_first_character(s, tbl, start_index)
+function M.find_zero_reverse(tbl, start_index)
+  for i = start_index, 1, -1 do
+    if tbl[i] == 0 then
+      return i
+    end
+  end
+end
+
+function M.find_next_character(s, tbl, start_index)
   if #tbl == 0 then
     return nil
   end
 
   local v1 = M.find_zero(tbl, start_index)
-  assert(v1 == start_index)
   if v1 == nil then
-    -- Invalid UTF-8 sequence
     return nil
   end
 
@@ -46,6 +52,52 @@ function M.find_first_character(s, tbl, start_index)
 
   local char = string.sub(s, v1, v2)
   return char, { v1, v2 }
+end
+
+function M.utf_pos(line)
+  return vim.str_utf_pos(line)
+end
+
+function M.utf_pos_list(lines)
+  local utf_pos = {}
+  for i, line in ipairs(lines) do
+    utf_pos[i] = vim.str_utf_pos(line)
+  end
+  return utf_pos
+end
+
+function M.utf_start(line)
+  local index = {}
+  for i = 1, #line do
+    table.insert(index, #index + 1, vim.str_utf_start(line, i))
+  end
+  return index
+end
+
+function M.utf_start_list(lines)
+  local index = {}
+  for i, line in ipairs(lines) do
+    local line_index = M.utf_start(line)
+    index[i] = line_index
+  end
+  return index
+end
+
+function M.utf_end(line)
+  local index = {}
+  for i = 1, #line do
+    table.insert(index, #index + 1, vim.str_utf_end(line, i))
+  end
+  return index
+end
+
+function M.utf_end_list(lines)
+  local index = {}
+  for i, line in ipairs(lines) do
+    local line_index = M.utf_end(line)
+    index[i] = line_index
+  end
+  return index
 end
 
 return M
