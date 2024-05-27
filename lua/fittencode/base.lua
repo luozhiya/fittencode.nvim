@@ -156,21 +156,6 @@ function M.is_bsd()
   end, sys) > 0
 end
 
----@param char string
----@return boolean
-function M.is_alpha(char)
-  ---@type integer
-  local byte = char:byte()
-  return (byte >= 65 and byte <= 90) or (byte >= 97 and byte <= 122)
-end
-
----@param char string
----@return boolean
-function M.is_space(char)
-  local byte = string.byte(char)
-  return byte == 32 or byte == 9
-end
-
 function M.tbl_keys_by_value(tbl, value)
   local keys = {}
   for k, v in pairs(tbl) do
