@@ -231,6 +231,35 @@ local function ignoreevent_wrap(fx)
   return ret
 end
 
+local function make_text_opts(updated)
+  return {}
+end
+
+local function make_virt_opts(updated)
+  return {}
+end
+
+local function accept_enabled()
+  if not M.is_inline_enabled() then
+    return
+  end
+
+  if not M.has_suggestions() then
+    Log.debug('No suggestions')
+    return
+  end
+end
+
+local function _accept_wrap(fx)
+  if not accept_enabled() then
+    return
+  end
+  Lines.clear_virt_text()
+  ignoreevent_wrap(function()
+    fx()
+  end)
+end
+
 function M.accept_line()
   Log.debug('Accept line...')
 
@@ -280,29 +309,8 @@ function M.accept_line()
   end)
 end
 
-local function make_text_opts(updated)
-  return {}
-end
-
-local function make_virt_opts(updated)
-  return {}
-end
-
 function M.accept_word()
-  Log.debug('Accept Word...')
-
-  if not M.is_inline_enabled() then
-    return
-  end
-
-  if not M.has_suggestions() then
-    Log.debug('No suggestions')
-    return
-  end
-
-  Lines.clear_virt_text()
-
-  ignoreevent_wrap(function()
+  _accept_wrap(function()
     local updated = model:accept({
       range = 'word',
       direction = 'forward',
