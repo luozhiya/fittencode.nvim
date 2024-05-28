@@ -196,24 +196,6 @@ function M.triggering_completion()
   end)
 end
 
-function M.accept_all_suggestions()
-  Log.debug('Accept all suggestions...')
-
-  if not M.is_inline_enabled() then
-    return
-  end
-
-  if not M.has_suggestions() then
-    Log.debug('No suggestions')
-    return
-  end
-
-  Lines.clear_virt_text()
-  _set_text(cache:get_lines())
-
-  M.reset()
-end
-
 ---@param fx? function
 ---@return any
 local function ignoreevent_wrap(fx)
@@ -239,7 +221,7 @@ local function make_virt_opts(updated)
   return {}
 end
 
-local function accept_enabled()
+local function suggestions_modify_enabled()
   if not M.is_inline_enabled() then
     return
   end
@@ -250,70 +232,15 @@ local function accept_enabled()
   end
 end
 
-local function _accept_wrap(fx)
-  if not accept_enabled() then
+local function _accept_impl(range, direction)
+  if not suggestions_modify_enabled() then
     return
   end
   Lines.clear_virt_text()
   ignoreevent_wrap(function()
-    fx()
-  end)
-end
-
-function M.accept_line()
-  Log.debug('Accept line...')
-
-  if not M.is_inline_enabled() then
-    return
-  end
-
-  if not M.has_suggestions() then
-    Log.debug('No suggestions')
-    return
-  end
-
-  Lines.clear_virt_text()
-
-  ignoreevent_wrap(function()
-    Log.debug('Pretreatment cached lines: {}', cache:get_lines())
-
-    local line = cache:remove_line(1)
-    local cur = vim.tbl_count(cache:get_lines())
-    local stage = cache:get_count() - 1
-
-    if cur == stage then
-      _set_text({ line })
-      Log.debug('Set line: {}', line)
-      _set_text({ '', '' })
-      Log.debug('Set empty new line')
-    else
-      if cur == 0 then
-        _set_text({ line })
-        Log.debug('Set line: {}', line)
-      else
-        _set_text({ line, '' })
-        Log.debug('Set line and empty new line; line: {}', line)
-      end
-    end
-
-    Log.debug('Remaining cached lines: {}', cache:get_lines())
-
-    if vim.tbl_count(cache:get_lines()) > 0 then
-      Lines.render_virt_text(cache:get_lines())
-      local row, col = Base.get_cursor()
-      cache:update_cursor(row, col)
-    else
-      Log.debug('No more suggestions, generate new one stage')
-      generate_one_stage_at_cursor()
-    end
-  end)
-end
-
-function M.accept_word()
-  _accept_wrap(function()
     local updated = model:accept({
-      range = 'word',
-      direction = 'forward',
+      range = range,
+      direction = direction,
     })
     local virt_opts = make_virt_opts(updated)
     if model.mode == 'commit' then
@@ -331,6 +258,18 @@ function M.accept_word()
   end)
 end
 
+function M.accept_all_suggestions()
+  _accept_impl('all', 'forward')
+end
+
+function M.accept_line()
+  _accept_impl('line', 'forward')
+end
+
+function M.accept_word()
+  _accept_impl('word', 'forward')
+end
+
 function M.reset()
   status:update(SC.IDLE)
   if M.is_inline_enabled() then
@@ -341,19 +280,12 @@ function M.reset()
 end
 
 function M.advance()
-  Log.debug('Advance...')
-
-  if not M.is_inline_enabled() then
+  if not suggestions_modify_enabled() then
     return
   end
-
-  if not M.has_suggestions() then
-    return
-  end
-
-  if not cache:equal_cursor(Base.get_cursor()) then
+  if not model:cache_hit(Base.get_cursor()) then
     Lines.clear_virt_text()
-    cache:flush()
+    model:reset()
   end
 end
 
