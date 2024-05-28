@@ -22,10 +22,13 @@ Case:describe('InlineModel', function(it)
       suggestion = {
         'ABC DEF GHI',
         '',
-        'w中zzz'
+        -- 'w中中zw(zz',
+        -- '',
+        -- 'w(zzz',
       }
     })
-    -- dump_model(model)
+    dump_model(model)
+    print('--------------------------------------------')
     -- Assert.equals({ 0, 0 }, model.cache.stage_cursor)
 
     for i = 1, 15 do
@@ -35,6 +38,8 @@ Case:describe('InlineModel', function(it)
       })
       dump_model(model)
     end
+
+    print('--------------------------------------------')
 
     -- model.cache.stage_cursor = { 1, 11 }
     -- dump_model(model)

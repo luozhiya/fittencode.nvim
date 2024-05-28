@@ -87,12 +87,39 @@ end
 
 local function _gettype(line, col)
   local byte = string.byte(line:sub(col, col))
+  if byte == nil then
+    return nil
+  end
   if is_number(byte) then
     return 'number'
   elseif is_alpha(byte) then
     return 'alpha'
   elseif is_space(byte) then
     return 'space'
+  end
+end
+
+-- A中B
+-- 0, 1, 2, 5
+local function _next_word3(cache, row, col, forward, pretype)
+  local line = cache.lines[row]
+  local utf_start = cache.utf_start[row]
+  local utf_end = cache.utf_end[row]
+
+  if forward == nil then
+    forward = true
+  end
+
+  local curr_w = utf_width(utf_end, col) or 1
+  local curr_type = _gettype(line, col)
+
+  local next = col + curr_w
+  local next_w = utf_width(utf_end, next)
+  local next_type = _gettype(line, next)
+  if next_w then
+    return _next_word(cache, row, next, forward)
+  else
+
   end
 end
 
@@ -104,6 +131,7 @@ local function _next_word(cache, row, col, forward, pretype)
   if forward == nil then
     forward = true
   end
+
   if col == 0 then
     if forward then
       col = 1
@@ -118,6 +146,7 @@ local function _next_word(cache, row, col, forward, pretype)
       col = Unicode.find_zero_reverse(utf_start, col - 1)
     end
   end
+
   local width = utf_width(utf_end, col)
   if not width then
     return nil
@@ -125,6 +154,11 @@ local function _next_word(cache, row, col, forward, pretype)
     return col
   else
     local curtype = _gettype(line, col)
+    local next_width = utf_width(utf_end, col + width)
+    local next_type = _gettype(line, col + width)
+    if next_width and next_width > 1 or next_type ~= curtype then
+      return col
+    end
     if curtype == pretype or pretype == nil then
       if col < #line then
         return _next_word(cache, row, col, forward, curtype)
@@ -132,7 +166,7 @@ local function _next_word(cache, row, col, forward, pretype)
         return col
       end
     else
-      return col - 1
+      return col
     end
   end
 end
