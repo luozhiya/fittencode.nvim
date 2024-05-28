@@ -262,14 +262,14 @@ end
 
 function InlineModel:reached_end()
   return self.cache.stage_cursor[1] == #self.cache.lines and
-  self.cache.stage_cursor[2] == #self.cache.lines[#self.cache.lines]
+      self.cache.stage_cursor[2] == #self.cache.lines[#self.cache.lines]
 end
 
 function InlineModel:triggered_cursor()
   return self.cache.triggered_cursor
 end
 
-function InlineModel:set_triggered_cursor(row, col)
+function InlineModel:update_triggered_cursor(row, col)
   self.cache.triggered_cursor = { row, col }
 end
 

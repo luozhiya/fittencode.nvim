@@ -27,21 +27,22 @@ local tasks = nil
 ---@type Status
 local status = nil
 
-local function _set_text(lines)
-  local window = api.nvim_get_current_win()
-  local buffer = api.nvim_win_get_buf(window)
-  Lines.set_text({
-    window = window,
-    buffer = buffer,
-    lines = lines,
-  })
-end
-
 function M.setup()
   model = Model:new()
   tasks = TaskScheduler:new()
   tasks:setup()
   status = Status:new({ tag = 'InlineEngine' })
+end
+
+local function suggestions_modify_enabled()
+  if not M.is_inline_enabled() then
+    return
+  end
+
+  if not M.has_suggestions() then
+    Log.debug('No suggestions')
+    return
+  end
 end
 
 ---@param task_id integer
@@ -123,7 +124,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   if not force and model:cache_hit(row, col) and M.has_suggestions() then
     status:update(SC.SUGGESTIONS_READY)
     Log.debug('Cached cursor matches requested cursor')
-    if M.is_inline_enabled() then
+    if suggestions_modify_enabled() then
       Lines.render_virt_text(cache:get_lines())
     end
     -- schedule(on_success, M.get_suggestions():get_lines())
@@ -133,7 +134,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
     Log.debug('Cached cursor is outdated')
   end
 
-  if M.is_inline_enabled() then
+  if suggestions_modify_enabled() then
     Lines.clear_virt_text()
   end
   model:reset()
@@ -175,17 +176,22 @@ end
 function M.triggering_completion()
   Log.debug('Triggering completion...')
 
-  if not M.is_inline_enabled() then
-    return
-  end
-
-  if M.has_suggestions() then
+  if not suggestions_modify_enabled() then
     return
   end
 
   local prompt = ' (Currently no completion options available)'
   local fx = function()
-    Lines.render_virt_text({ prompt }, 2000, Color.FittenNoMoreSuggestion, 'replace')
+    Lines.render_virt_text({
+      suggestions = {
+        { prompt }
+      },
+      hi = {
+        Color.FittenNoMoreSuggestion,
+      },
+      hl_mode = { 'replace' },
+      show_time = 2000,
+    })
   end
   generate_one_stage_at_cursor(function(suggestions)
     if not suggestions then
@@ -221,17 +227,6 @@ local function make_virt_opts(updated)
   return {}
 end
 
-local function suggestions_modify_enabled()
-  if not M.is_inline_enabled() then
-    return
-  end
-
-  if not M.has_suggestions() then
-    Log.debug('No suggestions')
-    return
-  end
-end
-
 local function _accept_impl(range, direction)
   if not suggestions_modify_enabled() then
     return
@@ -245,12 +240,11 @@ local function _accept_impl(range, direction)
     local virt_opts = make_virt_opts(updated)
     if model.mode == 'commit' then
       local text_opts = make_text_opts(updated)
-      -- set text
       local cusors = Lines.set_text(text_opts)
       if not cusors then
         return
       end
-      model:set_triggered_cursor(unpack(cusors[2]))
+      model:update_triggered_cursor(unpack(cusors[2]))
       Lines.render_virt_text(virt_opts)
     elseif model.mode == 'stage' then
       Lines.render_virt_text(virt_opts)
@@ -268,6 +262,22 @@ end
 
 function M.accept_word()
   _accept_impl('word', 'forward')
+end
+
+function M.accept_char()
+  _accept_impl('char', 'forward')
+end
+
+function M.revoke_char()
+  _accept_impl('char', 'backward')
+end
+
+function M.revoke_word()
+  _accept_impl('word', 'backward')
+end
+
+function M.revoke_line()
+  _accept_impl('line', 'backward')
 end
 
 function M.reset()
@@ -309,7 +319,7 @@ end
 function M.lazy_inline_completion()
   Log.debug('Lazy inline completion...')
 
-  if not M.is_inline_enabled() then
+  if not suggestions_modify_enabled() then
     return
   end
 
