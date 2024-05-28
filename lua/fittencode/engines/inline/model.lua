@@ -43,13 +43,6 @@ function InlineModel:recalculate(opts)
   self.cache.utf_end = Unicode.utf_end_list(self.cache.lines)
 end
 
--- IM = InlineModel:new()
--- IM:update(1, 1, 1, "hello")
--- committed, {staged, unstage} = IM:accept(AcceptRange.Char, AcceptDirection.Forward)
---
--- Lines.set_text(committed)
--- Lines.render_virt_text({staged, unstage})
-
 ---@class InlineModelAcceptOptions
 ---@field direction AcceptDirection
 ---@field range AcceptRange
@@ -238,20 +231,36 @@ function InlineModel:accept(opts)
   end
   row, col = post_accept(self.cache.lines, row, col, opts.direction)
 
+  local updated = {
+    lines = self.cache.lines,
+    segments = {
+      pre_commit = nil,
+      commit = nil,
+      stage = nil
+    }
+  }
   self.cache.stage_cursor = { row, col }
   if self.mode == 'commit' then
     local pre_commit = self.cache.commit_cursor
     self.cache.commit_cursor = { row, col }
-    -- [pre_commit, commit]
-    -- Lines.set_text(lines, pre_commit, commit)
-    -- Lines.render_virt_text(lines, stage)
+    -- (pre_commit, commit]
+    updated.segments.pre_commit = pre_commit
+    updated.segments.commit = self.cache.commit_cursor
   elseif self.mode == 'stage' then
-    -- Lines.render_virt_text(lines, commit, stage)
+    -- [..., stage]
+    -- (stage, ...]
+    updated.segments.stage = self.cache.stage_cursor
   end
+  return updated
 end
 
 function InlineModel:has_suggestions()
   return self.cache.lines and #self.cache.lines > 0
+end
+
+function InlineModel:reached_end()
+  return self.cache.stage_cursor[1] == #self.cache.lines and
+  self.cache.stage_cursor[2] == #self.cache.lines[#self.cache.lines]
 end
 
 return InlineModel

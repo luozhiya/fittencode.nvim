@@ -28,9 +28,8 @@ Case:describe('InlineModel', function(it)
       }
     })
     dump_model(model)
-    print('--------------------------------------------')
-    -- Assert.equals({ 0, 0 }, model.cache.stage_cursor)
 
+    print('--------------------------------------------')
     for i = 1, 15 do
       model:accept({
         range = 'word',
@@ -48,6 +47,15 @@ Case:describe('InlineModel', function(it)
       model:accept({
         range = 'word',
         direction = 'backward',
+      })
+      dump_model(model)
+    end
+
+    print('--------------------------------------------')
+    for i = 1, 15 do
+      model:accept({
+        range = 'word',
+        direction = 'forward',
       })
       dump_model(model)
     end

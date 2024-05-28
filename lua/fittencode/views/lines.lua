@@ -235,14 +235,23 @@ function M.set_text(opts)
   return curosr
 end
 
----@param suggestions? Suggestions
----@param show_time? integer
----@param hi? string
----@param hl_mode? string
-function M.render_virt_text(suggestions, show_time, hi, hl_mode)
+---@class RenderVirtTextOptions
+---@field show_time? integer
+---@field suggestions? Suggestions
+---@field segments? integer
+---@field hi? string
+---@field hl_mode? string
+
+---@param opts? RenderVirtTextOptions
+function M.render_virt_text(opts)
+  opts = opts or {}
+  local suggestions = opts.suggestions
+  local show_time = opts.show_time or 0
+  local hi = opts.hi
+  local hl_mode = opts.hl_mode or 'combine'
+
   committed_virt_text = generate_virt_text(suggestions, hi)
   move_to_center_vertical(vim.tbl_count(committed_virt_text or {}))
-  -- api.nvim_command('redraw!')
   api.nvim_buf_clear_namespace(0, namespace, 0, -1)
   set_extmark(committed_virt_text, hl_mode)
 
