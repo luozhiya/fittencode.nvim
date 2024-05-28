@@ -54,6 +54,27 @@ function M.find_next_character(s, tbl, start_index)
   return char, { v1, v2 }
 end
 
+function M.find_next_character_reverse(s, tbl, start_index)
+  if #tbl == 0 then
+    return nil
+  end
+
+  local v1 = M.find_zero_reverse(tbl, start_index)
+  if v1 == nil then
+    return nil
+  end
+
+  local v2 = M.find_zero_reverse(tbl, v1 - 1)
+  if v2 == nil then
+    v2 = 1
+  else
+    v2 = v2 + 1
+  end
+
+  local char = string.sub(s, v1, v2)
+  return char, { v1, v2 }
+end
+
 function M.utf_pos(line)
   return vim.str_utf_pos(line)
 end
