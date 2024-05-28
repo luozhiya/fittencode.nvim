@@ -101,8 +101,9 @@ local function _next_word(cache, row, col, forward, pretype)
   local utf_start = cache.utf_start[row]
   local utf_end = cache.utf_end[row]
 
-  forward = forward == false and false or true
-
+  if forward == nil then
+    forward = true
+  end
   if col == 0 then
     if forward then
       col = 1
