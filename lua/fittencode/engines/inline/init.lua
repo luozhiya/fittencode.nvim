@@ -5,13 +5,12 @@ local Config = require('fittencode.config')
 local Color = require('fittencode.color')
 local Lines = require('fittencode.views.lines')
 local Log = require('fittencode.log')
+local Model = require('fittencode.engines.inline.model')
 local Sessions = require('fittencode.sessions')
 local Status = require('fittencode.status')
-local SuggestionsCache = require('fittencode.engines.inline.suggestions_cache')
 local SuggestionsPreprocessing = require('fittencode.suggestions_preprocessing')
 local TaskScheduler = require('fittencode.tasks')
 local PromptProviders = require('fittencode.prompt_providers')
-local Unicode = require('fittencode.unicode')
 
 local schedule = Base.schedule
 
@@ -19,8 +18,8 @@ local SC = Status.C
 
 local M = {}
 
----@class SuggestionsCache
-local cache = nil
+---@class InlineModel
+local model = nil
 
 ---@class TaskScheduler
 local tasks = nil
@@ -39,7 +38,7 @@ local function _set_text(lines)
 end
 
 function M.setup()
-  cache = SuggestionsCache:new()
+  model = Model:new()
   tasks = TaskScheduler:new()
   tasks:setup()
   status = Status:new({ tag = 'InlineEngine' })
@@ -73,7 +72,12 @@ end
 
 local function apply_suggestion(task_id, row, col, suggestion)
   if suggestion then
-    cache:update(task_id, row, col, suggestion)
+    model:recalculate({
+      task_id = task_id,
+      row = row,
+      col = col,
+      suggestion = suggestion,
+    })
     if M.is_inline_enabled() then
       Lines.render_virt_text(suggestion)
     end
@@ -116,9 +120,6 @@ local generate_one_stage_timer = nil
 function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   Log.debug('Start generate one stage...')
 
-  Log.debug('Requested row: {}, col: {}', row, col)
-  Log.debug('Cached row: {}, col: {}', cache:get_cursor())
-
   if not force and cache:equal_cursor(row, col) and M.has_suggestions() then
     status:update(SC.SUGGESTIONS_READY)
     Log.debug('Cached cursor matches requested cursor')
@@ -134,7 +135,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   if M.is_inline_enabled() then
     Lines.clear_virt_text()
   end
-  cache:flush()
+  model:reset()
 
   if not Sessions.ready_for_generate() then
     Log.debug('Not ready for generate')
@@ -159,7 +160,7 @@ end
 
 ---@return SuggestionsCache
 function M.get_suggestions()
-  return cache
+  return model:get_suggestions()
 end
 
 local function generate_one_stage_at_cursor(on_success, on_error)
@@ -206,14 +207,10 @@ function M.accept_all_suggestions()
     return
   end
 
-  Log.debug('Pretreatment cached lines: {}', cache:get_lines())
-
   Lines.clear_virt_text()
   _set_text(cache:get_lines())
 
   M.reset()
-
-  Log.debug('Remaining cached lines: {}', cache:get_lines())
 end
 
 ---@param fx? function
@@ -282,43 +279,8 @@ function M.accept_line()
   end)
 end
 
--- Calculate the next word index, split by word boundary
----@param line string
-local function calculate_next_word_index(line, utf8_index)
-  local prev_ctype = nil
-  for i = 1, string.len(line) do
-    local char, pos = Unicode.find_next_character(line, utf8_index, i)
-    if not pos or not char then
-      break
-    end
-    if pos[1] ~= pos[2] then
-      if not prev_ctype then
-        return pos[2]
-      else
-        return pos[1] - 1
-      end
-    end
-
-    local is_alpha = Base.is_alpha(char)
-    local is_space = Base.is_space(char)
-
-    if not is_alpha and not is_space then
-      return prev_ctype and i - 1 or 1
-    end
-    if prev_ctype then
-      if is_alpha and prev_ctype ~= 'alpha' then
-        return i - 1
-      elseif is_space and prev_ctype ~= 'space' then
-        return i - 1
-      end
-    end
-    prev_ctype = is_alpha and 'alpha' or is_space and 'space'
-  end
-  return string.len(line)
-end
-
 function M.accept_word()
-  Log.debug('Accept word...')
+  Log.debug('Accept Word...')
 
   if not M.is_inline_enabled() then
     return
@@ -332,49 +294,10 @@ function M.accept_word()
   Lines.clear_virt_text()
 
   ignoreevent_wrap(function()
-    Log.debug('Pretreatment cached lines: {}', cache:get_lines())
-
-    local line = cache:get_line(1)
-    if not line then
-      Log.debug('No line cached')
-      return
-    end
-    local utf8_index = Unicode.calculate_utf8_index(line)
-    local next_word_index = calculate_next_word_index(line, utf8_index)
-    local word = ''
-    if next_word_index > 0 then
-      word = string.sub(line, 1, next_word_index)
-    end
-    if #word < #line then
-      line = string.sub(line, string.len(word) + 1)
-    else
-      line = ''
-    end
-    if string.len(line) == 0 then
-      cache:remove_line(1)
-      if M.has_suggestions() then
-        _set_text({ word, '' })
-        Log.debug('Set word and empty new line, word: {}', word)
-      else
-        _set_text({ word })
-        Log.debug('Set word: {}', word)
-      end
-    else
-      cache:update_line(1, line)
-      _set_text({ word })
-      Log.debug('Set word: {}', word)
-    end
-
-    Log.debug('Remaining cached lines: {}', cache:get_lines())
-
-    if vim.tbl_count(cache:get_lines()) > 0 then
-      Lines.render_virt_text(cache:get_lines())
-      local row, col = Base.get_cursor()
-      cache:update_cursor(row, col)
-    else
-      Log.debug('No more suggestions, generate new one stage')
-      generate_one_stage_at_cursor()
-    end
+    local updated = model:accept({
+      range = 'word',
+      direction = 'forward',
+    })
   end)
 end
 

@@ -263,4 +263,16 @@ function InlineModel:reached_end()
   self.cache.stage_cursor[2] == #self.cache.lines[#self.cache.lines]
 end
 
+function InlineModel:triggered_cursor()
+  return self.cache.triggered_cursor
+end
+
+function InlineModel:reset()
+  self.cache = SuggestionsCache:new()
+end
+
+function InlineModel:get_suggestions()
+  return self.cache.lines
+end
+
 return InlineModel
