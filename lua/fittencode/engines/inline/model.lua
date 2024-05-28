@@ -1,3 +1,4 @@
+local Config = require('fittencode.config')
 local SuggestionsCache = require('fittencode.engines.inline.suggestions_cache')
 local Unicode = require('fittencode.unicode')
 
@@ -7,7 +8,6 @@ local Unicode = require('fittencode.unicode')
 
 ---@class InlineModel
 ---@field cache? SuggestionsCache
----@field mode AcceptMode
 ---@field direction AcceptRange
 ---@field range AcceptDirection
 local InlineModel = {}
@@ -15,7 +15,6 @@ local InlineModel = {}
 function InlineModel:new()
   local o = {
     cache = SuggestionsCache:new()
-    -- mode = config.
   }
   self.__index = self
   return setmetatable(o, self)
@@ -25,14 +24,14 @@ end
 ---@field task_id number
 ---@field row number
 ---@field col number
----@field suggestion string[]
+---@field suggestions string[]
 
 ---@param opts InlineModelRecalculateOptions
 function InlineModel:recalculate(opts)
   local task_id = opts.task_id
   local row = opts.row
   local col = opts.col
-  local suggestion = opts.suggestion
+  local suggestion = opts.suggestions
 
   self.cache.task_id = task_id
   self.cache.triggered_cursor = { row, col }
@@ -219,6 +218,9 @@ end
 
 ---@param opts InlineModelAcceptOptions
 function InlineModel:accept(opts)
+  if Config.options.inline_completion.accept_mode == 'commit' and opts.direction == 'backward' then
+    return nil
+  end
   local row, col = unpack(self.cache.stage_cursor)
   row, col = pre_accept(self.cache.lines, row, col, opts.direction)
   if opts.range == 'char' then
@@ -241,14 +243,14 @@ function InlineModel:accept(opts)
     }
   }
   self.cache.stage_cursor = { row, col }
-  if self.mode == 'commit' then
+  if Config.options.inline_completion.accept_mode == 'commit' then
     local pre_commit = self.cache.commit_cursor
     self.cache.commit_cursor = { row, col }
     -- (pre_commit, commit]
     updated.segments.pre_commit = pre_commit
     updated.segments.commit = self.cache.commit_cursor
     -- self.cache.triggered_cursor -- update triggered_cursor
-  elseif self.mode == 'stage' then
+  elseif Config.options.inline_completion.accept_mode == 'stage' then
     -- [..., stage]
     -- (stage, ...]
     updated.segments.stage = self.cache.stage_cursor

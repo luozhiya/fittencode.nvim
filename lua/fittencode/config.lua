@@ -47,6 +47,11 @@ local defaults = {
     -- Auto triggering completion
     ---@type boolean
     auto_triggering_completion = true,
+    -- Accept Mode
+    -- Available options:
+    -- * 'commit' (default)
+    -- * 'stage'
+    accept_mode = 'commit',
   },
   delay_completion = {
     -- Delay time for inline completion (in milliseconds).

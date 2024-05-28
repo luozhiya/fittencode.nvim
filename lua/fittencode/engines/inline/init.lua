@@ -71,16 +71,18 @@ local function process_suggestions(task_id, suggestions)
   })
 end
 
-local function apply_suggestion(task_id, row, col, suggestion)
-  if suggestion then
+local function apply_new_suggestions(task_id, row, col, suggestions)
+  if suggestions then
     model:recalculate({
       task_id = task_id,
       row = row,
       col = col,
-      suggestion = suggestion,
+      suggestions = suggestions,
     })
-    if M.is_inline_enabled() then
-      Lines.render_virt_text(suggestion)
+    if suggestions_modify_enabled() then
+      Lines.render_virt_text({
+        suggestions = suggestions,
+      })
     end
   end
 end
@@ -97,7 +99,7 @@ local function _generate_one_stage(row, col, on_success, on_error)
     local processed = process_suggestions(id, suggestions)
     if processed then
       status:update(SC.SUGGESTIONS_READY)
-      apply_suggestion(task_id, row, col, processed)
+      apply_new_suggestions(task_id, row, col, processed)
       schedule(on_success, processed)
     else
       status:update(SC.NO_MORE_SUGGESTIONS)
@@ -183,13 +185,11 @@ function M.triggering_completion()
   local prompt = ' (Currently no completion options available)'
   local fx = function()
     Lines.render_virt_text({
-      suggestions = {
-        { prompt }
-      },
+      suggestions = { prompt },
       hi = {
         Color.FittenNoMoreSuggestion,
       },
-      hl_mode = { 'replace' },
+      hl_mode = 'replace',
       show_time = 2000,
     })
   end
@@ -231,12 +231,18 @@ local function _accept_impl(range, direction)
   if not suggestions_modify_enabled() then
     return
   end
+  if Config.options.inline_completion.accept_mode == 'commit' and direction == 'backward' then
+    return
+  end
   Lines.clear_virt_text()
   ignoreevent_wrap(function()
     local updated = model:accept({
       range = range,
       direction = direction,
     })
+    if not updated then
+      return
+    end
     local virt_opts = make_virt_opts(updated)
     if model.mode == 'commit' then
       local text_opts = make_text_opts(updated)

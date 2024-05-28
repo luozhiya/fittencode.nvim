@@ -38,20 +38,28 @@ function M.tab()
 end
 
 ---@param suggestions? Suggestions
----@param hi? string
+---@param segments? integer[][]
+---@param hi? string[]
 ---@return VirtText|nil
-local function generate_virt_text(suggestions, hi)
+local function generate_virt_text(suggestions, segments, hi)
   if suggestions == nil then
     return
   end
+  segments = segments or {}
+  hi = hi or {}
+  local current_segment = 1
   ---@type VirtText
   local virt_text = {}
-  for _, line in ipairs(suggestions) do
+  for i, line in ipairs(suggestions) do
+    if #segments > 0 then
+      if i == segments[current_segment][1] then
+      end
+    end
     local color = Color.FittenSuggestion
     if is_whitespace_line(line) then
       color = Color.FittenSuggestionWhitespace
     end
-    color = hi or color
+    color = hi[i] or color
     table.insert(virt_text, { { line, color } })
   end
   return virt_text
@@ -234,9 +242,10 @@ end
 
 ---@class RenderVirtTextOptions
 ---@field show_time? integer
----@field suggestions? Suggestions[]
+---@field suggestions? Suggestions
+---@field segments? integer[][]
 ---@field hi? string[]
----@field hl_mode? string[]
+---@field hl_mode? string
 
 ---@param opts? RenderVirtTextOptions
 function M.render_virt_text(opts)
@@ -247,10 +256,10 @@ function M.render_virt_text(opts)
   local hl_mode = opts.hl_mode or 'combine'
 
   ---@type VirtText?
-  local committed_virt_text = generate_virt_text(suggestions, hi)
-  move_to_center_vertical(vim.tbl_count(committed_virt_text or {}))
+  local virt_text = generate_virt_text(suggestions, segments, hi)
+  move_to_center_vertical(vim.tbl_count(virt_text or {}))
   api.nvim_buf_clear_namespace(0, namespace, 0, -1)
-  set_extmark(committed_virt_text, hl_mode)
+  set_extmark(virt_text, hl_mode)
 
   if show_time and show_time > 0 then
     vim.defer_fn(function()
