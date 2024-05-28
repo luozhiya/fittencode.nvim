@@ -21,22 +21,25 @@ Case:describe('InlineModel', function(it)
       col = 0,
       suggestion = {
         'ABC DEF GHI',
+        '',
+        'w中zzz'
       }
     })
     -- dump_model(model)
     -- Assert.equals({ 0, 0 }, model.cache.stage_cursor)
 
-    -- for i = 1, 10 do
-    --   model:accept({
-    --     range = 'word',
-    --     direction = 'forward',
-    --   })
-    --   dump_model(model)
-    -- end
-    model.cache.stage_cursor = { 1, 11 }
-    dump_model(model)
+    for i = 1, 15 do
+      model:accept({
+        range = 'word',
+        direction = 'forward',
+      })
+      dump_model(model)
+    end
 
-    for i = 1, 10 do
+    -- model.cache.stage_cursor = { 1, 11 }
+    -- dump_model(model)
+
+    for i = 1, 15 do
       model:accept({
         range = 'word',
         direction = 'backward',
