@@ -18,6 +18,9 @@ function M.calculate_utf8_index_tbl(lines)
 end
 
 function M.find_zero(tbl, start_index)
+  if start_index < 1 or start_index > #tbl then
+    return nil
+  end
   for i = start_index, #tbl do
     if tbl[i] == 0 then
       return i

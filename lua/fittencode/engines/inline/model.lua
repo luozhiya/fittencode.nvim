@@ -64,6 +64,9 @@ local function _next_char(utf_start, col, forward)
 end
 
 local function utf_width(utf_end, col)
+  if not col or col <= 0 then
+    return nil
+  end
   if col <= #utf_end then
     return utf_end[col] + 1
   end
@@ -99,7 +102,10 @@ local function _next_word(cache, row, col, forward, pretype)
   local utf_start = cache.utf_start[row]
   local utf_end = cache.utf_end[row]
 
-  forward = forward ~= nil or true
+  if forward == nil then
+    forward = true
+  end
+  print('forward:', forward)
   print('col:', col)
   if col == 0 then
     if forward then
@@ -110,11 +116,13 @@ local function _next_word(cache, row, col, forward, pretype)
   else
     if forward then
       local w = utf_width(utf_end, col)
-      print('w:', w)
+      -- print('w:', w)
       col = col + w
-      print('col:', col)
+      -- print('col:', col)
     else
+      print('col:', col)
       col = Unicode.find_zero(utf_start, col - 1)
+      print('col:', col)
     end
   end
   local width = utf_width(utf_end, col)
@@ -125,9 +133,13 @@ local function _next_word(cache, row, col, forward, pretype)
     return col
   else
     local curtype = _gettype(line, col)
-    print('curtype:', curtype)
+    -- print('curtype:', curtype)
     if curtype == pretype or pretype == nil then
-      return _next_word(cache, row, col, forward, curtype)
+      if col < #line then
+        return _next_word(cache, row, col, forward, curtype)
+      else
+        return col
+      end
     else
       return col - 1
     end
@@ -200,6 +212,11 @@ local function post_accept(lines, row, col, direction)
     if row > #lines then
       row = #lines
       col = #lines[row]
+    end
+  elseif direction == 'backward' then
+    if row < 1 then
+      row = 1
+      col = 0
     end
   end
   return row, col

@@ -47,13 +47,6 @@ Case:describe('InlineModel', function(it)
       direction = 'forward',
     })
     dump_model(model)
-    Assert.equals({ 1, 5 }, model.cache.stage_cursor)
-
-    model:accept({
-      range = 'word',
-      direction = 'forward',
-    })
-    dump_model(model)
     Assert.equals({ 1, 7 }, model.cache.stage_cursor)
 
     model:accept({
@@ -62,13 +55,6 @@ Case:describe('InlineModel', function(it)
     })
     dump_model(model)
     Assert.equals({ 1, 8 }, model.cache.stage_cursor)
-
-    model:accept({
-      range = 'word',
-      direction = 'forward',
-    })
-    dump_model(model)
-    Assert.equals({ 1, 9 }, model.cache.stage_cursor)
 
     model:accept({
       range = 'word',

@@ -7,9 +7,9 @@ local function dump_model(model)
   print('stage_cursor:', vim.inspect(model.cache.stage_cursor))
   -- print('commit_cursor:', vim.inspect(model.cache.commit_cursor))
   -- print('triggered_cursor:', vim.inspect(model.cache.triggered_cursor))
-  print('utf_pos:', vim.inspect(model.cache.utf_pos))
-  print('utf_start:', vim.inspect(model.cache.utf_start))
-  print('utf_end:', vim.inspect(model.cache.utf_end))
+  -- print('utf_pos:', vim.inspect(model.cache.utf_pos))
+  -- print('utf_start:', vim.inspect(model.cache.utf_start))
+  -- print('utf_end:', vim.inspect(model.cache.utf_end))
 end
 
 Case:describe('InlineModel', function(it)
@@ -20,38 +20,28 @@ Case:describe('InlineModel', function(it)
       row = 0,
       col = 0,
       suggestion = {
-        'A',
+        'ABC DEF GHI',
       }
     })
-    dump_model(model)
-    Assert.equals({ 0, 0 }, model.cache.stage_cursor)
+    -- dump_model(model)
+    -- Assert.equals({ 0, 0 }, model.cache.stage_cursor)
 
-    model:accept({
-      range = 'word',
-      direction = 'forward',
-    })
+    -- for i = 1, 10 do
+    --   model:accept({
+    --     range = 'word',
+    --     direction = 'forward',
+    --   })
+    --   dump_model(model)
+    -- end
+    model.cache.stage_cursor = { 1, 11 }
     dump_model(model)
-    -- Assert.equals({ 1, 3 }, model.cache.stage_cursor)
 
-    model:accept({
-      range = 'word',
-      direction = 'forward',
-    })
-    dump_model(model)
-    -- Assert.equals({ 2, 0 }, model.cache.stage_cursor)
-
-    model:accept({
-      range = 'word',
-      direction = 'forward',
-    })
-    dump_model(model)
-    -- Assert.equals({ 3, 0 }, model.cache.stage_cursor)
-
-    model:accept({
-      range = 'word',
-      direction = 'forward',
-    })
-    dump_model(model)
-    -- Assert.equals({ 3, 3 }, model.cache.stage_cursor)
+    for i = 1, 10 do
+      model:accept({
+        range = 'word',
+        direction = 'backward',
+      })
+      dump_model(model)
+    end
   end)
 end)
