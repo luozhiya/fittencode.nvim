@@ -198,7 +198,7 @@ end
 ---@field cursor? integer[]
 
 ---@param opts LinesSetTextOptions
----@return integer[]?
+---@return table[]?
 function M.set_text(opts)
   local window = opts.window
   local buffer = opts.buffer
@@ -234,8 +234,7 @@ end
 
 ---@class RenderVirtTextOptions
 ---@field show_time? integer
----@field suggestions? Suggestions
----@field segments? table[]
+---@field suggestions? Suggestions[]
 ---@field hi? string[]
 ---@field hl_mode? string[]
 

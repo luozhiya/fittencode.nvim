@@ -15,6 +15,7 @@ local InlineModel = {}
 function InlineModel:new()
   local o = {
     cache = SuggestionsCache:new()
+    -- mode = config.
   }
   self.__index = self
   return setmetatable(o, self)
@@ -266,6 +267,10 @@ end
 
 function InlineModel:triggered_cursor()
   return self.cache.triggered_cursor
+end
+
+function InlineModel:set_triggered_cursor(row, col)
+  self.cache.triggered_cursor = { row, col }
 end
 
 function InlineModel:reset()

@@ -280,6 +280,14 @@ function M.accept_line()
   end)
 end
 
+local function make_text_opts(updated)
+  return {}
+end
+
+local function make_virt_opts(updated)
+  return {}
+end
+
 function M.accept_word()
   Log.debug('Accept Word...')
 
@@ -299,6 +307,19 @@ function M.accept_word()
       range = 'word',
       direction = 'forward',
     })
+    local virt_opts = make_virt_opts(updated)
+    if model.mode == 'commit' then
+      local text_opts = make_text_opts(updated)
+      -- set text
+      local cusors = Lines.set_text(text_opts)
+      if not cusors then
+        return
+      end
+      model:set_triggered_cursor(unpack(cusors[2]))
+      Lines.render_virt_text(virt_opts)
+    elseif model.mode == 'stage' then
+      Lines.render_virt_text(virt_opts)
+    end
   end)
 end
 
