@@ -1,13 +1,13 @@
 local SuggestionsCache = require('fittencode.engines.inline.suggestions_cache')
 local Unicode = require('fittencode.unicode')
 
----@alias AccceptMode 'stage' | 'commit'
+---@alias AcceptMode 'stage' | 'commit'
 ---@alias AcceptRange 'char' | 'word' | 'line' | 'all'
 ---@alias AcceptDirection 'forward' | 'backward'
 
 ---@class InlineModel
 ---@field cache? SuggestionsCache
----@field mode AccceptMode
+---@field mode AcceptMode
 ---@field direction AcceptRange
 ---@field range AcceptDirection
 local InlineModel = {}
