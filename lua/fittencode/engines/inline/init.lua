@@ -120,13 +120,14 @@ local generate_one_stage_timer = nil
 function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   Log.debug('Start generate one stage...')
 
-  if not force and cache:equal_cursor(row, col) and M.has_suggestions() then
+  if not force and model:cache_hit(row, col) and M.has_suggestions() then
     status:update(SC.SUGGESTIONS_READY)
     Log.debug('Cached cursor matches requested cursor')
     if M.is_inline_enabled() then
       Lines.render_virt_text(cache:get_lines())
     end
-    schedule(on_success, M.get_suggestions():get_lines())
+    -- schedule(on_success, M.get_suggestions():get_lines())
+    schedule(on_error)
     return
   else
     Log.debug('Cached cursor is outdated')
@@ -155,7 +156,7 @@ end
 
 ---@return boolean
 function M.has_suggestions()
-  return vim.tbl_count(cache:get_lines() or {}) ~= 0
+  return model:has_suggestions()
 end
 
 ---@return SuggestionsCache
@@ -306,7 +307,7 @@ function M.reset()
   if M.is_inline_enabled() then
     Lines.clear_virt_text()
   end
-  cache:flush()
+  model:reset()
   tasks:clear()
 end
 

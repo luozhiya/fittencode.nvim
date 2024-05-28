@@ -11,9 +11,6 @@ local M = {}
 ---@type integer
 local namespace = api.nvim_create_namespace('FittenCode/InlineCompletion')
 
----@type VirtText?
-local committed_virt_text = nil
-
 ---@class VirtLine
 ---@field text string
 ---@field hl string
@@ -238,9 +235,9 @@ end
 ---@class RenderVirtTextOptions
 ---@field show_time? integer
 ---@field suggestions? Suggestions
----@field segments? integer
----@field hi? string
----@field hl_mode? string
+---@field segments? table[]
+---@field hi? string[]
+---@field hl_mode? string[]
 
 ---@param opts? RenderVirtTextOptions
 function M.render_virt_text(opts)
@@ -250,7 +247,8 @@ function M.render_virt_text(opts)
   local hi = opts.hi
   local hl_mode = opts.hl_mode or 'combine'
 
-  committed_virt_text = generate_virt_text(suggestions, hi)
+  ---@type VirtText?
+  local committed_virt_text = generate_virt_text(suggestions, hi)
   move_to_center_vertical(vim.tbl_count(committed_virt_text or {}))
   api.nvim_buf_clear_namespace(0, namespace, 0, -1)
   set_extmark(committed_virt_text, hl_mode)
@@ -263,7 +261,7 @@ function M.render_virt_text(opts)
 end
 
 function M.clear_virt_text()
-  M.render_virt_text()
+  api.nvim_buf_clear_namespace(0, namespace, 0, -1)
   -- api.nvim_command('redraw!')
 end
 

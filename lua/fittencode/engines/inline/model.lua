@@ -246,6 +246,7 @@ function InlineModel:accept(opts)
     -- (pre_commit, commit]
     updated.segments.pre_commit = pre_commit
     updated.segments.commit = self.cache.commit_cursor
+    -- self.cache.triggered_cursor -- update triggered_cursor
   elseif self.mode == 'stage' then
     -- [..., stage]
     -- (stage, ...]
@@ -273,6 +274,10 @@ end
 
 function InlineModel:get_suggestions()
   return self.cache.lines
+end
+
+function InlineModel:cache_hit(row, col)
+  return self.cache.stage_cursor[1] == row and self.cache.stage_cursor[2] == col
 end
 
 return InlineModel
