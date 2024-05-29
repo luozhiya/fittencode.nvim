@@ -37,30 +37,47 @@ function M.tab()
   feedkeys('<Tab>')
 end
 
+local function _make_default_hl(line)
+  return is_whitespace_line(line) and Color.FittenSuggestionWhitespace or Color.FittenSuggestion
+end
+
 ---@param suggestions? Suggestions
 ---@param segments? integer[][]
 ---@param hi? string[]
 ---@return VirtText|nil
-local function generate_virt_text(suggestions, segments, hi)
+local function make_virt_text(suggestions, segments, hi)
   if suggestions == nil then
     return
   end
   segments = segments or {}
   hi = hi or {}
+  if #segments > 0 and #hi > 0 and (#segments + 1 ~= #hi) then
+    return
+  end
   local current_segment = 1
   ---@type VirtText
   local virt_text = {}
   for i, line in ipairs(suggestions) do
     if #segments > 0 then
-      if i == segments[current_segment][1] then
+      local row = segments[current_segment][1]
+      local col = segments[current_segment][2]
+      if i < row then
+        table.insert(virt_text, { { line, hi[current_segment] or _make_default_hl(line) } })
+      elseif i == row then
+        local left = line:sub(1, col)
+        local right = line:sub(col + 1)
+        table.insert(virt_text,
+          { { left, hi[current_segment] or _make_default_hl(left) },
+            { right, hi[current_segment + 1] or _make_default_hl(right) } })
+      else
+        table.insert(virt_text, { { line, hi[current_segment + 1] or _make_default_hl(line) } })
+        if current_segment + 1 <= #segments then
+          current_segment = current_segment + 1
+        end
       end
+    else
+      table.insert(virt_text, { { line, hi[1] or _make_default_hl(line) } })
     end
-    local color = Color.FittenSuggestion
-    if is_whitespace_line(line) then
-      color = Color.FittenSuggestionWhitespace
-    end
-    color = hi[i] or color
-    table.insert(virt_text, { { line, color } })
   end
   return virt_text
 end
@@ -85,7 +102,7 @@ local function set_extmark(virt_text, hl_mode)
   else
     api.nvim_buf_set_extmark(0, namespace, row, col, {
       virt_text = virt_text[1],
-      -- eol will added space to the end of the line
+      -- `eol` will added space to the end of the line
       virt_text_pos = 'overlay',
       hl_mode = hl_mode,
     })
@@ -246,6 +263,7 @@ end
 ---@field segments? integer[][]
 ---@field hi? string[]
 ---@field hl_mode? string
+---@field center_vertical? boolean
 
 ---@param opts? RenderVirtTextOptions
 function M.render_virt_text(opts)
@@ -254,11 +272,19 @@ function M.render_virt_text(opts)
   local show_time = opts.show_time or 0
   local hi = opts.hi
   local hl_mode = opts.hl_mode or 'combine'
+  local segments = opts.segments
+  local center_vertical = opts.center_vertical or false
+
+  api.nvim_buf_clear_namespace(0, namespace, 0, -1)
 
   ---@type VirtText?
-  local virt_text = generate_virt_text(suggestions, segments, hi)
-  move_to_center_vertical(vim.tbl_count(virt_text or {}))
-  api.nvim_buf_clear_namespace(0, namespace, 0, -1)
+  local virt_text = make_virt_text(suggestions, segments, hi)
+  if not virt_text or vim.tbl_count(virt_text) == 0 then
+    return
+  end
+  if center_vertical then
+    move_to_center_vertical(vim.tbl_count(virt_text))
+  end
   set_extmark(virt_text, hl_mode)
 
   if show_time and show_time > 0 then

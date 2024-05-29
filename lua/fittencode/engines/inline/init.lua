@@ -244,7 +244,7 @@ local function _accept_impl(range, direction)
       return
     end
     local virt_opts = make_virt_opts(updated)
-    if model.mode == 'commit' then
+    if Config.options.inline_completion.accept_mode == 'commit' then
       local text_opts = make_text_opts(updated)
       local cusors = Lines.set_text(text_opts)
       if not cusors then
@@ -252,7 +252,7 @@ local function _accept_impl(range, direction)
       end
       model:update_triggered_cursor(unpack(cusors[2]))
       Lines.render_virt_text(virt_opts)
-    elseif model.mode == 'stage' then
+    elseif Config.options.inline_completion.accept_mode == 'stage' then
       Lines.render_virt_text(virt_opts)
     end
   end)
