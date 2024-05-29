@@ -287,4 +287,23 @@ function InlineModel:cache_hit(row, col)
   return self.cache.stage_cursor[1] == row and self.cache.stage_cursor[2] == col
 end
 
+function InlineModel:get_trim_commmited_suggestions()
+  local lines = self.cache.lines
+  if not lines or #lines == 0 then
+    return {}
+  end
+  local commit_row, commit_col = unpack(self.cache.commit_cursor)
+  local trim = {}
+  for i, line in ipairs(lines) do
+    if i < commit_row then
+      -- ingore
+    elseif i == commit_row then
+      trim[#trim + 1] = line:sub(commit_col) or ''
+    else
+      trim[#trim + 1] = line
+    end
+  end
+  return trim
+end
+
 return InlineModel

@@ -121,16 +121,16 @@ local generate_one_stage_timer = nil
 ---@param on_success? function
 ---@param on_error? function
 function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
-  Log.debug('Start generate one stage...')
+  Log.debug('Start Generate One Stage...')
 
   if not force and model:cache_hit(row, col) and M.has_suggestions() then
     status:update(SC.SUGGESTIONS_READY)
     Log.debug('Cached cursor matches requested cursor')
     if suggestions_modify_enabled() then
-      Lines.render_virt_text(cache:get_lines())
+      Lines.render_virt_text({
+      })
     end
-    -- schedule(on_success, M.get_suggestions():get_lines())
-    schedule(on_error)
+    schedule(on_success, model:get_trim_commmited_suggestions())
     return
   else
     Log.debug('Cached cursor is outdated')

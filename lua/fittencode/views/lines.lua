@@ -83,15 +83,7 @@ local function make_virt_text(suggestions, segments, hi)
 end
 
 local function set_extmark(virt_text, hl_mode)
-  if virt_text == nil or vim.tbl_count(virt_text) == 0 then
-    return
-  end
-
-  Log.debug('Setting extmark: {}', virt_text)
-
   local row, col = Base.get_cursor()
-
-  hl_mode = hl_mode or 'combine'
 
   if Config.internal.virtual_text.inline then
     api.nvim_buf_set_extmark(0, namespace, row, col, {
@@ -268,7 +260,7 @@ end
 ---@param opts? RenderVirtTextOptions
 function M.render_virt_text(opts)
   opts = opts or {}
-  local suggestions = opts.suggestions
+  local suggestions = opts.suggestions or {}
   local show_time = opts.show_time or 0
   local hi = opts.hi
   local hl_mode = opts.hl_mode or 'combine'
@@ -287,7 +279,7 @@ function M.render_virt_text(opts)
   end
   set_extmark(virt_text, hl_mode)
 
-  if show_time and show_time > 0 then
+  if show_time > 0 then
     vim.defer_fn(function()
       M.clear_virt_text()
     end, show_time)
