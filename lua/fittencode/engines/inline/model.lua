@@ -216,7 +216,17 @@ local function post_accept(lines, row, col, direction)
   return row, col
 end
 
+---@class SuggestionsSnapshot2
+---@field lines string[]
+---@field segments? table<string, table<integer, integer>?>
+
+---@class SuggestionsSnapshot
+---@field commit Suggestions?
+---@field stage Suggestions?
+---@field unstaged Suggestions?
+
 ---@param opts InlineModelAcceptOptions
+---@return SuggestionsSnapshot?
 function InlineModel:accept(opts)
   if Config.options.inline_completion.accept_mode == 'commit' and opts.direction == 'backward' then
     return nil
@@ -234,6 +244,7 @@ function InlineModel:accept(opts)
   end
   row, col = post_accept(self.cache.lines, row, col, opts.direction)
 
+  ---@type SuggestionsSnapshot
   local updated = {
     lines = self.cache.lines,
     segments = {
@@ -287,12 +298,15 @@ function InlineModel:cache_hit(row, col)
   return self.cache.stage_cursor[1] == row and self.cache.stage_cursor[2] == col
 end
 
-function InlineModel:get_trim_commmited_suggestions()
+function InlineModel:make_new_trim_commmited_suggestions()
   local lines = self.cache.lines
   if not lines or #lines == 0 then
     return {}
   end
   local commit_row, commit_col = unpack(self.cache.commit_cursor)
+  if commit_row == 0 and commit_col == 0 then
+    return lines
+  end
   local trim = {}
   for i, line in ipairs(lines) do
     if i < commit_row then
@@ -304,6 +318,16 @@ function InlineModel:get_trim_commmited_suggestions()
     end
   end
   return trim
+end
+
+function InlineModel:get_suggestions_snapshot()
+  return {
+    lines = self.cache.lines,
+    segments = {
+      commit = self.cache.commit_cursor,
+      stage = self.cache.stage_cursor
+    }
+  }
 end
 
 return InlineModel

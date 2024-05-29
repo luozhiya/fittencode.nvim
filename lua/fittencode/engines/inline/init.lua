@@ -53,7 +53,6 @@ local function process_suggestions(task_id, suggestions)
   local buffer = api.nvim_win_get_buf(window)
   local row, col = Base.get_cursor(window)
   if not tasks:match_clean(task_id, row, col) then
-    Log.debug('Completion request is outdated, discarding; task_id: {}, row: {}, col: {}', task_id, row, col)
     return
   end
 
@@ -62,13 +61,41 @@ local function process_suggestions(task_id, suggestions)
     return
   end
 
-  Log.debug('Suggestions received; task_id: {}, suggestions: {}', task_id, suggestions)
-
   return SuggestionsPreprocessing.run({
     window = window,
     buffer = buffer,
     suggestions = suggestions,
   })
+end
+
+local function make_text_opts(ss)
+  return {}
+end
+
+---@param ss SuggestionsSnapshot
+---@return RenderVirtTextOptions?
+local function make_virt_opts(ss)
+  if Config.options.inline_completion.accept_mode == 'commit' then
+    return {
+      suggestions = ss.lines,
+      segments = {
+        ss.segments.commit,
+        { -1, -1 }
+      }
+    }
+  elseif Config.options.inline_completion.accept_mode == 'stage' then
+    return {
+      suggestions = ss.lines,
+      segments = {
+        { 0, 0 },
+        ss.segments.stage,
+      },
+      hi = {
+        Color.FittenSuggestionStage,
+        Color.FittenSuggestion
+      },
+    }
+  end
 end
 
 local function apply_new_suggestions(task_id, row, col, suggestions)
@@ -127,10 +154,9 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
     status:update(SC.SUGGESTIONS_READY)
     Log.debug('Cached cursor matches requested cursor')
     if suggestions_modify_enabled() then
-      Lines.render_virt_text({
-      })
+      Lines.render_virt_text(make_virt_opts(model:get_suggestions_snapshot()))
     end
-    schedule(on_success, model:get_trim_commmited_suggestions())
+    schedule(on_success, model:make_new_trim_commmited_suggestions())
     return
   else
     Log.debug('Cached cursor is outdated')
@@ -219,14 +245,6 @@ local function ignoreevent_wrap(fx)
   return ret
 end
 
-local function make_text_opts(updated)
-  return {}
-end
-
-local function make_virt_opts(updated)
-  return {}
-end
-
 local function _accept_impl(range, direction)
   if not suggestions_modify_enabled() then
     return
@@ -236,16 +254,16 @@ local function _accept_impl(range, direction)
   end
   Lines.clear_virt_text()
   ignoreevent_wrap(function()
-    local updated = model:accept({
+    local ss = model:accept({
       range = range,
       direction = direction,
     })
-    if not updated then
+    if not ss then
       return
     end
-    local virt_opts = make_virt_opts(updated)
+    local virt_opts = make_virt_opts(ss)
     if Config.options.inline_completion.accept_mode == 'commit' then
-      local text_opts = make_text_opts(updated)
+      local text_opts = make_text_opts(ss)
       local cusors = Lines.set_text(text_opts)
       if not cusors then
         return
