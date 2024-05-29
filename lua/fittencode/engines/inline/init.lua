@@ -72,7 +72,7 @@ local function make_text_opts(ss)
   return {}
 end
 
----@param ss SuggestionsSnapshot
+---@param ss SuggestionsSegments
 ---@return RenderVirtTextOptions?
 local function make_virt_opts(ss)
   if Config.options.inline_completion.accept_mode == 'commit' then

@@ -216,17 +216,42 @@ local function post_accept(lines, row, col, direction)
   return row, col
 end
 
----@class SuggestionsSnapshot2
----@field lines string[]
----@field segments? table<string, table<integer, integer>?>
-
----@class SuggestionsSnapshot
+-- A: pre_commit + commit + changes
+-- B: stage + changes
+---@class SuggestionsSegments
+---@field pre_commit Suggestions?
 ---@field commit Suggestions?
 ---@field stage Suggestions?
----@field unstaged Suggestions?
+---@field changes Suggestions?
+
+local function get_region(lines, start, end_)
+
+end
+
+---@return SuggestionsSegments?
+local function make_segments(updated)
+  local lines = updated.lines
+  local segments = updated.segments
+  local pre_commit = segments.pre_commit
+  local commit = segments.commit
+  local stage = segments.stage
+
+  if commit then
+    return {
+      pre_commit =  get_region(lines, {0, 0}, pre_commit),
+      commit = get_region(lines, pre_commit, commit),
+      changes = get_region(lines, commit, { #lines, #lines[#lines] })
+    }
+  elseif stage then
+    return {
+      stage = get_region(lines, {0, 0}, stage),
+      changes = get_region(lines, stage, { #lines, #lines[#lines] })
+    }
+  end
+end
 
 ---@param opts InlineModelAcceptOptions
----@return SuggestionsSnapshot?
+---@return SuggestionsSegments?
 function InlineModel:accept(opts)
   if Config.options.inline_completion.accept_mode == 'commit' and opts.direction == 'backward' then
     return nil
@@ -244,7 +269,6 @@ function InlineModel:accept(opts)
   end
   row, col = post_accept(self.cache.lines, row, col, opts.direction)
 
-  ---@type SuggestionsSnapshot
   local updated = {
     lines = self.cache.lines,
     segments = {
@@ -266,7 +290,9 @@ function InlineModel:accept(opts)
     -- (stage, ...]
     updated.segments.stage = self.cache.stage_cursor
   end
-  return updated
+
+  ---@type SuggestionsSegments
+  return make_segments(updated)
 end
 
 function InlineModel:has_suggestions()
