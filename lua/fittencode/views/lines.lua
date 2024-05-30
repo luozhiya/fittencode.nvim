@@ -241,7 +241,7 @@ end
 ---@class RenderVirtTextOptions
 ---@field show_time? integer
 ---@field suggestions? Suggestions[]
----@field hi? string[]
+---@field hi? string[][]
 ---@field hl_mode? string
 ---@field center_vertical? boolean
 
@@ -250,7 +250,7 @@ function M.render_virt_text(opts)
   opts = opts or {}
   local suggestions = opts.suggestions or {}
   local show_time = opts.show_time or 0
-  local hi = opts.hi
+  local hi = opts.hi or {}
   local hl_mode = opts.hl_mode or 'combine'
   local center_vertical = opts.center_vertical or false
 

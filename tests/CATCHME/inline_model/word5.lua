@@ -24,7 +24,7 @@ Case:describe('InlineModel', function(it)
       row = 0,
       col = 0,
       suggestions = {
-        'ABC DEF GHI',
+        'ABC',
         '',
         -- 'w中中zw(zz',
         -- '',
@@ -37,34 +37,36 @@ Case:describe('InlineModel', function(it)
     print('utf_end:', vim.inspect(model.cache.utf_end))
 
     print('--------------------------------------------')
-    for i = 1, 15 do
-      model:accept({
-        range = 'word',
-        direction = 'forward',
-      })
-      dump_model(model)
-    end
 
-    print('--------------------------------------------')
-
-    -- model.cache.stage_cursor = { 2, 0 }
+    -- model.cache.stage_cursor = { 1, 8 }
     -- dump_model(model)
+    -- print('--------------------------------------------')
 
-    for i = 1, 15 do
-      model:accept({
-        range = 'word',
-        direction = 'backward',
-      })
-      dump_model(model)
-    end
+    local seg = model:accept({
+      range = 'word',
+      direction = 'forward',
+    })
+    dump_model(model)
+    print('seg:', vim.inspect(seg))
 
     print('--------------------------------------------')
-    for i = 1, 15 do
-      model:accept({
-        range = 'word',
-        direction = 'forward',
-      })
-      dump_model(model)
-    end
+
+    seg = model:accept({
+      range = 'word',
+      direction = 'forward',
+    })
+    dump_model(model)
+    print('seg:', vim.inspect(seg))
+
+    print('--------------------------------------------')
+
+    seg = model:accept({
+      range = 'word',
+      direction = 'forward',
+    })
+    dump_model(model)
+    print('seg:', vim.inspect(seg))
+
+    print('--------------------------------------------')
   end)
 end)

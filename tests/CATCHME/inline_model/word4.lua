@@ -37,34 +37,16 @@ Case:describe('InlineModel', function(it)
     print('utf_end:', vim.inspect(model.cache.utf_end))
 
     print('--------------------------------------------')
-    for i = 1, 15 do
-      model:accept({
-        range = 'word',
-        direction = 'forward',
-      })
-      dump_model(model)
-    end
+
+    model.cache.stage_cursor = { 1, 8 }
+    dump_model(model)
 
     print('--------------------------------------------')
 
-    -- model.cache.stage_cursor = { 2, 0 }
-    -- dump_model(model)
-
-    for i = 1, 15 do
-      model:accept({
-        range = 'word',
-        direction = 'backward',
-      })
-      dump_model(model)
-    end
-
-    print('--------------------------------------------')
-    for i = 1, 15 do
-      model:accept({
-        range = 'word',
-        direction = 'forward',
-      })
-      dump_model(model)
-    end
+    model:accept({
+      range = 'word',
+      direction = 'backward',
+    })
+    dump_model(model)
   end)
 end)
