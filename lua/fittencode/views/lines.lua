@@ -172,7 +172,7 @@ end
 
 ---@param fx? function
 ---@return any
-local function format_wrap(fx)
+local function format_wrap(buffer, fx)
   local fmts = {
     { 'autoindent',    false },
     { 'smartindent',   false },
@@ -180,8 +180,8 @@ local function format_wrap(fx)
     { 'textwidth',     0 },
   }
   for _, fmt in ipairs(fmts) do
-    fmt[3] = vim.bo[fmt[1]]
-    vim.bo[fmt[1]] = fmt[2]
+    fmt[3] = api.nvim_get_option_value(fmt[1], { buf = buffer })
+    api.nvim_set_option_value(fmt[1], fmt[2], { buf = buffer })
   end
 
   local ret = nil
@@ -190,7 +190,7 @@ local function format_wrap(fx)
   end
 
   for _, fmt in ipairs(fmts) do
-    vim.bo[fmt[1]] = fmt[3]
+    api.nvim_set_option_value(fmt[1], fmt[3], { buf = buffer })
   end
   return ret
 end
@@ -212,21 +212,30 @@ function M.set_text(opts)
   local is_undo_disabled = opts.is_undo_disabled or false
   local row, col = nil, nil
   local position = opts.position or 'current'
+
+  if not buffer or not api.nvim_buf_is_valid(buffer) then
+    return
+  end
+  if position == 'current' and (not window or not api.nvim_win_is_valid(window)) then
+    return
+  end
+
   if position == 'end' then
     row = math.max(api.nvim_buf_line_count(buffer) - 1, 0)
     col = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]:len()
-  elseif position == 'current' and window and api.nvim_win_is_valid(window) then
+  elseif position == 'current' then
     row, col = Base.get_cursor(window)
   elseif position == 'cursor' then
     if opts.cursor then
       row, col = unpack(opts.cursor)
     end
   end
+
   if row == nil or col == nil then
     return
   end
   local curosr = {}
-  format_wrap(function()
+  format_wrap(buffer, function()
     curosr[1] = { row, col }
     if not is_undo_disabled then
       undojoin()
