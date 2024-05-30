@@ -1,10 +1,6 @@
-local Config = require('fittencode.config')
 local InlineModel = require('fittencode.engines.inline.model')
 local Case = require('tests.case')
 local Assert = require('tests.assert')
-
-Config:setup()
-Config.options.inline_completion.accept_mode = 'stage'
 
 local function dump_model(model)
   print('stage_cursor:', vim.inspect(model.cache.stage_cursor))
@@ -47,6 +43,7 @@ Case:describe('InlineModel', function(it)
     for i = 1, 3 do
       -- print('--------------------------------------------')
       local seg = model:accept({
+        mode = 'stage',
         range = 'word',
         direction = 'backward',
       })

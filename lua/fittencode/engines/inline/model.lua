@@ -224,7 +224,7 @@ end
 local function shift_bounds(cache, row, col, direction)
   if direction == 'backward' then
     local commit = cache.commit_cursor
-    if row > commit[1] or (row == commit[1] and col > commit[2]) then
+    if row < commit[1] or (row == commit[1] and col < commit[2]) then
       row = commit[1]
       col = commit[2]
     end
