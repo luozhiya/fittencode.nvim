@@ -46,11 +46,11 @@ local function _make_hl(line, hl)
   return not is_whitespace_line(line) and fg or bg
 end
 
----@param suggestions? Suggestions[]
+---@param lines? string[][]
 ---@param hls string[][]|string
 ---@return VirtText?
-local function make_virt_text(suggestions, hls)
-  if suggestions == nil or #suggestions == 0 then
+local function make_virt_text(lines, hls)
+  if lines == nil or #lines == 0 then
     return
   end
   if type(hls) == 'string' then
@@ -59,14 +59,14 @@ local function make_virt_text(suggestions, hls)
   ---@type VirtText
   local virt_text = {}
   local last = {}
-  for i, suggestion in ipairs(suggestions) do
-    for _, line in ipairs(suggestion) do
+  for i, sub_lines in ipairs(lines) do
+    for _, line in ipairs(sub_lines) do
       local hl = _make_hl(line, hls[i] or hls[1] or {})
       if i == 1 then
         table.insert(last, { line, hl })
         table.insert(virt_text, last)
         last = {}
-      elseif i == #suggestion then
+      elseif i == #sub_lines then
         last = { { line, hl } }
       else
         table.insert(virt_text, { { line, hl } })
@@ -255,7 +255,7 @@ end
 
 ---@class RenderVirtTextOptions
 ---@field show_time? integer
----@field suggestions? Suggestions[]
+---@field lines? string[][]
 ---@field hls? string[][]|string
 ---@field hl_mode? string
 ---@field center_vertical? boolean
@@ -263,7 +263,7 @@ end
 ---@param opts? RenderVirtTextOptions
 function M.render_virt_text(opts)
   opts = opts or {}
-  local suggestions = opts.suggestions or {}
+  local lines = opts.lines or {}
   local show_time = opts.show_time or 0
   local hls = opts.hls or {}
   local hl_mode = opts.hl_mode or 'combine'
@@ -272,7 +272,7 @@ function M.render_virt_text(opts)
   api.nvim_buf_clear_namespace(0, namespace, 0, -1)
 
   ---@type VirtText?
-  local virt_text = make_virt_text(suggestions, hls)
+  local virt_text = make_virt_text(lines, hls)
   if not virt_text or vim.tbl_count(virt_text) == 0 then
     return
   end

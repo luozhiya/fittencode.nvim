@@ -71,7 +71,7 @@ end
 local function make_text_opts(ss)
   if Config.options.inline_completion.accept_mode == 'commit' then
     return {
-      suggestions = {
+      lines = {
         ss.commit,
       }
     }
@@ -83,13 +83,13 @@ end
 local function make_virt_opts(ss)
   if Config.options.inline_completion.accept_mode == 'commit' then
     return {
-      suggestions = {
+      lines = {
         ss.changes,
       }
     }
   elseif Config.options.inline_completion.accept_mode == 'stage' then
     return {
-      suggestions = {
+      lines = {
         ss.stage,
         ss.changes
       },
@@ -212,7 +212,7 @@ function M.triggering_completion()
   local prompt = ' (Currently no completion options available)'
   local fx = function()
     Lines.render_virt_text({
-      suggestions = {
+      lines = {
         { prompt }
       },
       hls = Color.FittenNoMoreSuggestion,
