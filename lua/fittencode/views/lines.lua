@@ -37,48 +37,37 @@ function M.tab()
   feedkeys('<Tab>')
 end
 
-local function _make_default_hl(line)
-  return is_whitespace_line(line) and Color.FittenSuggestionWhitespace or Color.FittenSuggestion
+local function _make_hl(line, hi)
+  local fg = hi[1] and hi[1] or Color.FittenSuggestion
+  local bg = hi[2] and hi[2] or Color.FittenSuggestionBackground
+  return not is_whitespace_line(line) and fg or bg
 end
 
----@param suggestions? Suggestions
----@param segments? integer[][]
----@param hi? string[]
+---@param suggestions? Suggestions[]
+---@param hi string[]
 ---@return VirtText|nil
-local function make_virt_text(suggestions, segments, hi)
-  if suggestions == nil then
+local function make_virt_text(suggestions, hi)
+  if suggestions == nil or #suggestions == 0 then
     return
   end
-  segments = segments or {}
-  hi = hi or {}
-  if #segments > 0 and #hi > 0 and (#segments + 1 ~= #hi) then
-    return
-  end
-  local current_segment = 1
   ---@type VirtText
   local virt_text = {}
-  for i, line in ipairs(suggestions) do
-    if #segments > 0 then
-      local row = segments[current_segment][1]
-      local col = segments[current_segment][2]
-      if i < row then
-        table.insert(virt_text, { { line, hi[current_segment] or _make_default_hl(line) } })
-      elseif i == row then
-        local left = line:sub(1, col)
-        local right = line:sub(col + 1)
-        table.insert(virt_text,
-          { { left, hi[current_segment] or _make_default_hl(left) },
-            { right, hi[current_segment + 1] or _make_default_hl(right) } })
+  local last = {}
+  for i, suggestion in ipairs(suggestions) do
+    for _, line in ipairs(suggestion) do
+      local hl = _make_hl(line, hi[i] or {})
+      if i == 1 then
+        table.insert(last, { line, hl })
+        table.insert(virt_text, last)
+        last = {}
+      elseif i == #suggestion then
+        last = { { line, hl } }
       else
-        table.insert(virt_text, { { line, hi[current_segment + 1] or _make_default_hl(line) } })
-        if current_segment + 1 <= #segments then
-          current_segment = current_segment + 1
-        end
+        table.insert(virt_text, { { line, hl } })
       end
-    else
-      table.insert(virt_text, { { line, hi[1] or _make_default_hl(line) } })
     end
   end
+  table.insert(virt_text, last)
   return virt_text
 end
 
@@ -251,8 +240,7 @@ end
 
 ---@class RenderVirtTextOptions
 ---@field show_time? integer
----@field suggestions? Suggestions
----@field segments? integer[][]
+---@field suggestions? Suggestions[]
 ---@field hi? string[]
 ---@field hl_mode? string
 ---@field center_vertical? boolean
@@ -264,13 +252,12 @@ function M.render_virt_text(opts)
   local show_time = opts.show_time or 0
   local hi = opts.hi
   local hl_mode = opts.hl_mode or 'combine'
-  local segments = opts.segments
   local center_vertical = opts.center_vertical or false
 
   api.nvim_buf_clear_namespace(0, namespace, 0, -1)
 
   ---@type VirtText?
-  local virt_text = make_virt_text(suggestions, segments, hi)
+  local virt_text = make_virt_text(suggestions, hi)
   if not virt_text or vim.tbl_count(virt_text) == 0 then
     return
   end

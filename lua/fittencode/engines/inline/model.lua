@@ -224,8 +224,29 @@ end
 ---@field stage Suggestions?
 ---@field changes Suggestions?
 
+---@param lines string[]
+---@return SuggestionsSegments?
 local function get_region(lines, start, end_)
-
+  local segment = {}
+  for i, line in ipairs(lines) do
+    if i > end_[1] then
+      break
+    end
+    if i < start[1] then
+      -- ingore
+    elseif i >= start[1] then
+      if i == end_[1] then
+        segment[#segment + 1] = line:sub(start[2] + 1, end_[2]) or ''
+      else
+        if i == start[1] then
+          segment[#segment + 1] = line:sub(start[2] + 1) or ''
+        else
+          segment[#segment + 1] = line
+        end
+      end
+    end
+  end
+  return segment
 end
 
 ---@return SuggestionsSegments?
@@ -238,13 +259,13 @@ local function make_segments(updated)
 
   if commit then
     return {
-      pre_commit =  get_region(lines, {0, 0}, pre_commit),
+      pre_commit = get_region(lines, { 0, 0 }, pre_commit),
       commit = get_region(lines, pre_commit, commit),
       changes = get_region(lines, commit, { #lines, #lines[#lines] })
     }
   elseif stage then
     return {
-      stage = get_region(lines, {0, 0}, stage),
+      stage = get_region(lines, { 0, 0 }, stage),
       changes = get_region(lines, stage, { #lines, #lines[#lines] })
     }
   end
@@ -277,17 +298,18 @@ function InlineModel:accept(opts)
       stage = nil
     }
   }
-  self.cache.stage_cursor = { row, col }
   if Config.options.inline_completion.accept_mode == 'commit' then
     local pre_commit = self.cache.commit_cursor
     self.cache.commit_cursor = { row, col }
+    -- ({0, 0}, pre_commit]
     -- (pre_commit, commit]
+    -- (commit, changes])
     updated.segments.pre_commit = pre_commit
     updated.segments.commit = self.cache.commit_cursor
-    -- self.cache.triggered_cursor -- update triggered_cursor
   elseif Config.options.inline_completion.accept_mode == 'stage' then
-    -- [..., stage]
-    -- (stage, ...]
+    self.cache.stage_cursor = { row, col }
+    -- ({0, 0}, stage]
+    -- (stage, changes]
     updated.segments.stage = self.cache.stage_cursor
   end
 
@@ -329,31 +351,18 @@ function InlineModel:make_new_trim_commmited_suggestions()
   if not lines or #lines == 0 then
     return {}
   end
-  local commit_row, commit_col = unpack(self.cache.commit_cursor)
-  if commit_row == 0 and commit_col == 0 then
-    return lines
-  end
-  local trim = {}
-  for i, line in ipairs(lines) do
-    if i < commit_row then
-      -- ingore
-    elseif i == commit_row then
-      trim[#trim + 1] = line:sub(commit_col) or ''
-    else
-      trim[#trim + 1] = line
-    end
-  end
-  return trim
+  return get_region(lines, self.cache.commit_cursor, { #lines, #lines[#lines] })
 end
 
-function InlineModel:get_suggestions_snapshot()
-  return {
+function InlineModel:get_suggestions_segments()
+  local updated = {
     lines = self.cache.lines,
     segments = {
       commit = self.cache.commit_cursor,
       stage = self.cache.stage_cursor
     }
   }
+  return make_segments(updated)
 end
 
 return InlineModel

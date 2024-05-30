@@ -69,7 +69,13 @@ local function process_suggestions(task_id, suggestions)
 end
 
 local function make_text_opts(ss)
-  return {}
+  if Config.options.inline_completion.accept_mode == 'commit' then
+    return {
+      suggestions = {
+        ss.commit,
+      }
+    }
+  end
 end
 
 ---@param ss SuggestionsSegments
@@ -77,22 +83,19 @@ end
 local function make_virt_opts(ss)
   if Config.options.inline_completion.accept_mode == 'commit' then
     return {
-      suggestions = ss.lines,
-      segments = {
-        ss.segments.commit,
-        { -1, -1 }
+      suggestions = {
+        ss.changes,
       }
     }
   elseif Config.options.inline_completion.accept_mode == 'stage' then
     return {
-      suggestions = ss.lines,
-      segments = {
-        { 0, 0 },
-        ss.segments.stage,
+      suggestions = {
+        ss.stage,
+        ss.changes
       },
       hi = {
-        Color.FittenSuggestionStage,
-        Color.FittenSuggestion
+        { Color.FittenSuggestionStage, Color.FittenSuggestionStageBackground },
+        { Color.FittenSuggestion,      Color.FittenSuggestionBackground },
       },
     }
   end
@@ -154,7 +157,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
     status:update(SC.SUGGESTIONS_READY)
     Log.debug('Cached cursor matches requested cursor')
     if suggestions_modify_enabled() then
-      Lines.render_virt_text(make_virt_opts(model:get_suggestions_snapshot()))
+      Lines.render_virt_text(make_virt_opts(model:get_suggestions_segments()))
     end
     schedule(on_success, model:make_new_trim_commmited_suggestions())
     return
