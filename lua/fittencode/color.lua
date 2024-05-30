@@ -6,6 +6,7 @@ M.FittenSuggestion = 'FittenSuggestion'
 M.FittenSuggestionBackground = 'FittenSuggestionBackground'
 M.FittenNoMoreSuggestion = 'FittenNoMoreSuggestion'
 M.FittenSuggestionStage = 'FittenSuggestionStage'
+M.FittenSuggestionStageBackground = 'FittenSuggestionStageBackground'
 
 -- Define FittenCode colors
 local colors = {}

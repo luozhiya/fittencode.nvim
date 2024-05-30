@@ -320,7 +320,9 @@ function InlineModel:get_suggestions()
 end
 
 function InlineModel:cache_hit(row, col)
-  return self.cache.stage_cursor[1] == row and self.cache.stage_cursor[2] == col
+  return self.cache.stage_cursor and
+      self.cache.stage_cursor[1] == row and
+      self.cache.stage_cursor[2] == col
 end
 
 function InlineModel:make_new_trim_commmited_suggestions()
@@ -339,7 +341,7 @@ function InlineModel:get_suggestions_segments()
       stage = self.cache.stage_cursor
     }
   }
-  return make_segments(updated)
+  return make_segments(updated, self.cache.utf_end)
 end
 
 return InlineModel

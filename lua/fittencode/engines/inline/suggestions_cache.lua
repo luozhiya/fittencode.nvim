@@ -17,6 +17,8 @@ function SuggestionsCache.new()
   self.row = nil
   self.col = nil
   self.count = 0
+  self.commit_cursor = { 0, 0 }
+  self.stage_cursor = { 0, 0 }
   return self
 end
 
