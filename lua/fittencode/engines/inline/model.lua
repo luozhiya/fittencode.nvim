@@ -8,8 +8,8 @@ local Unicode = require('fittencode.unicode')
 
 ---@class InlineModel
 ---@field cache? SuggestionsCache
----@field direction AcceptRange
----@field range AcceptDirection
+---@field direction AcceptDirection
+---@field range AcceptRange
 local InlineModel = {}
 
 function InlineModel:new()
@@ -48,7 +48,7 @@ function InlineModel:recalculate(opts)
     self.cache.utf_pos)
 end
 
----@class InlineModelAcceptOptions
+---@class AcceptOptions
 ---@field direction AcceptDirection
 ---@field range AcceptRange
 ---@field mode AcceptMode
@@ -157,8 +157,6 @@ local function post_accept(lines, row, col, direction)
   return row, col
 end
 
--- A: pre_commit + commit + changes
--- B: stage + changes
 ---@class SuggestionsSegments
 ---@field pre_commit Suggestions?
 ---@field commit Suggestions?
@@ -222,7 +220,18 @@ local function make_segments(updated, utf_end)
   }
 end
 
----@param opts InlineModelAcceptOptions
+local function shift_by_commit(cache, row, col, direction)
+  if direction == 'backward' then
+    local commit = cache.commit_cursor
+    if row > commit[1] or (row == commit[1] and col >= commit[2]) then
+      row = commit[1]
+      col = commit[2]
+    end
+  end
+  return row, col
+end
+
+---@param opts AcceptOptions
 ---@return SuggestionsSegments?
 function InlineModel:accept(opts)
   if opts.mode == 'commit' and opts.direction == 'backward' then
@@ -240,6 +249,7 @@ function InlineModel:accept(opts)
     row, col = accept_all(self.cache)
   end
   row, col = post_accept(self.cache.lines, row, col, opts.direction)
+  row, col = shift_by_commit(self.cache, row, col, opts.direction)
   self.cache.stage_cursor = { row, col }
 
   local updated = {
