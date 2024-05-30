@@ -110,9 +110,7 @@ local function apply_new_suggestions(task_id, row, col, suggestions)
       suggestions = suggestions,
     })
     if suggestions_modify_enabled() then
-      Lines.render_virt_text({
-        suggestions = suggestions,
-      })
+      Lines.render_virt_text(make_virt_opts(model:get_suggestions_segments()))
     end
   end
 end
@@ -214,10 +212,10 @@ function M.triggering_completion()
   local prompt = ' (Currently no completion options available)'
   local fx = function()
     Lines.render_virt_text({
-      suggestions = { prompt },
-      hi = {
-        Color.FittenNoMoreSuggestion,
+      suggestions = {
+        { prompt }
       },
+      hls = Color.FittenNoMoreSuggestion,
       hl_mode = 'replace',
       show_time = 2000,
     })

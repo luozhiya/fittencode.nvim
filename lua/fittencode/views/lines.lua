@@ -37,25 +37,31 @@ function M.tab()
   feedkeys('<Tab>')
 end
 
-local function _make_hl(line, hi)
-  local fg = hi[1] and hi[1] or Color.FittenSuggestion
-  local bg = hi[2] and hi[2] or Color.FittenSuggestionBackground
+---@param line string
+---@param hl string[]
+---@return string
+local function _make_hl(line, hl)
+  local fg = hl[1] and hl[1] or Color.FittenSuggestion
+  local bg = hl[2] and hl[2] or Color.FittenSuggestionBackground
   return not is_whitespace_line(line) and fg or bg
 end
 
 ---@param suggestions? Suggestions[]
----@param hi string[]
----@return VirtText|nil
-local function make_virt_text(suggestions, hi)
+---@param hls string[][]|string
+---@return VirtText?
+local function make_virt_text(suggestions, hls)
   if suggestions == nil or #suggestions == 0 then
     return
+  end
+  if type(hls) == 'string' then
+    hls = { { hls, hls } }
   end
   ---@type VirtText
   local virt_text = {}
   local last = {}
   for i, suggestion in ipairs(suggestions) do
     for _, line in ipairs(suggestion) do
-      local hl = _make_hl(line, hi[i] or {})
+      local hl = _make_hl(line, hls[i] or hls[1] or {})
       if i == 1 then
         table.insert(last, { line, hl })
         table.insert(virt_text, last)
@@ -250,7 +256,7 @@ end
 ---@class RenderVirtTextOptions
 ---@field show_time? integer
 ---@field suggestions? Suggestions[]
----@field hi? string[][]
+---@field hls? string[][]|string
 ---@field hl_mode? string
 ---@field center_vertical? boolean
 
@@ -259,14 +265,14 @@ function M.render_virt_text(opts)
   opts = opts or {}
   local suggestions = opts.suggestions or {}
   local show_time = opts.show_time or 0
-  local hi = opts.hi or {}
+  local hls = opts.hls or {}
   local hl_mode = opts.hl_mode or 'combine'
   local center_vertical = opts.center_vertical or false
 
   api.nvim_buf_clear_namespace(0, namespace, 0, -1)
 
   ---@type VirtText?
-  local virt_text = make_virt_text(suggestions, hi)
+  local virt_text = make_virt_text(suggestions, hls)
   if not virt_text or vim.tbl_count(virt_text) == 0 then
     return
   end
