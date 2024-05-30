@@ -246,14 +246,14 @@ local RANGES = {
   'all'
 }
 
-local function _accept_pipeline(cache, row, col, direction, range)
-  local PIPES = {
+local function accept_pipelines(cache, row, col, direction, range)
+  local PIPELINES = {
     pre_accept,
     ACCEPT_FUNCTIONS[range],
     post_accept,
     shift_bounds
   }
-  for _, fx in ipairs(PIPES) do
+  for _, fx in ipairs(PIPELINES) do
     row, col = fx(cache, row, col, direction)
   end
   return row, col
@@ -270,10 +270,7 @@ function InlineModel:accept(opts)
   end
 
   local row, col = unpack(self.cache.stage_cursor)
-  row, col = pre_accept(self.cache, row, col, opts.direction)
-  row, col = ACCEPT_FUNCTIONS[opts.range](self.cache, row, col, opts.direction)
-  row, col = post_accept(self.cache, row, col, opts.direction)
-  row, col = shift_bounds(self.cache, row, col, opts.direction)
+  row, col = accept_pipelines(self.cache, row, col, opts.direction, opts.range)
   self.cache.stage_cursor = { row, col }
 
   local updated = {
