@@ -18,11 +18,11 @@ Case:describe('InlineModel', function(it)
       row = 0,
       col = 0,
       suggestions = {
-        -- 'A中',
+        'A中',
         '',
-        'w中中zw(zz',
-        '',
-        'w(zzz',
+        -- 'w中中zw(zz',
+        -- '',
+        -- 'w(zzz',
       }
     })
     dump_model(model)
@@ -42,9 +42,9 @@ Case:describe('InlineModel', function(it)
     --   -- print('seg:', vim.inspect(seg))
     -- end
 
-    model.cache.stage_cursor = { 4, 5 }
+    model.cache.stage_cursor = { 2, 0 }
 
-    for i = 1, 10 do
+    for i = 1, 3 do
       -- print('--------------------------------------------')
       local seg = model:accept({
         range = 'word',
