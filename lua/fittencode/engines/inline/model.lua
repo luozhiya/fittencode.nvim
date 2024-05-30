@@ -41,6 +41,11 @@ function InlineModel:recalculate(opts)
   self.cache.utf_start = Unicode.utf_start_list(self.cache.lines)
   self.cache.utf_pos = Unicode.utf_pos_list(self.cache.lines)
   self.cache.utf_end = Unicode.utf_end_list(self.cache.lines)
+  self.cache.utf_words = Unicode.utf_words_list(
+    self.cache.lines,
+    self.cache.utf_start,
+    self.cache.utf_end,
+    self.cache.utf_pos)
 end
 
 ---@class InlineModelAcceptOptions
@@ -48,95 +53,28 @@ end
 ---@field range AcceptRange
 
 local function _next_char(utf_start, col, forward)
-  forward = forward ~= nil or true
-  if forward then
+  if forward == nil or forward then
     return Unicode.find_zero(utf_start, col + 1)
   else
     return Unicode.find_zero_reverse(utf_start, col - 1)
   end
 end
 
-local function utf_width(utf_end, col)
-  if not col or col <= 0 then
-    return nil
+local function _next_word(cache, row, col, forward)
+  local utf_words = cache.utf_words[row]
+  local count = #utf_words - col
+  local step = 1
+  if forward == false then
+    step = -1
+    count = col - 1
   end
-  if col <= #utf_end then
-    return utf_end[col] + 1
-  end
-end
-
-local function is_alpha(byte)
-  ---@type integer
-  return (byte >= 65 and byte <= 90) or (byte >= 97 and byte <= 122)
-end
-
-local function is_space(byte)
-  return byte == 32 or byte == 9
-end
-
-local function is_number(byte)
-  return byte >= 48 and byte <= 57
-end
-
-local function _gettype(line, col)
-  local byte = string.byte(line:sub(col, col))
-  if byte == nil then
-    return nil
-  end
-  if is_number(byte) then
-    return 'number'
-  elseif is_alpha(byte) then
-    return 'alpha'
-  elseif is_space(byte) then
-    return 'space'
-  end
-end
-
-local function _next_word(cache, row, col, forward, pretype)
-  local line = cache.lines[row]
-  local utf_start = cache.utf_start[row]
-  local utf_end = cache.utf_end[row]
-
-  if forward == nil then
-    forward = true
-  end
-
-  if col == 0 then
-    if forward then
-      col = 1
-    else
-      return nil
+  local i = 1
+  while i <= count do
+    local word = utf_words[col + step * i]
+    if word == 1 then
+      return col + step * i
     end
-  else
-    if forward then
-      local w = utf_width(utf_end, col)
-      col = col + w
-    else
-      col = Unicode.find_zero_reverse(utf_start, col - 1)
-    end
-  end
-
-  local width = utf_width(utf_end, col)
-  if not width then
-    return nil
-  elseif width > 1 then
-    return col
-  else
-    local curtype = _gettype(line, col)
-    local next_width = utf_width(utf_end, col + width)
-    local next_type = _gettype(line, col + width)
-    if (next_width and next_width > 1) or next_type ~= curtype then
-      return col
-    end
-    if curtype == pretype or pretype == nil then
-      if col < #line then
-        return _next_word(cache, row, col, forward, curtype)
-      else
-        return col
-      end
-    else
-      return col
-    end
+    i = i + 1
   end
 end
 
@@ -146,6 +84,7 @@ end
 
 local function _accept(cache, row, col, direction, next_fx)
   local lines = cache.lines
+  local utf_start = cache.utf_start
 
   if direction == 'forward' then
     local next = next_fx(cache, row, col)
@@ -160,7 +99,8 @@ local function _accept(cache, row, col, direction, next_fx)
     if prev == nil then
       row = row - 1
       if row > 0 then
-        col = #lines[row]
+        local zero = Unicode.find_zero_reverse(utf_start[row], #lines[row])
+        col = zero and zero or 0
       else
         col = 0
       end
@@ -250,12 +190,24 @@ local function get_region(lines, start, end_)
 end
 
 ---@return SuggestionsSegments?
-local function make_segments(updated)
+local function make_segments(updated, utf_end)
   local lines = updated.lines
   local segments = updated.segments
-  local pre_commit = segments.pre_commit
-  local commit = segments.commit
-  local stage = segments.stage
+
+  local to_utf_end = function(cursor)
+    if not cursor or not cursor[1] or not cursor[2] then
+      return nil
+    end
+    local ue = utf_end[cursor[1]]
+    if ue and ue[cursor[2]] and ue[cursor[2]] ~= 1 then
+      return { cursor[1], cursor[2] + ue[cursor[2]] }
+    end
+    return cursor
+  end
+
+  local pre_commit = to_utf_end(segments.pre_commit)
+  local commit = to_utf_end(segments.commit)
+  local stage = to_utf_end(segments.stage)
 
   if commit then
     return {
@@ -314,7 +266,7 @@ function InlineModel:accept(opts)
   end
 
   ---@type SuggestionsSegments
-  return make_segments(updated)
+  return make_segments(updated, self.cache.utf_end)
 end
 
 function InlineModel:has_suggestions()

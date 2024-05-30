@@ -24,7 +24,7 @@ Case:describe('InlineModel', function(it)
       row = 0,
       col = 0,
       suggestions = {
-        'ABC',
+        'A中',
         '',
         -- 'w中中zw(zz',
         -- '',
@@ -63,6 +63,15 @@ Case:describe('InlineModel', function(it)
     seg = model:accept({
       range = 'word',
       direction = 'forward',
+    })
+    dump_model(model)
+    print('seg:', vim.inspect(seg))
+
+    print('--------------------------------------------')
+
+    seg = model:accept({
+      range = 'word',
+      direction = 'backward',
     })
     dump_model(model)
     print('seg:', vim.inspect(seg))

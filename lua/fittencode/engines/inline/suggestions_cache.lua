@@ -7,6 +7,7 @@
 ---@field utf_start? integer[][]
 ---@field utf_end? integer[][]
 ---@field utf_pos? integer[][]
+---@field utf_words? integer[][]
 local SuggestionsCache = {}
 
 function SuggestionsCache.new()
