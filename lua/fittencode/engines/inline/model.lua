@@ -167,7 +167,7 @@ end
 ---@param lines string[]
 ---@return SuggestionsSegments?
 local function get_region(lines, start, end_)
-  local segment = {}
+  local region = {}
   for i, line in ipairs(lines) do
     if i > end_[1] then
       break
@@ -176,17 +176,17 @@ local function get_region(lines, start, end_)
       -- ingore
     elseif i >= start[1] then
       if i == end_[1] then
-        segment[#segment + 1] = line:sub(start[2] + 1, end_[2]) or ''
+        region[#region + 1] = line:sub(start[2] + 1, end_[2]) or ''
       else
         if i == start[1] then
-          segment[#segment + 1] = line:sub(start[2] + 1) or ''
+          region[#region + 1] = line:sub(start[2] + 1) or ''
         else
-          segment[#segment + 1] = line
+          region[#region + 1] = line
         end
       end
     end
   end
-  return segment
+  return region
 end
 
 ---@return SuggestionsSegments?
@@ -194,9 +194,9 @@ local function make_segments(updated, utf_end)
   local lines = updated.lines
   local segments = updated.segments
 
-  local to_utf_end = function(cursor)
+  local correct = function(cursor)
     if not cursor or not cursor[1] or not cursor[2] then
-      return nil
+      return { 0, 0 }
     end
     local ue = utf_end[cursor[1]]
     if ue and ue[cursor[2]] and ue[cursor[2]] ~= 1 then
@@ -205,9 +205,9 @@ local function make_segments(updated, utf_end)
     return cursor
   end
 
-  local pre_commit = to_utf_end(segments.pre_commit)
-  local commit = to_utf_end(segments.commit)
-  local stage = to_utf_end(segments.stage)
+  local pre_commit = correct(segments.pre_commit)
+  local commit = correct(segments.commit)
+  local stage = correct(segments.stage)
 
   if commit then
     return {
