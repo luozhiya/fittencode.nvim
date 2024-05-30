@@ -51,6 +51,7 @@ end
 ---@class InlineModelAcceptOptions
 ---@field direction AcceptDirection
 ---@field range AcceptRange
+---@field mode AcceptMode
 
 local function _next_char(utf_start, col, forward)
   if forward == nil or forward then
@@ -209,24 +210,22 @@ local function make_segments(updated, utf_end)
   local commit = correct(segments.commit)
   local stage = correct(segments.stage)
 
-  if commit then
-    return {
-      pre_commit = get_region(lines, { 0, 0 }, pre_commit),
-      commit = get_region(lines, pre_commit, commit),
-      changes = get_region(lines, commit, { #lines, #lines[#lines] })
-    }
-  elseif stage then
-    return {
-      stage = get_region(lines, { 0, 0 }, stage),
-      changes = get_region(lines, stage, { #lines, #lines[#lines] })
-    }
-  end
+  -- ({0, 0}, pre_commit]
+  -- (pre_commit, commit]
+  -- (commit, stage]
+  -- (stage, changes]  
+  return {
+    pre_commit = get_region(lines, { 0, 0 }, pre_commit),
+    commit = get_region(lines, pre_commit, commit),
+    stage = get_region(lines, commit, stage),
+    changes = get_region(lines, stage, { #lines, #lines[#lines] })
+  }
 end
 
 ---@param opts InlineModelAcceptOptions
 ---@return SuggestionsSegments?
 function InlineModel:accept(opts)
-  if Config.options.inline_completion.accept_mode == 'commit' and opts.direction == 'backward' then
+  if opts.mode == 'commit' and opts.direction == 'backward' then
     return nil
   end
   local row, col = unpack(self.cache.stage_cursor)
@@ -241,6 +240,7 @@ function InlineModel:accept(opts)
     row, col = accept_all(self.cache)
   end
   row, col = post_accept(self.cache.lines, row, col, opts.direction)
+  self.cache.stage_cursor = { row, col }
 
   local updated = {
     lines = self.cache.lines,
@@ -250,19 +250,13 @@ function InlineModel:accept(opts)
       stage = nil
     }
   }
-  if Config.options.inline_completion.accept_mode == 'commit' then
+
+  updated.segments.stage = self.cache.stage_cursor
+  if opts.mode == 'commit' then
     local pre_commit = self.cache.commit_cursor
     self.cache.commit_cursor = { row, col }
-    -- ({0, 0}, pre_commit]
-    -- (pre_commit, commit]
-    -- (commit, changes])
     updated.segments.pre_commit = pre_commit
     updated.segments.commit = self.cache.commit_cursor
-  elseif Config.options.inline_completion.accept_mode == 'stage' then
-    self.cache.stage_cursor = { row, col }
-    -- ({0, 0}, stage]
-    -- (stage, changes]
-    updated.segments.stage = self.cache.stage_cursor
   end
 
   ---@type SuggestionsSegments
