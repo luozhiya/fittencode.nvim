@@ -1,4 +1,3 @@
-local Config = require('fittencode.config')
 local SuggestionsCache = require('fittencode.engines.inline.suggestions_cache')
 local Unicode = require('fittencode.unicode')
 
@@ -129,7 +128,8 @@ local function accept_all(cache)
   return #lines, #lines[#lines]
 end
 
-local function pre_accept(lines, row, col, direction)
+local function pre_accept(cache, row, col, direction)
+  local lines = cache.lines
   if direction == 'forward' then
     if row == 0 and col == 0 then
       row = 1
@@ -142,7 +142,8 @@ local function pre_accept(lines, row, col, direction)
   return row, col
 end
 
-local function post_accept(lines, row, col, direction)
+local function post_accept(cache, row, col, direction)
+  local lines = cache.lines
   if direction == 'forward' then
     if row > #lines then
       row = #lines
@@ -211,7 +212,7 @@ local function make_segments(updated, utf_end)
   -- ({0, 0}, pre_commit]
   -- (pre_commit, commit]
   -- (commit, stage]
-  -- (stage, changes]  
+  -- (stage, changes]
   return {
     pre_commit = get_region(lines, { 0, 0 }, pre_commit),
     commit = get_region(lines, pre_commit, commit),
@@ -220,10 +221,10 @@ local function make_segments(updated, utf_end)
   }
 end
 
-local function shift_by_commit(cache, row, col, direction)
+local function shift_bounds(cache, row, col, direction)
   if direction == 'backward' then
     local commit = cache.commit_cursor
-    if row > commit[1] or (row == commit[1] and col >= commit[2]) then
+    if row > commit[1] or (row == commit[1] and col > commit[2]) then
       row = commit[1]
       col = commit[2]
     end
@@ -245,20 +246,34 @@ local RANGES = {
   'all'
 }
 
+local function _accept_pipeline(cache, row, col, direction, range)
+  local PIPES = {
+    pre_accept,
+    ACCEPT_FUNCTIONS[range],
+    post_accept,
+    shift_bounds
+  }
+  for _, fx in ipairs(PIPES) do
+    row, col = fx(cache, row, col, direction)
+  end
+  return row, col
+end
+
 ---@param opts AcceptOptions
 ---@return SuggestionsSegments?
 function InlineModel:accept(opts)
   if opts.mode == 'commit' and opts.direction == 'backward' then
     return nil
   end
-  if vim.tbl_contains(RANGES, opts.range) == false then
+  if not vim.tbl_contains(RANGES, opts.range) then
     return nil
   end
+
   local row, col = unpack(self.cache.stage_cursor)
-  row, col = pre_accept(self.cache.lines, row, col, opts.direction)
+  row, col = pre_accept(self.cache, row, col, opts.direction)
   row, col = ACCEPT_FUNCTIONS[opts.range](self.cache, row, col, opts.direction)
-  row, col = post_accept(self.cache.lines, row, col, opts.direction)
-  row, col = shift_by_commit(self.cache, row, col, opts.direction)
+  row, col = post_accept(self.cache, row, col, opts.direction)
+  row, col = shift_bounds(self.cache, row, col, opts.direction)
   self.cache.stage_cursor = { row, col }
 
   local updated = {
