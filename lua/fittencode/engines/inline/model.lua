@@ -231,23 +231,32 @@ local function shift_by_commit(cache, row, col, direction)
   return row, col
 end
 
+local ACCEPT_FUNCTIONS = {
+  char = accept_char,
+  word = accept_word,
+  line = accept_line,
+  all = accept_all
+}
+
+local RANGES = {
+  'char',
+  'word',
+  'line',
+  'all'
+}
+
 ---@param opts AcceptOptions
 ---@return SuggestionsSegments?
 function InlineModel:accept(opts)
   if opts.mode == 'commit' and opts.direction == 'backward' then
     return nil
   end
+  if vim.tbl_contains(RANGES, opts.range) == false then
+    return nil
+  end
   local row, col = unpack(self.cache.stage_cursor)
   row, col = pre_accept(self.cache.lines, row, col, opts.direction)
-  if opts.range == 'char' then
-    row, col = accept_char(self.cache, row, col, opts.direction)
-  elseif opts.range == 'word' then
-    row, col = accept_word(self.cache, row, col, opts.direction)
-  elseif opts.range == 'line' then
-    row, col = accept_line(self.cache, row, col, opts.direction)
-  elseif opts.range == 'all' then
-    row, col = accept_all(self.cache)
-  end
+  row, col = ACCEPT_FUNCTIONS[opts.range](self.cache, row, col, opts.direction)
   row, col = post_accept(self.cache.lines, row, col, opts.direction)
   row, col = shift_by_commit(self.cache, row, col, opts.direction)
   self.cache.stage_cursor = { row, col }
