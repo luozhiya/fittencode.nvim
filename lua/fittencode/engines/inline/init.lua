@@ -250,6 +250,7 @@ local function _accept_impl(range, direction, mode)
     return
   end
   Lines.clear_virt_text()
+  local virt_opts = nil
   ignoreevent_wrap(function()
     local ss = model:accept({
       mode = mode,
@@ -259,7 +260,7 @@ local function _accept_impl(range, direction, mode)
     if not ss then
       return
     end
-    local virt_opts = make_virt_opts(ss)
+    virt_opts = make_virt_opts(ss)
     if mode == 'commit' then
       local window = api.nvim_get_current_win()
       local buffer = api.nvim_win_get_buf(window)
@@ -272,11 +273,14 @@ local function _accept_impl(range, direction, mode)
         return
       end
       model:update_triggered_cursor(unpack(cusors[2]))
-      Lines.render_virt_text(virt_opts)
-    elseif mode == 'stage' then
-      Lines.render_virt_text(virt_opts)
     end
   end)
+  if virt_opts and #virt_opts.lines > 0 then
+    Lines.render_virt_text(virt_opts)
+  end
+  if model:reached_end() then
+    generate_one_stage_at_cursor()
+  end
 end
 
 function M.accept_all_suggestions()

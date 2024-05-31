@@ -176,7 +176,11 @@ local function get_region(lines, start, end_)
       -- ingore
     elseif i >= start[1] then
       if i == end_[1] then
-        region[#region + 1] = line:sub(start[2] + 1, end_[2]) or ''
+        if i == start[1] then
+          region[#region + 1] = line:sub(start[2] + 1, end_[2]) or ''
+        else
+          region[#region + 1] = line:sub(0, end_[2]) or ''
+        end
       else
         if i == start[1] then
           region[#region + 1] = line:sub(start[2] + 1) or ''
@@ -320,9 +324,9 @@ function InlineModel:get_suggestions()
 end
 
 function InlineModel:cache_hit(row, col)
-  return self.cache.stage_cursor and
-      self.cache.stage_cursor[1] == row and
-      self.cache.stage_cursor[2] == col
+  return self.cache.triggered_cursor and
+      self.cache.triggered_cursor[1] == row and
+      self.cache.triggered_cursor[2] == col
 end
 
 function InlineModel:make_new_trim_commmited_suggestions()
