@@ -1,3 +1,4 @@
+local Log = require('fittencode.log')
 local SuggestionsCache = require('fittencode.engines.inline.suggestions_cache')
 local Unicode = require('fittencode.unicode')
 
@@ -52,11 +53,12 @@ end
 ---@field range AcceptRange
 ---@field mode AcceptMode
 
-local function _next_char(utf_start, col, forward)
-  if forward == nil or forward then
-    return Unicode.find_zero(utf_start, col + 1)
-  else
+local function _next_char(cache, row, col, forward)
+  local utf_start = cache.utf_start[row]
+  if forward == false then
     return Unicode.find_zero_reverse(utf_start, col - 1)
+  else
+    return Unicode.find_zero(utf_start, col + 1)
   end
 end
 
@@ -346,6 +348,17 @@ function InlineModel:get_suggestions_segments()
     }
   }
   return make_segments(updated, self.cache.utf_end)
+end
+
+function InlineModel:is_advance(row, col)
+  local triggered_cursor = self.cache.triggered_cursor
+  if not triggered_cursor or not triggered_cursor[1] or not triggered_cursor[2] then
+    return false
+  end
+  if triggered_cursor[1] == row and triggered_cursor[2] + 1 == col then
+    return true
+  end
+  return false
 end
 
 return InlineModel

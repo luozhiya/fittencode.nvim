@@ -357,11 +357,26 @@ function M.lazy_inline_completion()
     return
   end
 
-  -- local ss = model:accept({
-  --   mode = 'commit', -- Force commit
-  --   range = 'char',
-  --   direction = 'forward',
-  -- })
+  local row, col = Base.get_cursor()
+  if model:is_advance(row, col) then
+    Lines.clear_virt_text()
+    local segments = model:accept({
+      mode = 'commit',
+      range = 'char',
+      direction = 'forward',
+    })
+    if not segments then
+      return
+    end
+    local opts = make_virt_opts(segments)
+    if opts and #opts.lines > 0 then
+      Lines.render_virt_text(opts)
+    end
+    model:update_triggered_cursor(row, col)
+    if model:reached_end() then
+      model:reset()
+    end
+  end
 
   return false
 end
