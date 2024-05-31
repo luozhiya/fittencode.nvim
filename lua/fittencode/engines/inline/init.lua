@@ -241,6 +241,22 @@ local function ignoreevent_wrap(fx)
   return ret
 end
 
+local function set_text_event_filter(lines)
+  local window = api.nvim_get_current_win()
+  local buffer = api.nvim_win_get_buf(window)
+  ignoreevent_wrap(function()
+    local cusors = Lines.set_text({
+      window = window,
+      buffer = buffer,
+      lines = lines,
+    })
+    if not cusors then
+      return
+    end
+    model:update_triggered_cursor(unpack(cusors[2]))
+  end)
+end
+
 local function _accept_impl(range, direction, mode)
   if not suggestions_modify_enabled() then
     return
@@ -249,49 +265,25 @@ local function _accept_impl(range, direction, mode)
   if mode == 'commit' and direction == 'backward' then
     return
   end
-  local window = api.nvim_get_current_win()
-  local buffer = api.nvim_win_get_buf(window)
   Lines.clear_virt_text()
-  local virt_opts = nil
-  ignoreevent_wrap(function()
-    local ss = model:accept({
-      mode = mode,
-      range = range,
-      direction = direction,
-    })
-    if not ss then
-      return
-    end
-    virt_opts = make_virt_opts(ss)
-    if mode == 'commit' then
-      local cusors = Lines.set_text({
-        window = window,
-        buffer = buffer,
-        lines = ss.commit,
-      })
-      if not cusors then
-        return
-      end
-      model:update_triggered_cursor(unpack(cusors[2]))
-    end
-  end)
-  if virt_opts and #virt_opts.lines > 0 then
-    Lines.render_virt_text(virt_opts)
+  local segments = model:accept({
+    mode = mode,
+    range = range,
+    direction = direction,
+  })
+  if not segments then
+    return
+  end
+  if mode == 'commit' then
+    set_text_event_filter(segments.commit)
+  end
+  local opts = make_virt_opts(segments)
+  if opts and #opts.lines > 0 then
+    Lines.render_virt_text(opts)
   end
   if model:reached_end() then
     if mode == 'stage' then
-      -- Insert all staged changes
-      ignoreevent_wrap(function()
-        local cusors = Lines.set_text({
-          window = window,
-          buffer = buffer,
-          lines = model:get_suggestions_segments().stage,
-        })
-        if not cusors then
-          return
-        end
-        model:update_triggered_cursor(unpack(cusors[2]))
-      end)
+      set_text_event_filter(model:get_suggestions_segments().stage)
     end
     generate_one_stage_at_cursor()
   end
