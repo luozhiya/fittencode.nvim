@@ -101,11 +101,8 @@ local function apply_new_suggestions(task_id, row, col, suggestions)
       col = col,
       suggestions = suggestions,
     })
-    Log.debug('Cache: {}', model.cache)
     if suggestions_modify_enabled() then
-      local ss = make_virt_opts(model:get_suggestions_segments())
-      Log.debug('Apply new suggestions: {}', ss)
-      Lines.render_virt_text(ss)
+      Lines.render_virt_text(make_virt_opts(model:get_suggestions_segments()))
     end
   end
 end
@@ -144,14 +141,8 @@ local generate_one_stage_timer = nil
 ---@param on_success? function
 ---@param on_error? function
 function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
-  Log.debug('Start Generate One Stage...')
-
   if not force and model:cache_hit(row, col) and M.has_suggestions() then
     status:update(SC.SUGGESTIONS_READY)
-    Log.debug('Cached cursor matches requested cursor')
-    if suggestions_modify_enabled() then
-      Lines.render_virt_text(make_virt_opts(model:get_suggestions_segments()))
-    end
     schedule(on_success, model:make_new_trim_commmited_suggestions())
     return
   else
@@ -266,24 +257,25 @@ local function _accept_impl(range, direction, mode)
     return
   end
   Lines.clear_virt_text()
-  local segments = model:accept({
+  local updated = model:accept({
     mode = mode,
     range = range,
     direction = direction,
   })
-  if not segments then
+  if not updated then
     return
   end
   if mode == 'commit' then
-    set_text_event_filter(segments.commit)
+    set_text_event_filter(updated.commit)
   end
+  local segments = model:get_suggestions_segments()
   local opts = make_virt_opts(segments)
   if opts and #opts.lines > 0 then
     Lines.render_virt_text(opts)
   end
   if model:reached_end() then
     if mode == 'stage' then
-      set_text_event_filter(model:get_suggestions_segments().stage)
+      set_text_event_filter(segments.stage)
     end
     generate_one_stage_at_cursor()
   end
@@ -357,22 +349,16 @@ function M.lazy_inline_completion()
     return
   end
 
+  Lines.clear_virt_text()
   local row, col = Base.get_cursor()
   if model:is_advance(row, col) then
-    Lines.clear_virt_text()
-    local segments = model:accept({
+    model:accept({
       mode = 'commit',
       range = 'char',
       direction = 'forward',
     })
-    if not segments then
-      return
-    end
-    local opts = make_virt_opts(segments)
-    if opts and #opts.lines > 0 then
-      Lines.render_virt_text(opts)
-    end
     model:update_triggered_cursor(row, col)
+    Lines.render_virt_text(make_virt_opts(model:get_suggestions_segments()))
     if model:reached_end() then
       model:reset()
     end
