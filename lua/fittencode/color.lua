@@ -6,7 +6,7 @@ M.FittenSuggestion = 'FittenSuggestion'
 M.FittenSuggestionBackground = 'FittenSuggestionBackground'
 M.FittenNoMoreSuggestion = 'FittenNoMoreSuggestion'
 M.FittenSuggestionStage = 'FittenSuggestionStage'
-M.FittenSuggestionStageBackground = 'FittenSuggestionStageBackground'
+M.FittenSuggestionStageBackground = 'FittenSuggestionStage'
 
 -- Define FittenCode colors
 local colors = {}
@@ -32,10 +32,6 @@ function M.setup_highlight()
     fg = colors.yellow2,
     bg = colors.gray2,
     ctermfg = 'LightYellow',
-  })
-  Base.set_hi(M.FittenSuggestionStageBackground, {
-    bg = colors.yellow2,
-    ctermbg = 'LightYellow',
   })
 end
 
