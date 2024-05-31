@@ -40,7 +40,6 @@ local function suggestions_modify_enabled()
   end
 
   if not M.has_suggestions() then
-    Log.debug('No suggestions')
     return false
   end
 
@@ -146,7 +145,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
     schedule(on_success, model:make_new_trim_commmited_suggestions())
     return
   else
-    Log.debug('Cached cursor is outdated')
+    Log.debug('NO CACHE HIT')
   end
 
   if suggestions_modify_enabled() then
@@ -191,7 +190,7 @@ end
 function M.triggering_completion()
   Log.debug('Triggering completion...')
 
-  if not suggestions_modify_enabled() then
+  if not M.is_inline_enabled() then
     return
   end
 
@@ -275,7 +274,7 @@ local function _accept_impl(range, direction, mode)
   end
   if model:reached_end() then
     if mode == 'stage' then
-      set_text_event_filter(segments.stage)
+      set_text_event_filter(segments.commit)
     end
     generate_one_stage_at_cursor()
   end
@@ -348,10 +347,12 @@ function M.lazy_inline_completion()
   if not suggestions_modify_enabled() then
     return
   end
-
   Lines.clear_virt_text()
-  local row, col = Base.get_cursor()
-  if model:is_advance(row, col) then
+  local window = api.nvim_get_current_win()
+  local buffer = api.nvim_win_get_buf(window)
+  local row, col = Base.get_cursor(window)
+  local char = api.nvim_buf_get_text(buffer, row, col - 1, row, col + 1, {})[1]
+  if model:is_advance(row, col, char) then
     model:accept({
       mode = 'commit',
       range = 'char',
@@ -362,9 +363,9 @@ function M.lazy_inline_completion()
     if model:reached_end() then
       model:reset()
     end
+  else
+    model:reset()
   end
-
-  return false
 end
 
 ---@return integer

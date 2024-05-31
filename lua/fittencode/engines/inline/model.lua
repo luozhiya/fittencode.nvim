@@ -52,6 +52,7 @@ end
 ---@field direction AcceptDirection
 ---@field range AcceptRange
 ---@field mode AcceptMode
+---@field only_calculate? boolean
 
 local function _next_char(cache, row, col, forward)
   local utf_start = cache.utf_start[row]
@@ -277,7 +278,6 @@ function InlineModel:accept(opts)
 
   local row, col = unpack(self.cache.stage_cursor)
   row, col = accept_pipelines(self.cache, row, col, opts.direction, opts.range)
-  self.cache.stage_cursor = { row, col }
 
   local updated = {
     lines = self.cache.lines,
@@ -288,12 +288,16 @@ function InlineModel:accept(opts)
     }
   }
 
-  updated.segments.stage = self.cache.stage_cursor
+  updated.segments.stage = { row, col }
   if opts.mode == 'commit' then
     local pre_commit = self.cache.commit_cursor
-    self.cache.commit_cursor = { row, col }
     updated.segments.pre_commit = pre_commit
-    updated.segments.commit = self.cache.commit_cursor
+    updated.segments.commit = { row, col }
+  end
+
+  if not opts.only_calculate then
+    self.cache.stage_cursor = { row, col }
+    self.cache.commit_cursor = { row, col }
   end
 
   ---@type SuggestionsSegments
@@ -350,12 +354,22 @@ function InlineModel:get_suggestions_segments()
   return make_segments(updated, self.cache.utf_end)
 end
 
-function InlineModel:is_advance(row, col)
+function InlineModel:get_next_char()
+  local updated = self:accept({ direction = 'forward', range = 'char', mode = 'commit', only_calculate = true })
+  if not updated then
+    return nil
+  end
+  local line1 = updated.commit[1]
+  return line1 and line1:sub(1, 1)
+end
+
+function InlineModel:is_advance(row, col, char)
   local triggered_cursor = self.cache.triggered_cursor
   if not triggered_cursor or not triggered_cursor[1] or not triggered_cursor[2] then
     return false
   end
-  if triggered_cursor[1] == row and triggered_cursor[2] + 1 == col then
+  local cache_char = self:get_next_char()
+  if triggered_cursor[1] == row and triggered_cursor[2] + 1 == col and char == cache_char then
     return true
   end
   return false
