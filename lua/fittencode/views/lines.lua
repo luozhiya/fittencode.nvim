@@ -60,13 +60,16 @@ local function make_virt_text(lines, hls)
   local virt_text = {}
   local last = {}
   for i, sub_lines in ipairs(lines) do
-    for _, line in ipairs(sub_lines) do
-      local hl = _make_hl(line, hls[i] or hls[1] or {})
-      if i == 1 then
+    for j, line in ipairs(sub_lines) do
+      local sub_hls = hls[i] or hls[1] or {}
+      local hl = _make_hl(line, sub_hls)
+      if j == 1 then
         table.insert(last, { line, hl })
-        table.insert(virt_text, last)
-        last = {}
-      elseif i == #sub_lines then
+        if #sub_lines > 1 then
+          table.insert(virt_text, last)
+          last = {}
+        end
+      elseif j == #sub_lines then
         last = { { line, hl } }
       else
         table.insert(virt_text, { { line, hl } })

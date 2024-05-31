@@ -85,7 +85,7 @@ local function make_virt_opts(ss)
         ss.stage,
         ss.changes
       },
-      hi = {
+      hls = {
         { Color.FittenSuggestionStage, Color.FittenSuggestionStageBackground },
         { Color.FittenSuggestion,      Color.FittenSuggestionBackground },
       },
@@ -249,6 +249,8 @@ local function _accept_impl(range, direction, mode)
   if mode == 'commit' and direction == 'backward' then
     return
   end
+  local window = api.nvim_get_current_win()
+  local buffer = api.nvim_win_get_buf(window)
   Lines.clear_virt_text()
   local virt_opts = nil
   ignoreevent_wrap(function()
@@ -262,8 +264,6 @@ local function _accept_impl(range, direction, mode)
     end
     virt_opts = make_virt_opts(ss)
     if mode == 'commit' then
-      local window = api.nvim_get_current_win()
-      local buffer = api.nvim_win_get_buf(window)
       local cusors = Lines.set_text({
         window = window,
         buffer = buffer,
@@ -279,6 +279,20 @@ local function _accept_impl(range, direction, mode)
     Lines.render_virt_text(virt_opts)
   end
   if model:reached_end() then
+    if mode == 'stage' then
+      -- Insert all staged changes
+      ignoreevent_wrap(function()
+        local cusors = Lines.set_text({
+          window = window,
+          buffer = buffer,
+          lines = model:get_suggestions_segments().stage,
+        })
+        if not cusors then
+          return
+        end
+        model:update_triggered_cursor(unpack(cusors[2]))
+      end)
+    end
     generate_one_stage_at_cursor()
   end
 end

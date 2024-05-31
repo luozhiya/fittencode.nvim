@@ -51,7 +51,7 @@ local defaults = {
     -- Available options:
     -- * 'commit' (default)
     -- * 'stage'
-    accept_mode = 'commit',
+    accept_mode = 'stage',
   },
   delay_completion = {
     -- Delay time for inline completion (in milliseconds).

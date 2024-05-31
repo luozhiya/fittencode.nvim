@@ -289,6 +289,8 @@ function M.setup_keymaps()
   end)
   Base.map('i', '<C-Down>', API.accept_line)
   Base.map('i', '<C-Right>', API.accept_word)
+  Base.map('i', '<C-Up>', API.revoke_line)
+  Base.map('i', '<C-Left>', API.revoke_word)
   Base.map('i', '<A-\\>', API.triggering_completion)
 end
 

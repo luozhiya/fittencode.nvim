@@ -12,7 +12,8 @@ M.FittenSuggestionStageBackground = 'FittenSuggestionStageBackground'
 local colors = {}
 colors.gray = '#808080'
 colors.yellow = '#FFEBC7'
-colors.yellow2 = '#C6F0C2'
+colors.yellow2 = '#E2C07C'
+colors.gray2 = '#37373D'
 
 function M.setup_highlight()
   Base.set_hi(M.FittenSuggestion, {
@@ -29,6 +30,7 @@ function M.setup_highlight()
   })
   Base.set_hi(M.FittenSuggestionStage, {
     fg = colors.yellow2,
+    bg = colors.gray2,
     ctermfg = 'LightYellow',
   })
   Base.set_hi(M.FittenSuggestionStageBackground, {
