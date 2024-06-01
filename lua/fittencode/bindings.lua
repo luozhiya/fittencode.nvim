@@ -11,11 +11,11 @@ local M = {}
 
 local ignore = false
 
--- Debounce time for advance function, in milliseconds
-local ADVANCE_DEBOUNCE_TIME = 120
+-- milliseconds
+local CURSORMOVED_DEBOUNCE_TIME = 120
 
 ---@type uv_timer_t
-local advance_timer = nil
+local cursormoved_timer = nil
 
 function M.setup_autocmds()
   api.nvim_create_autocmd({ 'CursorHoldI' }, {
@@ -38,17 +38,17 @@ function M.setup_autocmds()
   })
 
   api.nvim_create_autocmd({ 'CursorMovedI' }, {
-    group = Base.augroup('Advance'),
+    group = Base.augroup('CursorMoved'),
     pattern = '*',
     callback = function()
       if ignore then
         return
       end
-      Base.debounce(advance_timer, function()
-        InlineEngine.advance()
-      end, ADVANCE_DEBOUNCE_TIME)
+      Base.debounce(cursormoved_timer, function()
+        InlineEngine.on_cursor_moved()
+      end, CURSORMOVED_DEBOUNCE_TIME)
     end,
-    desc = 'Advance',
+    desc = 'CursorMoved',
   })
 
   api.nvim_create_autocmd({ 'TextChangedI' }, {
@@ -60,7 +60,7 @@ function M.setup_autocmds()
       end
       InlineEngine.on_text_changed()
     end,
-    desc = 'Lazy Inline Completion',
+    desc = 'TextChanged',
   })
 
   api.nvim_create_autocmd({ 'BufLeave', 'InsertLeave', 'CursorMoved' }, {

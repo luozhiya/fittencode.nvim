@@ -380,7 +380,7 @@ function M.reset()
   tasks:clear()
 end
 
-function M.advance()
+function M.on_cursor_moved()
   if Lines.is_rendering(api.nvim_get_current_buf(), extmark_ids[IDS_PROMPT]) then
     clear_virt_text_prompt()
   end
