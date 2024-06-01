@@ -242,6 +242,9 @@ local function ignoreevent_wrap(fx)
 end
 
 local function set_text_event_filter(lines)
+  if not lines or #lines == 0 then
+    return
+  end
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
   ignoreevent_wrap(function()
@@ -257,6 +260,8 @@ local function set_text_event_filter(lines)
   end)
 end
 
+local ignore_lazy_once = false
+
 local function _accept_impl(range, direction, mode)
   if not suggestions_modify_enabled() then
     return
@@ -265,6 +270,7 @@ local function _accept_impl(range, direction, mode)
   if mode == 'commit' and direction == 'backward' then
     return
   end
+  ignore_lazy_once = true
   Lines.clear_virt_text()
   local commited = false
   if mode == 'stage' and range == 'all' then
@@ -371,6 +377,10 @@ end
 ---@return boolean?
 function M.lazy_inline_completion()
   if not suggestions_modify_enabled() then
+    return
+  end
+  if ignore_lazy_once then
+    ignore_lazy_once = false
     return
   end
   Lines.clear_virt_text()

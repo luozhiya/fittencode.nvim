@@ -168,11 +168,9 @@ local function move_cursor_to_text_end(window, row, col, lines)
   end
   if count == 1 then
     local first_len = string.len(lines[1])
-    if first_len ~= 0 then
-      cursor = { row + 1, col + first_len }
-      if window and api.nvim_win_is_valid(window) then
-        api.nvim_win_set_cursor(window, cursor)
-      end
+    cursor = { row + 1, col + first_len }
+    if window and api.nvim_win_is_valid(window) then
+      api.nvim_win_set_cursor(window, cursor)
     end
   else
     local last_len = string.len(lines[count])
