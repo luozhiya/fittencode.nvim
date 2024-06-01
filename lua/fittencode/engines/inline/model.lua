@@ -312,9 +312,18 @@ local function make_segments(updated, utf_end)
   }
 end
 
+---@param cache SuggestionsCache
+---@param row number
+---@param col number
+---@param direction AcceptDirection
+---@param range AcceptRange
+---@return number?, number?
 local function shift_bounds(cache, row, col, direction, range)
   if direction == 'backward' then
     local commit = cache.commit_cursor
+    if not commit then
+      return
+    end
     if row < commit[1] or (row == commit[1] and col < commit[2]) then
       row = commit[1]
       col = commit[2]
@@ -323,6 +332,12 @@ local function shift_bounds(cache, row, col, direction, range)
   return row, col
 end
 
+---@param cache SuggestionsCache
+---@param row number
+---@param col number
+---@param direction AcceptDirection
+---@param range AcceptRange
+---@return number?, number?
 local function accept_pipelines(cache, row, col, direction, range)
   local PIPELINES = {
     pre_accept,
@@ -331,7 +346,12 @@ local function accept_pipelines(cache, row, col, direction, range)
     shift_bounds
   }
   for _, fx in ipairs(PIPELINES) do
-    row, col = fx(cache, row, col, direction, range)
+    local next_row, next_col = fx(cache, row, col, direction, range)
+    if not next_row or not next_col then
+      return
+    end
+    row = next_row
+    col = next_col
   end
   return row, col
 end
@@ -352,13 +372,12 @@ function InlineModel:accept(opts)
     return
   end
 
-  ---@type integer?, integer?
   local row, col = unpack(self.cache.stage_cursor)
-  row, col = accept_pipelines(self.cache, row, col, opts.direction, opts.range)
-  if not row or not col then
+  local next_row, next_col = accept_pipelines(self.cache, row, col, opts.direction, opts.range)
+  if not next_row or not next_col then
     return
   end
-  local cursor = { row, col }
+  local cursor = { next_col, next_col }
 
   ---@type AcceptIncrementalUpdates
   local updated = {
@@ -388,10 +407,12 @@ function InlineModel:accept(opts)
   return make_segments(updated, self.cache.utf_end)
 end
 
+---@return boolean
 function InlineModel:has_suggestions()
-  return self.cache.lines and #self.cache.lines > 0
+  return self.cache.lines and #self.cache.lines > 0 or false
 end
 
+---@return boolean
 function InlineModel:reached_end()
   if not self.cache.lines or #self.cache.lines == 0 then
     return true
@@ -400,10 +421,13 @@ function InlineModel:reached_end()
       self.cache.stage_cursor[2] == #self.cache.lines[#self.cache.lines]
 end
 
+---@return number[]?
 function InlineModel:triggered_cursor()
   return self.cache.triggered_cursor
 end
 
+---@param row number
+---@param col number
 function InlineModel:update_triggered_cursor(row, col)
   self.cache.triggered_cursor = { row, col }
 end
@@ -412,24 +436,30 @@ function InlineModel:reset()
   self.cache = SuggestionsCache:new()
 end
 
+---@return string[]?
 function InlineModel:get_suggestions()
   return self.cache.lines
 end
 
+---@param row number
+---@param col number
+---@return boolean
 function InlineModel:cache_hit(row, col)
   return self.cache.triggered_cursor and
       self.cache.triggered_cursor[1] == row and
-      self.cache.triggered_cursor[2] == col
+      self.cache.triggered_cursor[2] == col or false
 end
 
+---@return string[]?
 function InlineModel:make_new_trim_commmited_suggestions()
   local lines = self.cache.lines
   if not lines or #lines == 0 then
-    return {}
+    return
   end
   return get_region(lines, self.cache.commit_cursor, { #lines, #lines[#lines] })
 end
 
+---@return SuggestionsSegments?
 function InlineModel:get_suggestions_segments()
   ---@type AcceptIncrementalUpdates
   local updated = {
@@ -442,15 +472,20 @@ function InlineModel:get_suggestions_segments()
   return make_segments(updated, self.cache.utf_end)
 end
 
+---@return string?
 function InlineModel:get_next_char()
   local segments = self:accept({ direction = 'forward', range = 'char', mode = 'commit', only_calculate = true })
   if not segments then
-    return nil
+    return
   end
   local line1 = segments.commit[1]
   return line1 and line1:sub(1, 1)
 end
 
+---@param row number
+---@param col number
+---@param char string
+---@return boolean
 function InlineModel:is_advance(row, col, char)
   local triggered_cursor = self.cache.triggered_cursor
   if not triggered_cursor or not triggered_cursor[1] or not triggered_cursor[2] then
