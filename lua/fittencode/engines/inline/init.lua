@@ -171,10 +171,10 @@ local generate_one_stage_timer = nil
 function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   if not force and model:cache_hit(row, col) and M.has_suggestions() then
     status:update(SC.SUGGESTIONS_READY)
-    Log.debug('CACHE HIT')
     local segments = model:get_suggestions_segments()
     render_virt_text_segments(segments)
     schedule(on_success, model:make_new_trim_commmited_suggestions())
+    Log.debug('CACHE HIT')
     return
   else
     Log.debug('NO CACHE HIT')

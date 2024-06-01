@@ -22,7 +22,6 @@ function M.setup_autocmds()
     group = Base.augroup('GenerateOneStage'),
     pattern = '*',
     callback = function()
-      -- Log.debug('CursorHoldI')
       if not InlineEngine.is_inline_enabled() then
         return
       end
@@ -35,14 +34,13 @@ function M.setup_autocmds()
       local row, col = Base.get_cursor()
       InlineEngine.generate_one_stage(row, col)
     end,
-    desc = 'Generate one stage',
+    desc = 'Generate One Stage',
   })
 
   api.nvim_create_autocmd({ 'CursorMovedI' }, {
     group = Base.augroup('Advance'),
     pattern = '*',
     callback = function()
-      -- Log.debug('CursorMovedI')
       if ignore then
         return
       end
@@ -57,13 +55,12 @@ function M.setup_autocmds()
     group = Base.augroup('TextChanged'),
     pattern = '*',
     callback = function(param)
-      -- Log.debug('TextChangedI')
       if ignore then
         return
       end
       InlineEngine.lazy_inline_completion()
     end,
-    desc = 'Lazy inline completion',
+    desc = 'Lazy Inline Completion',
   })
 
   api.nvim_create_autocmd({ 'BufLeave', 'InsertLeave', 'CursorMoved' }, {
@@ -302,7 +299,6 @@ function M.setup_keyfilters()
     vim.schedule(function()
       if api.nvim_get_mode().mode == 'i' then
         if vim.tbl_contains(FILTERED_KEYS, key) then
-          Log.debug('Delete key pressed, resetting inline completion')
           InlineEngine.reset()
           if Config.options.inline_completion.disable_completion_when_delete then
             ignore = true
