@@ -43,9 +43,6 @@ function M.setup_autocmds()
     pattern = '*',
     callback = function()
       -- Log.debug('CursorMovedI')
-      if not Config.options.inline_completion.auto_triggering_completion then
-        return
-      end
       if ignore then
         return
       end
