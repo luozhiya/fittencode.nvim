@@ -96,9 +96,22 @@ local function _next_line(cache, row, col, forward)
   return nil
 end
 
-local function _accept(cache, row, col, direction, range, next_fx)
+local function _next_all(cache)
+  local lines = cache.lines
+  return #lines, #lines[#lines]
+end
+
+local NEXT = {
+  char = _next_char,
+  word = _next_word,
+  line = _next_line,
+  all = _next_all
+}
+
+local function _accept(cache, row, col, direction, range)
   local lines = cache.lines
   local utf_start = cache.utf_start
+  local next_fx = NEXT[range]
 
   if direction == 'forward' then
     local next = next_fx(cache, row, col)
@@ -136,24 +149,7 @@ local function _accept(cache, row, col, direction, range, next_fx)
   return row, col
 end
 
-local function accept_char(cache, row, col, direction)
-  return _accept(cache, row, col, direction, 'char', _next_char)
-end
-
-local function accept_word(cache, row, col, direction)
-  return _accept(cache, row, col, direction, 'word', _next_word)
-end
-
-local function accept_line(cache, row, col, direction)
-  return _accept(cache, row, col, direction, 'line', _next_line)
-end
-
-local function accept_all(cache)
-  local lines = cache.lines
-  return #lines, #lines[#lines]
-end
-
-local function pre_accept(cache, row, col, direction)
+local function pre_accept(cache, row, col, direction, range)
   local lines = cache.lines
   if direction == 'forward' then
     if row == 0 and col == 0 then
@@ -167,7 +163,7 @@ local function pre_accept(cache, row, col, direction)
   return row, col
 end
 
-local function post_accept(cache, row, col, direction)
+local function post_accept(cache, row, col, direction, range)
   local lines = cache.lines
   if direction == 'forward' then
     if row > #lines then
@@ -250,7 +246,7 @@ local function make_segments(updated, utf_end)
   }
 end
 
-local function shift_bounds(cache, row, col, direction)
+local function shift_bounds(cache, row, col, direction, range)
   if direction == 'backward' then
     local commit = cache.commit_cursor
     if row < commit[1] or (row == commit[1] and col < commit[2]) then
@@ -261,22 +257,15 @@ local function shift_bounds(cache, row, col, direction)
   return row, col
 end
 
-local ACCEPT_FUNCTIONS = {
-  char = accept_char,
-  word = accept_word,
-  line = accept_line,
-  all = accept_all
-}
-
 local function accept_pipelines(cache, row, col, direction, range)
   local PIPELINES = {
     pre_accept,
-    ACCEPT_FUNCTIONS[range],
+    _accept,
     post_accept,
     shift_bounds
   }
   for _, fx in ipairs(PIPELINES) do
-    row, col = fx(cache, row, col, direction)
+    row, col = fx(cache, row, col, direction, range)
   end
   return row, col
 end
@@ -287,7 +276,7 @@ function InlineModel:accept(opts)
   if opts.mode == 'commit' and opts.direction == 'backward' then
     return nil
   end
-  if not vim.tbl_contains(vim.tbl_keys(ACCEPT_FUNCTIONS), opts.range) then
+  if not vim.tbl_contains(vim.tbl_keys(NEXT), opts.range) then
     return nil
   end
 
