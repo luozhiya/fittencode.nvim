@@ -49,9 +49,22 @@ local defaults = {
     auto_triggering_completion = true,
     -- Accept Mode
     -- Available options:
-    -- * 'commit' (default)
-    -- * 'stage'
-    accept_mode = 'stage',
+    -- * `commit` (VSCode style accept, also default)
+    --   - `Tab` to Accept all suggestions
+    --   - `Alt+Right` to Accept word
+    --   - `Alt+Down` to Accept line
+    --   - Interrupt
+    --      - Enter a different character than suggested
+    --      - Exit insert mode
+    -- * `stage` (Stage style accept)
+    --   - `Tab` to Accept all staged characters
+    --   - `Alt+Right` to Stage word
+    --   - `Alt+Left` to Revoke word
+    --   - `Alt+Down` to Stage line
+    --   - `Alt+Up` to Revoke line
+    --   - Interrupt(Same as `commit`, but with the following changes:)
+    --      - Characters that have already been staged will be lost.
+    accept_mode = 'commit',
   },
   delay_completion = {
     -- Delay time for inline completion (in milliseconds).

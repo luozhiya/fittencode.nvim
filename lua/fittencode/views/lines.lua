@@ -80,6 +80,8 @@ local function make_virt_text(lines, hls)
   return virt_text
 end
 
+---@param virt_text VirtText
+---@param hl_mode string
 local function set_extmark(virt_text, hl_mode)
   local row, col = Base.get_cursor()
 
@@ -273,7 +275,7 @@ function M.render_virt_text(opts)
   local show_time = opts.show_time or 0
   local hls = opts.hls or {}
   local hl_mode = opts.hl_mode or 'combine'
-  local center_vertical = opts.center_vertical or false
+  local center_vertical = opts.center_vertical or true
 
   if #lines == 0 then
     return
