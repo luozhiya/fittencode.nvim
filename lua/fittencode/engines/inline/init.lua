@@ -149,7 +149,9 @@ local generate_one_stage_timer = nil
 function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   if not force and model:cache_hit(row, col) and M.has_suggestions() then
     status:update(SC.SUGGESTIONS_READY)
-    render_virt_text_segments(model:get_suggestions_segments())
+    Log.debug('CACHE HIT')
+    local segments = model:get_suggestions_segments()
+    render_virt_text_segments(segments)
     schedule(on_success, model:make_new_trim_commmited_suggestions())
     return
   else
@@ -264,10 +266,21 @@ local function _accept_impl(range, direction, mode)
     return
   end
   Lines.clear_virt_text()
+  local commited = false
   if mode == 'stage' and range == 'all' then
-    set_text_event_filter(model:get_suggestions_segments().stage)
-    model:sync_commit()
-  else
+    local segments = model:get_suggestions_segments()
+    if not segments then
+      return
+    end
+    if model:is_initial_state() then
+      mode = 'commit'
+    else
+      set_text_event_filter(segments.stage)
+      model:sync_commit()
+      commited = true
+    end
+  end
+  if not commited then
     local updated = model:accept({
       mode = mode,
       range = range,
@@ -360,6 +373,7 @@ function M.lazy_inline_completion()
   if not suggestions_modify_enabled() then
     return
   end
+  Lines.clear_virt_text()
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
   local row, col = Base.get_cursor(window)
@@ -368,7 +382,6 @@ function M.lazy_inline_completion()
     return
   end
   if model:is_advance(row, col, char) then
-    Lines.clear_virt_text()
     model:accept({
       mode = 'commit',
       range = 'char',

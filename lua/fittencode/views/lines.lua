@@ -298,11 +298,12 @@ function M.render_virt_text(opts)
       M.clear_virt_text()
     end, show_time)
   end
+
+  -- api.nvim_command('redraw!')
 end
 
 function M.clear_virt_text()
   api.nvim_buf_clear_namespace(0, namespace, 0, -1)
-  -- api.nvim_command('redraw!')
 end
 
 -- When we edit some complex documents, extmark will not be able to draw correctly.

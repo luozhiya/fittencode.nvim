@@ -122,11 +122,7 @@ end
 ---@param cache SuggestionsCache
 ---@return number?, number?
 local function _next_all(cache)
-  local lines = cache.lines
-  if not lines then
-    return nil
-  end
-  return #lines, #lines[#lines]
+  return
 end
 
 local NEXT = {
@@ -153,6 +149,11 @@ local function _accept(cache, row, col, direction, range)
   if direction == 'forward' then
     local next = next_fx(cache, row, col)
     if next == nil then
+      if range == 'all' then
+        row = #lines
+        col = #lines[row]
+        return row, col
+      end
       row = row + 1
       if row <= #lines then
         if range == 'word' then
@@ -377,7 +378,7 @@ function InlineModel:accept(opts)
   if not next_row or not next_col then
     return
   end
-  local cursor = { next_col, next_col }
+  local cursor = { next_row, next_col }
 
   ---@type AcceptIncrementalUpdates
   local updated = {
@@ -500,6 +501,17 @@ end
 
 function InlineModel:sync_commit()
   self.cache.commit_cursor = self.cache.stage_cursor
+end
+
+function InlineModel:is_initial_state()
+  local stage_cursor = self.cache.stage_cursor
+  if not stage_cursor or not stage_cursor[1] or not stage_cursor[2] then
+    return true
+  end
+  if (stage_cursor[1] == 0 or stage_cursor[1] == 1) and stage_cursor[2] == 0 then
+    return true
+  end
+  return false
 end
 
 return InlineModel

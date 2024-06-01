@@ -59,11 +59,8 @@ function M.setup_autocmds()
   api.nvim_create_autocmd({ 'TextChangedI' }, {
     group = Base.augroup('TextChanged'),
     pattern = '*',
-    callback = function()
+    callback = function(param)
       -- Log.debug('TextChangedI')
-      if not Config.options.inline_completion.auto_triggering_completion then
-        return
-      end
       if ignore then
         return
       end
