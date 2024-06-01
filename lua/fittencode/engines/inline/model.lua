@@ -48,14 +48,19 @@ function InlineModel:recalculate(opts)
     self.cache.utf_pos)
 end
 
----@class AcceptOptions
----@field direction AcceptDirection
----@field range AcceptRange
----@field mode AcceptMode
----@field only_calculate? boolean
-
+---@param cache SuggestionsCache
+---@param row number
+---@param col number
+---@param forward boolean
+---@return number?
 local function _next_char(cache, row, col, forward)
+  if not cache.utf_start then
+    return
+  end
   local utf_start = cache.utf_start[row]
+  if not utf_start then
+    return
+  end
   if forward == false then
     return Unicode.find_zero_reverse(utf_start, col - 1)
   else
@@ -63,8 +68,19 @@ local function _next_char(cache, row, col, forward)
   end
 end
 
+---@param cache SuggestionsCache
+---@param row number
+---@param col number
+---@param forward boolean
+---@return number?
 local function _next_word(cache, row, col, forward)
+  if not cache.utf_words then
+    return
+  end
   local utf_words = cache.utf_words[row]
+  if not utf_words then
+    return
+  end
   local count = #utf_words - col
   local step = 1
   if forward == false then
@@ -81,23 +97,35 @@ local function _next_word(cache, row, col, forward)
   end
 end
 
+---@param cache SuggestionsCache
+---@param row number
+---@param col number
+---@param forward boolean
+---@return number?
 local function _next_line(cache, row, col, forward)
   local lines = cache.lines
+  if not lines then
+    return
+  end
   if row <= #lines then
     local line = lines[row]
     if col < #line then
       if forward == false then
-        return nil
+        return
       else
         return #line
       end
     end
   end
-  return nil
 end
 
+---@param cache SuggestionsCache
+---@return number?, number?
 local function _next_all(cache)
   local lines = cache.lines
+  if not lines then
+    return nil
+  end
   return #lines, #lines[#lines]
 end
 
@@ -112,6 +140,9 @@ local function _accept(cache, row, col, direction, range)
   local lines = cache.lines
   local utf_start = cache.utf_start
   local next_fx = NEXT[range]
+  if not lines or not utf_start or not next_fx then
+    return
+  end
 
   if direction == 'forward' then
     local next = next_fx(cache, row, col)
@@ -151,6 +182,9 @@ end
 
 local function pre_accept(cache, row, col, direction, range)
   local lines = cache.lines
+  if not lines then
+    return
+  end
   if direction == 'forward' then
     if row == 0 and col == 0 then
       row = 1
@@ -165,6 +199,9 @@ end
 
 local function post_accept(cache, row, col, direction, range)
   local lines = cache.lines
+  if not lines then
+    return
+  end
   if direction == 'forward' then
     if row > #lines then
       row = #lines
@@ -270,18 +307,28 @@ local function accept_pipelines(cache, row, col, direction, range)
   return row, col
 end
 
+---@class AcceptOptions
+---@field direction AcceptDirection
+---@field range AcceptRange
+---@field mode AcceptMode
+---@field only_calculate? boolean
+
 ---@param opts AcceptOptions
 ---@return SuggestionsSegments?
 function InlineModel:accept(opts)
   if opts.mode == 'commit' and opts.direction == 'backward' then
-    return nil
+    return
   end
   if not vim.tbl_contains(vim.tbl_keys(NEXT), opts.range) then
-    return nil
+    return
   end
 
+  ---@type integer?, integer?
   local row, col = unpack(self.cache.stage_cursor)
   row, col = accept_pipelines(self.cache, row, col, opts.direction, opts.range)
+  if not row or not col then
+    return
+  end
   local cursor = { row, col }
 
   local updated = {
