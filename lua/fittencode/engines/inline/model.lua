@@ -93,7 +93,11 @@ local function _accept(cache, row, col, direction, next_fx)
     local next = next_fx(cache, row, col)
     if next == nil then
       row = row + 1
-      col = 0
+      if row <= #lines then
+        col = next_fx(cache, row, 0)
+      else
+        col = 0
+      end
     else
       col = next
     end
