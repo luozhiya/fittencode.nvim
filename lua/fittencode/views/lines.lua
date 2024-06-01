@@ -161,6 +161,9 @@ end
 local function move_cursor_to_text_end(window, row, col, lines)
   local cursor = { row, col }
   local count = vim.tbl_count(lines)
+  if count == 0 then
+    return { row, col }
+  end
   if count == 1 then
     local first_len = string.len(lines[1])
     if first_len ~= 0 then

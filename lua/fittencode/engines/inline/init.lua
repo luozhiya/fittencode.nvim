@@ -142,6 +142,7 @@ local generate_one_stage_timer = nil
 function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   if not force and model:cache_hit(row, col) and M.has_suggestions() then
     status:update(SC.SUGGESTIONS_READY)
+    Lines.render_virt_text(make_virt_opts(model:get_suggestions_segments()))
     schedule(on_success, model:make_new_trim_commmited_suggestions())
     return
   else
@@ -162,7 +163,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   if delaytime == nil then
     delaytime = Config.options.delay_completion.delaytime
   end
-  Log.debug('Delay completion request; delaytime: {} ms', delaytime)
+  Log.debug('Delay completion request for delaytime: {} ms', delaytime)
 
   Base.debounce(generate_one_stage_timer, function()
     _generate_one_stage(row, col, on_success, on_error)
@@ -256,16 +257,22 @@ local function _accept_impl(range, direction, mode)
     return
   end
   Lines.clear_virt_text()
-  local updated = model:accept({
-    mode = mode,
-    range = range,
-    direction = direction,
-  })
-  if not updated then
-    return
-  end
-  if mode == 'commit' then
-    set_text_event_filter(updated.commit)
+  if mode == 'stage' and range == 'all' then
+    local segments = model:get_suggestions_segments()
+    set_text_event_filter(segments.stage)
+    model:sync_commit()
+  else
+    local updated = model:accept({
+      mode = mode,
+      range = range,
+      direction = direction,
+    })
+    if not updated then
+      return
+    end
+    if mode == 'commit' then
+      set_text_event_filter(updated.commit)
+    end
   end
   local segments = model:get_suggestions_segments()
   local opts = make_virt_opts(segments)
@@ -274,7 +281,7 @@ local function _accept_impl(range, direction, mode)
   end
   if model:reached_end() then
     if mode == 'stage' then
-      set_text_event_filter(segments.commit)
+      set_text_event_filter(segments.stage)
     end
     generate_one_stage_at_cursor()
   end
@@ -347,12 +354,12 @@ function M.lazy_inline_completion()
   if not suggestions_modify_enabled() then
     return
   end
-  Lines.clear_virt_text()
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
   local row, col = Base.get_cursor(window)
   local char = api.nvim_buf_get_text(buffer, row, col - 1, row, col + 1, {})[1]
   if model:is_advance(row, col, char) then
+    Lines.clear_virt_text()
     model:accept({
       mode = 'commit',
       range = 'char',
@@ -363,8 +370,6 @@ function M.lazy_inline_completion()
     if model:reached_end() then
       model:reset()
     end
-  else
-    model:reset()
   end
 end
 

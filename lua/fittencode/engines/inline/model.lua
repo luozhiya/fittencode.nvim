@@ -278,6 +278,7 @@ function InlineModel:accept(opts)
 
   local row, col = unpack(self.cache.stage_cursor)
   row, col = accept_pipelines(self.cache, row, col, opts.direction, opts.range)
+  local cursor = { row, col }
 
   local updated = {
     lines = self.cache.lines,
@@ -288,16 +289,18 @@ function InlineModel:accept(opts)
     }
   }
 
-  updated.segments.stage = { row, col }
+  updated.segments.stage = cursor
   if opts.mode == 'commit' then
     local pre_commit = self.cache.commit_cursor
     updated.segments.pre_commit = pre_commit
-    updated.segments.commit = { row, col }
+    updated.segments.commit = cursor
   end
 
   if not opts.only_calculate then
-    self.cache.stage_cursor = { row, col }
-    self.cache.commit_cursor = { row, col }
+    self.cache.stage_cursor = cursor
+    if opts.mode == 'commit' then
+      self.cache.commit_cursor = cursor
+    end
   end
 
   ---@type SuggestionsSegments
@@ -373,6 +376,10 @@ function InlineModel:is_advance(row, col, char)
     return true
   end
   return false
+end
+
+function InlineModel:sync_commit()
+  self.cache.commit_cursor = self.cache.stage_cursor
 end
 
 return InlineModel
