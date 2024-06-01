@@ -136,6 +136,12 @@ local NEXT = {
   all = _next_all
 }
 
+---@param cache SuggestionsCache
+---@param row number
+---@param col number
+---@param direction AcceptDirection
+---@param range AcceptRange
+---@return number?, number?
 local function _accept(cache, row, col, direction, range)
   local lines = cache.lines
   local utf_start = cache.utf_start
@@ -150,7 +156,7 @@ local function _accept(cache, row, col, direction, range)
       row = row + 1
       if row <= #lines then
         if range == 'word' then
-          col = next_fx(cache, row, 0)
+          col = next_fx(cache, row, 0) or 0
         elseif range == 'line' then
           local zero = Unicode.find_zero_reverse(utf_start[row], #lines[row])
           col = zero and zero or #lines[row]
@@ -180,6 +186,12 @@ local function _accept(cache, row, col, direction, range)
   return row, col
 end
 
+---@param cache SuggestionsCache
+---@param row number
+---@param col number
+---@param direction AcceptDirection
+---@param range AcceptRange
+---@return number?, number?
 local function pre_accept(cache, row, col, direction, range)
   local lines = cache.lines
   if not lines then
@@ -197,6 +209,12 @@ local function pre_accept(cache, row, col, direction, range)
   return row, col
 end
 
+---@param cache SuggestionsCache
+---@param row number
+---@param col number
+---@param direction AcceptDirection
+---@param range AcceptRange
+---@return number?, number?
 local function post_accept(cache, row, col, direction, range)
   local lines = cache.lines
   if not lines then
@@ -251,6 +269,17 @@ local function get_region(lines, start, end_)
   return region
 end
 
+---@class AcceptIncrementalSegments
+---@field pre_commit? integer[]
+---@field commit? integer[]
+---@field stage? integer[]
+
+---@class AcceptIncrementalUpdates
+---@field lines string[]
+---@field segments AcceptIncrementalSegments
+
+---@param updated AcceptIncrementalUpdates
+---@param utf_end integer[][]
 ---@return SuggestionsSegments?
 local function make_segments(updated, utf_end)
   local lines = updated.lines
@@ -331,6 +360,7 @@ function InlineModel:accept(opts)
   end
   local cursor = { row, col }
 
+  ---@type AcceptIncrementalUpdates
   local updated = {
     lines = self.cache.lines,
     segments = {
@@ -401,6 +431,7 @@ function InlineModel:make_new_trim_commmited_suggestions()
 end
 
 function InlineModel:get_suggestions_segments()
+  ---@type AcceptIncrementalUpdates
   local updated = {
     lines = self.cache.lines,
     segments = {
@@ -412,11 +443,11 @@ function InlineModel:get_suggestions_segments()
 end
 
 function InlineModel:get_next_char()
-  local updated = self:accept({ direction = 'forward', range = 'char', mode = 'commit', only_calculate = true })
-  if not updated then
+  local segments = self:accept({ direction = 'forward', range = 'char', mode = 'commit', only_calculate = true })
+  if not segments then
     return nil
   end
-  local line1 = updated.commit[1]
+  local line1 = segments.commit[1]
   return line1 and line1:sub(1, 1)
 end
 
