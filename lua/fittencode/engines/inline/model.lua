@@ -246,13 +246,6 @@ local ACCEPT_FUNCTIONS = {
   all = accept_all
 }
 
-local RANGES = {
-  'char',
-  'word',
-  'line',
-  'all'
-}
-
 local function accept_pipelines(cache, row, col, direction, range)
   local PIPELINES = {
     pre_accept,
@@ -272,7 +265,7 @@ function InlineModel:accept(opts)
   if opts.mode == 'commit' and opts.direction == 'backward' then
     return nil
   end
-  if not vim.tbl_contains(RANGES, opts.range) then
+  if not vim.tbl_contains(vim.tbl_keys(ACCEPT_FUNCTIONS), opts.range) then
     return nil
   end
 
@@ -312,6 +305,9 @@ function InlineModel:has_suggestions()
 end
 
 function InlineModel:reached_end()
+  if not self.cache.lines or #self.cache.lines == 0 then
+    return true
+  end
   return self.cache.stage_cursor[1] == #self.cache.lines and
       self.cache.stage_cursor[2] == #self.cache.lines[#self.cache.lines]
 end

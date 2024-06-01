@@ -19,7 +19,7 @@ local namespace = api.nvim_create_namespace('FittenCode/InlineCompletion')
 
 ---@param line string
 ---@return boolean
-local function is_whitespace_line(line)
+local function is_spaces_line(line)
   return string.len(line) == 0 or line:match('^%s*$') ~= nil
 end
 
@@ -42,8 +42,8 @@ end
 ---@return string
 local function _make_hl(line, hl)
   local fg = hl[1] and hl[1] or Color.FittenSuggestion
-  local bg = hl[2] and hl[2] or Color.FittenSuggestionBackground
-  return not is_whitespace_line(line) and fg or bg
+  local bg = hl[2] and hl[2] or Color.FittenSuggestionSpacesLine
+  return not is_spaces_line(line) and fg or bg
 end
 
 ---@param lines? string[][]
@@ -274,6 +274,10 @@ function M.render_virt_text(opts)
   local hls = opts.hls or {}
   local hl_mode = opts.hl_mode or 'combine'
   local center_vertical = opts.center_vertical or false
+
+  if #lines == 0 then
+    return
+  end
 
   api.nvim_buf_clear_namespace(0, namespace, 0, -1)
 

@@ -58,7 +58,6 @@ local function process_suggestions(task_id, suggestions)
   end
 
   if not suggestions or #suggestions == 0 then
-    Log.debug('No more suggestions')
     return
   end
 
@@ -85,11 +84,18 @@ local function make_virt_opts(ss)
         ss.changes
       },
       hls = {
-        { Color.FittenSuggestionStage, Color.FittenSuggestionStageBackground },
-        { Color.FittenSuggestion,      Color.FittenSuggestionBackground },
+        { Color.FittenSuggestionStage, Color.FittenSuggestionStageSpacesLine },
+        { Color.FittenSuggestion,      Color.FittenSuggestionSpacesLine },
       },
     }
   end
+end
+
+local function render_virt_text_segments(segments)
+  if not segments then
+    return
+  end
+  Lines.render_virt_text(make_virt_opts(segments))
 end
 
 local function apply_new_suggestions(task_id, row, col, suggestions)
@@ -101,7 +107,7 @@ local function apply_new_suggestions(task_id, row, col, suggestions)
       suggestions = suggestions,
     })
     if suggestions_modify_enabled() then
-      Lines.render_virt_text(make_virt_opts(model:get_suggestions_segments()))
+      render_virt_text_segments(model:get_suggestions_segments())
     end
   end
 end
@@ -123,6 +129,7 @@ local function _generate_one_stage(row, col, on_success, on_error)
     else
       status:update(SC.NO_MORE_SUGGESTIONS)
       schedule(on_success)
+      Log.debug('No More Suggestions')
     end
   end, function()
     status:update(SC.ERROR)
@@ -142,7 +149,7 @@ local generate_one_stage_timer = nil
 function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   if not force and model:cache_hit(row, col) and M.has_suggestions() then
     status:update(SC.SUGGESTIONS_READY)
-    Lines.render_virt_text(make_virt_opts(model:get_suggestions_segments()))
+    render_virt_text_segments(model:get_suggestions_segments())
     schedule(on_success, model:make_new_trim_commmited_suggestions())
     return
   else
@@ -258,8 +265,7 @@ local function _accept_impl(range, direction, mode)
   end
   Lines.clear_virt_text()
   if mode == 'stage' and range == 'all' then
-    local segments = model:get_suggestions_segments()
-    set_text_event_filter(segments.stage)
+    set_text_event_filter(model:get_suggestions_segments().stage)
     model:sync_commit()
   else
     local updated = model:accept({
@@ -275,10 +281,7 @@ local function _accept_impl(range, direction, mode)
     end
   end
   local segments = model:get_suggestions_segments()
-  local opts = make_virt_opts(segments)
-  if opts and #opts.lines > 0 then
-    Lines.render_virt_text(opts)
-  end
+  render_virt_text_segments(segments)
   if model:reached_end() then
     if mode == 'stage' then
       set_text_event_filter(segments.stage)
@@ -366,7 +369,7 @@ function M.lazy_inline_completion()
       direction = 'forward',
     })
     model:update_triggered_cursor(row, col)
-    Lines.render_virt_text(make_virt_opts(model:get_suggestions_segments()))
+    render_virt_text_segments(model:get_suggestions_segments())
     if model:reached_end() then
       model:reset()
     end

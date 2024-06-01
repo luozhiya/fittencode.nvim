@@ -3,10 +3,10 @@ local Base = require('fittencode.base')
 local M = {}
 
 M.FittenSuggestion = 'FittenSuggestion'
-M.FittenSuggestionBackground = 'FittenSuggestionBackground'
+M.FittenSuggestionSpacesLine = 'FittenSuggestionSpacesLine'
 M.FittenNoMoreSuggestion = 'FittenNoMoreSuggestion'
 M.FittenSuggestionStage = 'FittenSuggestionStage'
-M.FittenSuggestionStageBackground = 'FittenSuggestionStage'
+M.FittenSuggestionStageSpacesLine = 'FittenSuggestionStage'
 
 -- Define FittenCode colors
 local colors = {}
@@ -20,7 +20,7 @@ function M.setup_highlight()
     fg = colors.gray,
     ctermfg = 'LightGrey',
   })
-  Base.set_hi(M.FittenSuggestionBackground, {
+  Base.set_hi(M.FittenSuggestionSpacesLine, {
     bg = colors.gray,
     ctermbg = 'LightGrey',
   })

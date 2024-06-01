@@ -12,11 +12,6 @@ local SuggestionsCache = {}
 
 function SuggestionsCache.new()
   local self = setmetatable({}, { __index = SuggestionsCache })
-  self.task_id = nil
-  self.lines = {}
-  self.row = nil
-  self.col = nil
-  self.count = 0
   self.commit_cursor = { 0, 0 }
   self.stage_cursor = { 0, 0 }
   return self
