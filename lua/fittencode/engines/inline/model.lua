@@ -500,7 +500,8 @@ function InlineModel:is_advance(row, col, char)
 end
 
 function InlineModel:sync_commit()
-  self.cache.commit_cursor = self.cache.stage_cursor
+  self.cache.commit_cursor[1] = self.cache.stage_cursor[1]
+  self.cache.commit_cursor[2] = self.cache.stage_cursor[2]
 end
 
 function InlineModel:is_initial_state()

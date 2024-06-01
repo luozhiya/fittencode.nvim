@@ -303,12 +303,17 @@ local function _accept_impl(range, direction, mode)
   if not segments then
     return
   end
-  render_virt_text_segments(segments)
   if model:reached_end() then
     if mode == 'stage' then
       set_text_event_filter(segments.stage)
     end
-    generate_one_stage_at_cursor()
+    if Config.options.inline_completion.auto_triggering_completion then
+      generate_one_stage_at_cursor()
+    else
+      model:reset()
+    end
+  else
+    render_virt_text_segments(segments)
   end
 end
 
@@ -376,14 +381,14 @@ end
 
 ---@return boolean?
 function M.lazy_inline_completion()
-  if not suggestions_modify_enabled() then
-    return
-  end
   if ignore_lazy_once then
     ignore_lazy_once = false
     return
   end
   Lines.clear_virt_text()
+  if not suggestions_modify_enabled() then
+    return
+  end
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
   local row, col = Base.get_cursor(window)
