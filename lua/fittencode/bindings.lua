@@ -58,7 +58,7 @@ function M.setup_autocmds()
       if ignore then
         return
       end
-      InlineEngine.lazy_inline_completion()
+      InlineEngine.on_text_changed()
     end,
     desc = 'Lazy Inline Completion',
   })

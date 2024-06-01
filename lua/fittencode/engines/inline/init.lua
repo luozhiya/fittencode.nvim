@@ -409,7 +409,7 @@ function M.is_inline_enabled()
 end
 
 ---@return boolean?
-function M.lazy_inline_completion()
+function M.on_text_changed()
   if Lines.is_rendering(api.nvim_get_current_buf(), extmark_ids[IDS_PROMPT]) then
     clear_virt_text_prompt()
   end
