@@ -81,11 +81,22 @@ local function _next_word(cache, row, col, forward)
   end
 end
 
-local function _next_line(utf_start, col, forward)
+local function _next_line(cache, row, col, forward)
+  local lines = cache.lines
+  if row <= #lines then
+    local line = lines[row]
+    if col < #line then
+      if forward == false then
+        return nil
+      else
+        return #line
+      end
+    end
+  end
   return nil
 end
 
-local function _accept(cache, row, col, direction, next_fx)
+local function _accept(cache, row, col, direction, range, next_fx)
   local lines = cache.lines
   local utf_start = cache.utf_start
 
@@ -94,7 +105,14 @@ local function _accept(cache, row, col, direction, next_fx)
     if next == nil then
       row = row + 1
       if row <= #lines then
-        col = next_fx(cache, row, 0)
+        if range == 'word' then
+          col = next_fx(cache, row, 0)
+        elseif range == 'line' then
+          local zero = Unicode.find_zero_reverse(utf_start[row], #lines[row])
+          col = zero and zero or #lines[row]
+        else
+          col = 0
+        end
       else
         col = 0
       end
@@ -119,15 +137,15 @@ local function _accept(cache, row, col, direction, next_fx)
 end
 
 local function accept_char(cache, row, col, direction)
-  return _accept(cache, row, col, direction, _next_char)
+  return _accept(cache, row, col, direction, 'char', _next_char)
 end
 
 local function accept_word(cache, row, col, direction)
-  return _accept(cache, row, col, direction, _next_word)
+  return _accept(cache, row, col, direction, 'word', _next_word)
 end
 
 local function accept_line(cache, row, col, direction)
-  return _accept(cache, row, col, direction, _next_line)
+  return _accept(cache, row, col, direction, 'line', _next_line)
 end
 
 local function accept_all(cache)
