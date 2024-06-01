@@ -9,7 +9,7 @@ local Log = require('fittencode.log')
 
 local M = {}
 
-local ignore = false
+local ignore_event = false
 
 -- milliseconds
 local CURSORMOVED_DEBOUNCE_TIME = 120
@@ -28,7 +28,7 @@ function M.setup_autocmds()
       if not Config.options.inline_completion.auto_triggering_completion then
         return
       end
-      if ignore then
+      if ignore_event then
         return
       end
       local row, col = Base.get_cursor()
@@ -41,26 +41,26 @@ function M.setup_autocmds()
     group = Base.augroup('CursorMoved'),
     pattern = '*',
     callback = function()
-      if ignore then
+      if ignore_event then
         return
       end
       Base.debounce(cursormoved_timer, function()
         InlineEngine.on_cursor_moved()
       end, CURSORMOVED_DEBOUNCE_TIME)
     end,
-    desc = 'CursorMoved',
+    desc = 'Cursor Moved',
   })
 
   api.nvim_create_autocmd({ 'TextChangedI' }, {
     group = Base.augroup('TextChanged'),
     pattern = '*',
-    callback = function(param)
-      if ignore then
+    callback = function()
+      if ignore_event then
         return
       end
       InlineEngine.on_text_changed()
     end,
-    desc = 'TextChanged',
+    desc = 'Text Changed',
   })
 
   api.nvim_create_autocmd({ 'BufLeave', 'InsertLeave', 'CursorMoved' }, {
@@ -301,10 +301,10 @@ function M.setup_keyfilters()
         if vim.tbl_contains(FILTERED_KEYS, key) then
           InlineEngine.reset()
           if Config.options.inline_completion.disable_completion_when_delete then
-            ignore = true
+            ignore_event = true
           end
         else
-          ignore = false
+          ignore_event = false
         end
       end
     end)
