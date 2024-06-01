@@ -184,7 +184,7 @@ end
 
 ---@return SuggestionsCache
 function M.get_suggestions()
-  return model:get_suggestions()
+  return model:get_suggestions() or {}
 end
 
 local function generate_one_stage_at_cursor(on_success, on_error)
@@ -281,6 +281,9 @@ local function _accept_impl(range, direction, mode)
     end
   end
   local segments = model:get_suggestions_segments()
+  if not segments then
+    return
+  end
   render_virt_text_segments(segments)
   if model:reached_end() then
     if mode == 'stage' then
@@ -361,6 +364,9 @@ function M.lazy_inline_completion()
   local buffer = api.nvim_win_get_buf(window)
   local row, col = Base.get_cursor(window)
   local char = api.nvim_buf_get_text(buffer, row, col - 1, row, col + 1, {})[1]
+  if not char or char == '' then
+    return
+  end
   if model:is_advance(row, col, char) then
     Lines.clear_virt_text()
     model:accept({
