@@ -82,17 +82,19 @@ end
 
 ---@param virt_text VirtText
 ---@param hl_mode string
+---@return integer[]
 local function set_extmark(virt_text, hl_mode)
   local row, col = Base.get_cursor()
+  local ids = {}
 
   if Config.internal.virtual_text.inline then
-    api.nvim_buf_set_extmark(0, namespace, row, col, {
+    ids[#ids + 1] = api.nvim_buf_set_extmark(0, namespace, row, col, {
       virt_text = virt_text[1],
       virt_text_pos = 'inline',
       hl_mode = hl_mode,
     })
   else
-    api.nvim_buf_set_extmark(0, namespace, row, col, {
+    ids[#ids + 1] = api.nvim_buf_set_extmark(0, namespace, row, col, {
       virt_text = virt_text[1],
       -- `eol` will added space to the end of the line
       virt_text_pos = 'overlay',
@@ -103,11 +105,13 @@ local function set_extmark(virt_text, hl_mode)
   table.remove(virt_text, 1)
 
   if vim.tbl_count(virt_text) > 0 then
-    api.nvim_buf_set_extmark(0, namespace, row, 0, {
+    ids[#ids + 1] = api.nvim_buf_set_extmark(0, namespace, row, 0, {
       virt_lines = virt_text,
       hl_mode = hl_mode,
     })
   end
+
+  return ids
 end
 
 ---@param virt_height integer
@@ -260,6 +264,7 @@ function M.set_text(opts)
 end
 
 ---@class RenderVirtTextOptions
+---@field buffer? integer
 ---@field show_time? integer
 ---@field lines? string[][]
 ---@field hls? string[][]|string
@@ -267,8 +272,13 @@ end
 ---@field center_vertical? boolean
 
 ---@param opts? RenderVirtTextOptions
+---@return integer[]?
 function M.render_virt_text(opts)
   opts = opts or {}
+  local buffer = opts.buffer
+  if not buffer or not api.nvim_buf_is_valid(buffer) then
+    return
+  end
   local lines = opts.lines or {}
   local show_time = opts.show_time or 0
   local hls = opts.hls or {}
@@ -279,8 +289,6 @@ function M.render_virt_text(opts)
     return
   end
 
-  api.nvim_buf_clear_namespace(0, namespace, 0, -1)
-
   ---@type VirtText?
   local virt_text = make_virt_text(lines, hls)
   if not virt_text or vim.tbl_count(virt_text) == 0 then
@@ -289,19 +297,50 @@ function M.render_virt_text(opts)
   if center_vertical then
     move_to_center_vertical(vim.tbl_count(virt_text))
   end
-  set_extmark(virt_text, hl_mode)
+  local ids = set_extmark(virt_text, hl_mode)
+  -- api.nvim_command('redraw!')
 
   if show_time > 0 then
     vim.defer_fn(function()
-      M.clear_virt_text()
+      M.clear_virt_text({
+        buffer = buffer,
+        ids = ids,
+      })
     end, show_time)
   end
 
-  -- api.nvim_command('redraw!')
+  return ids
 end
 
-function M.clear_virt_text()
-  api.nvim_buf_clear_namespace(0, namespace, 0, -1)
+---@class ClearVirtTextOptions
+---@field buffer? integer
+---@field ids? integer[]
+---@field clear_ns? boolean
+
+---@param opts? ClearVirtTextOptions
+function M.clear_virt_text(opts)
+  opts = opts or {}
+  local buffer = opts.buffer or 0
+  local ids = opts.ids or {}
+  local clear_ns = opts.clear_ns or false
+  if clear_ns then
+    api.nvim_buf_clear_namespace(0, namespace, 0, -1)
+  else
+    for _, id in ipairs(ids) do
+      api.nvim_buf_del_extmark(buffer, namespace, id)
+    end
+  end
+end
+
+function M.is_rendering(buffer, ids)
+  ids = ids or {}
+  for _, id in ipairs(ids) do
+    local details = api.nvim_buf_get_extmark_by_id(buffer, namespace, id, { details = true })
+    if #details > 0 then
+      return true
+    end
+  end
+  return false
 end
 
 -- When we edit some complex documents, extmark will not be able to draw correctly.

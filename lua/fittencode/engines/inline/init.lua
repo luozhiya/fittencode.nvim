@@ -27,6 +27,11 @@ local tasks = nil
 ---@type Status
 local status = nil
 
+local IDS_SUGGESTIONS = 1
+local IDS_PROMPT = 2
+---@type integer[][]
+local extmark_ids = { {}, {} }
+
 function M.setup()
   model = Model:new()
   tasks = TaskScheduler:new()
@@ -35,15 +40,7 @@ function M.setup()
 end
 
 local function suggestions_modify_enabled()
-  if not M.is_inline_enabled() then
-    return false
-  end
-
-  if not M.has_suggestions() then
-    return false
-  end
-
-  return true
+  return M.is_inline_enabled() and M.has_suggestions()
 end
 
 ---@param task_id integer
@@ -71,14 +68,17 @@ end
 ---@param ss SuggestionsSegments
 ---@return RenderVirtTextOptions?
 local function make_virt_opts(ss)
+  local buffer = api.nvim_get_current_buf()
   if Config.options.inline_completion.accept_mode == 'commit' then
     return {
+      buffer = buffer,
       lines = {
         ss.changes,
       }
     }
   elseif Config.options.inline_completion.accept_mode == 'stage' then
     return {
+      buffer = buffer,
       lines = {
         ss.stage,
         ss.changes
@@ -95,7 +95,29 @@ local function render_virt_text_segments(segments)
   if not segments then
     return
   end
-  Lines.render_virt_text(make_virt_opts(segments))
+  extmark_ids[IDS_SUGGESTIONS] = Lines.render_virt_text(make_virt_opts(segments)) or {}
+end
+
+local function clear_virt_text(ids)
+  Lines.clear_virt_text({
+    buffer = api.nvim_get_current_buf(),
+    ids = ids,
+  })
+end
+
+local function clear_virt_text_prompt()
+  clear_virt_text(extmark_ids[IDS_PROMPT])
+  extmark_ids[IDS_PROMPT] = {}
+end
+
+local function clear_virt_text_suggestions()
+  clear_virt_text(extmark_ids[IDS_SUGGESTIONS])
+  extmark_ids[IDS_SUGGESTIONS] = {}
+end
+
+local function clear_virt_text_all()
+  clear_virt_text_suggestions()
+  clear_virt_text_prompt()
 end
 
 local function apply_new_suggestions(task_id, row, col, suggestions)
@@ -159,7 +181,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   end
 
   if suggestions_modify_enabled() then
-    Lines.clear_virt_text()
+    clear_virt_text_all()
   end
   model:reset()
 
@@ -206,7 +228,9 @@ function M.triggering_completion()
 
   local prompt = ' (Currently no completion options available)'
   local fx = function()
-    Lines.render_virt_text({
+    local buffer = api.nvim_get_current_buf()
+    extmark_ids[IDS_PROMPT] = Lines.render_virt_text({
+      buffer = buffer,
       lines = {
         { prompt }
       },
@@ -271,7 +295,7 @@ local function _accept_impl(range, direction, mode)
     return
   end
   ignore_lazy_once = true
-  Lines.clear_virt_text()
+  clear_virt_text_all()
   local commited = false
   if mode == 'stage' and range == 'all' then
     local segments = model:get_suggestions_segments()
@@ -348,18 +372,21 @@ end
 function M.reset()
   status:update(SC.IDLE)
   if M.is_inline_enabled() then
-    Lines.clear_virt_text()
+    clear_virt_text_all()
   end
   model:reset()
   tasks:clear()
 end
 
 function M.advance()
+  if Lines.is_rendering(api.nvim_get_current_buf(), extmark_ids[IDS_PROMPT]) then
+    clear_virt_text_prompt()
+  end
   if not suggestions_modify_enabled() then
     return
   end
   if not model:cache_hit(Base.get_cursor()) then
-    Lines.clear_virt_text()
+    clear_virt_text_all()
     model:reset()
   end
 end
@@ -381,14 +408,17 @@ end
 
 ---@return boolean?
 function M.lazy_inline_completion()
+  if Lines.is_rendering(api.nvim_get_current_buf(), extmark_ids[IDS_PROMPT]) then
+    clear_virt_text_prompt()
+  end
+  if not suggestions_modify_enabled() then
+    return
+  end
   if ignore_lazy_once then
     ignore_lazy_once = false
     return
   end
-  Lines.clear_virt_text()
-  if not suggestions_modify_enabled() then
-    return
-  end
+  clear_virt_text_all()
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
   local row, col = Base.get_cursor(window)
