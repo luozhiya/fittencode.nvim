@@ -91,13 +91,6 @@ local function make_virt_opts(ss)
   end
 end
 
-local function render_virt_text_segments(segments)
-  if not segments then
-    return
-  end
-  extmark_ids[IDS_SUGGESTIONS] = Lines.render_virt_text(make_virt_opts(segments)) or {}
-end
-
 local function clear_virt_text(ids)
   Lines.clear_virt_text({
     buffer = api.nvim_get_current_buf(),
@@ -118,6 +111,14 @@ end
 local function clear_virt_text_all()
   clear_virt_text_suggestions()
   clear_virt_text_prompt()
+end
+
+local function render_virt_text_segments(segments)
+  if not segments then
+    return
+  end
+  clear_virt_text_all()
+  extmark_ids[IDS_SUGGESTIONS] = Lines.render_virt_text(make_virt_opts(segments)) or {}
 end
 
 local function apply_new_suggestions(task_id, row, col, suggestions)
@@ -229,6 +230,7 @@ function M.triggering_completion()
   local prompt = ' (Currently no completion options available)'
   local fx = function()
     local buffer = api.nvim_get_current_buf()
+    clear_virt_text_all()
     extmark_ids[IDS_PROMPT] = Lines.render_virt_text({
       buffer = buffer,
       lines = {
