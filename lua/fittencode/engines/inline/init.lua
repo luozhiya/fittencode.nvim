@@ -428,7 +428,7 @@ function M.on_text_changed()
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
   local row, col = Base.get_cursor(window)
-  local char = api.nvim_buf_get_text(buffer, row, col - 1, row, col + 1, {})[1]
+  local char = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]:sub(col, col)
   if not char or char == '' then
     return
   end
@@ -445,8 +445,8 @@ function M.on_text_changed()
     else
       render_virt_text_segments(model:get_suggestions_segments())
     end
-  elseif model:is_advance(row, col, char, true) then
-    -- Accept word
+  elseif model:cache_hit(row, col) then
+    -- Accept word/line/all
   else
     clear_virt_text_all()
   end

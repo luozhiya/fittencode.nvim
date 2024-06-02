@@ -487,19 +487,13 @@ end
 ---@param col number
 ---@param char string
 ---@return boolean
-function InlineModel:is_advance(row, col, char, oneline)
+function InlineModel:is_advance(row, col, char)
   local triggered_cursor = self.cache.triggered_cursor
   if not triggered_cursor or not triggered_cursor[1] or not triggered_cursor[2] then
     return false
   end
-  if oneline and triggered_cursor[1] == row and col == triggered_cursor[2] then
-    return true
-  end
   local cache_char = self:get_next_char()
-  if triggered_cursor[1] == row and triggered_cursor[2] + 1 == col and char == cache_char then
-    return true
-  end
-  return false
+  return triggered_cursor[1] == row and triggered_cursor[2] + 1 == col and char == cache_char
 end
 
 function InlineModel:sync_commit()
