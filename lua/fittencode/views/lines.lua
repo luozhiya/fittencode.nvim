@@ -283,7 +283,7 @@ function M.render_virt_text(opts)
   local show_time = opts.show_time or 0
   local hls = opts.hls or {}
   local hl_mode = opts.hl_mode or 'combine'
-  local center_vertical = opts.center_vertical or true
+  local center_vertical = opts.center_vertical ~= false or false
 
   if #lines == 0 then
     return

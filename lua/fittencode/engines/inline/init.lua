@@ -223,7 +223,7 @@ function M.has_suggestions()
   return model:has_suggestions()
 end
 
----@return SuggestionsCache
+---@return string[]
 function M.get_suggestions()
   return model:get_suggestions() or {}
 end
@@ -397,28 +397,6 @@ function M.reset()
   tasks:clear()
 end
 
-local function _on_cursor_moved()
-  if Lines.is_rendering(api.nvim_get_current_buf(), extmark_ids[IDS_PROMPT]) then
-    clear_virt_text_prompt()
-  end
-  if not suggestions_modify_enabled() then
-    return
-  end
-  if not model:cache_hit(Base.get_cursor()) then
-    clear_virt_text_all()
-    model:reset()
-  end
-end
-
-function M.on_cursor_moved()
-  if ignore_event then
-    return
-  end
-  Base.debounce(cursormoved_timer, function()
-    _on_cursor_moved()
-  end, CURSORMOVED_DEBOUNCE_TIME)
-end
-
 ---@return boolean
 function M.is_inline_enabled()
   if Config.options.completion_mode ~= 'inline' then
@@ -432,6 +410,11 @@ function M.is_inline_enabled()
     return false
   end
   return true
+end
+
+---@return integer
+function M.get_status()
+  return status:get_current()
 end
 
 ---@return boolean?
@@ -469,11 +452,6 @@ function M.on_text_changed()
       model:reset()
     end
   end
-end
-
----@return integer
-function M.get_status()
-  return status:get_current()
 end
 
 function M.on_leave()
@@ -514,6 +492,28 @@ function M.on_cursor_hold()
   end
   local row, col = Base.get_cursor()
   M.generate_one_stage(row, col)
+end
+
+local function _on_cursor_moved()
+  if Lines.is_rendering(api.nvim_get_current_buf(), extmark_ids[IDS_PROMPT]) then
+    clear_virt_text_prompt()
+  end
+  if not suggestions_modify_enabled() then
+    return
+  end
+  if not model:cache_hit(Base.get_cursor()) then
+    clear_virt_text_all()
+    model:reset()
+  end
+end
+
+function M.on_cursor_moved()
+  if ignore_event then
+    return
+  end
+  Base.debounce(cursormoved_timer, function()
+    _on_cursor_moved()
+  end, CURSORMOVED_DEBOUNCE_TIME)
 end
 
 return M
