@@ -118,6 +118,7 @@ use {
     --   - Interrupt
     --      - Enter a different character than suggested
     --      - Exit insert mode
+    --      - Move the cursor
     -- * `stage` (Stage style accept)
     --   - `Tab` to Accept all staged characters
     --   - `Alt+Right` to Stage word

@@ -32,8 +32,6 @@ local IDS_PROMPT = 2
 ---@type integer[][]
 local extmark_ids = { {}, {} }
 
-local ignore_textchanged = false
-
 ---@type uv_timer_t
 local generate_one_stage_timer = nil
 
@@ -87,7 +85,8 @@ local function make_virt_opts(ss)
       buffer = buffer,
       lines = {
         ss.changes,
-      }
+      },
+      hl_mode = 'replace',
     }
   elseif Config.options.inline_completion.accept_mode == 'stage' then
     return {
@@ -100,6 +99,7 @@ local function make_virt_opts(ss)
         { Color.FittenSuggestionStage, Color.FittenSuggestionStageSpacesLine },
         { Color.FittenSuggestion,      Color.FittenSuggestionSpacesLine },
       },
+      hl_mode = 'replace',
     }
   end
 end
@@ -188,8 +188,7 @@ end
 function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   if not force and model:cache_hit(row, col) and M.has_suggestions() then
     status:update(SC.SUGGESTIONS_READY)
-    local segments = model:get_suggestions_segments()
-    render_virt_text_segments(segments)
+    render_virt_text_segments(model:get_suggestions_segments())
     schedule(on_success, model:make_new_trim_commmited_suggestions())
     Log.debug('CACHE HIT')
     return
@@ -313,17 +312,15 @@ local function _accept_impl(range, direction, mode)
   if mode == 'commit' and direction == 'backward' then
     return
   end
-  ignore_textchanged = true
-  clear_virt_text_all()
   local commited = false
   if mode == 'stage' and range == 'all' then
     local segments = model:get_suggestions_segments()
-    if not segments then
-      return
-    end
     if model:is_initial_state() then
       mode = 'commit'
     else
+      if #segments.stage == 1 and #segments.stage[1] == 0 then
+        return
+      end
       set_text_event_filter(segments.stage)
       model:sync_commit()
       commited = true
@@ -428,11 +425,6 @@ function M.on_text_changed()
   if not suggestions_modify_enabled() then
     return
   end
-  if ignore_textchanged then
-    ignore_textchanged = false
-    return
-  end
-  clear_virt_text_all()
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
   local row, col = Base.get_cursor(window)
@@ -447,10 +439,16 @@ function M.on_text_changed()
       direction = 'forward',
     })
     model:update_triggered_cursor(row, col)
-    render_virt_text_segments(model:get_suggestions_segments())
     if model:reached_end() then
+      clear_virt_text_all()
       model:reset()
+    else
+      render_virt_text_segments(model:get_suggestions_segments())
     end
+  elseif model:is_advance(row, col, char, true) then
+    -- Accept word
+  else
+    clear_virt_text_all()
   end
 end
 

@@ -281,7 +281,7 @@ end
 
 ---@param updated AcceptIncrementalUpdates
 ---@param utf_end integer[][]
----@return SuggestionsSegments?
+---@return SuggestionsSegments
 local function make_segments(updated, utf_end)
   local lines = updated.lines
   local segments = updated.segments
@@ -460,7 +460,7 @@ function InlineModel:make_new_trim_commmited_suggestions()
   return get_region(lines, self.cache.commit_cursor, { #lines, #lines[#lines] })
 end
 
----@return SuggestionsSegments?
+---@return SuggestionsSegments
 function InlineModel:get_suggestions_segments()
   ---@type AcceptIncrementalUpdates
   local updated = {
@@ -487,10 +487,13 @@ end
 ---@param col number
 ---@param char string
 ---@return boolean
-function InlineModel:is_advance(row, col, char)
+function InlineModel:is_advance(row, col, char, oneline)
   local triggered_cursor = self.cache.triggered_cursor
   if not triggered_cursor or not triggered_cursor[1] or not triggered_cursor[2] then
     return false
+  end
+  if oneline and triggered_cursor[1] == row and col == triggered_cursor[2] then
+    return true
   end
   local cache_char = self:get_next_char()
   if triggered_cursor[1] == row and triggered_cursor[2] + 1 == col and char == cache_char then
