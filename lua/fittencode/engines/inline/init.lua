@@ -37,6 +37,14 @@ local ignore_lazy_once = false
 ---@type uv_timer_t
 local generate_one_stage_timer = nil
 
+local ignore_event = false
+
+-- milliseconds
+local CURSORMOVED_DEBOUNCE_TIME = 120
+
+---@type uv_timer_t
+local cursormoved_timer = nil
+
 function M.setup()
   model = Model:new()
   tasks = TaskScheduler:new()
@@ -389,7 +397,7 @@ function M.reset()
   tasks:clear()
 end
 
-function M.on_cursor_moved()
+local function _on_cursor_moved()
   if Lines.is_rendering(api.nvim_get_current_buf(), extmark_ids[IDS_PROMPT]) then
     clear_virt_text_prompt()
   end
@@ -400,6 +408,15 @@ function M.on_cursor_moved()
     clear_virt_text_all()
     model:reset()
   end
+end
+
+function M.on_cursor_moved()
+  if ignore_event then
+    return
+  end
+  Base.debounce(cursormoved_timer, function()
+    _on_cursor_moved()
+  end, CURSORMOVED_DEBOUNCE_TIME)
 end
 
 ---@return boolean
@@ -419,6 +436,9 @@ end
 
 ---@return boolean?
 function M.on_text_changed()
+  if ignore_event then
+    return
+  end
   if Lines.is_rendering(api.nvim_get_current_buf(), extmark_ids[IDS_PROMPT]) then
     clear_virt_text_prompt()
   end
@@ -454,6 +474,27 @@ end
 ---@return integer
 function M.get_status()
   return status:get_current()
+end
+
+function M.on_leave()
+  M.reset()
+end
+
+function M.on_key()
+end
+
+function M.on_cursor_hold()
+  if ignore_event then
+    return
+  end
+  if not M.is_inline_enabled() then
+    return
+  end
+  if not Config.options.inline_completion.auto_triggering_completion then
+    return
+  end
+  local row, col = Base.get_cursor()
+  M.generate_one_stage(row, col)
 end
 
 return M

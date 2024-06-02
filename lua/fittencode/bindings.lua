@@ -9,67 +9,41 @@ local Log = require('fittencode.log')
 
 local M = {}
 
-local ignore_event = false
-
--- milliseconds
-local CURSORMOVED_DEBOUNCE_TIME = 120
-
----@type uv_timer_t
-local cursormoved_timer = nil
-
 function M.setup_autocmds()
   api.nvim_create_autocmd({ 'CursorHoldI' }, {
-    group = Base.augroup('GenerateOneStage'),
+    group = Base.augroup('CursorHold'),
     pattern = '*',
     callback = function()
-      if not InlineEngine.is_inline_enabled() then
-        return
-      end
-      if not Config.options.inline_completion.auto_triggering_completion then
-        return
-      end
-      if ignore_event then
-        return
-      end
-      local row, col = Base.get_cursor()
-      InlineEngine.generate_one_stage(row, col)
+      InlineEngine.on_cursor_hold()
     end,
-    desc = 'Generate One Stage',
+    desc = 'On Cursor Hold',
   })
 
   api.nvim_create_autocmd({ 'CursorMovedI' }, {
     group = Base.augroup('CursorMoved'),
     pattern = '*',
     callback = function()
-      if ignore_event then
-        return
-      end
-      Base.debounce(cursormoved_timer, function()
-        InlineEngine.on_cursor_moved()
-      end, CURSORMOVED_DEBOUNCE_TIME)
+      InlineEngine.on_cursor_moved()
     end,
-    desc = 'Cursor Moved',
+    desc = 'On Cursor Moved',
   })
 
   api.nvim_create_autocmd({ 'TextChangedI' }, {
     group = Base.augroup('TextChanged'),
     pattern = '*',
     callback = function()
-      if ignore_event then
-        return
-      end
       InlineEngine.on_text_changed()
     end,
-    desc = 'Text Changed',
+    desc = 'On Text Changed',
   })
 
-  api.nvim_create_autocmd({ 'BufLeave', 'InsertLeave', 'CursorMoved' }, {
-    group = Base.augroup('Reset'),
+  api.nvim_create_autocmd({ 'BufLeave', 'InsertLeave' }, {
+    group = Base.augroup('Leave'),
     pattern = '*',
     callback = function()
-      InlineEngine.reset()
+      InlineEngine.on_leave()
     end,
-    desc = 'Reset',
+    desc = 'On Leave',
   })
 end
 
