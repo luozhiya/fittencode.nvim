@@ -32,6 +32,11 @@ local IDS_PROMPT = 2
 ---@type integer[][]
 local extmark_ids = { {}, {} }
 
+local ignore_lazy_once = false
+
+---@type uv_timer_t
+local generate_one_stage_timer = nil
+
 function M.setup()
   model = Model:new()
   tasks = TaskScheduler:new()
@@ -91,6 +96,7 @@ local function make_virt_opts(ss)
   end
 end
 
+---@param ids integer[]
 local function clear_virt_text(ids)
   Lines.clear_virt_text({
     buffer = api.nvim_get_current_buf(),
@@ -113,6 +119,7 @@ local function clear_virt_text_all()
   clear_virt_text_prompt()
 end
 
+---@param segments? SuggestionsSegments
 local function render_virt_text_segments(segments)
   if not segments then
     return
@@ -121,6 +128,10 @@ local function render_virt_text_segments(segments)
   extmark_ids[IDS_SUGGESTIONS] = Lines.render_virt_text(make_virt_opts(segments)) or {}
 end
 
+---@param task_id integer
+---@param row integer
+---@param col integer
+---@param suggestions? Suggestions
 local function apply_new_suggestions(task_id, row, col, suggestions)
   if suggestions then
     model:recalculate({
@@ -159,9 +170,6 @@ local function _generate_one_stage(row, col, on_success, on_error)
     schedule(on_error)
   end)
 end
-
----@type uv_timer_t
-local generate_one_stage_timer = nil
 
 ---@param row integer
 ---@param col integer
@@ -286,8 +294,9 @@ local function set_text_event_filter(lines)
   end)
 end
 
-local ignore_lazy_once = false
-
+---@param range AcceptRange
+---@param direction AcceptDirection
+---@param mode? AcceptMode
 local function _accept_impl(range, direction, mode)
   if not suggestions_modify_enabled() then
     return
