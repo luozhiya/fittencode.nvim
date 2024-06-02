@@ -228,7 +228,7 @@ function M.get_suggestions()
   return model:get_suggestions() or {}
 end
 
-local function generate_one_stage_at_cursor(on_success, on_error)
+local function generate_one_stage_current_force(on_success, on_error)
   M.reset()
 
   local row, col = Base.get_cursor()
@@ -257,7 +257,7 @@ function M.triggering_completion()
       show_time = 2000,
     })
   end
-  generate_one_stage_at_cursor(function(suggestions)
+  generate_one_stage_current_force(function(suggestions)
     if not suggestions then
       fx()
     end
@@ -351,7 +351,7 @@ local function _accept_impl(range, direction, mode)
       set_text_event_filter(segments.stage)
     end
     if Config.options.inline_completion.auto_triggering_completion then
-      generate_one_stage_at_cursor()
+      generate_one_stage_current_force()
     else
       model:reset()
     end
