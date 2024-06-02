@@ -32,7 +32,7 @@ local IDS_PROMPT = 2
 ---@type integer[][]
 local extmark_ids = { {}, {} }
 
-local ignore_lazy_once = false
+local ignore_textchanged = false
 
 ---@type uv_timer_t
 local generate_one_stage_timer = nil
@@ -313,7 +313,7 @@ local function _accept_impl(range, direction, mode)
   if mode == 'commit' and direction == 'backward' then
     return
   end
-  ignore_lazy_once = true
+  ignore_textchanged = true
   clear_virt_text_all()
   local commited = false
   if mode == 'stage' and range == 'all' then
@@ -445,8 +445,8 @@ function M.on_text_changed()
   if not suggestions_modify_enabled() then
     return
   end
-  if ignore_lazy_once then
-    ignore_lazy_once = false
+  if ignore_textchanged then
+    ignore_textchanged = false
     return
   end
   clear_virt_text_all()
@@ -480,15 +480,16 @@ function M.on_leave()
   M.reset()
 end
 
+-- '<80>kd', '<80>kD' in Lua
+local FILTERED_KEYS = {}
+vim.tbl_map(function(key)
+  FILTERED_KEYS[#FILTERED_KEYS + 1] = api.nvim_replace_termcodes(key, true, true, true)
+end, {
+  '<Backspace>',
+  '<Delete>',
+})
+
 function M.on_key(key)
-  -- '<80>kd', '<80>kD' in Lua
-  local FILTERED_KEYS = {}
-  vim.tbl_map(function(k)
-    FILTERED_KEYS[#FILTERED_KEYS + 1] = api.nvim_replace_termcodes(k, true, true, true)
-  end, {
-    '<Backspace>',
-    '<Delete>',
-  })
   if api.nvim_get_mode().mode == 'i' then
     if vim.tbl_contains(FILTERED_KEYS, key) then
       M.reset()
