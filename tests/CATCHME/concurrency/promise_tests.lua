@@ -1,4 +1,4 @@
-local Promise = require('promise')
+local Promise = require('fittencode.concurrency.promise')
 
 local count = 1
 

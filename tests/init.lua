@@ -14,8 +14,10 @@ vim.opt.runtimepath:append(root('tests'))
 -- require('tests.CATCHME.inline_model.word3')
 -- require('tests.CATCHME.inline_model.word4')
 -- require('tests.CATCHME.inline_model.word5')
-require('tests.CATCHME.inline_model.word6')
+-- require('tests.CATCHME.inline_model.word6')
 -- require('tests.CATCHME.inline_model.line')
+
+require('tests.CATCHME.concurrency.promise_tests')
 
 -- vim.cmd([[
 --   sleep 1000m
