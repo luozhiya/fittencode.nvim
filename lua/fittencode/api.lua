@@ -134,6 +134,9 @@ M.api = {
   show_chat = function()
     return ActionsEngine.show_chat()
   end,
+  toggle_chat = function()
+    return ActionsEngine.toggle_chat()
+  end,
 }
 
 return M

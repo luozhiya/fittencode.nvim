@@ -12,6 +12,7 @@ local Log = require('fittencode.log')
 ---@field create function
 ---@field last_cursor? table
 ---@field callbacks table
+---@field is_visible function
 local M = {}
 
 function M:new(callbacks)
@@ -156,6 +157,10 @@ end
 ---@return integer[]?
 function M:commit(lines)
   return _commit(self.window, self.buffer, lines)
+end
+
+function M:is_visible()
+  return self.window and api.nvim_win_is_valid(self.window)
 end
 
 return M

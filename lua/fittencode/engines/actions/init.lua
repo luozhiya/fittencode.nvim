@@ -690,4 +690,12 @@ function ActionsEngine.show_chat()
   chat:show()
 end
 
+function ActionsEngine.toggle_chat()
+  if chat:is_visible() then
+    chat:close()
+  else
+    chat:show()
+  end
+end
+
 return ActionsEngine

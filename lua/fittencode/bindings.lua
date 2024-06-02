@@ -208,6 +208,8 @@ function M.setup_commands()
     stop_eval = API.stop_eval,
     -- Arguments: Nop
     show_chat = API.show_chat,
+    -- Arguments: Nop
+    toggle_chat = API.toggle_chat,
   }
   Base.command('Fitten', function(line)
     ---@type string[]
