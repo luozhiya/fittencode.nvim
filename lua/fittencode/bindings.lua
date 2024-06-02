@@ -259,28 +259,10 @@ function M.setup_keymaps()
   Base.map('i', '<A-\\>', API.triggering_completion)
 end
 
--- '<80>kd', '<80>kD' in Lua
-local FILTERED_KEYS = {}
-vim.tbl_map(function(key)
-  FILTERED_KEYS[#FILTERED_KEYS + 1] = api.nvim_replace_termcodes(key, true, true, true)
-end, {
-  '<Backspace>',
-  '<Delete>',
-})
-
 function M.setup_keyfilters()
   vim.on_key(function(key)
     vim.schedule(function()
-      if api.nvim_get_mode().mode == 'i' then
-        if vim.tbl_contains(FILTERED_KEYS, key) then
-          InlineEngine.reset()
-          if Config.options.inline_completion.disable_completion_when_delete then
-            ignore_event = true
-          end
-        else
-          ignore_event = false
-        end
-      end
+      InlineEngine.on_key(key)
     end)
   end)
 end

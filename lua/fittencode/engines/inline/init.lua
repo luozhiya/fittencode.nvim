@@ -480,7 +480,25 @@ function M.on_leave()
   M.reset()
 end
 
-function M.on_key()
+function M.on_key(key)
+  -- '<80>kd', '<80>kD' in Lua
+  local FILTERED_KEYS = {}
+  vim.tbl_map(function(k)
+    FILTERED_KEYS[#FILTERED_KEYS + 1] = api.nvim_replace_termcodes(k, true, true, true)
+  end, {
+    '<Backspace>',
+    '<Delete>',
+  })
+  if api.nvim_get_mode().mode == 'i' then
+    if vim.tbl_contains(FILTERED_KEYS, key) then
+      M.reset()
+      if Config.options.inline_completion.disable_completion_when_delete then
+        ignore_event = true
+      end
+    else
+      ignore_event = false
+    end
+  end
 end
 
 function M.on_cursor_hold()
