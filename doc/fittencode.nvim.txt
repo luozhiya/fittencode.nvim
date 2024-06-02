@@ -1,4 +1,4 @@
-*fittencode.nvim.txt*       For Neovim >= 0.8.0       Last change: 2024 May 27
+*fittencode.nvim.txt*       For Neovim >= 0.8.0      Last change: 2024 June 02
 
 ==============================================================================
 Table of Contents                          *fittencode.nvim-table-of-contents*
@@ -132,6 +132,25 @@ DEFAULTS ~
         -- Auto triggering completion
         ---@type boolean
         auto_triggering_completion = true,
+        -- Accept Mode
+        -- Available options:
+        -- * `commit` (VSCode style accept, also default)
+        --   - `Tab` to Accept all suggestions
+        --   - `Alt+Right` to Accept word
+        --   - `Alt+Down` to Accept line
+        --   - Interrupt
+        --      - Enter a different character than suggested
+        --      - Exit insert mode
+        --      - Move the cursor
+        -- * `stage` (Stage style accept)
+        --   - `Tab` to Accept all staged characters
+        --   - `Alt+Right` to Stage word
+        --   - `Alt+Left` to Revoke word
+        --   - `Alt+Down` to Stage line
+        --   - `Alt+Up` to Revoke line
+        --   - Interrupt(Same as `commit`, but with the following changes:)
+        --      - Characters that have already been staged will be lost.
+        accept_mode = 'commit',    
       },
       delay_completion = {
         -- Delay time for inline completion (in milliseconds).
