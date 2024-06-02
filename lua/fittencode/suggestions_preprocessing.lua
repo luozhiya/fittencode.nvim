@@ -68,8 +68,6 @@ local function condense_nl(opts)
     end
   end
 
-  Log.debug('remove_all: {}, keep_first: {}', remove_all, keep_first)
-
   mode = mode or 'first'
 
   if mode == 'all' then

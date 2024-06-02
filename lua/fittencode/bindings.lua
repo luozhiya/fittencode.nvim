@@ -9,76 +9,41 @@ local Log = require('fittencode.log')
 
 local M = {}
 
-local ignore = false
-
--- Debounce time for advance function, in milliseconds
-local ADVANCE_DEBOUNCE_TIME = 120
-
----@type uv_timer_t
-local advance_timer = nil
-
 function M.setup_autocmds()
   api.nvim_create_autocmd({ 'CursorHoldI' }, {
-    group = Base.augroup('GenerateOneStage'),
+    group = Base.augroup('CursorHold'),
     pattern = '*',
     callback = function()
-      -- Log.debug('CursorHoldI')
-      if not InlineEngine.is_inline_enabled() then
-        return
-      end
-      if not Config.options.inline_completion.auto_triggering_completion then
-        return
-      end
-      if ignore then
-        return
-      end
-      local row, col = Base.get_cursor()
-      InlineEngine.generate_one_stage(row, col)
+      InlineEngine.on_cursor_hold()
     end,
-    desc = 'Generate one stage',
+    desc = 'On Cursor Hold',
   })
 
   api.nvim_create_autocmd({ 'CursorMovedI' }, {
-    group = Base.augroup('Advance'),
+    group = Base.augroup('CursorMoved'),
     pattern = '*',
     callback = function()
-      -- Log.debug('CursorMovedI')
-      if not Config.options.inline_completion.auto_triggering_completion then
-        return
-      end
-      if ignore then
-        return
-      end
-      Base.debounce(advance_timer, function()
-        InlineEngine.advance()
-      end, ADVANCE_DEBOUNCE_TIME)
+      InlineEngine.on_cursor_moved()
     end,
-    desc = 'Advance',
+    desc = 'On Cursor Moved',
   })
 
   api.nvim_create_autocmd({ 'TextChangedI' }, {
     group = Base.augroup('TextChanged'),
     pattern = '*',
     callback = function()
-      -- Log.debug('TextChangedI')
-      if not Config.options.inline_completion.auto_triggering_completion then
-        return
-      end
-      if ignore then
-        return
-      end
-      InlineEngine.lazy_inline_completion()
+      InlineEngine.on_text_changed()
     end,
-    desc = 'Lazy inline completion',
+    desc = 'On Text Changed',
   })
 
-  api.nvim_create_autocmd({ 'BufLeave', 'InsertLeave', 'CursorMoved' }, {
-    group = Base.augroup('Reset'),
+  api.nvim_create_autocmd({ 'BufLeave', 'InsertLeave' }, {
+    group = Base.augroup('Leave'),
     pattern = '*',
     callback = function()
-      InlineEngine.reset()
+      InlineEngine.on_leave()
     end,
-    desc = 'Reset',
+    desc = 'On Leave',
   })
 end
 
@@ -289,32 +254,15 @@ function M.setup_keymaps()
   end)
   Base.map('i', '<C-Down>', API.accept_line)
   Base.map('i', '<C-Right>', API.accept_word)
+  Base.map('i', '<C-Up>', API.revoke_line)
+  Base.map('i', '<C-Left>', API.revoke_word)
   Base.map('i', '<A-\\>', API.triggering_completion)
 end
-
--- '<80>kd', '<80>kD' in Lua
-local FILTERED_KEYS = {}
-vim.tbl_map(function(key)
-  FILTERED_KEYS[#FILTERED_KEYS + 1] = api.nvim_replace_termcodes(key, true, true, true)
-end, {
-  '<Backspace>',
-  '<Delete>',
-})
 
 function M.setup_keyfilters()
   vim.on_key(function(key)
     vim.schedule(function()
-      if api.nvim_get_mode().mode == 'i' then
-        if vim.tbl_contains(FILTERED_KEYS, key) then
-          Log.debug('Delete key pressed, resetting inline completion')
-          InlineEngine.reset()
-          if Config.options.inline_completion.disable_completion_when_delete then
-            ignore = true
-          end
-        else
-          ignore = false
-        end
-      end
+      InlineEngine.on_key(key)
     end)
   end)
 end
