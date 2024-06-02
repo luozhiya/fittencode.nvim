@@ -1,3 +1,6 @@
+local api = vim.api
+
+local Base = require('fittencode.base')
 local Log = require('fittencode.log')
 local SuggestionsCache = require('fittencode.engines.inline.suggestions_cache')
 local Unicode = require('fittencode.unicode')
@@ -483,11 +486,13 @@ function InlineModel:get_next_char()
   return line1 and line1:sub(1, 1)
 end
 
----@param row number
----@param col number
----@param char string
 ---@return boolean
-function InlineModel:is_advance(row, col, char)
+function InlineModel:is_advance(window, buffer)
+  local row, col = Base.get_cursor(window)
+  local char = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]:sub(col, col)
+  if not char or char == '' then
+    return false
+  end
   local triggered_cursor = self.cache.triggered_cursor
   if not triggered_cursor or not triggered_cursor[1] or not triggered_cursor[2] then
     return false

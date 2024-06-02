@@ -428,11 +428,7 @@ function M.on_text_changed()
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
   local row, col = Base.get_cursor(window)
-  local char = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]:sub(col, col)
-  if not char or char == '' then
-    return
-  end
-  if model:is_advance(row, col, char) then
+  if model:is_advance(window, buffer) then
     model:accept({
       mode = 'commit',
       range = 'char',
