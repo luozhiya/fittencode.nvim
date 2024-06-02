@@ -488,13 +488,13 @@ end
 
 ---@return boolean
 function InlineModel:is_advance(window, buffer)
+  local triggered_cursor = self.cache.triggered_cursor
+  if not triggered_cursor or not triggered_cursor[1] or not triggered_cursor[2] then
+    return false
+  end
   local row, col = Base.get_cursor(window)
   local char = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]:sub(col, col)
   if not char or char == '' then
-    return false
-  end
-  local triggered_cursor = self.cache.triggered_cursor
-  if not triggered_cursor or not triggered_cursor[1] or not triggered_cursor[2] then
     return false
   end
   local cache_char = self:get_next_char()
