@@ -10,6 +10,8 @@ M.api = {
   ---@param username string
   ---@param password string
   login = function(username, password)
+    username = vim.fn.input('username ')
+    password = vim.fn.inputsecret('password ')
     Sessions.login(username, password)
   end,
   logout = function()
