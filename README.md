@@ -186,7 +186,7 @@ require('cmp').setup({
 | Command           | Description                                                        |
 |-------------------|--------------------------------------------------------------------|
 | `Fitten register` | If you haven't registered yet, please run the command to register. |
-| `Fitten login`    | Try the command `Fitten login` to login.         |
+| `Fitten login`    | Try the command `Fitten login` to login.                           |
 | `Fitten logout`   | Logout account                                                     |
 
 ### Action Commands
