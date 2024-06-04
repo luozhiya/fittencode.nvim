@@ -77,7 +77,7 @@ local function set_option_value_win(window)
 end
 
 function M:create()
-  if self.buffer then
+  if self.buffer and api.nvim_buf_is_valid(self.buffer) then
     return
   end
 
