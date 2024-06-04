@@ -430,7 +430,9 @@ function ActionsEngine.start_action(action, opts)
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
 
-  chat:create()
+  chat:create({
+    keymaps = Config.options.keymaps.chat,
+  })
   if not opts.headless then
     chat:show()
     fn.win_gotoid(window)
@@ -665,18 +667,6 @@ local chat_callbacks = {
   end,
 }
 
-function ActionsEngine.setup()
-  chat = Chat:new(chat_callbacks)
-  content = Content:new(chat)
-  tasks = TaskScheduler:new()
-  tasks:setup()
-  status = Status:new({
-    tag = 'ActionsEngine',
-    ready_idle = true,
-  })
-  setup_actions_menu()
-end
-
 ---@return integer
 function ActionsEngine.get_status()
   return status:get_current()
@@ -696,6 +686,18 @@ function ActionsEngine.toggle_chat()
   else
     chat:show()
   end
+end
+
+function ActionsEngine.setup()
+  chat = Chat:new(chat_callbacks)
+  content = Content:new(chat)
+  tasks = TaskScheduler:new()
+  tasks:setup()
+  status = Status:new({
+    tag = 'ActionsEngine',
+    ready_idle = true,
+  })
+  setup_actions_menu()
 end
 
 return ActionsEngine
