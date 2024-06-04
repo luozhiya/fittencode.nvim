@@ -31,7 +31,7 @@ end
 ---@param username? string
 ---@param password? string
 function M.login(username, password)
-  local invalid = function ()
+  local invalid = function()
     return username == nil or username == '' or password == nil or password == ''
   end
   if invalid() then

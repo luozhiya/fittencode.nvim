@@ -59,6 +59,10 @@ local function set_option_value_buf(buffer)
   api.nvim_set_option_value('filetype', 'markdown', { buf = buffer })
   api.nvim_set_option_value('readonly', true, { buf = buffer })
   api.nvim_set_option_value('modifiable', false, { buf = buffer })
+  api.nvim_set_option_value('buftype', 'nofile', { buf = buffer })
+  -- api.nvim_set_option_value('bufhidden', 'wipe', { buf = buffer })
+  api.nvim_set_option_value('buflisted', false, { buf = buffer })
+  api.nvim_set_option_value('swapfile', false, { buf = buffer })
 end
 
 local function set_option_value_win(window)
@@ -92,6 +96,10 @@ function M:create()
 end
 
 function M:show()
+  if not self.buffer or not api.nvim_buf_is_valid(self.buffer) then
+    self:create()
+  end
+
   if self.window then
     if api.nvim_win_is_valid(self.window) and api.nvim_win_get_buf(self.window) == self.buffer then
       return
@@ -103,7 +111,6 @@ function M:show()
   vim.cmd('vertical resize ' .. 42)
   self.window = api.nvim_get_current_win()
   api.nvim_win_set_buf(self.window, self.buffer)
-
   set_option_value_win(self.window)
 
   if self.last_cursor then
