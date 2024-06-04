@@ -22,30 +22,37 @@ local key_storage = nil
 
 -- Current user name, used for mapping to API key
 ---@type string?
-local username = nil
+local current_username = nil
 
 function M.register()
   client:register()
 end
 
----@param name string
----@param password string
-function M.login(name, password)
-  if name == nil or name == '' or password == nil or password == '' then
+---@param username? string
+---@param password? string
+function M.login(username, password)
+  local invalid = function ()
+    return username == nil or username == '' or password == nil or password == ''
+  end
+  if invalid() then
+    username = vim.fn.input('Username ')
+    password = vim.fn.inputsecret('Password ')
+  end
+  if invalid() then
     Log.e('Invalid username or password')
     return
   end
 
-  username = name
+  current_username = username
 
-  local api_key = key_storage:get_key_by_name(username)
+  local api_key = key_storage:get_key_by_name(current_username)
   if api_key ~= nil then
     Log.i('You are already logged in')
     return
   end
 
-  client:login(username, password, function(key)
-    key_storage:set_key_by_name(username, key)
+  client:login(current_username, password, function(key)
+    key_storage:set_key_by_name(current_username, key)
     Log.i('Login successful')
   end, function()
     Log.e('Failed to login with provided credentials')
@@ -53,20 +60,20 @@ function M.login(name, password)
 end
 
 function M.logout()
-  local api_key = key_storage:get_key_by_name(username)
+  local api_key = key_storage:get_key_by_name(current_username)
   if api_key == nil then
     Log.i('You are already logged out')
     return
   end
   key_storage:clear()
-  username = nil
+  current_username = nil
   Log.i('Logout successful')
 end
 
 function M.load_last_session()
   Log.info('Loading last session...')
   key_storage:load(function(name)
-    username = name
+    current_username = name
     Log.info('Last session for user {} loaded successful', name)
   end, function()
     Log.info('Last session not found or invalid')
@@ -120,7 +127,7 @@ local function make_generate_one_stage_params(opts)
 end
 
 function M.ready_for_generate()
-  return key_storage:get_key_by_name(username) ~= nil
+  return key_storage:get_key_by_name(current_username) ~= nil
 end
 
 ---@param task_id integer
@@ -128,7 +135,7 @@ end
 ---@param on_error function|nil
 function M.request_generate_one_stage(task_id, opts, on_success, on_error)
   Log.debug('Requesting generate one stage...')
-  local api_key = key_storage:get_key_by_name(username)
+  local api_key = key_storage:get_key_by_name(current_username)
   if api_key == nil then
     Log.debug('Key is not found')
     schedule(on_error)
