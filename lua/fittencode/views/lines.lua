@@ -24,17 +24,13 @@ local function is_spaces_line(line)
 end
 
 ---@param chars string
-local function feedkeys(chars)
+function M.feedkeys(chars)
   local keys = api.nvim_replace_termcodes(chars, true, false, true)
   api.nvim_feedkeys(keys, 'in', true)
 end
 
 local function undojoin()
-  feedkeys('<C-g>u')
-end
-
-function M.tab()
-  feedkeys('<Tab>')
+  M.feedkeys('<C-g>u')
 end
 
 ---@param line string

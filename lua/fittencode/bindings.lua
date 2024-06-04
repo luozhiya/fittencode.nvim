@@ -246,18 +246,24 @@ function M.setup_commands()
   })
 end
 
+local KEYMAPS = {
+  { '<TAB>',     API.accept_all_suggestions },
+  { '<C-Down>',  API.accept_line },
+  { '<C-Right>', API.accept_word },
+  { '<C-Up>',    API.revoke_line },
+  { '<C-Left>',  API.revoke_word },
+}
+
 function M.setup_keymaps()
-  Base.map('i', '<Tab>', function()
-    if API.has_suggestions() then
-      API.accept_all_suggestions()
-    else
-      Lines.tab()
-    end
-  end)
-  Base.map('i', '<C-Down>', API.accept_line)
-  Base.map('i', '<C-Right>', API.accept_word)
-  Base.map('i', '<C-Up>', API.revoke_line)
-  Base.map('i', '<C-Left>', API.revoke_word)
+  for _, keymap in ipairs(KEYMAPS) do
+    Base.map('i', keymap[1], function()
+      if API.has_suggestions() then
+        keymap[2]()
+      else
+        Lines.feedkeys(keymap[1])
+      end
+    end)
+  end
   Base.map('i', '<A-\\>', API.triggering_completion)
 end
 
