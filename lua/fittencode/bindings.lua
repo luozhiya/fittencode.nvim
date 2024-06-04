@@ -1,8 +1,8 @@
 local api = vim.api
 
+local ActionsEngine = require('fittencode.engines.actions')
 local API = require('fittencode.api').api
 local Base = require('fittencode.base')
-local Config = require('fittencode.config')
 local InlineEngine = require('fittencode.engines.inline')
 local Lines = require('fittencode.views.lines')
 local Log = require('fittencode.log')
@@ -246,25 +246,8 @@ function M.setup_commands()
   })
 end
 
-local KEYMAPS = {
-  { '<TAB>',     API.accept_all_suggestions },
-  { '<C-Down>',  API.accept_line },
-  { '<C-Right>', API.accept_word },
-  { '<C-Up>',    API.revoke_line },
-  { '<C-Left>',  API.revoke_word },
-}
-
 function M.setup_keymaps()
-  for _, keymap in ipairs(KEYMAPS) do
-    Base.map('i', keymap[1], function()
-      if API.has_suggestions() then
-        keymap[2]()
-      else
-        Lines.feedkeys(keymap[1])
-      end
-    end)
-  end
-  Base.map('i', '<A-\\>', API.triggering_completion)
+  InlineEngine.setup_keymaps()
 end
 
 function M.setup_keyfilters()

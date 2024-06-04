@@ -510,4 +510,30 @@ function M.on_cursor_moved()
   end, CURSORMOVED_DEBOUNCE_TIME)
 end
 
+local KEYSBACK = {
+  'accept_all_suggestions',
+  'accept_char',
+  'accept_word',
+  'accept_line',
+  'revoke_char',
+  'revoke_word',
+  'revoke_line',
+}
+
+function M.setup_keymaps()
+  for key, value in pairs(Config.options.keymaps.inline) do
+    Base.map('i', key, function()
+      if vim.tbl_contains(KEYSBACK, value) then
+        if M.has_suggestions() then
+          M[value]()
+        else
+          Lines.feedkeys(key)
+        end
+      else
+        M[value]()
+      end
+    end)
+  end
+end
+
 return M

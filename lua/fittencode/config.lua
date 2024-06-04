@@ -73,6 +73,20 @@ local defaults = {
   },
   -- Enable/Disable the default keymaps in inline completion.
   use_default_keymaps = true,
+  -- Default keymaps
+  keymaps = {
+    inline = {
+      ['<TAB>'] = 'accept_all_suggestions',
+      ['<C-Down>'] = 'accept_line',
+      ['<C-Right>'] = 'accept_word',
+      ['<C-Up>'] = 'revoke_line',
+      ['<C-Left>'] = 'revoke_word',
+      ['<A-\\>'] = 'triggering_completion',
+    },
+    chat = {
+      ['q'] = 'close'
+    }
+  },
   -- Setting for source completion.
   ---@class SourceCompletionOptions
   source_completion = {
