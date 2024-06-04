@@ -138,11 +138,6 @@ local function on_stage_end(is_error, on_success, on_error)
   Log.debug('Action elapsed time: {}', elapsed_time)
   Log.debug('Action depth: {}', depth)
 
-  content:on_end({
-    elapsed_time = elapsed_time,
-    depth = depth,
-  })
-
   if is_error then
     status:update(SC.ERROR)
     local err_msg = 'Error: fetch failed.'
@@ -159,6 +154,11 @@ local function on_stage_end(is_error, on_success, on_error)
       schedule(on_success, content:get_current_suggestions())
     end
   end
+
+  content:on_end({
+    elapsed_time = elapsed_time,
+    depth = depth,
+  })
 
   current_eval = current_eval + 1
   lock = false

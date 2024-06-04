@@ -236,7 +236,18 @@ function M:on_status(msg)
   if not msg then
     return
   end
-  self:commit('```\n' .. msg .. '\n```')
+  self:commit({
+    lines = {
+      '',
+      '```',
+      msg,
+      '```',
+    },
+    format = {
+      firstlinebreak = true,
+      fenced_code = true,
+    }
+  })
 end
 
 local function merge_lines(suggestions)
