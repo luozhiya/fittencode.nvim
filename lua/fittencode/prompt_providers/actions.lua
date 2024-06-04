@@ -132,9 +132,9 @@ local function make_prompt(ctx, name, language, no_lang)
 end
 
 local function make_prefix(content, prompt, source_type, instruction_type)
-  local mark_source = '# ' .. source_type .. '\n'
+  local mark_source = '' .. source_type .. ':\n'
   local mark_reading = 'Dear FittenCode, Please Reading the ' .. source_type .. ' below:\n'
-  local mark_instructions = '# ' .. instruction_type .. '\n'
+  local mark_instructions = '' .. instruction_type .. ':\n'
   local mark_prompt_prefix = 'Dear FittenCode, Please '
 
   local prefix = table.concat({
