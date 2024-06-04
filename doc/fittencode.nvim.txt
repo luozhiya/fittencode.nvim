@@ -1,4 +1,4 @@
-*fittencode.nvim.txt*       For Neovim >= 0.8.0      Last change: 2024 June 02
+*fittencode.nvim.txt*       For Neovim >= 0.8.0      Last change: 2024 June 04
 
 ==============================================================================
 Table of Contents                          *fittencode.nvim-table-of-contents*
@@ -216,8 +216,7 @@ ACCOUNT COMMANDS ~
   Fitten register   If you haven’t registered yet, please run the command
                     to register.
 
-  Fitten login      Try the command Fitten login <user> <password> to
-                    login.
+  Fitten login      Try the command Fitten login to login.
 
   Fitten logout     Logout account
   -------------------------------------------------------------------------
