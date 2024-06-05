@@ -73,6 +73,20 @@ local defaults = {
   },
   -- Enable/Disable the default keymaps in inline completion.
   use_default_keymaps = true,
+  -- Default keymaps
+  keymaps = {
+    inline = {
+      ['<TAB>'] = 'accept_all_suggestions',
+      ['<C-Down>'] = 'accept_line',
+      ['<C-Right>'] = 'accept_word',
+      ['<C-Up>'] = 'revoke_line',
+      ['<C-Left>'] = 'revoke_word',
+      ['<A-\\>'] = 'triggering_completion',
+    },
+    chat = {
+      ['q'] = 'close'
+    }
+  },
   -- Setting for source completion.
   ---@class SourceCompletionOptions
   source_completion = {
@@ -128,7 +142,12 @@ M.internal = {
 
 ---@param opts? FittenCodeOptions
 function M.setup(opts)
+  ---@class FittenCodeOptions
   M.options = vim.tbl_deep_extend('force', defaults, opts or {})
+  if M.options.use_default_keymaps == false then
+    M.options.keymaps.inline = {}
+    M.options.keymaps.chat = {}
+  end
 end
 
 return M

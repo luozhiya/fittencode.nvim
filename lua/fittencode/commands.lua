@@ -1,51 +1,8 @@
-local api = vim.api
-
 local API = require('fittencode.api').api
 local Base = require('fittencode.base')
-local Config = require('fittencode.config')
-local InlineEngine = require('fittencode.engines.inline')
-local Lines = require('fittencode.views.lines')
 local Log = require('fittencode.log')
 
 local M = {}
-
-function M.setup_autocmds()
-  api.nvim_create_autocmd({ 'CursorHoldI' }, {
-    group = Base.augroup('CursorHold'),
-    pattern = '*',
-    callback = function()
-      InlineEngine.on_cursor_hold()
-    end,
-    desc = 'On Cursor Hold',
-  })
-
-  api.nvim_create_autocmd({ 'CursorMovedI' }, {
-    group = Base.augroup('CursorMoved'),
-    pattern = '*',
-    callback = function()
-      InlineEngine.on_cursor_moved()
-    end,
-    desc = 'On Cursor Moved',
-  })
-
-  api.nvim_create_autocmd({ 'TextChangedI' }, {
-    group = Base.augroup('TextChanged'),
-    pattern = '*',
-    callback = function()
-      InlineEngine.on_text_changed()
-    end,
-    desc = 'On Text Changed',
-  })
-
-  api.nvim_create_autocmd({ 'BufLeave', 'InsertLeave' }, {
-    group = Base.augroup('Leave'),
-    pattern = '*',
-    callback = function()
-      InlineEngine.on_leave()
-    end,
-    desc = 'On Leave',
-  })
-end
 
 ---@class FittenCommands
 ---@field login function
@@ -159,7 +116,7 @@ local function _summarize_text(...)
   return _action_apis_wrap_content(API.summarize_text, ...)
 end
 
-function M.setup_commands()
+function M.setup()
   ---@type FittenCommands
   local commands = {
     -- Arguments: Nop
@@ -219,7 +176,7 @@ function M.setup_commands()
       table.remove(actions, 1)
       return cmd(unpack(actions))
     end
-    Log.debug('Invalid command; fargs: {}', line.fargs)
+    Log.debug('Invalid command fargs: {}', line.fargs)
   end, {
     complete = function(_, line)
       local args = vim.split(vim.trim(line), '%s+')
@@ -244,35 +201,6 @@ function M.setup_commands()
     nargs = '*',
     desc = 'Fitten Command',
   })
-end
-
-local KEYMAPS = {
-  { '<TAB>',     API.accept_all_suggestions },
-  { '<C-Down>',  API.accept_line },
-  { '<C-Right>', API.accept_word },
-  { '<C-Up>',    API.revoke_line },
-  { '<C-Left>',  API.revoke_word },
-}
-
-function M.setup_keymaps()
-  for _, keymap in ipairs(KEYMAPS) do
-    Base.map('i', keymap[1], function()
-      if API.has_suggestions() then
-        keymap[2]()
-      else
-        Lines.feedkeys(keymap[1])
-      end
-    end)
-  end
-  Base.map('i', '<A-\\>', API.triggering_completion)
-end
-
-function M.setup_keyfilters()
-  vim.on_key(function(key)
-    vim.schedule(function()
-      InlineEngine.on_key(key)
-    end)
-  end)
 end
 
 return M

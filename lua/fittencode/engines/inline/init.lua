@@ -43,13 +43,6 @@ local CURSORMOVED_DEBOUNCE_TIME = 120
 ---@type uv_timer_t
 local cursormoved_timer = nil
 
-function M.setup()
-  model = Model:new()
-  tasks = TaskScheduler:new()
-  tasks:setup()
-  status = Status:new({ tag = 'InlineEngine' })
-end
-
 local function suggestions_modify_enabled()
   return M.is_inline_enabled() and M.has_suggestions()
 end
@@ -461,17 +454,21 @@ end, {
   '<Delete>',
 })
 
-function M.on_key(key)
-  if api.nvim_get_mode().mode == 'i' then
-    if vim.tbl_contains(FILTERED_KEYS, key) then
-      M.reset()
-      if Config.options.inline_completion.disable_completion_when_delete then
-        ignore_event = true
+local function setup_keyfilters()
+  vim.on_key(function(key)
+    vim.schedule(function()
+      if api.nvim_get_mode().mode == 'i' then
+        if vim.tbl_contains(FILTERED_KEYS, key) then
+          M.reset()
+          if Config.options.inline_completion.disable_completion_when_delete then
+            ignore_event = true
+          end
+        else
+          ignore_event = false
+        end
       end
-    else
-      ignore_event = false
-    end
-  end
+    end)
+  end)
 end
 
 function M.on_cursor_hold()
@@ -508,6 +505,89 @@ function M.on_cursor_moved()
   Base.debounce(cursormoved_timer, function()
     _on_cursor_moved()
   end, CURSORMOVED_DEBOUNCE_TIME)
+end
+
+local KEYS = {
+  accept_all_suggestions = { true },
+  accept_char = { true },
+  accept_word = { true },
+  accept_line = { true },
+  revoke_char = { true },
+  revoke_word = { true },
+  revoke_line = { true },
+  triggering_completion = { false }
+}
+
+local function setup_keymaps()
+  for key, value in pairs(Config.options.keymaps.inline) do
+    Base.map('i', key, function()
+      local v = KEYS[value]
+      if v == nil then
+        return
+      end
+      if v[1] then
+        if M.has_suggestions() then
+          M[value]()
+        else
+          Lines.feedkeys(key)
+        end
+      else
+        M[value]()
+      end
+    end)
+  end
+end
+
+local function setup_autocmds()
+  api.nvim_create_autocmd({ 'CursorHoldI' }, {
+    group = Base.augroup('CursorHold'),
+    pattern = '*',
+    callback = function()
+      M.on_cursor_hold()
+    end,
+    desc = 'On Cursor Hold',
+  })
+
+  api.nvim_create_autocmd({ 'CursorMovedI' }, {
+    group = Base.augroup('CursorMoved'),
+    pattern = '*',
+    callback = function()
+      M.on_cursor_moved()
+    end,
+    desc = 'On Cursor Moved',
+  })
+
+  api.nvim_create_autocmd({ 'TextChangedI' }, {
+    group = Base.augroup('TextChanged'),
+    pattern = '*',
+    callback = function()
+      M.on_text_changed()
+    end,
+    desc = 'On Text Changed',
+  })
+
+  api.nvim_create_autocmd({ 'BufLeave', 'InsertLeave' }, {
+    group = Base.augroup('Leave'),
+    pattern = '*',
+    callback = function()
+      M.on_leave()
+    end,
+    desc = 'On Leave',
+  })
+end
+
+function M.setup()
+  model = Model:new()
+  tasks = TaskScheduler:new()
+  tasks:setup()
+  status = Status:new({ tag = 'InlineEngine' })
+  if Config.options.completion_mode == 'inline' then
+    setup_keymaps()
+    setup_keyfilters()
+    setup_autocmds()
+  elseif Config.options.completion_mode == 'source' then
+    require('fittencode.sources').setup()
+  end
 end
 
 return M

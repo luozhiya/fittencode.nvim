@@ -76,7 +76,10 @@ local function set_option_value_win(window)
   -- api.nvim_set_option_value('scrolloff', 8, { win = window })
 end
 
-function M:create()
+---@class ChatCreateOptions
+---@field keymaps? table
+
+function M:create(opts)
   if self.buffer and api.nvim_buf_is_valid(self.buffer) then
     return
   end
@@ -84,11 +87,23 @@ function M:create()
   self.buffer = api.nvim_create_buf(false, true)
   api.nvim_buf_set_name(self.buffer, 'FittenCodeChat')
 
-  Base.map('n', 'q', function() self:close() end, { buffer = self.buffer })
-  Base.map('n', '[c', function() self:goto_prev_conversation() end, { buffer = self.buffer })
-  Base.map('n', ']c', function() self:goto_next_conversation() end, { buffer = self.buffer })
-  Base.map('n', 'c', function() self:copy_conversation() end, { buffer = self.buffer })
-  Base.map('n', 'C', function() self:copy_all_conversations() end, { buffer = self.buffer })
+  local FX = {
+    close = function() self:close() end,
+  }
+
+  for key, value in pairs(opts.keymaps or {}) do
+    Base.map('n', key, function()
+      if FX[value] then
+        FX[value]()
+      end
+    end, { buffer = self.buffer })
+  end
+
+  -- Base.map('n', 'q', function() self:close() end, { buffer = self.buffer })
+  -- Base.map('n', '[c', function() self:goto_prev_conversation() end, { buffer = self.buffer })
+  -- Base.map('n', ']c', function() self:goto_next_conversation() end, { buffer = self.buffer })
+  -- Base.map('n', 'c', function() self:copy_conversation() end, { buffer = self.buffer })
+  -- Base.map('n', 'C', function() self:copy_all_conversations() end, { buffer = self.buffer })
   -- Base.map('n', 'd', function() self:delete_conversation() end, { buffer = self.buffer })
   -- Base.map('n', 'D', function() self:delete_all_conversations() end, { buffer = self.buffer })
 
