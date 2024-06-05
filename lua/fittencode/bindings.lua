@@ -1,51 +1,8 @@
-local api = vim.api
-
-local ActionsEngine = require('fittencode.engines.actions')
 local API = require('fittencode.api').api
 local Base = require('fittencode.base')
-local InlineEngine = require('fittencode.engines.inline')
-local Lines = require('fittencode.views.lines')
 local Log = require('fittencode.log')
 
 local M = {}
-
-function M.setup_autocmds()
-  api.nvim_create_autocmd({ 'CursorHoldI' }, {
-    group = Base.augroup('CursorHold'),
-    pattern = '*',
-    callback = function()
-      InlineEngine.on_cursor_hold()
-    end,
-    desc = 'On Cursor Hold',
-  })
-
-  api.nvim_create_autocmd({ 'CursorMovedI' }, {
-    group = Base.augroup('CursorMoved'),
-    pattern = '*',
-    callback = function()
-      InlineEngine.on_cursor_moved()
-    end,
-    desc = 'On Cursor Moved',
-  })
-
-  api.nvim_create_autocmd({ 'TextChangedI' }, {
-    group = Base.augroup('TextChanged'),
-    pattern = '*',
-    callback = function()
-      InlineEngine.on_text_changed()
-    end,
-    desc = 'On Text Changed',
-  })
-
-  api.nvim_create_autocmd({ 'BufLeave', 'InsertLeave' }, {
-    group = Base.augroup('Leave'),
-    pattern = '*',
-    callback = function()
-      InlineEngine.on_leave()
-    end,
-    desc = 'On Leave',
-  })
-end
 
 ---@class FittenCommands
 ---@field login function

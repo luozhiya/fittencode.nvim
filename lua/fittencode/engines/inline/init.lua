@@ -539,6 +539,44 @@ local function setup_keymaps()
   end
 end
 
+local function setup_autocmds()
+  api.nvim_create_autocmd({ 'CursorHoldI' }, {
+    group = Base.augroup('CursorHold'),
+    pattern = '*',
+    callback = function()
+      M.on_cursor_hold()
+    end,
+    desc = 'On Cursor Hold',
+  })
+
+  api.nvim_create_autocmd({ 'CursorMovedI' }, {
+    group = Base.augroup('CursorMoved'),
+    pattern = '*',
+    callback = function()
+      M.on_cursor_moved()
+    end,
+    desc = 'On Cursor Moved',
+  })
+
+  api.nvim_create_autocmd({ 'TextChangedI' }, {
+    group = Base.augroup('TextChanged'),
+    pattern = '*',
+    callback = function()
+      M.on_text_changed()
+    end,
+    desc = 'On Text Changed',
+  })
+
+  api.nvim_create_autocmd({ 'BufLeave', 'InsertLeave' }, {
+    group = Base.augroup('Leave'),
+    pattern = '*',
+    callback = function()
+      M.on_leave()
+    end,
+    desc = 'On Leave',
+  })
+end
+
 function M.setup()
   model = Model:new()
   tasks = TaskScheduler:new()
@@ -546,6 +584,7 @@ function M.setup()
   status = Status:new({ tag = 'InlineEngine' })
   setup_keymaps()
   setup_keyfilters()
+  setup_autocmds()
 end
 
 return M
