@@ -22,7 +22,6 @@ function M.setup(opts)
 
   if Config.options.completion_mode == 'inline' then
     Bindings.setup_autocmds()
-    Bindings.setup_keyfilters()
   elseif Config.options.completion_mode == 'source' then
     require('fittencode.sources').setup()
   end

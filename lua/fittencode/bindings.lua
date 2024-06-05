@@ -246,12 +246,4 @@ function M.setup_commands()
   })
 end
 
-function M.setup_keyfilters()
-  vim.on_key(function(key)
-    vim.schedule(function()
-      InlineEngine.on_key(key)
-    end)
-  end)
-end
-
 return M

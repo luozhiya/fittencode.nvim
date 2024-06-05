@@ -454,17 +454,21 @@ end, {
   '<Delete>',
 })
 
-function M.on_key(key)
-  if api.nvim_get_mode().mode == 'i' then
-    if vim.tbl_contains(FILTERED_KEYS, key) then
-      M.reset()
-      if Config.options.inline_completion.disable_completion_when_delete then
-        ignore_event = true
+local function setup_keyfilters()
+  vim.on_key(function(key)
+    vim.schedule(function()
+      if api.nvim_get_mode().mode == 'i' then
+        if vim.tbl_contains(FILTERED_KEYS, key) then
+          M.reset()
+          if Config.options.inline_completion.disable_completion_when_delete then
+            ignore_event = true
+          end
+        else
+          ignore_event = false
+        end
       end
-    else
-      ignore_event = false
-    end
-  end
+    end)
+  end)
 end
 
 function M.on_cursor_hold()
@@ -541,6 +545,7 @@ function M.setup()
   tasks:setup()
   status = Status:new({ tag = 'InlineEngine' })
   setup_keymaps()
+  setup_keyfilters()
 end
 
 return M
