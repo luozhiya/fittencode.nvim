@@ -523,10 +523,9 @@ local function setup_keymaps()
     Base.map('i', key, function()
       local v = KEYS[value]
       if v == nil then
-        Log.warn('Invalid keymap value: ', value)
         return
       end
-      if v then
+      if v[1] then
         if M.has_suggestions() then
           M[value]()
         else

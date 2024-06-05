@@ -93,7 +93,7 @@ function M:create(opts)
 
   for key, value in pairs(opts.keymaps or {}) do
     Base.map('n', key, function()
-      if vim.tbl_contains(vim.tbl_keys(FX), value) then
+      if FX[value] then
         FX[value]()
       end
     end, { buffer = self.buffer })
