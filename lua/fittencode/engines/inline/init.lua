@@ -582,9 +582,13 @@ function M.setup()
   tasks = TaskScheduler:new()
   tasks:setup()
   status = Status:new({ tag = 'InlineEngine' })
-  setup_keymaps()
-  setup_keyfilters()
-  setup_autocmds()
+  if Config.options.completion_mode == 'inline' then
+    setup_keymaps()
+    setup_keyfilters()
+    setup_autocmds()
+  elseif Config.options.completion_mode == 'source' then
+    require('fittencode.sources').setup()
+  end
 end
 
 return M

@@ -17,15 +17,7 @@ function M.setup(opts)
   require('fittencode.sessions').setup()
   require('fittencode.prompt_providers').setup()
   require('fittencode.color').setup_highlight()
-  local Bindings = require('fittencode.bindings')
-  Bindings.setup_commands()
-
-  if Config.options.completion_mode == 'inline' then
-    Bindings.setup_autocmds()
-  elseif Config.options.completion_mode == 'source' then
-    require('fittencode.sources').setup()
-  end
-
+  require('fittencode.bindings').setup_commands()
   require('fittencode.sessions').load_last_session()
 end
 
