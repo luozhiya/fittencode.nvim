@@ -1,4 +1,4 @@
-*fittencode.nvim.txt*       For Neovim >= 0.8.0      Last change: 2024 June 04
+*fittencode.nvim.txt*       For Neovim >= 0.8.0      Last change: 2024 June 05
 
 ==============================================================================
 Table of Contents                          *fittencode.nvim-table-of-contents*
@@ -159,6 +159,20 @@ DEFAULTS ~
       },
       -- Enable/Disable the default keymaps in inline completion.
       use_default_keymaps = true,
+      -- Default keymaps
+      keymaps = {
+        inline = {
+          ['<TAB>'] = 'accept_all_suggestions',
+          ['<C-Down>'] = 'accept_line',
+          ['<C-Right>'] = 'accept_word',
+          ['<C-Up>'] = 'revoke_line',
+          ['<C-Left>'] = 'revoke_word',
+          ['<A-\\>'] = 'triggering_completion',
+        },
+        chat = {
+          ['q'] = 'close'
+        }
+      },
       -- Setting for source completion.
       source_completion = {
         -- Enable source completion.
