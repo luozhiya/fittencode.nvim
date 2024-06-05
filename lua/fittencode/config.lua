@@ -144,8 +144,9 @@ M.internal = {
 function M.setup(opts)
   ---@class FittenCodeOptions
   M.options = vim.tbl_deep_extend('force', defaults, opts or {})
-  if not M.options.use_default_keymaps then
-    M.options.keymaps = {}
+  if M.options.use_default_keymaps == false then
+    M.options.keymaps.inline = {}
+    M.options.keymaps.chat = {}
   end
 end
 
