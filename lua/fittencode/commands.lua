@@ -116,7 +116,7 @@ local function _summarize_text(...)
   return _action_apis_wrap_content(API.summarize_text, ...)
 end
 
-function M.setup_commands()
+function M.setup()
   ---@type FittenCommands
   local commands = {
     -- Arguments: Nop
