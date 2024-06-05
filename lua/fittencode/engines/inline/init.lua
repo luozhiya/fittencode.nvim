@@ -43,13 +43,6 @@ local CURSORMOVED_DEBOUNCE_TIME = 120
 ---@type uv_timer_t
 local cursormoved_timer = nil
 
-function M.setup()
-  model = Model:new()
-  tasks = TaskScheduler:new()
-  tasks:setup()
-  status = Status:new({ tag = 'InlineEngine' })
-end
-
 local function suggestions_modify_enabled()
   return M.is_inline_enabled() and M.has_suggestions()
 end
@@ -510,20 +503,26 @@ function M.on_cursor_moved()
   end, CURSORMOVED_DEBOUNCE_TIME)
 end
 
-local KEYSBACK = {
-  'accept_all_suggestions',
-  'accept_char',
-  'accept_word',
-  'accept_line',
-  'revoke_char',
-  'revoke_word',
-  'revoke_line',
+local KEYS = {
+  accept_all_suggestions = { true },
+  accept_char = { true },
+  accept_word = { true },
+  accept_line = { true },
+  revoke_char = { true },
+  revoke_word = { true },
+  revoke_line = { true },
+  triggering_completion = { false }
 }
 
-function M.setup_keymaps()
+local function setup_keymaps()
   for key, value in pairs(Config.options.keymaps.inline) do
     Base.map('i', key, function()
-      if vim.tbl_contains(KEYSBACK, value) then
+      local v = KEYS[value]
+      if v == nil then
+        Log.warn('Invalid keymap value: ', value)
+        return
+      end
+      if v then
         if M.has_suggestions() then
           M[value]()
         else
@@ -534,6 +533,14 @@ function M.setup_keymaps()
       end
     end)
   end
+end
+
+function M.setup()
+  model = Model:new()
+  tasks = TaskScheduler:new()
+  tasks:setup()
+  status = Status:new({ tag = 'InlineEngine' })
+  setup_keymaps()
 end
 
 return M

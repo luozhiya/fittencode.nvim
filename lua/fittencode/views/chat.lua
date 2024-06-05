@@ -87,8 +87,15 @@ function M:create(opts)
   self.buffer = api.nvim_create_buf(false, true)
   api.nvim_buf_set_name(self.buffer, 'FittenCodeChat')
 
+  local FX = {
+    close = function() self:close() end,
+  }
+
   for key, value in pairs(opts.keymaps or {}) do
-    Base.map('n', key, function ()
+    Base.map('n', key, function()
+      if vim.tbl_contains(vim.tbl_keys(FX), value) then
+        FX[value]()
+      end
     end, { buffer = self.buffer })
   end
 

@@ -430,10 +430,9 @@ function ActionsEngine.start_action(action, opts)
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
 
-  local create_opts = {
+  chat:create({
     keymaps = Config.options.keymaps.chat,
-  }
-  chat:create(create_opts)
+  })
   if not opts.headless then
     chat:show()
     fn.win_gotoid(window)

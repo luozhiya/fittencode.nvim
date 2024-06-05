@@ -246,10 +246,6 @@ function M.setup_commands()
   })
 end
 
-function M.setup_keymaps()
-  InlineEngine.setup_keymaps()
-end
-
 function M.setup_keyfilters()
   vim.on_key(function(key)
     vim.schedule(function()

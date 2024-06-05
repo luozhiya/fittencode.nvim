@@ -142,7 +142,11 @@ M.internal = {
 
 ---@param opts? FittenCodeOptions
 function M.setup(opts)
+  ---@class FittenCodeOptions
   M.options = vim.tbl_deep_extend('force', defaults, opts or {})
+  if not M.options.use_default_keymaps then
+    M.options.keymaps = {}
+  end
 end
 
 return M
