@@ -123,8 +123,8 @@ function M:show()
   end
 
   vim.cmd('topleft vsplit')
-  vim.cmd('vertical resize ' .. 42)
   self.window = api.nvim_get_current_win()
+  vim.api.nvim_win_set_width(self.window, 42)
   api.nvim_win_set_buf(self.window, self.buffer)
   set_option_value_win(self.window)
 

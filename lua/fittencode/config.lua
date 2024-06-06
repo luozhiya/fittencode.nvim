@@ -28,6 +28,12 @@ local defaults = {
       -- Show "Fitten Code - Start Chat" in the editor context menu, when you right-click on the code.
       show_in_editor_context_menu = true,
     },
+    identify_programming_language = {
+      -- Identify programming language of the current buffer
+      --   - Unamed buffer
+      --   - Buffer without file extension
+      identify_buffer = true,
+    }
   },
   disable_specific_inline_completion = {
     -- Disable auto-completion for some specific file suffixes by entering them below

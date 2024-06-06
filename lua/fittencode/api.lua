@@ -26,6 +26,9 @@ M.api = {
   get_current_status = function()
     return Engines.get_status()
   end,
+  ready_for_generate = function()
+    return Sessions.ready_for_generate()
+  end,
   triggering_completion = function()
     InlineEngine.triggering_completion()
   end,

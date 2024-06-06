@@ -87,6 +87,7 @@ local status = nil
 ---@field content? string
 ---@field language? string
 ---@field headless? boolean
+---@field commit? boolean
 ---@field on_success? function @function Callback when suggestions are ready
 ---@field on_error? function @function Callback when an error occurs
 
@@ -438,11 +439,18 @@ function ActionsEngine.start_action(action, opts)
     fn.win_gotoid(window)
   end
 
-  local range = make_range(buffer)
-  Log.debug('Action range: {}', range)
+  local range = {
+    start = { 0, 0 },
+    ['end'] = { 0, 0 },
+  }
+  local filetype = ''
 
-  local filetype = make_filetype(buffer, range)
-  Log.debug('Action real filetype: {}', filetype)
+  if not opts.content then
+    range = make_range(buffer)
+    Log.debug('Action range: {}', range)
+    filetype = make_filetype(buffer, range)
+    Log.debug('Action real filetype: {}', filetype)
+  end
 
   local prompt_opts = {
     window = window,

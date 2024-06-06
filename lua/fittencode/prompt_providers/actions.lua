@@ -82,7 +82,7 @@ local MAP_ACTION_PROMPTS = {
   end,
   OptimizeCode = 'Optimize the code above to make it faster and more efficient',
   RefactorCode = 'Refactor the code above',
-  IdentifyProgrammingLanguage = 'Identify the language used in the code above',
+  IdentifyProgrammingLanguage = 'Identify the language used in the code above and Give the name in short',
   AnalyzeData = 'Analyze the data above and Give the pattern of the data',
   TranslateText = function(ctx)
     assert(ctx.action_opts)
