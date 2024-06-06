@@ -28,6 +28,13 @@ local defaults = {
       -- Show "Fitten Code - Start Chat" in the editor context menu, when you right-click on the code.
       show_in_editor_context_menu = true,
     },
+    identify_programming_language = {
+      -- Identify programming language of the current buffer
+      -- * Unnamed buffer
+      -- * Buffer without file extension
+      -- * Buffer no filetype detected
+      identify_buffer = true,
+    }
   },
   disable_specific_inline_completion = {
     -- Disable auto-completion for some specific file suffixes by entering them below
@@ -71,6 +78,14 @@ local defaults = {
     ---@type integer
     delaytime = 0,
   },
+  prompt = {
+    -- Maximum number of characters to prompt for completion/chat.
+    max_characters = 1000000,
+  },
+  chat = {
+    -- Highlight the conversation in the chat window at the current cursor position.
+    highlight_conversation_at_cursor = false,
+  },
   -- Enable/Disable the default keymaps in inline completion.
   use_default_keymaps = true,
   -- Default keymaps
@@ -84,7 +99,13 @@ local defaults = {
       ['<A-\\>'] = 'triggering_completion',
     },
     chat = {
-      ['q'] = 'close'
+      ['q'] = 'close',
+      ['[c'] = 'goto_previous_conversation',
+      [']c'] = 'goto_next_conversation',
+      ['c'] = 'copy_conversation',
+      ['C'] = 'copy_all_conversations',
+      ['d'] = 'delete_conversation',
+      ['D'] = 'delete_all_conversations',
     }
   },
   -- Setting for source completion.
@@ -106,8 +127,8 @@ local defaults = {
   },
   -- Set the mode of the completion.
   -- Available options:
-  -- - 'inline' (VSCode style inline completion)
-  -- - 'source' (integrates into other completion plugins)
+  -- * 'inline' (VSCode style inline completion)
+  -- * 'source' (integrates into other completion plugins)
   completion_mode = 'inline',
   rest = {
     -- Rest backend to use. Available options:
@@ -133,13 +154,6 @@ local defaults = {
   },
 }
 
--- Private options
-M.internal = {
-  virtual_text = {
-    inline = vim.fn.has('nvim-0.10') == 1,
-  },
-}
-
 ---@param opts? FittenCodeOptions
 function M.setup(opts)
   ---@class FittenCodeOptions
@@ -147,6 +161,9 @@ function M.setup(opts)
   if M.options.use_default_keymaps == false then
     M.options.keymaps.inline = {}
     M.options.keymaps.chat = {}
+  end
+  if vim.fn.has('nvim-0.10') ~= 1 then
+    M.options.inline_completion.disable_completion_within_the_line = true
   end
 end
 

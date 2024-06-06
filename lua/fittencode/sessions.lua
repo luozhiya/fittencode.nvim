@@ -1,7 +1,7 @@
 local fn = vim.fn
 
 local Base = require('fittencode.base')
-local Client = require('fittencode.client.fitten_client')
+local Client = require('fittencode.client.fitten')
 local Config = require('fittencode.config')
 local KeyStorage = require('fittencode.key_storage')
 local Log = require('fittencode.log')
@@ -112,7 +112,7 @@ local function make_generate_one_stage_params(opts)
   if prompt == nil then
     return
   end
-  if prompt.within_the_line and (not Config.internal.virtual_text.inline or Config.options.inline_completion.disable_completion_within_the_line) then
+  if prompt.within_the_line and Config.options.inline_completion.disable_completion_within_the_line then
     return
   end
   local fc_prompt = '!FCPREFIX!' .. prompt.prefix .. '!FCSUFFIX!' .. prompt.suffix .. '!FCMIDDLE!'

@@ -26,6 +26,9 @@ M.api = {
   get_current_status = function()
     return Engines.get_status()
   end,
+  ready_for_generate = function()
+    return Sessions.ready_for_generate()
+  end,
   triggering_completion = function()
     InlineEngine.triggering_completion()
   end,
@@ -127,9 +130,6 @@ M.api = {
   ---@param opts? ActionOptions
   start_chat = function(opts)
     return ActionsEngine.start_chat(opts)
-  end,
-  stop_eval = function()
-    return ActionsEngine.stop_eval()
   end,
   show_chat = function()
     return ActionsEngine.show_chat()
