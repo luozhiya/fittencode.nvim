@@ -22,6 +22,18 @@ local function _identify_current_buffer()
   if #name > 0 and #ext > 0 then
     return
   end
+  local ipl = ''
+  local success, result = pcall(api.nvim_buf_get_var, buffer, 'fittencode_identify_programming_language')
+  if success and result and #result > 0 then
+    ipl = result
+  end
+  local filetype = api.nvim_get_option_value('filetype', {
+    buf = buffer,
+  })
+  if #filetype > 0 and #ipl == 0 then
+    return
+  end
+
   local content = table.concat(api.nvim_buf_get_lines(buffer, 0, -1, false), '\n')
   API.identify_programming_language({
     headless = true,
@@ -30,20 +42,21 @@ local function _identify_current_buffer()
       if not suggestions or #suggestions == 0 then
         return
       end
-      local filter = suggestions[1]
-      if #filter == 0 then
+      local lang = suggestions[1]
+      if #lang == 0 then
         return
       end
-      filter = filter:lower()
-      filter = filter:gsub('^%s*(.-)%s*$', '%1')
-      if #filter == 0 then
+      lang = lang:lower()
+      lang = lang:gsub('^%s*(.-)%s*$', '%1')
+      if #lang == 0 then
         return
       end
-      filter = filter:gsub('c%+%+', 'cpp')
-      filter = filter:match('^(%w+)')
-      api.nvim_set_option_value('filetype', filter, {
+      lang = lang:gsub('c%+%+', 'cpp')
+      lang = lang:match('^(%w+)')
+      api.nvim_set_option_value('filetype', lang, {
         buf = buffer,
       })
+      api.nvim_buf_set_var(buffer, 'fittencode_identify_programming_language', lang)
     end,
   })
 end
