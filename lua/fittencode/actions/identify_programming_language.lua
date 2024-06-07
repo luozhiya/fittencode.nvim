@@ -34,11 +34,10 @@ local function _identify_current_buffer()
     return
   end
 
-  local count = 0
-  local lines = api.nvim_buf_get_lines(buffer, 0, -1, false)
-  vim.tbl_map(function(line)
-    count = count + #line
-  end, lines)
+  local count, lines = Base.buffer_characters(buffer)
+  if not count or not lines then
+    return
+  end
   if count > Config.options.prompt.max_characters then
     return
   end

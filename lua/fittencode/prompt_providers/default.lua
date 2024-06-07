@@ -1,5 +1,6 @@
 local api = vim.api
 
+local Base = require('fittencode.base')
 local Config = require('fittencode.config')
 local Log = require('fittencode.log')
 
@@ -37,11 +38,10 @@ function M:execute(ctx)
     return
   end
 
-  local count = 0
-  local lines = api.nvim_buf_get_lines(ctx.buffer, 0, -1, false)
-  vim.tbl_map(function(line)
-    count = count + #line
-  end, lines)
+  local count = Base.buffer_characters(ctx.buffer)
+  if not count then
+    return
+  end
   if count > Config.options.prompt.max_characters then
     return
   end

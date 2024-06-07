@@ -186,6 +186,20 @@ function M.rfind(s, sub)
   end)()
 end
 
+---@param buffer? number
+function M.buffer_characters(buffer)
+  buffer = buffer or api.nvim_get_current_buf()
+  if not api.nvim_buf_is_valid(buffer) then
+    return
+  end
+  local count = 0
+  local lines = api.nvim_buf_get_lines(buffer, 0, -1, false)
+  vim.tbl_map(function(line)
+    count = count + #line
+  end, lines)
+  return count, lines
+end
+
 ---@class NeovimVersion
 ---@field nvim string
 ---@field buildtype string
