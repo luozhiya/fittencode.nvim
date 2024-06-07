@@ -95,7 +95,7 @@ local function format_lines(opts, content)
       #content > 0 and #lines > 1 then
     local last_lines = content[#content]
     local last_line = last_lines[#last_lines]
-    if not string.match(lines[2], '^```') and not string.match(last_line, '^```') then
+    if not string.match(lines[1], '^```') and not string.match(lines[2], '^```') and not string.match(last_line, '^```') then
       table.insert(lines, 1, '')
     end
   end
@@ -238,7 +238,6 @@ function M:on_status(msg)
   end
   self:commit({
     lines = {
-      '',
       '```',
       msg,
       '```',

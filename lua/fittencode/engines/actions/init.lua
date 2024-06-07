@@ -84,7 +84,7 @@ local status = nil
 ---@field prompt? string
 ---@field content? string
 ---@field language? string
----@field headless? boolean start action without opening chat window
+---@field headless? boolean
 ---@field on_success? function
 ---@field on_error? function
 
