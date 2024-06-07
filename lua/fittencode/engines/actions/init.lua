@@ -133,9 +133,6 @@ local function filter_suggestions(window, buffer, task_id, suggestions)
 end
 
 local function on_stage_end(is_error, on_success, on_error)
-  Log.debug('Action elapsed time: {}', elapsed_time)
-  Log.debug('Action depth: {}', depth)
-
   local ready = false
   if is_error then
     status:update(SC.ERROR)
@@ -171,14 +168,8 @@ end
 ---@param solved_prefix string
 ---@param on_error function
 local function chain_actions(window, buffer, action, solved_prefix, on_success, on_error)
-  Log.debug('Chain Action({})...', get_action_name(action))
-  if not solved_prefix then
+  if not solved_prefix or depth >= MAX_DEPTH then
     on_stage_end(false, on_success, on_error)
-    return
-  end
-  if depth >= MAX_DEPTH then
-    Log.debug('Max depth reached, stopping evaluation')
-    schedule(on_error)
     return
   end
   local task_id = tasks:create(0, 0)
@@ -188,7 +179,7 @@ local function chain_actions(window, buffer, action, solved_prefix, on_success, 
   }, function(_, prompt, suggestions)
     local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
     if not lines or #lines == 0 then
-      schedule(on_success)
+      on_stage_end(false, on_success, on_error)
     else
       elapsed_time = elapsed_time + ms
       depth = depth + 1
@@ -196,19 +187,9 @@ local function chain_actions(window, buffer, action, solved_prefix, on_success, 
       local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
       chain_actions(window, buffer, action, new_solved_prefix, on_success, on_error)
     end
-  end, function(err)
-    schedule(on_error, err)
+  end, function()
+    on_stage_end(true, on_success, on_error)
   end)
-end
-
-local function on_stage_error(prompt_opts, err)
-  local action_opts = prompt_opts.action_opts or {}
-  on_stage_end(true, action_opts.on_success, action_opts.on_error)
-end
-
-local function on_stage_success(prompt_opts, suggestions)
-  local action_opts = prompt_opts.action_opts or {}
-  on_stage_end(false, action_opts.on_success, action_opts.on_error)
 end
 
 ---@param line? string
@@ -355,16 +336,10 @@ local function make_filetype(buffer, range)
   return filetype
 end
 
-local function _start_action(window, buffer, action, prompt_opts)
-  local on_stage_error_wrap = function(err)
-    on_stage_error(prompt_opts, err)
-  end
-  local on_stage_success_wrap = function(suggestions)
-    on_stage_success(prompt_opts, suggestions)
-  end
+local function _start_action(window, buffer, action, opts)
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
-    Sessions.request_generate_one_stage(task_id, prompt_opts, function(_, prompt, suggestions)
+    Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
       local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
@@ -375,13 +350,13 @@ local function _start_action(window, buffer, action, prompt_opts)
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         resolve(solved_prefix)
       end
-    end, function(err)
-      reject(err)
+    end, function()
+      reject()
     end)
   end):forward(function(solved_prefix)
-    chain_actions(window, buffer, action, solved_prefix, on_stage_success_wrap, on_stage_error_wrap)
-  end, function(err)
-    schedule(on_stage_error_wrap, err)
+    chain_actions(window, buffer, action, solved_prefix, opts.action_opts.on_success, opts.action_opts.on_error)
+  end, function()
+    on_stage_end(true, opts.action_opts.on_success, opts.action_opts.on_error)
   end)
 end
 
@@ -414,6 +389,8 @@ function ActionsEngine.start_action(action, opts)
     return
   end
 
+  local headless = opts.headless == true
+
   if lock then
     return
   end
@@ -430,8 +407,10 @@ function ActionsEngine.start_action(action, opts)
   chat:create({
     keymaps = Config.options.keymaps.chat,
   })
-  chat:show()
-  fn.win_gotoid(window)
+  if not headless then
+    chat:show()
+    fn.win_gotoid(window)
+  end
 
   local range = {
     start = { 0, 0 },
@@ -444,6 +423,7 @@ function ActionsEngine.start_action(action, opts)
     filetype = make_filetype(buffer, range)
   end
 
+  ---@type PromptContext
   local prompt_opts = {
     window = window,
     buffer = buffer,
