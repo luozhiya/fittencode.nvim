@@ -307,7 +307,6 @@ vim.log = {
 | `translate_text_into_chinese(TranslateTextOptions)` | Translate text into Chinese                                     |
 | `translate_text_into_english(TranslateTextOptions)` | Translate text into English                                     |
 | `start_chat(ActionOptions)`                         | Start chat                                                      |
-| `stop_eval()`                                       | Stop the evaluation                                             |
 
 ## 🎉 Special Thanks
 

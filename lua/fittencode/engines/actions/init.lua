@@ -77,8 +77,6 @@ local elapsed_time = 0
 local depth = 0
 local MAX_DEPTH = 20
 
-local stop_eval = false
-
 ---@type Status
 local status = nil
 
@@ -182,12 +180,6 @@ local function chain_actions(window, buffer, action, solved_prefix, on_success, 
   if depth >= MAX_DEPTH then
     Log.debug('Max depth reached, stopping evaluation')
     schedule(on_error)
-    return
-  end
-  if stop_eval then
-    stop_eval = false
-    schedule(on_error)
-    Log.debug('Stop evaluation')
     return
   end
   local task_id = tasks:create(0, 0)
@@ -685,10 +677,6 @@ local chat_callbacks = {
 ---@return integer
 function ActionsEngine.get_status()
   return status:get_current()
-end
-
-function ActionsEngine.stop_eval()
-  stop_eval = true
 end
 
 function ActionsEngine.show_chat()

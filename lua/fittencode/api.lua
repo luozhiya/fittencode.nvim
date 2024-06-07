@@ -131,9 +131,6 @@ M.api = {
   start_chat = function(opts)
     return ActionsEngine.start_chat(opts)
   end,
-  stop_eval = function()
-    return ActionsEngine.stop_eval()
-  end,
   show_chat = function()
     return ActionsEngine.show_chat()
   end,
