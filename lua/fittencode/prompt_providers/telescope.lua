@@ -1,5 +1,6 @@
 local api = vim.api
 
+local Config = require('fittencode.config')
 local Log = require('fittencode.log')
 
 local M = {}
@@ -73,6 +74,10 @@ function M:execute(ctx)
     if selection ~= nil then
       prefix = selection.ordinal .. '\n' .. content
     end
+  end
+
+  if #prefix > Config.options.prompt.max_characters then
+    return
   end
 
   local suffix = ''

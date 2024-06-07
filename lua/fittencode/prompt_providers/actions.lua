@@ -1,5 +1,6 @@
 local api = vim.api
 
+local Config = require('fittencode.config')
 local Log = require('fittencode.log')
 local Path = require('fittencode.fs.path')
 
@@ -202,6 +203,10 @@ function M:execute(ctx)
     prefix = make_prefix(content, prompt, source_type, instruction_type)
   end
   local suffix = ''
+
+  if #prefix > Config.options.prompt.max_characters then
+    return
+  end
 
   return {
     name = self.name,
