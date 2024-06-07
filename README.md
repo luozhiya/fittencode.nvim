@@ -90,6 +90,13 @@ use {
       -- Show "Fitten Code - Start Chat" in the editor context menu, when you right-click on the code.
       show_in_editor_context_menu = true,
     },
+    identify_programming_language = {
+      -- Identify programming language of the current buffer
+      -- * Unnamed buffer
+      -- * Buffer without file extension
+      -- * Buffer no filetype detected
+      identify_buffer = true,
+    }
   },
   disable_specific_inline_completion = {
     -- Disable auto-completion for some specific file suffixes by entering them below
@@ -134,6 +141,10 @@ use {
     ---@type integer
     delaytime = 0,
   },
+  prompt = {
+    -- Maximum number of characters to prompt for completion/chat.
+    max_characters = 1000000,
+  },
   -- Enable/Disable the default keymaps in inline completion.
   use_default_keymaps = true,
   -- Default keymaps
@@ -157,8 +168,8 @@ use {
   },
   -- Set the mode of the completion.
   -- Available options:
-  -- - 'inline' (VSCode style inline completion)
-  -- - 'source' (integrates into other completion plugins)
+  -- * 'inline' (VSCode style inline completion)
+  -- * 'source' (integrates into other completion plugins)
   completion_mode = 'inline',
   ---@class LogOptions
   log = {

@@ -30,9 +30,9 @@ local defaults = {
     },
     identify_programming_language = {
       -- Identify programming language of the current buffer
-      --   - Unnamed buffer
-      --   - Buffer without file extension
-      --   - Buffer no filetype detected
+      -- * Unnamed buffer
+      -- * Buffer without file extension
+      -- * Buffer no filetype detected
       identify_buffer = true,
     }
   },
@@ -117,8 +117,8 @@ local defaults = {
   },
   -- Set the mode of the completion.
   -- Available options:
-  -- - 'inline' (VSCode style inline completion)
-  -- - 'source' (integrates into other completion plugins)
+  -- * 'inline' (VSCode style inline completion)
+  -- * 'source' (integrates into other completion plugins)
   completion_mode = 'inline',
   rest = {
     -- Rest backend to use. Available options:
