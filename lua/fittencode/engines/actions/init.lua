@@ -332,7 +332,9 @@ local function make_range(buffer)
     end
   end
 
-  api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
+  if not region then
+    api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
+  end
 
   local start = api.nvim_buf_get_mark(buffer, '<')
   local end_ = api.nvim_buf_get_mark(buffer, '>')
