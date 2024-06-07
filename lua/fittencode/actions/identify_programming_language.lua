@@ -45,7 +45,6 @@ local function _identify_current_buffer()
   local content = table.concat(lines, '\n')
   API.identify_programming_language({
     headless = true,
-    commit = false,
     content = content,
     on_success = function(suggestions)
       if not suggestions or #suggestions == 0 then

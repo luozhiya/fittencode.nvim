@@ -84,10 +84,9 @@ local status = nil
 ---@field prompt? string
 ---@field content? string
 ---@field language? string
----@field headless? boolean
----@field commit? boolean
----@field on_success? function @function Callback when suggestions are ready
----@field on_error? function @function Callback when an error occurs
+---@field headless? boolean start action without opening chat window
+---@field on_success? function
+---@field on_error? function
 
 ---@class GenerateUnitTestOptions : ActionOptions
 ---@field test_framework string
@@ -395,7 +394,6 @@ local function start_content(action_name, prompt_opts, range)
     current_eval = current_eval,
     action = action_name,
     prompt = vim.split(prompt_preview.content, '\n'),
-    commit = prompt_opts.action_opts.commit,
     location = {
       prompt_preview.filename,
       range.start[1],
@@ -409,10 +407,6 @@ end
 ---@return nil
 function ActionsEngine.start_action(action, opts)
   opts = opts or {}
-  opts.commit = opts.commit == nil and true or opts.commit
-  if not opts.commit then
-    opts.headless = true
-  end
 
   local action_name = get_action_name(action)
   if not action_name then
@@ -436,10 +430,8 @@ function ActionsEngine.start_action(action, opts)
   chat:create({
     keymaps = Config.options.keymaps.chat,
   })
-  if not opts.headless then
-    chat:show()
-    fn.win_gotoid(window)
-  end
+  chat:show()
+  fn.win_gotoid(window)
 
   local range = {
     start = { 0, 0 },
