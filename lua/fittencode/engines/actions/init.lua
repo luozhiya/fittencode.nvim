@@ -336,7 +336,7 @@ local function make_filetype(buffer, range)
   return filetype
 end
 
-local function _start_action(window, buffer, action, opts)
+local function _start_action(window, buffer, action, opts, on_success, on_error)
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
@@ -354,9 +354,9 @@ local function _start_action(window, buffer, action, opts)
       reject()
     end)
   end):forward(function(solved_prefix)
-    chain_actions(window, buffer, action, solved_prefix, opts.action_opts.on_success, opts.action_opts.on_error)
+    chain_actions(window, buffer, action, solved_prefix, on_success, on_error)
   end, function()
-    on_stage_end(true, opts.action_opts.on_success, opts.action_opts.on_error)
+    on_stage_end(true, on_success, on_error)
   end)
 end
 
@@ -433,11 +433,11 @@ function ActionsEngine.start_action(action, opts)
     solved_content = opts and opts.content,
     solved_prefix = nil,
     prompt = opts and opts.prompt,
-    action_opts = opts,
+    action = opts,
   }
 
   start_content(action_name, prompt_opts, range)
-  _start_action(chat.window, chat.buffer, action, prompt_opts)
+  _start_action(chat.window, chat.buffer, action, prompt_opts, opts.on_success, opts.on_error)
 end
 
 ---@param opts? ActionOptions

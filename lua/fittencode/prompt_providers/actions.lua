@@ -70,14 +70,14 @@ local MAP_ACTION_PROMPTS = {
   ExplainCode = 'Explain the code above, Break it down step by step',
   FindBugs = 'Find bugs in the code above',
   GenerateUnitTest = function(ctx)
-    local opts = ctx.action_opts or {}
+    local opts = ctx.action or {}
     if opts.test_framework then
       return 'Generate a unit test for the code above with ' .. opts.test_framework
     end
     return 'Generate a unit test for the code above'
   end,
   ImplementFeatures = function(ctx)
-    local opts = ctx.action_opts or {}
+    local opts = ctx.action or {}
     local feature_type = opts.feature_type or 'code'
     return 'Implement the ' .. feature_type .. ' mentioned in the code above'
   end,
@@ -86,9 +86,9 @@ local MAP_ACTION_PROMPTS = {
   IdentifyProgrammingLanguage = 'Identify the language used in the code above and Give the name in short',
   AnalyzeData = 'Analyze the data above and Give the pattern of the data',
   TranslateText = function(ctx)
-    assert(ctx.action_opts)
-    assert(ctx.action_opts.target_language)
-    return 'Translate the text above' .. ' into ' .. ctx.action_opts.target_language
+    assert(ctx.action)
+    assert(ctx.action.target_language)
+    return 'Translate the text above' .. ' into ' .. ctx.action.target_language
   end,
   SummarizeText = 'Summarize the text above and then represent the outline in a multi-level sequence',
   GenerateCode = 'Generate code based on the description above and fenced code block languages'
@@ -96,7 +96,7 @@ local MAP_ACTION_PROMPTS = {
 
 local function make_language(ctx)
   local filetype = ctx.filetype or ''
-  local language = ctx.action_opts.language or filetype
+  local language = ctx.action.language or filetype
   return language
 end
 
