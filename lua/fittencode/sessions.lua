@@ -1,7 +1,7 @@
 local fn = vim.fn
 
 local Base = require('fittencode.base')
-local Client = require('fittencode.client.fitten_client')
+local Client = require('fittencode.client.fitten')
 local Config = require('fittencode.config')
 local KeyStorage = require('fittencode.key_storage')
 local Log = require('fittencode.log')
