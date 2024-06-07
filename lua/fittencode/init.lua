@@ -13,14 +13,14 @@ function M.setup(opts)
 
   require('fittencode.log').setup()
   require('fittencode.rest.manager').setup()
-  local sessions = require('fittencode.sessions')
-  sessions.setup()
+  local Sessions = require('fittencode.sessions')
+  Sessions.setup()
   require('fittencode.engines').setup()
   require('fittencode.actions').setup()
   require('fittencode.prompt_providers').setup()
   require('fittencode.color').setup_highlight()
   require('fittencode.commands').setup()
-  sessions.load_last_session()
+  Sessions.load_last_session()
 end
 
 setmetatable(M, {
