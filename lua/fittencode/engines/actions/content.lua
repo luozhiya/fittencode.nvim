@@ -128,6 +128,11 @@ function M:on_start(opts)
   self.conversations[self.current_eval] = Conversation:new(self.current_eval, opts.action)
   self.conversations[self.current_eval].location = opts.location
   self.conversations[self.current_eval].prompt = opts.prompt
+  self.conversations[self.current_eval].headless = opts.headless
+
+  if self.conversations[self.current_eval].headless then
+    return
+  end
 
   local source_info = ' (' .. opts.location[1] .. ' ' .. opts.location[2] .. ':' .. opts.location[3] .. ')'
   local c_in = '# In`[' .. self.current_eval .. ']`:= ' .. opts.action .. source_info
@@ -182,6 +187,10 @@ function M:on_end(opts)
   self.conversations[self.current_eval].elapsed_time = opts.elapsed_time
   self.conversations[self.current_eval].depth = opts.depth
 
+  if self.conversations[self.current_eval].headless then
+    return
+  end
+
   self:commit({
     lines = {
       '',
@@ -214,6 +223,10 @@ function M:on_suggestions(suggestions)
   end
   self.conversations[self.current_eval].suggestions[#self.conversations[self.current_eval].suggestions + 1] = suggestions
 
+  if self.conversations[self.current_eval].headless then
+    return
+  end
+
   if not self.has_suggestions[self.current_eval] then
     self.has_suggestions[self.current_eval] = true
     local cursor = self:commit({
@@ -234,6 +247,9 @@ end
 
 function M:on_status(msg)
   if not msg then
+    return
+  end
+  if self.conversations[self.current_eval].headless then
     return
   end
   self:commit({

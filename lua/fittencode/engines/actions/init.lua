@@ -369,6 +369,7 @@ local function start_content(action_name, prompt_opts, range)
     current_eval = current_eval,
     action = action_name,
     prompt = vim.split(prompt_preview.content, '\n'),
+    headless = prompt_opts.action.headless,
     location = {
       prompt_preview.filename,
       range.start[1],
