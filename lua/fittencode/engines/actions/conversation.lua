@@ -7,6 +7,7 @@
 ---@field elapsed_time integer
 ---@field depth integer
 ---@field location table -- [filename, row_start, row_end]
+---@field commit boolean
 local M = {}
 
 function M:new(id, actions, references)

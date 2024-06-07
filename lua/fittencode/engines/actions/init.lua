@@ -139,6 +139,7 @@ local function on_stage_end(is_error, on_success, on_error)
   Log.debug('Action elapsed time: {}', elapsed_time)
   Log.debug('Action depth: {}', depth)
 
+  local ready = false
   if is_error then
     status:update(SC.ERROR)
     local err_msg = 'Error: fetch failed.'
@@ -152,7 +153,7 @@ local function on_stage_end(is_error, on_success, on_error)
       schedule(on_success)
     else
       status:update(SC.SUGGESTIONS_READY)
-      schedule(on_success, content:get_current_suggestions())
+      ready = true
     end
   end
 
@@ -160,6 +161,10 @@ local function on_stage_end(is_error, on_success, on_error)
     elapsed_time = elapsed_time,
     depth = depth,
   })
+
+  if ready then
+    schedule(on_success, content:get_current_suggestions())
+  end
 
   current_eval = current_eval + 1
   lock = false
@@ -396,6 +401,7 @@ local function start_content(action_name, prompt_opts, range)
     current_eval = current_eval,
     action = action_name,
     prompt = vim.split(prompt_preview.content, '\n'),
+    commit = prompt_opts.action_opts.commit,
     location = {
       prompt_preview.filename,
       range.start[1],
@@ -409,16 +415,18 @@ end
 ---@return nil
 function ActionsEngine.start_action(action, opts)
   opts = opts or {}
+  opts.commit = opts.commit == nil and true or opts.commit
+  if not opts.commit then
+    opts.headless = true
+  end
 
   local action_name = get_action_name(action)
   if not action_name then
     Log.error('Invalid Action: {}', action)
     return
   end
-  Log.debug('Start Action({})...', action_name)
 
   if lock then
-    Log.debug('Action is locked, skipping')
     return
   end
 
@@ -447,9 +455,7 @@ function ActionsEngine.start_action(action, opts)
 
   if not opts.content then
     range = make_range(buffer)
-    Log.debug('Action range: {}', range)
     filetype = make_filetype(buffer, range)
-    Log.debug('Action real filetype: {}', filetype)
   end
 
   local prompt_opts = {
@@ -463,7 +469,6 @@ function ActionsEngine.start_action(action, opts)
     prompt = opts and opts.prompt,
     action_opts = opts,
   }
-  Log.debug('Action prompt_opts: {}', prompt_opts)
 
   start_content(action_name, prompt_opts, range)
   _start_action(chat.window, chat.buffer, action, prompt_opts)
