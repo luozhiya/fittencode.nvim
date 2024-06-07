@@ -144,13 +144,6 @@ local defaults = {
   },
 }
 
--- Private options
-M.internal = {
-  virtual_text = {
-    inline = vim.fn.has('nvim-0.10') == 1,
-  },
-}
-
 ---@param opts? FittenCodeOptions
 function M.setup(opts)
   ---@class FittenCodeOptions
@@ -158,6 +151,9 @@ function M.setup(opts)
   if M.options.use_default_keymaps == false then
     M.options.keymaps.inline = {}
     M.options.keymaps.chat = {}
+  end
+  if vim.fn.has('nvim-0.10') ~= 1 then
+    M.options.inline_completion.disable_completion_within_the_line = true
   end
 end
 

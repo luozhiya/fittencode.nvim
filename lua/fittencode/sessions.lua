@@ -112,7 +112,7 @@ local function make_generate_one_stage_params(opts)
   if prompt == nil then
     return
   end
-  if prompt.within_the_line and (not Config.internal.virtual_text.inline or Config.options.inline_completion.disable_completion_within_the_line) then
+  if prompt.within_the_line and Config.options.inline_completion.disable_completion_within_the_line then
     return
   end
   local fc_prompt = '!FCPREFIX!' .. prompt.prefix .. '!FCSUFFIX!' .. prompt.suffix .. '!FCMIDDLE!'

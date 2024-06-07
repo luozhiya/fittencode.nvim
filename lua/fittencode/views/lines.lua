@@ -83,7 +83,7 @@ local function set_extmark(virt_text, hl_mode)
   local row, col = Base.get_cursor()
   local ids = {}
 
-  if Config.internal.virtual_text.inline then
+  if vim.fn.has('nvim-0.10') == 1 then
     ids[#ids + 1] = api.nvim_buf_set_extmark(0, namespace, row, col, {
       virt_text = virt_text[1],
       virt_text_pos = 'inline',
