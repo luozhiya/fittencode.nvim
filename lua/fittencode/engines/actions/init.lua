@@ -24,8 +24,6 @@ local SC = Status.C
 ---@field tasks TaskScheduler
 ---@field status Status
 ---@field lock boolean
----@field elapsed_time number
----@field depth number
 ---@field current_eval number
 ---@field start_chat function
 ---@field document_code function
@@ -75,8 +73,6 @@ local tasks = nil
 -- One by one evaluation
 local lock = false
 
-local elapsed_time = 0
-local depth = 0
 local MAX_DEPTH = 20
 
 ---@type Status
@@ -132,7 +128,7 @@ local function preprocessing(presug, task_id, suggestions)
   }), ms
 end
 
-local function on_stage_end(is_error, headless, suggestions, on_success, on_error)
+local function on_stage_end(is_error, headless, elapsed_time, depth, suggestions, on_success, on_error)
   local ready = false
   if is_error then
     status:update(SC.ERROR)
@@ -171,9 +167,9 @@ end
 ---@param action integer
 ---@param solved_prefix string
 ---@param on_error function
-local function chain_actions(presug, action, solved_prefix, headless, on_success, on_error)
+local function chain_actions(presug, action, solved_prefix, headless, elapsed_time, depth, on_success, on_error)
   if not solved_prefix or depth >= MAX_DEPTH then
-    on_stage_end(false, headless, presug, on_success, on_error)
+    on_stage_end(false, headless, elapsed_time, depth, presug, on_success, on_error)
     return
   end
   Promise:new(function(resolve, reject)
@@ -191,7 +187,7 @@ local function chain_actions(presug, action, solved_prefix, headless, on_success
         local new_presug = Merge.run(presug, lines, true)
         content:on_suggestions(lines)
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-        chain_actions(new_presug, action, new_solved_prefix, headless, on_success, on_error)
+        chain_actions(new_presug, action, new_solved_prefix, headless, elapsed_time, depth, on_success, on_error)
       end
     end, function()
       reject({ true, presug })
@@ -206,7 +202,7 @@ local function chain_actions(presug, action, solved_prefix, headless, on_success
       }
     })
     local new_presug = Merge.run(prefix, lines, true)
-    on_stage_end(is_error, headless, new_presug, on_success, on_error)
+    on_stage_end(is_error, headless, elapsed_time, depth, new_presug, on_success, on_error)
   end)
 end
 
@@ -351,7 +347,7 @@ local function make_filetype(buffer, range)
   return filetype
 end
 
-local function _start_action(action, opts, headless, on_success, on_error)
+local function _start_action(action, opts, headless, elapsed_time, depth, on_success, on_error)
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
@@ -370,9 +366,9 @@ local function _start_action(action, opts, headless, on_success, on_error)
     end)
   end):forward(function(pair)
     local solved_prefix, new_presug = unpack(pair)
-    chain_actions(new_presug, action, solved_prefix, headless, on_success, on_error)
+    chain_actions(new_presug, action, solved_prefix, headless, elapsed_time, depth, on_success, on_error)
   end, function()
-    on_stage_end(true, headless, nil, on_success, on_error)
+    on_stage_end(true, headless, elapsed_time, depth, nil, on_success, on_error)
   end)
 end
 
@@ -413,8 +409,6 @@ function ActionsEngine.start_action(action, opts)
   end
 
   lock = true
-  elapsed_time = 0
-  depth = 0
 
   status:update(SC.GENERATING)
 
@@ -451,7 +445,7 @@ function ActionsEngine.start_action(action, opts)
   }
 
   start_content(action_name, prompt_opts, range)
-  _start_action(action, prompt_opts, headless, opts.on_success, opts.on_error)
+  _start_action(action, prompt_opts, headless, 0, 0, opts.on_success, opts.on_error)
 end
 
 ---@param opts? ActionOptions
