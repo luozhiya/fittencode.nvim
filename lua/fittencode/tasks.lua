@@ -8,6 +8,7 @@ local Log = require('fittencode.log')
 ---@field timestamp integer @timestamp of the task when it was created, in nanoseconds, since the Unix epoch
 
 ---@class TaskScheduler
+---@field tag string
 ---@field list table<integer, Task> @list of tasks
 ---@field threshold? integer @threshold for clean up
 ---@field timeout_recycling_timer? uv_timer_t @timer for recycling timeout tasks
@@ -21,12 +22,15 @@ local MS_TO_NS = 1000000
 local TASK_TIMEOUT = 6000 * MS_TO_NS
 local RECYCLING_CYCLE = 100
 
-function TaskScheduler.new()
-  local self = setmetatable({}, { __index = TaskScheduler })
-  self.list = {}
-  self.threshold = nil
-  self.timeout_recycling_timer = nil
-  return self
+function TaskScheduler:new(tag)
+  local obj = {
+    tag = tag,
+    list = {},
+    threshold = nil,
+    timeout_recycling_timer = nil,
+  }
+  self.__index = self
+  return setmetatable(obj, self)
 end
 
 function TaskScheduler:setup()
@@ -41,13 +45,17 @@ function TaskScheduler:setup()
   end
 end
 
----@param row integer
----@param col integer
+---@param row? integer
+---@param col? integer
 ---@return integer
 function TaskScheduler:create(row, col)
   local timestamp = uv.hrtime()
   table.insert(self.list, #self.list + 1, { row = row, col = col, timestamp = timestamp })
-  Log.debug('TASK CREATED: {}', self.list[#self.list])
+  if row and col then
+    Log.debug('Task<{}>: {} Created at ({}, {})', self.tag, string.format('%x', timestamp), row, col)
+  else
+    Log.debug('Task<{}>: {} Created', self.tag, string.format('%x', timestamp))
+  end
   return timestamp
 end
 
@@ -60,23 +68,26 @@ function TaskScheduler:schedule_clean(task_id)
 end
 
 ---@param task_id integer
----@param row integer
----@param col integer
----@return boolean, integer
-function TaskScheduler:match_clean(task_id, row, col)
+---@param row? integer
+---@param col? integer
+---@return table<boolean, integer>
+function TaskScheduler:match_clean(task_id, row, col, clean)
   local match_found = false
   local ms = 0
+  clean = clean == false and false or true
   for i = #self.list, 1, -1 do
     local task = self.list[i]
     if task.timestamp == task_id and task.row == row and task.col == col then
       ms = math.floor((uv.hrtime() - task.timestamp) / MS_TO_NS)
-      Log.debug('TASK MATCHED, time elapsed: {} ms, task: {}', ms, task)
+      Log.debug('Task<{}>: {} Matched, Time elapsed: {} ms', self.tag, string.format('%x', task_id), ms)
       match_found = true
       break
     end
   end
-  self:schedule_clean(task_id)
-  return match_found, ms
+  if clean then
+    self:schedule_clean(task_id)
+  end
+  return { match_found, ms }
 end
 
 ---@param timestamp integer

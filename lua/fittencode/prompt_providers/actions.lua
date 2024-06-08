@@ -187,8 +187,10 @@ function M:execute(ctx)
   local instruction_type = make_instruction_type(name)
 
   local filename = ''
+  local display_filename = ''
   if ctx.buffer then
     filename = Path.name(ctx.buffer, no_lang)
+    display_filename = Path.name(ctx.buffer, false)
   end
   local within_the_line = false
   local content = ''
@@ -212,6 +214,7 @@ function M:execute(ctx)
     name = self.name,
     priority = self.priority,
     filename = filename,
+    display_filename = display_filename,
     content = content,
     prefix = prefix,
     suffix = suffix,
