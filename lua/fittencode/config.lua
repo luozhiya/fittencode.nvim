@@ -82,6 +82,10 @@ local defaults = {
     -- Maximum number of characters to prompt for completion/chat.
     max_characters = 1000000,
   },
+  chat = {
+    -- Highlight the conversation in the chat window at the current cursor position.
+    highlight_conversation_at_cursor = false,
+  },
   -- Enable/Disable the default keymaps in inline completion.
   use_default_keymaps = true,
   -- Default keymaps

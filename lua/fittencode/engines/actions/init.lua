@@ -410,9 +410,6 @@ function ActionsEngine.start_action(action, opts)
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
 
-  chat:create({
-    keymaps = Config.options.keymaps.chat,
-  })
   if not headless then
     chat:show()
     fn.win_gotoid(window)
@@ -668,6 +665,9 @@ local CHAT_MODEL = {
 
 function ActionsEngine.setup()
   chat = Chat:new(CHAT_MODEL)
+  chat:create({
+    keymaps = Config.options.keymaps.chat,
+  })
   content = Content:new(chat)
   tasks = TaskScheduler:new()
   tasks:setup()

@@ -7,6 +7,7 @@ M.FittenSuggestionSpacesLine = 'FittenSuggestionSpacesLine'
 M.FittenNoMoreSuggestion = 'FittenNoMoreSuggestion'
 M.FittenSuggestionStage = 'FittenSuggestionStage'
 M.FittenSuggestionStageSpacesLine = 'FittenSuggestionStage'
+M.FittenChatConversation = 'FittenChatConversation'
 
 -- Define FittenCode colors
 local colors = {}
@@ -32,6 +33,10 @@ function M.setup_highlight()
     fg = colors.yellow2,
     bg = colors.gray2,
     ctermfg = 'LightYellow',
+  })
+  Base.set_hi(M.FittenChatConversation, {
+    bg = colors.gray2,
+    ctermbg = 'LightGrey',
   })
 end
 

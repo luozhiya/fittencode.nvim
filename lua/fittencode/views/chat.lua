@@ -1,6 +1,8 @@
 local api = vim.api
 
 local Base = require('fittencode.base')
+local Config = require('fittencode.config')
+local Color = require('fittencode.color')
 local Lines = require('fittencode.views.lines')
 local Log = require('fittencode.log')
 
@@ -68,7 +70,7 @@ end
 local function set_option_value_win(window)
   api.nvim_set_option_value('wrap', true, { win = window })
   api.nvim_set_option_value('linebreak', true, { win = window })
-  -- api.nvim_set_option_value('cursorline', true, { win = window })
+  api.nvim_set_option_value('cursorline', true, { win = window })
   api.nvim_set_option_value('spell', false, { win = window })
   api.nvim_set_option_value('number', false, { win = window })
   api.nvim_set_option_value('relativenumber', false, { win = window })
@@ -81,7 +83,13 @@ function M:update_highlight()
   if not range then
     return
   end
-  Lines.highlight_range(self.buffer, 'Visual', range[1][1], range[1][2], range[2][1], range[2][2])
+  Lines.highlight_lines({
+    buffer = self.buffer,
+    hl = Color.FittenChatConversation,
+    start_row = range[1][1],
+    end_row = range[2][1],
+    -- show_time = 500,
+  })
 end
 
 ---@class ChatCreateOptions
@@ -108,24 +116,23 @@ function M:create(opts)
     end, { buffer = self.buffer })
   end
 
-  api.nvim_create_autocmd({ 'CursorMoved' }, {
-    group = Base.augroup('Chat', 'CursorMoved'),
-    pattern = '*',
-    callback = function()
-      M:update_highlight()
-    end,
-    {
-      desc = 'On Cursor Moved',
+  if Config.options.chat.highlight_conversation_at_cursor then
+    api.nvim_create_autocmd({ 'CursorMoved' }, {
+      group = Base.augroup('Chat', 'HighlightConversationAtCursor'),
+      callback = function()
+        self:update_highlight()
+      end,
       buffer = self.buffer,
-    }
-  })
+      desc = 'On Cursor Moved',
+    })
+  end
 
   set_option_value_buf(self.buffer)
 end
 
 function M:show()
   if not self.buffer or not api.nvim_buf_is_valid(self.buffer) then
-    self:create()
+    return
   end
 
   if self.window then

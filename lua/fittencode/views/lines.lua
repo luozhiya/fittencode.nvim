@@ -339,8 +339,27 @@ function M.is_rendering(buffer, ids)
   return false
 end
 
-function M.highlight_range(buffer, hl, start_row, start_col, end_row, end_col)
-  vim.highlight.range(buffer, namespace, hl, { start_row, start_col }, { end_row, end_col })
+---@class HighlightLinesOptions
+---@field buffer integer
+---@field hl string
+---@field start_row integer
+---@field end_row integer
+---@field show_time? integer
+
+---@param opts HighlightLinesOptions
+function M.highlight_lines(opts)
+  local buffer = opts.buffer
+  local hl = opts.hl
+  local start_row = opts.start_row
+  local end_row = opts.end_row
+  local show_time = opts.show_time or 0
+  api.nvim_buf_clear_namespace(buffer, namespace, 0, -1)
+  vim.highlight.range(buffer, namespace, hl, { start_row, 0 }, { end_row + 1, vim.v.maxcol })
+  if show_time > 0 then
+    vim.defer_fn(function()
+      api.nvim_buf_clear_namespace(buffer, namespace, 0, -1)
+    end, show_time)
+  end
 end
 
 -- When we edit some complex documents, extmark will not be able to draw correctly.

@@ -133,6 +133,7 @@ function M:on_start(opts)
   self.conversations[self.current_eval].headless = opts.headless
 
   if self.conversations[self.current_eval].headless then
+    self.cursors[self.current_eval] = {}
     return
   end
 
@@ -281,7 +282,28 @@ local function merge_lines(suggestions)
   return merged
 end
 
+function M:get_current_suggestions()
+  return merge_lines(self.conversations[self.current_eval].suggestions)
+end
+
+function M:get_conversation_index(row, col)
+  for i, cursor in ipairs(self.cursors) do
+    if cursor then
+      if row >= cursor[ViewBlock.IN][1][1] and row <= cursor[ViewBlock.QED][2][1] then
+        return i
+      end
+    end
+  end
+end
+
 function M:get_conversation_range(row, col)
+  local i = self:get_conversation_index(row, col)
+  if i then
+    return {
+      { self.cursors[i][ViewBlock.IN][1][1],  0 },
+      { self.cursors[i][ViewBlock.QED][2][1], 0 }
+    }
+  end
 end
 
 return M
