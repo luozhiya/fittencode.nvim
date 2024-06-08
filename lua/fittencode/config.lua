@@ -99,7 +99,13 @@ local defaults = {
       ['<A-\\>'] = 'triggering_completion',
     },
     chat = {
-      ['q'] = 'close'
+      ['q'] = 'close',
+      ['[c'] = 'goto_previous_conversation',
+      [']c'] = 'goto_next_conversation',
+      ['c'] = 'copy_conversation',
+      ['C'] = 'copy_all_conversations',
+      ['d'] = 'delete_conversation',
+      ['D'] = 'delete_all_conversations',
     }
   },
   -- Setting for source completion.

@@ -658,9 +658,12 @@ function ActionsEngine.toggle_chat()
 end
 
 local CHAT_MODEL = {
-  get_conversation_range = function(row, col)
-    return content:get_conversation_range(row, col)
+  get_conversations_range = function(direction, row, col)
+    return content:get_conversations_range(direction, row, col)
   end,
+  get_conversations = function(range, row, col)
+    return content:get_conversations(range, row, col)
+  end
 }
 
 function ActionsEngine.setup()

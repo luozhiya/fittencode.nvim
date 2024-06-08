@@ -296,13 +296,46 @@ function M:get_conversation_index(row, col)
   end
 end
 
-function M:get_conversation_range(row, col)
+function M:get_conversations_range(direction, row, col)
   local i = self:get_conversation_index(row, col)
-  if i then
+  if not i then
+    return
+  end
+  local start_row = self.cursors[i][ViewBlock.IN][1][1]
+  local end_row = self.cursors[i][ViewBlock.QED][2][1]
+  if direction == 'current' then
     return {
-      { self.cursors[i][ViewBlock.IN][1][1],  0 },
-      { self.cursors[i][ViewBlock.QED][2][1], 0 }
+      { start_row, 0 },
+      { end_row,   0 }
     }
+  elseif direction == 'forward' then
+    local f = self:get_conversation_index(end_row + 2, 0)
+    if f then
+      return {
+        { self.cursors[f][ViewBlock.IN][1][1],  0 },
+        { self.cursors[f][ViewBlock.QED][2][1], 0 }
+      }
+    end
+  elseif direction == 'backward' then
+    local b = self:get_conversation_index(start_row - 2, 0)
+    if b then
+      return {
+        { self.cursors[b][ViewBlock.IN][1][1],  0 },
+        { self.cursors[b][ViewBlock.QED][2][1], 0 }
+      }
+    end
+  end
+end
+
+function M:get_conversations(range, row, col)
+  if range == 'all' then
+    return self.conversations
+  elseif range == 'current' then
+    local i = self:get_conversation_index(row, col)
+    if not i then
+      return
+    end
+    return self.conversations[i]
   end
 end
 

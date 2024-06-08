@@ -25,6 +25,13 @@ function M:new(model)
   return setmetatable(o, self)
 end
 
+local function _call_model(self, method, ...)
+  if not self.model[method] then
+    return
+  end
+  return self.model[method](...)
+end
+
 local function _commit(window, buffer, lines)
   local cursor = nil
   if buffer and api.nvim_buf_is_valid(buffer) then
@@ -79,7 +86,7 @@ local function set_option_value_win(window)
 end
 
 function M:update_highlight()
-  local range = self.model['get_conversation_range'](Base.get_cursor(self.window))
+  local range = _call_model(self, 'get_conversations_range', 'current', Base.get_cursor(self.window))
   if not range then
     return
   end
@@ -105,6 +112,12 @@ function M:create(opts)
 
   local Fx = {
     close = function() self:close() end,
+    goto_previous_conversation = function() self:goto_previous_conversation() end,
+    goto_next_conversation = function() self:goto_next_conversation() end,
+    copy_conversation = function() self:copy_conversation() end,
+    copy_all_conversations = function() self:copy_all_conversations() end,
+    delete_conversation = function() self:delete_conversation() end,
+    delete_all_conversations = function() self:delete_all_conversations() end,
   }
 
   for key, value in pairs(Config.options.keymaps.chat) do
@@ -172,6 +185,66 @@ end
 
 function M:is_visible()
   return self.window and api.nvim_win_is_valid(self.window)
+end
+
+function M:goto_conversation(direction)
+  local range = _call_model(self, 'get_conversations_range', direction, Base.get_cursor(self.window))
+  Log.debug('goto_conversation range {}', range)
+  if not range then
+    return
+  end
+  api.nvim_win_set_cursor(self.window, { range[1][1] + 1, range[1][2] })
+end
+
+function M:goto_previous_conversation()
+  self:goto_conversation('backward')
+end
+
+function M:goto_next_conversation()
+  self:goto_conversation('forward')
+end
+
+function M:copy_conversation()
+  local range = _call_model(self, 'get_conversations_range', 'current', Base.get_cursor(self.window))
+  if not range then
+    return
+  end
+  local start_row = range[1][1]
+  local end_row = range[2][1]
+  local lines = api.nvim_buf_get_lines(self.buffer, start_row, end_row + 1, false)
+  vim.fn.setreg('+', table.concat(lines, '\n'))
+end
+
+function M:copy_all_conversations()
+  local conversations = _call_model(self, 'get_conversations', 'all')
+  if not conversations then
+    return
+  end
+end
+
+function M:delete_conversation()
+  local range = _call_model(self, 'get_conversations_range', 'current', Base.get_cursor(self.window))
+  if not range then
+    return
+  end
+  local start_row = range[1][1]
+  local end_row = range[2][1]
+  local next = _call_model(self, 'get_conversations_range', 'forward', Base.get_cursor(self.window))
+  if next then
+    Log.debug('delete_conversation next {}', next)
+    end_row = next[1][1] - 1
+  end
+  if self.buffer and api.nvim_buf_is_valid(self.buffer) then
+    api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
+    api.nvim_set_option_value('readonly', false, { buf = self.buffer })
+    api.nvim_buf_set_lines(self.buffer, start_row, end_row + 1, false, {})
+    api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
+    api.nvim_set_option_value('readonly', true, { buf = self.buffer })
+  end
+end
+
+function M:delete_all_conversations()
+  api.nvim_buf_set_lines(self.buffer, 0, -1, false, {})
 end
 
 return M
