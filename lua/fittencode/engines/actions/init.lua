@@ -60,6 +60,7 @@ local ACTIONS = {
 }
 
 local current_eval = 1
+local current_action = 1
 
 ---@type Chat
 local chat = nil
@@ -77,8 +78,6 @@ local elapsed_time = 0
 local depth = 0
 local MAX_DEPTH = 20
 
-local stop_eval = false
-
 ---@type Status
 local status = nil
 
@@ -87,8 +86,8 @@ local status = nil
 ---@field content? string
 ---@field language? string
 ---@field headless? boolean
----@field on_success? function @function Callback when suggestions are ready
----@field on_error? function @function Callback when an error occurs
+---@field on_success? function
+---@field on_error? function
 
 ---@class GenerateUnitTestOptions : ActionOptions
 ---@field test_framework string
@@ -134,10 +133,8 @@ local function filter_suggestions(window, buffer, task_id, suggestions)
   }), ms
 end
 
-local function on_stage_end(is_error, on_success, on_error)
-  Log.debug('Action elapsed time: {}', elapsed_time)
-  Log.debug('Action depth: {}', depth)
-
+local function on_stage_end(is_error, headless, on_success, on_error)
+  local ready = false
   if is_error then
     status:update(SC.ERROR)
     local err_msg = 'Error: fetch failed.'
@@ -151,7 +148,7 @@ local function on_stage_end(is_error, on_success, on_error)
       schedule(on_success)
     else
       status:update(SC.SUGGESTIONS_READY)
-      schedule(on_success, content:get_current_suggestions())
+      ready = true
     end
   end
 
@@ -160,28 +157,23 @@ local function on_stage_end(is_error, on_success, on_error)
     depth = depth,
   })
 
+  if ready then
+    schedule(on_success, content:get_current_suggestions())
+  end
+
   current_eval = current_eval + 1
+  if not headless then
+    current_action = current_action + 1
+  end
   lock = false
 end
 
 ---@param action integer
 ---@param solved_prefix string
 ---@param on_error function
-local function chain_actions(window, buffer, action, solved_prefix, on_success, on_error)
-  Log.debug('Chain Action({})...', get_action_name(action))
-  if not solved_prefix then
-    on_stage_end(false, on_success, on_error)
-    return
-  end
-  if depth >= MAX_DEPTH then
-    Log.debug('Max depth reached, stopping evaluation')
-    schedule(on_error)
-    return
-  end
-  if stop_eval then
-    stop_eval = false
-    schedule(on_error)
-    Log.debug('Stop evaluation')
+local function chain_actions(window, buffer, action, solved_prefix, headless, on_success, on_error)
+  if not solved_prefix or depth >= MAX_DEPTH then
+    on_stage_end(false, headless, on_success, on_error)
     return
   end
   local task_id = tasks:create(0, 0)
@@ -191,27 +183,17 @@ local function chain_actions(window, buffer, action, solved_prefix, on_success, 
   }, function(_, prompt, suggestions)
     local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
     if not lines or #lines == 0 then
-      schedule(on_success)
+      on_stage_end(false, headless, on_success, on_error)
     else
       elapsed_time = elapsed_time + ms
       depth = depth + 1
       content:on_suggestions(lines)
       local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-      chain_actions(window, buffer, action, new_solved_prefix, on_success, on_error)
+      chain_actions(window, buffer, action, new_solved_prefix, headless, on_success, on_error)
     end
-  end, function(err)
-    schedule(on_error, err)
+  end, function()
+    on_stage_end(true, headless, on_success, on_error)
   end)
-end
-
-local function on_stage_error(prompt_opts, err)
-  local action_opts = prompt_opts.action_opts or {}
-  on_stage_end(true, action_opts.on_success, action_opts.on_error)
-end
-
-local function on_stage_success(prompt_opts, suggestions)
-  local action_opts = prompt_opts.action_opts or {}
-  on_stage_end(false, action_opts.on_success, action_opts.on_error)
 end
 
 ---@param line? string
@@ -326,7 +308,9 @@ local function make_range(buffer)
     end
   end
 
-  api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
+  if not region then
+    api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
+  end
 
   local start = api.nvim_buf_get_mark(buffer, '<')
   local end_ = api.nvim_buf_get_mark(buffer, '>')
@@ -356,16 +340,10 @@ local function make_filetype(buffer, range)
   return filetype
 end
 
-local function _start_action(window, buffer, action, prompt_opts)
-  local on_stage_error_wrap = function(err)
-    on_stage_error(prompt_opts, err)
-  end
-  local on_stage_success_wrap = function(suggestions)
-    on_stage_success(prompt_opts, suggestions)
-  end
+local function _start_action(window, buffer, action, opts, headless, on_success, on_error)
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
-    Sessions.request_generate_one_stage(task_id, prompt_opts, function(_, prompt, suggestions)
+    Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
       local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
@@ -376,13 +354,13 @@ local function _start_action(window, buffer, action, prompt_opts)
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         resolve(solved_prefix)
       end
-    end, function(err)
-      reject(err)
+    end, function()
+      reject()
     end)
   end):forward(function(solved_prefix)
-    chain_actions(window, buffer, action, solved_prefix, on_stage_success_wrap, on_stage_error_wrap)
-  end, function(err)
-    schedule(on_stage_error_wrap, err)
+    chain_actions(window, buffer, action, solved_prefix, headless, on_success, on_error)
+  end, function()
+    on_stage_end(true, headless, on_success, on_error)
   end)
 end
 
@@ -393,8 +371,10 @@ local function start_content(action_name, prompt_opts, range)
   end
   content:on_start({
     current_eval = current_eval,
+    current_action = current_action,
     action = action_name,
     prompt = vim.split(prompt_preview.content, '\n'),
+    headless = prompt_opts.action.headless,
     location = {
       prompt_preview.filename,
       range.start[1],
@@ -414,10 +394,10 @@ function ActionsEngine.start_action(action, opts)
     Log.error('Invalid Action: {}', action)
     return
   end
-  Log.debug('Start Action({})...', action_name)
+
+  local headless = opts.headless == true
 
   if lock then
-    Log.debug('Action is locked, skipping')
     return
   end
 
@@ -430,20 +410,23 @@ function ActionsEngine.start_action(action, opts)
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
 
-  chat:create({
-    keymaps = Config.options.keymaps.chat,
-  })
-  if not opts.headless then
+  if not headless then
     chat:show()
     fn.win_gotoid(window)
   end
 
-  local range = make_range(buffer)
-  Log.debug('Action range: {}', range)
+  local range = {
+    start = { 0, 0 },
+    ['end'] = { 0, 0 },
+  }
+  local filetype = ''
 
-  local filetype = make_filetype(buffer, range)
-  Log.debug('Action real filetype: {}', filetype)
+  if not opts.content then
+    range = make_range(buffer)
+    filetype = make_filetype(buffer, range)
+  end
 
+  ---@type PromptContext
   local prompt_opts = {
     window = window,
     buffer = buffer,
@@ -453,12 +436,11 @@ function ActionsEngine.start_action(action, opts)
     solved_content = opts and opts.content,
     solved_prefix = nil,
     prompt = opts and opts.prompt,
-    action_opts = opts,
+    action = opts,
   }
-  Log.debug('Action prompt_opts: {}', prompt_opts)
 
   start_content(action_name, prompt_opts, range)
-  _start_action(chat.window, chat.buffer, action, prompt_opts)
+  _start_action(chat.window, chat.buffer, action, prompt_opts, headless, opts.on_success, opts.on_error)
 end
 
 ---@param opts? ActionOptions
@@ -658,22 +640,9 @@ local function setup_actions_menu()
   end
 end
 
-local chat_callbacks = {
-  goto_prev_conversation = function(row, col)
-    return content:get_prev_conversation(row, col)
-  end,
-  goto_next_conversation = function(row, col)
-    return content:get_next_conversation(row, col)
-  end,
-}
-
 ---@return integer
 function ActionsEngine.get_status()
   return status:get_current()
-end
-
-function ActionsEngine.stop_eval()
-  stop_eval = true
 end
 
 function ActionsEngine.show_chat()
@@ -688,8 +657,18 @@ function ActionsEngine.toggle_chat()
   end
 end
 
+local CHAT_MODEL = {
+  get_conversations_range = function(direction, row, col)
+    return content:get_conversations_range(direction, row, col)
+  end,
+  get_conversations = function(range, row, col)
+    return content:get_conversations(range, row, col)
+  end
+}
+
 function ActionsEngine.setup()
-  chat = Chat:new(chat_callbacks)
+  chat = Chat:new(CHAT_MODEL)
+  chat:create()
   content = Content:new(chat)
   tasks = TaskScheduler:new()
   tasks:setup()

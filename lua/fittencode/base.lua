@@ -40,9 +40,10 @@ function M.map(mode, lhs, rhs, opts)
   vim.keymap.set(mode, lhs, rhs, opts)
 end
 
+---@param tag string
 ---@param name string
-function M.augroup(name)
-  return api.nvim_create_augroup('FittenCode/' .. name, { clear = true })
+function M.augroup(tag, name)
+  return api.nvim_create_augroup('FittenCode/' .. tag .. '/' .. name, { clear = true })
 end
 
 ---@param name string
@@ -184,6 +185,20 @@ function M.rfind(s, sub)
     local r = { string.find(string.reverse(s), sub, 1, true) }
     return r[2]
   end)()
+end
+
+---@param buffer? number
+function M.buffer_characters(buffer)
+  buffer = buffer or api.nvim_get_current_buf()
+  if not api.nvim_buf_is_valid(buffer) then
+    return
+  end
+  local count = 0
+  local lines = api.nvim_buf_get_lines(buffer, 0, -1, false)
+  vim.tbl_map(function(line)
+    count = count + #line
+  end, lines)
+  return count, lines
 end
 
 ---@class NeovimVersion

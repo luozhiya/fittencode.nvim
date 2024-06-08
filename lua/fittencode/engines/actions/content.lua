@@ -8,7 +8,6 @@ local Log = require('fittencode.log')
 ---@field has_suggestions boolean[]
 ---@field current_eval number
 ---@field cursors table[]
----@field first_commit boolean
 ---@field on_start function
 ---@field on_suggestions function
 ---@field on_status function
@@ -32,7 +31,6 @@ function M:new(chat)
     current_eval = nil,
     cursors = {},
     has_suggestions = {},
-    first_commit = true,
   }
   self.__index = self
   return setmetatable(obj, self)
@@ -95,7 +93,7 @@ local function format_lines(opts, content)
       #content > 0 and #lines > 1 then
     local last_lines = content[#content]
     local last_line = last_lines[#last_lines]
-    if not string.match(lines[2], '^```') and not string.match(last_line, '^```') then
+    if not string.match(lines[1], '^```') and not string.match(lines[2], '^```') and not string.match(last_line, '^```') then
       table.insert(lines, 1, '')
     end
   end
@@ -125,16 +123,22 @@ function M:on_start(opts)
     return
   end
   self.current_eval = opts.current_eval
+  self.current_action = opts.current_action
   self.conversations[self.current_eval] = Conversation:new(self.current_eval, opts.action)
+  self.conversations[self.current_eval].current_action = opts.current_action
   self.conversations[self.current_eval].location = opts.location
   self.conversations[self.current_eval].prompt = opts.prompt
+  self.conversations[self.current_eval].headless = opts.headless
+
+  if self.conversations[self.current_eval].headless then
+    self.cursors[self.current_eval] = nil
+    return
+  end
 
   local source_info = ' (' .. opts.location[1] .. ' ' .. opts.location[2] .. ':' .. opts.location[3] .. ')'
-  local c_in = '# In`[' .. self.current_eval .. ']`:= ' .. opts.action .. source_info
-  if not self.first_commit then
+  local c_in = '# In`[' .. self.current_action .. ']`:= ' .. opts.action .. source_info
+  if not self.chat:is_empty() then
     self:commit('\n\n')
-  else
-    self.first_commit = false
   end
   local cursor = self:commit({
     lines = {
@@ -159,7 +163,7 @@ function M:on_start(opts)
       '',
     }
   })
-  local c_out = '# Out`[' .. self.current_eval .. ']`='
+  local c_out = '# Out`[' .. self.current_action .. ']`='
   cursor = self:commit({
     lines = {
       c_out,
@@ -181,6 +185,10 @@ function M:on_end(opts)
 
   self.conversations[self.current_eval].elapsed_time = opts.elapsed_time
   self.conversations[self.current_eval].depth = opts.depth
+
+  if self.conversations[self.current_eval].headless then
+    return
+  end
 
   self:commit({
     lines = {
@@ -214,6 +222,10 @@ function M:on_suggestions(suggestions)
   end
   self.conversations[self.current_eval].suggestions[#self.conversations[self.current_eval].suggestions + 1] = suggestions
 
+  if self.conversations[self.current_eval].headless then
+    return
+  end
+
   if not self.has_suggestions[self.current_eval] then
     self.has_suggestions[self.current_eval] = true
     local cursor = self:commit({
@@ -236,9 +248,11 @@ function M:on_status(msg)
   if not msg then
     return
   end
+  if self.conversations[self.current_eval].headless then
+    return
+  end
   self:commit({
     lines = {
-      '',
       '```',
       msg,
       '```',
@@ -268,12 +282,57 @@ function M:get_current_suggestions()
   return merge_lines(self.conversations[self.current_eval].suggestions)
 end
 
-function M:get_prev_conversation(row, col)
-
+function M:get_conversation_index(row, col)
+  for i, cursor in ipairs(self.cursors) do
+    if cursor and #cursor == 5 then
+      if row >= cursor[ViewBlock.IN][1][1] and row <= cursor[ViewBlock.QED][2][1] then
+        return i
+      end
+    end
+  end
 end
 
-function M:get_next_conversation(row, col)
+function M:get_conversations_range(direction, row, col)
+  local i = self:get_conversation_index(row, col)
+  if not i then
+    return
+  end
+  if direction == 'current' then
+    return {
+      { self.cursors[i][ViewBlock.IN][1][1],  0 },
+      { self.cursors[i][ViewBlock.QED][2][1], 0 }
+    }
+  elseif direction == 'forward' then
+    for j = i + 1, #self.cursors do
+      if self.cursors[j] and #self.cursors[j] == 5 then
+        return {
+          { self.cursors[j][ViewBlock.IN][1][1],  0 },
+          { self.cursors[j][ViewBlock.QED][1][1], 0 }
+        }
+      end
+    end
+  elseif direction == 'backward' then
+    for j = i - 1, 1, -1 do
+      if self.cursors[j] and #self.cursors[j] == 5 then
+        return {
+          { self.cursors[j][ViewBlock.IN][1][1],  0 },
+          { self.cursors[j][ViewBlock.QED][2][1], 0 }
+        }
+      end
+    end
+  end
+end
 
+function M:get_conversations(range, row, col)
+  if range == 'all' then
+    return self.conversations
+  elseif range == 'current' then
+    local i = self:get_conversation_index(row, col)
+    if not i then
+      return
+    end
+    return self.conversations[i]
+  end
 end
 
 return M
