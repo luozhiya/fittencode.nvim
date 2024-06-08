@@ -32,6 +32,7 @@ local M = {}
 ---@field get_name fun(self): string
 ---@field get_priority fun(self): integer
 ---@field execute fun(self, PromptContext): Prompt?
+---@field get_suggestions_preprocessing_format fun(self): SuggestionsPreprocessingFormat?
 
 ---@class PromptFilter
 ---@field count integer
@@ -103,6 +104,18 @@ function M.get_current_prompt_ctx()
     col = col,
     range = nil
   }
+end
+
+---@return SuggestionsPreprocessingFormat?
+function M.get_suggestions_preprocessing_format(prompt_ty)
+  local format = nil
+  for _, provider in ipairs(providers) do
+    if provider:is_available(prompt_ty) then
+      format = provider:get_suggestions_preprocessing_format()
+      break
+    end
+  end
+  return format
 end
 
 return M

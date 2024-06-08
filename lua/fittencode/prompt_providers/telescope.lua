@@ -92,4 +92,15 @@ function M:execute(ctx)
   }
 end
 
+---@return SuggestionsPreprocessingFormat?
+function M.get_suggestions_preprocessing_format()
+  ---@type SuggestionsPreprocessingFormat
+  return {
+    filter = {
+      count = 1,
+      exclude_markdown_code_blocks = true,
+    }
+  }
+end
+
 return M

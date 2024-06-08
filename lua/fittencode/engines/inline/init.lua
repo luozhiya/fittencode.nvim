@@ -8,7 +8,7 @@ local Log = require('fittencode.log')
 local Model = require('fittencode.engines.inline.model')
 local Sessions = require('fittencode.sessions')
 local Status = require('fittencode.status')
-local SuggestionsPreprocessing = require('fittencode.suggestions_preprocessing')
+local Preprocessing = require('fittencode.preprocessing')
 local TaskScheduler = require('fittencode.tasks')
 local PromptProviders = require('fittencode.prompt_providers')
 
@@ -47,26 +47,24 @@ local function suggestions_modify_enabled()
   return M.is_inline_enabled() and M.has_suggestions()
 end
 
+---@param ctx PromptContext
 ---@param task_id integer
 ---@param suggestions? Suggestions
 ---@return Suggestions?
-local function process_suggestions(task_id, suggestions)
-  local window = api.nvim_get_current_win()
-  local buffer = api.nvim_win_get_buf(window)
-  local row, col = Base.get_cursor(window)
+local function preprocessing(ctx, task_id, suggestions)
+  local row, col = Base.get_cursor(ctx.window)
   if not tasks:match_clean(task_id, row, col) then
     return
   end
-
   if not suggestions or #suggestions == 0 then
     return
   end
-
-  return SuggestionsPreprocessing.run({
-    window = window,
-    buffer = buffer,
+  local format = PromptProviders.get_suggestions_preprocessing_format(ctx.prompt_ty)
+  local opts = {
     suggestions = suggestions,
-  })
+  }
+  opts = vim.tbl_deep_extend('force', opts, format or {})
+  return Preprocessing.run(opts)
 end
 
 ---@param ss SuggestionsSegments
@@ -155,12 +153,13 @@ local function _generate_one_stage(row, col, on_success, on_error)
   status:update(SC.GENERATING)
 
   local task_id = tasks:create(row, col)
-  Sessions.request_generate_one_stage(task_id, PromptProviders.get_current_prompt_ctx(), function(id, _, suggestions)
-    local processed = process_suggestions(id, suggestions)
-    if processed then
+  local ctx = PromptProviders.get_current_prompt_ctx()
+  Sessions.request_generate_one_stage(task_id, ctx, function(id, _, suggestions)
+    local results = preprocessing(ctx, id, suggestions)
+    if results then
       status:update(SC.SUGGESTIONS_READY)
-      apply_new_suggestions(task_id, row, col, processed)
-      schedule(on_success, processed)
+      apply_new_suggestions(task_id, row, col, results)
+      schedule(on_success, results)
     else
       status:update(SC.NO_MORE_SUGGESTIONS)
       schedule(on_success)

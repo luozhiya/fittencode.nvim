@@ -10,7 +10,7 @@ local Promise = require('fittencode.concurrency.promise')
 local PromptProviders = require('fittencode.prompt_providers')
 local Sessions = require('fittencode.sessions')
 local Status = require('fittencode.status')
-local SuggestionsPreprocessing = require('fittencode.suggestions_preprocessing')
+local Preprocessing = require('fittencode.preprocessing')
 local TaskScheduler = require('fittencode.tasks')
 local Unicode = require('fittencode.unicode')
 
@@ -116,16 +116,12 @@ end
 ---@param task_id integer
 ---@param suggestions Suggestions
 ---@return Suggestions?, integer?
-local function filter_suggestions(window, buffer, task_id, suggestions)
+local function preprocessing(window, buffer, task_id, suggestions)
   local matched, ms = tasks:match_clean(task_id, 0, 0)
-  if not matched then
-    Log.debug('Action request is outdated, discarding task: {}', task_id)
+  if not matched or not suggestions or #suggestions == 0 then
     return nil, ms
   end
-  if not suggestions then
-    return nil, ms
-  end
-  return SuggestionsPreprocessing.run({
+  return Preprocessing.run({
     window = window,
     buffer = buffer,
     suggestions = suggestions,
@@ -181,7 +177,7 @@ local function chain_actions(window, buffer, action, solved_prefix, headless, on
     prompt_ty = get_action_type(action),
     solved_prefix = solved_prefix,
   }, function(_, prompt, suggestions)
-    local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
+    local lines, ms = preprocessing(window, buffer, task_id, suggestions)
     if not lines or #lines == 0 then
       on_stage_end(false, headless, on_success, on_error)
     else
@@ -344,7 +340,7 @@ local function _start_action(window, buffer, action, opts, headless, on_success,
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
-      local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
+      local lines, ms = preprocessing(window, buffer, task_id, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
         resolve()
