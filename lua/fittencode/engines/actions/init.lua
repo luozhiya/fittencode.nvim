@@ -6,11 +6,12 @@ local Chat = require('fittencode.views.chat')
 local Config = require('fittencode.config')
 local Content = require('fittencode.engines.actions.content')
 local Log = require('fittencode.log')
+local Merge = require('fittencode.preprocessing.merge')
 local Promise = require('fittencode.concurrency.promise')
 local PromptProviders = require('fittencode.prompt_providers')
 local Sessions = require('fittencode.sessions')
 local Status = require('fittencode.status')
-local SuggestionsPreprocessing = require('fittencode.suggestions_preprocessing')
+local Preprocessing = require('fittencode.preprocessing')
 local TaskScheduler = require('fittencode.tasks')
 local Unicode = require('fittencode.unicode')
 
@@ -19,13 +20,6 @@ local schedule = Base.schedule
 local SC = Status.C
 
 ---@class ActionsEngine
----@field chat Chat
----@field tasks TaskScheduler
----@field status Status
----@field lock boolean
----@field elapsed_time number
----@field depth number
----@field current_eval number
 ---@field start_chat function
 ---@field document_code function
 ---@field edit_code function
@@ -60,7 +54,7 @@ local ACTIONS = {
 }
 
 local current_eval = 1
-local current_action = 1
+local current_headless = 1
 
 ---@type Chat
 local chat = nil
@@ -68,14 +62,14 @@ local chat = nil
 ---@type ActionsContent
 local content = nil
 
----@class TaskScheduler
-local tasks = nil
+local TASK_DEFAULT = 1
+local TASK_HEADLESS = 2
+---@type table<integer, TaskScheduler>
+local tasks = {}
 
 -- One by one evaluation
 local lock = false
 
-local elapsed_time = 0
-local depth = 0
 local MAX_DEPTH = 20
 
 ---@type Status
@@ -86,6 +80,8 @@ local status = nil
 ---@field content? string
 ---@field language? string
 ---@field headless? boolean
+---@field silence? boolean
+---@field preprocess_format? SuggestionsPreprocessingFormat
 ---@field on_success? function
 ---@field on_error? function
 
@@ -116,35 +112,44 @@ end
 ---@param task_id integer
 ---@param suggestions Suggestions
 ---@return Suggestions?, integer?
-local function filter_suggestions(window, buffer, task_id, suggestions)
-  local matched, ms = tasks:match_clean(task_id, 0, 0)
-  if not matched then
-    Log.debug('Action request is outdated, discarding task: {}', task_id)
+local function preprocessing(presug, task_id, headless, preprocess_format, suggestions)
+  local match = headless and tasks[TASK_HEADLESS]:match_clean(task_id, nil, nil, false) or
+      tasks[TASK_DEFAULT]:match_clean(task_id, nil, nil)
+  local ms = match[2]
+  if not match[1] or not suggestions or #suggestions == 0 then
     return nil, ms
   end
-  if not suggestions then
-    return nil, ms
-  end
-  return SuggestionsPreprocessing.run({
-    window = window,
-    buffer = buffer,
+  local opts = {
+    prefix = presug,
     suggestions = suggestions,
-    condense_nl = 'all'
-  }), ms
+    condense_blank_line = {
+      mode = 'all'
+    },
+    replace_slash = true,
+    markdown_prettify = {
+      separate_code_block_marker = true,
+    },
+  }
+  opts = vim.tbl_deep_extend('force', opts, preprocess_format or {})
+  return Preprocessing.run(opts), ms
 end
 
-local function on_stage_end(is_error, headless, on_success, on_error)
+local function on_stage_end(is_error, headless, elapsed_time, depth, suggestions, on_success, on_error)
   local ready = false
   if is_error then
     status:update(SC.ERROR)
-    local err_msg = 'Error: fetch failed.'
-    content:on_status(err_msg)
+    if not headless then
+      local err_msg = 'Error: fetch failed.'
+      content:on_status(err_msg)
+    end
     schedule(on_error)
   else
     if depth == 0 then
       status:update(SC.NO_MORE_SUGGESTIONS)
-      local msg = 'No more suggestions.'
-      content:on_status(msg)
+      if not headless then
+        local msg = 'No more suggestions.'
+        content:on_status(msg)
+      end
       schedule(on_success)
     else
       status:update(SC.SUGGESTIONS_READY)
@@ -152,47 +157,71 @@ local function on_stage_end(is_error, headless, on_success, on_error)
     end
   end
 
-  content:on_end({
-    elapsed_time = elapsed_time,
-    depth = depth,
-  })
-
   if ready then
-    schedule(on_success, content:get_current_suggestions())
+    schedule(on_success, suggestions)
   end
 
-  current_eval = current_eval + 1
-  if not headless then
-    current_action = current_action + 1
+  if headless then
+    current_headless = current_headless + 1
+  else
+    content:on_end({
+      suggestions = suggestions,
+      elapsed_time = elapsed_time,
+      depth = depth,
+    })
+    current_eval = current_eval + 1
+    lock = false
   end
-  lock = false
 end
 
 ---@param action integer
 ---@param solved_prefix string
 ---@param on_error function
-local function chain_actions(window, buffer, action, solved_prefix, headless, on_success, on_error)
+local function chain_actions(presug, action, solved_prefix, headless, elapsed_time, depth, preprocess_format, on_success,
+                             on_error)
   if not solved_prefix or depth >= MAX_DEPTH then
-    on_stage_end(false, headless, on_success, on_error)
+    on_stage_end(false, headless, elapsed_time, depth, presug, on_success, on_error)
     return
   end
-  local task_id = tasks:create(0, 0)
-  Sessions.request_generate_one_stage(task_id, {
-    prompt_ty = get_action_type(action),
-    solved_prefix = solved_prefix,
-  }, function(_, prompt, suggestions)
-    local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
-    if not lines or #lines == 0 then
-      on_stage_end(false, headless, on_success, on_error)
+  Promise:new(function(resolve, reject)
+    local task_id = nil
+    if headless then
+      task_id = tasks[TASK_HEADLESS]:create()
     else
-      elapsed_time = elapsed_time + ms
-      depth = depth + 1
-      content:on_suggestions(lines)
-      local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-      chain_actions(window, buffer, action, new_solved_prefix, headless, on_success, on_error)
+      task_id = tasks[TASK_DEFAULT]:create()
     end
-  end, function()
-    on_stage_end(true, headless, on_success, on_error)
+    Sessions.request_generate_one_stage(task_id, {
+      prompt_ty = get_action_type(action),
+      solved_prefix = solved_prefix,
+    }, function(_, prompt, suggestions)
+      local lines, ms = preprocessing(presug, task_id, headless, preprocess_format, suggestions)
+      elapsed_time = elapsed_time + ms
+      if not lines or #lines == 0 then
+        reject({ false, presug })
+      else
+        depth = depth + 1
+        local new_presug = Merge.run(presug, lines, true)
+        if not headless then
+          content:on_suggestions(vim.deepcopy(lines))
+        end
+        local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
+        chain_actions(new_presug, action, new_solved_prefix, headless, elapsed_time, depth, preprocess_format, on_success,
+          on_error)
+      end
+    end, function()
+      reject({ true, presug })
+    end)
+  end):forward(nil, function(pair)
+    local is_error, prefix = unpack(pair)
+    local lines = Preprocessing.run({
+      prefix = prefix,
+      suggestions = { '' },
+      markdown_prettify = {
+        fenced_code_blocks = 'start'
+      }
+    })
+    local new_presug = Merge.run(prefix, lines, true)
+    on_stage_end(is_error, headless, elapsed_time, depth, new_presug, on_success, on_error)
   end)
 end
 
@@ -298,22 +327,30 @@ end
 local function make_range(buffer)
   local in_v = false
   local region = nil
+  ---@type integer[][][]
+  local pos = nil
 
   local mode = api.nvim_get_mode().mode
-  Log.debug('Action mode: {}', mode)
   if VMODE[mode] then
     in_v = true
     if fn.has('nvim-0.10') == 1 then
       region = fn.getregion(fn.getpos('.'), fn.getpos('v'), { type = fn.mode() })
+      -- [bufnum, lnum, col, off]
+      pos = fn.getregionpos(fn.getpos('.'), fn.getpos('v'))
     end
   end
 
-  if not region then
-    api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
-  end
+  local start = { 0, 0 }
+  local end_ = { 0, 0 }
 
-  local start = api.nvim_buf_get_mark(buffer, '<')
-  local end_ = api.nvim_buf_get_mark(buffer, '>')
+  if pos then
+    start = { pos[1][1][2], pos[1][1][3] }
+    end_ = { pos[1][2][2], pos[1][2][3] }
+  else
+    api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
+    start = api.nvim_buf_get_mark(buffer, '<')
+    end_ = api.nvim_buf_get_mark(buffer, '>')
+  end
 
   ---@type ActionRange
   local range = {
@@ -329,9 +366,7 @@ end
 
 local function make_filetype(buffer, range)
   local filetype = api.nvim_get_option_value('filetype', { buf = buffer })
-  Log.debug('Action option filetype: {}', filetype)
   local langs = get_tslangs(buffer, range)
-  Log.debug('Action langs: {}', langs)
   -- Markdown contains blocks of code
   -- JS or CSS is embedded in the HTML
   if #langs >= 2 then
@@ -340,27 +375,36 @@ local function make_filetype(buffer, range)
   return filetype
 end
 
-local function _start_action(window, buffer, action, opts, headless, on_success, on_error)
+local function _start_action(action, opts, headless, elapsed_time, depth, preprocess_format, on_success, on_error)
   Promise:new(function(resolve, reject)
-    local task_id = tasks:create(0, 0)
+    local task_id = nil
+    if headless then
+      task_id = tasks[TASK_HEADLESS]:create()
+    else
+      task_id = tasks[TASK_DEFAULT]:create()
+    end
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
-      local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
+      local lines, ms = preprocessing(nil, task_id, headless, preprocess_format, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
-        resolve()
+        resolve({ nil, lines })
       else
         depth = depth + 1
-        content:on_suggestions(lines)
+        if not headless then
+          content:on_suggestions(vim.deepcopy(lines))
+        end
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-        resolve(solved_prefix)
+        resolve({ solved_prefix, lines })
       end
     end, function()
       reject()
     end)
-  end):forward(function(solved_prefix)
-    chain_actions(window, buffer, action, solved_prefix, headless, on_success, on_error)
+  end):forward(function(pair)
+    local solved_prefix, new_presug = unpack(pair)
+    chain_actions(new_presug, action, solved_prefix, headless, elapsed_time, depth, preprocess_format, on_success,
+      on_error)
   end, function()
-    on_stage_end(true, headless, on_success, on_error)
+    on_stage_end(true, headless, elapsed_time, depth, nil, on_success, on_error)
   end)
 end
 
@@ -371,7 +415,6 @@ local function start_content(action_name, prompt_opts, range)
   end
   content:on_start({
     current_eval = current_eval,
-    current_action = current_action,
     action = action_name,
     prompt = vim.split(prompt_preview.content, '\n'),
     headless = prompt_opts.action.headless,
@@ -383,37 +426,9 @@ local function start_content(action_name, prompt_opts, range)
   })
 end
 
----@param action integer
----@param opts? ActionOptions
----@return nil
-function ActionsEngine.start_action(action, opts)
-  opts = opts or {}
-
-  local action_name = get_action_name(action)
-  if not action_name then
-    Log.error('Invalid Action: {}', action)
-    return
-  end
-
-  local headless = opts.headless == true
-
-  if lock then
-    return
-  end
-
-  lock = true
-  elapsed_time = 0
-  depth = 0
-
+---@param opts ActionOptions
+local function _start_action_wrap(window, buffer, action, action_name, headless, opts)
   status:update(SC.GENERATING)
-
-  local window = api.nvim_get_current_win()
-  local buffer = api.nvim_win_get_buf(window)
-
-  if not headless then
-    chat:show()
-    fn.win_gotoid(window)
-  end
 
   local range = {
     start = { 0, 0 },
@@ -439,8 +454,43 @@ function ActionsEngine.start_action(action, opts)
     action = opts,
   }
 
-  start_content(action_name, prompt_opts, range)
-  _start_action(chat.window, chat.buffer, action, prompt_opts, headless, opts.on_success, opts.on_error)
+  if not headless then
+    start_content(action_name, prompt_opts, range)
+  end
+  _start_action(action, prompt_opts, headless, 0, 0, opts.preprocess_format, opts.on_success, opts.on_error)
+end
+
+---@param action integer
+---@param opts? ActionOptions
+---@return nil
+function ActionsEngine.start_action(action, opts)
+  opts = opts or {}
+
+  local action_name = get_action_name(action)
+  if not action_name then
+    return
+  end
+
+  local window = api.nvim_get_current_win()
+  local buffer = api.nvim_win_get_buf(window)
+
+  local headless = opts.headless == true
+  if headless then
+    _start_action_wrap(window, buffer, action, action_name, true, opts)
+    return
+  end
+
+  if lock then
+    return
+  end
+  lock = true
+
+  if not opts.silence then
+    chat:show()
+    fn.win_gotoid(window)
+  end
+
+  _start_action_wrap(window, buffer, action, action_name, false, opts)
 end
 
 ---@param opts? ActionOptions
@@ -458,10 +508,8 @@ function ActionsEngine.edit_code(opts)
     local input_opts = { prompt = 'Prompt for FittenCode EditCode: ', default = '', }
     vim.ui.input(input_opts, function(prompt)
       if not prompt or #prompt == 0 then
-        Log.debug('No Prompt for FittenCode EditCode')
         return
       end
-      Log.debug('Prompt for FittenCode EditCode: ' .. prompt)
       ActionsEngine.start_action(ACTIONS.EditCode, {
         prompt = prompt,
         content = merged.content
@@ -572,10 +620,8 @@ function ActionsEngine.generate_code(opts)
     local input_opts = { prompt = 'Enter instructions: ', default = '', }
     vim.ui.input(input_opts, function(content)
       if not content or #content == 0 then
-        Log.debug('No Content for FittenCode GenerateCode')
         return
       end
-      Log.debug('Enter instructions: ' .. content)
       ActionsEngine.start_action(ACTIONS.GenerateCode, {
         content = content }
       )
@@ -594,10 +640,8 @@ function ActionsEngine.start_chat(opts)
     local input_opts = { prompt = 'Ask... (Fitten Code Fast): ', default = '', }
     vim.ui.input(input_opts, function(content)
       if not content or #content == 0 then
-        Log.debug('No Content for FittenCode StartChat')
         return
       end
-      Log.debug('Ask... (Fitten Code Fast): ' .. content)
       ActionsEngine.start_action(ACTIONS.StartChat, {
         content = content }
       )
@@ -670,8 +714,10 @@ function ActionsEngine.setup()
   chat = Chat:new(CHAT_MODEL)
   chat:create()
   content = Content:new(chat)
-  tasks = TaskScheduler:new()
-  tasks:setup()
+  tasks[TASK_DEFAULT] = TaskScheduler:new()
+  tasks[TASK_DEFAULT]:setup()
+  tasks[TASK_HEADLESS] = TaskScheduler:new()
+  tasks[TASK_HEADLESS]:setup()
   status = Status:new({
     tag = 'ActionsEngine',
     ready_idle = true,

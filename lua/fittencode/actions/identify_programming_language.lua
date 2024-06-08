@@ -46,6 +46,12 @@ local function _identify_current_buffer()
   API.identify_programming_language({
     headless = true,
     content = content,
+    preprocess_format = {
+      trim_trailing_whitespace = true,
+      filter = {
+        exclude_markdown_code_blocks_marker = true,
+      }
+    },
     on_success = function(suggestions)
       if not suggestions or #suggestions == 0 then
         return
@@ -55,10 +61,6 @@ local function _identify_current_buffer()
         return
       end
       lang = lang:lower()
-      lang = lang:gsub('^%s*(.-)%s*$', '%1')
-      if #lang == 0 then
-        return
-      end
       lang = lang:gsub('c%+%+', 'cpp')
       lang = lang:match('^(%w+)')
       api.nvim_set_option_value('filetype', lang, {

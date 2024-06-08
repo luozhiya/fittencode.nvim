@@ -52,14 +52,13 @@ end
 function M:update(status)
   local name = get_status_name(status)
   if not name then
-    Log.error('Invalid status code: {}', status)
     return
   end
   if status ~= self.current then
     self.current = status
     -- Force `lualine` to update statusline
     -- vim.cmd('redrawstatus')
-    Log.debug('{} status updated to {}', self.tag, name)
+    Log.debug('{} -> {}', self.tag, name)
   end
   Base.debounce(self.idle_timer, function()
     if vim.tbl_contains(self.filters, self.current) then
