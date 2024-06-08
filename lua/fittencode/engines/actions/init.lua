@@ -643,15 +643,6 @@ local function setup_actions_menu()
   end
 end
 
-local chat_callbacks = {
-  goto_prev_conversation = function(row, col)
-    return content:get_prev_conversation(row, col)
-  end,
-  goto_next_conversation = function(row, col)
-    return content:get_next_conversation(row, col)
-  end,
-}
-
 ---@return integer
 function ActionsEngine.get_status()
   return status:get_current()
@@ -669,8 +660,14 @@ function ActionsEngine.toggle_chat()
   end
 end
 
+local CHAT_MODEL = {
+  get_conversation_range = function(row, col)
+    return content:get_conversation_range(row, col)
+  end,
+}
+
 function ActionsEngine.setup()
-  chat = Chat:new(chat_callbacks)
+  chat = Chat:new(CHAT_MODEL)
   content = Content:new(chat)
   tasks = TaskScheduler:new()
   tasks:setup()

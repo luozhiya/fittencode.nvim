@@ -339,6 +339,10 @@ function M.is_rendering(buffer, ids)
   return false
 end
 
+function M.highlight_range(buffer, hl, start_row, start_col, end_row, end_col)
+  vim.highlight.range(buffer, namespace, hl, { start_row, start_col }, { end_row, end_col })
+end
+
 -- When we edit some complex documents, extmark will not be able to draw correctly.
 -- api.nvim_set_decoration_provider(namespace, {
 --   on_win = function()

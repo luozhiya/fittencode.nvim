@@ -11,13 +11,13 @@ local Log = require('fittencode.log')
 ---@field commit function
 ---@field create function
 ---@field last_cursor? table
----@field callbacks table
+---@field model table
 ---@field is_visible function
 local M = {}
 
-function M:new(callbacks)
+function M:new(model)
   local o = {
-    callbacks = callbacks,
+    model = model,
   }
   self.__index = self
   return setmetatable(o, self)
@@ -68,7 +68,7 @@ end
 local function set_option_value_win(window)
   api.nvim_set_option_value('wrap', true, { win = window })
   api.nvim_set_option_value('linebreak', true, { win = window })
-  api.nvim_set_option_value('cursorline', true, { win = window })
+  -- api.nvim_set_option_value('cursorline', true, { win = window })
   api.nvim_set_option_value('spell', false, { win = window })
   api.nvim_set_option_value('number', false, { win = window })
   api.nvim_set_option_value('relativenumber', false, { win = window })
@@ -76,9 +76,18 @@ local function set_option_value_win(window)
   -- api.nvim_set_option_value('scrolloff', 8, { win = window })
 end
 
+function M:update_highlight()
+  local range = self.model['get_conversation_range'](Base.get_cursor(self.window))
+  if not range then
+    return
+  end
+  Lines.highlight_range(self.buffer, 'Visual', range[1][1], range[1][2], range[2][1], range[2][2])
+end
+
 ---@class ChatCreateOptions
 ---@field keymaps? table
 
+---@param opts ChatCreateOptions
 function M:create(opts)
   if self.buffer and api.nvim_buf_is_valid(self.buffer) then
     return
@@ -99,13 +108,17 @@ function M:create(opts)
     end, { buffer = self.buffer })
   end
 
-  -- Base.map('n', 'q', function() self:close() end, { buffer = self.buffer })
-  -- Base.map('n', '[c', function() self:goto_prev_conversation() end, { buffer = self.buffer })
-  -- Base.map('n', ']c', function() self:goto_next_conversation() end, { buffer = self.buffer })
-  -- Base.map('n', 'c', function() self:copy_conversation() end, { buffer = self.buffer })
-  -- Base.map('n', 'C', function() self:copy_all_conversations() end, { buffer = self.buffer })
-  -- Base.map('n', 'd', function() self:delete_conversation() end, { buffer = self.buffer })
-  -- Base.map('n', 'D', function() self:delete_all_conversations() end, { buffer = self.buffer })
+  api.nvim_create_autocmd({ 'CursorMoved' }, {
+    group = Base.augroup('Chat/CursorMoved'),
+    pattern = '*',
+    callback = function()
+      M:update_highlight()
+    end,
+    {
+      desc = 'On Cursor Moved',
+      buffer = self.buffer,
+    }
+  })
 
   set_option_value_buf(self.buffer)
 end
@@ -135,34 +148,6 @@ function M:show()
   end
 end
 
-function M:goto_prev_conversation()
-  local row, col = self.callbacks['goto_prev_conversation'](Base.get_cursor(self.window))
-  if row and col then
-    api.nvim_win_set_cursor(self.window, { row + 1, col })
-  end
-end
-
-function M:goto_next_conversation()
-  local row, col = self.callbacks['goto_next_conversation'](Base.get_cursor(self.window))
-  if row and col then
-    api.nvim_win_set_cursor(self.window, { row + 1, col })
-  end
-end
-
-function M:copy_conversation()
-  local lines = self.callbacks['get_conversation'](Base.get_cursor(self.window))
-  if lines then
-    vim.fn.setreg('+', table.concat(lines, '\n'))
-  end
-end
-
-function M:copy_all_conversations()
-  local lines = self.callbacks['get_all_conversations']()
-  if lines then
-    vim.fn.setreg('+', table.concat(lines, '\n'))
-  end
-end
-
 function M:close()
   if self.window == nil then
     return
@@ -172,8 +157,6 @@ function M:close()
     api.nvim_win_close(self.window, true)
   end
   self.window = nil
-  -- api.nvim_buf_delete(self.buffer, { force = true })
-  -- self.buffer = nil
 end
 
 ---@return integer[]?
