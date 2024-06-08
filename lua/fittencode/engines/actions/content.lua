@@ -66,9 +66,7 @@ local function format_lines(last_lines, lines, format)
         table.insert(lines, 1, '')
       end
     else
-      if first == '' then
-        table.remove(lines, 1)
-      else
+      if first ~= '' then
         table.insert(lines, 1, '')
       end
     end
