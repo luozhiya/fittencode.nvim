@@ -6,8 +6,8 @@ local Log = require('fittencode.log')
 local M = {}
 
 ---@class PreprocessingMarkdownPrettifyOptions
----@field fenced_code_blocks 'start'|'end'|nil
----@field separate_code_block_marker boolean
+---@field fenced_code_blocks? 'start'|'end'
+---@field separate_code_block_marker? boolean
 
 ---@class PreprocessingNormalizeIndentOptions
 ---@field tabstop integer

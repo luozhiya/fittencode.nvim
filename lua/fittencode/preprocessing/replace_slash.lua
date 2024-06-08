@@ -1,6 +1,9 @@
 ---@param prefix? string[]
 ---@param lines string[]
 local function replace_slash(prefix, lines, opts)
+  if not opts then
+    return lines
+  end
   local slash = {}
   for i, line in ipairs(lines) do
     line = line:gsub('\\"', '"')

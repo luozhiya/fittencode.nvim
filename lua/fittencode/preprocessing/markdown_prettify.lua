@@ -42,7 +42,9 @@ end
 ---@param lines string[]
 ---@param opts? PreprocessingMarkdownPrettifyOptions
 local function markdown_prettify(prefix, lines, opts)
-  opts = opts or {}
+  if not opts then
+    return lines
+  end
   local fenced_code_blocks = opts.fenced_code_blocks
   local separate_code_block_marker = opts.separate_code_block_marker or true
 

@@ -74,7 +74,9 @@ end
 ---@param opts? PreprocessingCondensedBlankLineOptions
 ---@return string[]?
 local function condense_blank_line(prefix, lines, opts)
-  opts = opts or {}
+  if not opts then
+    return lines
+  end
   if is_all_blank(lines) then
     return
   end

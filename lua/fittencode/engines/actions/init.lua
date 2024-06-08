@@ -6,6 +6,7 @@ local Chat = require('fittencode.views.chat')
 local Config = require('fittencode.config')
 local Content = require('fittencode.engines.actions.content')
 local Log = require('fittencode.log')
+local Merge = require('fittencode.preprocessing.merge')
 local Promise = require('fittencode.concurrency.promise')
 local PromptProviders = require('fittencode.prompt_providers')
 local Sessions = require('fittencode.sessions')
@@ -116,20 +117,21 @@ end
 ---@param task_id integer
 ---@param suggestions Suggestions
 ---@return Suggestions?, integer?
-local function preprocessing(window, buffer, task_id, suggestions)
+local function preprocessing(presug, task_id, suggestions)
   local matched, ms = tasks:match_clean(task_id, 0, 0)
   if not matched or not suggestions or #suggestions == 0 then
     return nil, ms
   end
   return Preprocessing.run({
-    window = window,
-    buffer = buffer,
+    prefix = presug,
     suggestions = suggestions,
-    condense_nl = 'all'
+    condense_blank_line = {
+      mode = 'all'
+    }
   }), ms
 end
 
-local function on_stage_end(is_error, headless, on_success, on_error)
+local function on_stage_end(is_error, headless, suggestions, on_success, on_error)
   local ready = false
   if is_error then
     status:update(SC.ERROR)
@@ -154,7 +156,7 @@ local function on_stage_end(is_error, headless, on_success, on_error)
   })
 
   if ready then
-    schedule(on_success, content:get_current_suggestions())
+    schedule(on_success, suggestions)
   end
 
   current_eval = current_eval + 1
@@ -167,28 +169,41 @@ end
 ---@param action integer
 ---@param solved_prefix string
 ---@param on_error function
-local function chain_actions(window, buffer, action, solved_prefix, headless, on_success, on_error)
+local function chain_actions(presug, action, solved_prefix, headless, on_success, on_error)
   if not solved_prefix or depth >= MAX_DEPTH then
-    on_stage_end(false, headless, on_success, on_error)
+    on_stage_end(false, headless, presug, on_success, on_error)
     return
   end
-  local task_id = tasks:create(0, 0)
-  Sessions.request_generate_one_stage(task_id, {
-    prompt_ty = get_action_type(action),
-    solved_prefix = solved_prefix,
-  }, function(_, prompt, suggestions)
-    local lines, ms = preprocessing(window, buffer, task_id, suggestions)
-    if not lines or #lines == 0 then
-      on_stage_end(false, headless, on_success, on_error)
-    else
+  Promise:new(function(resolve, reject)
+    local task_id = tasks:create(0, 0)
+    Sessions.request_generate_one_stage(task_id, {
+      prompt_ty = get_action_type(action),
+      solved_prefix = solved_prefix,
+    }, function(_, prompt, suggestions)
+      local lines, ms = preprocessing(presug, task_id, suggestions)
       elapsed_time = elapsed_time + ms
-      depth = depth + 1
-      content:on_suggestions(lines)
-      local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-      chain_actions(window, buffer, action, new_solved_prefix, headless, on_success, on_error)
-    end
-  end, function()
-    on_stage_end(true, headless, on_success, on_error)
+      if not lines or #lines == 0 then
+        reject(false, presug)
+      else
+        depth = depth + 1
+        local new_presug = Merge.run(presug, lines)
+        content:on_suggestions(lines)
+        local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
+        chain_actions(new_presug, action, new_solved_prefix, headless, on_success, on_error)
+      end
+    end, function()
+      reject(true, presug)
+    end)
+  end):forward(nil, function(is_error, prefix)
+    local lines = Preprocessing.run({
+      prefix = prefix,
+      suggestions = { '' },
+      markdown_prettify = {
+        fenced_code_blocks = 'start'
+      }
+    })
+    local new_presug = Merge.run(prefix, lines)
+    on_stage_end(is_error, headless, new_presug, on_success, on_error)
   end)
 end
 
@@ -336,27 +351,27 @@ local function make_filetype(buffer, range)
   return filetype
 end
 
-local function _start_action(window, buffer, action, opts, headless, on_success, on_error)
+local function _start_action(action, opts, headless, on_success, on_error)
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
-      local lines, ms = preprocessing(window, buffer, task_id, suggestions)
+      local lines, ms = preprocessing(nil, task_id, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
-        resolve()
+        resolve(nil, lines)
       else
         depth = depth + 1
         content:on_suggestions(lines)
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-        resolve(solved_prefix)
+        resolve(solved_prefix, lines)
       end
     end, function()
       reject()
     end)
-  end):forward(function(solved_prefix)
-    chain_actions(window, buffer, action, solved_prefix, headless, on_success, on_error)
+  end):forward(function(solved_prefix, new_presug)
+    chain_actions(new_presug, action, solved_prefix, headless, on_success, on_error)
   end, function()
-    on_stage_end(true, headless, on_success, on_error)
+    on_stage_end(true, headless, nil, on_success, on_error)
   end)
 end
 
@@ -387,7 +402,6 @@ function ActionsEngine.start_action(action, opts)
 
   local action_name = get_action_name(action)
   if not action_name then
-    Log.error('Invalid Action: {}', action)
     return
   end
 
@@ -436,7 +450,7 @@ function ActionsEngine.start_action(action, opts)
   }
 
   start_content(action_name, prompt_opts, range)
-  _start_action(chat.window, chat.buffer, action, prompt_opts, headless, opts.on_success, opts.on_error)
+  _start_action(action, prompt_opts, headless, opts.on_success, opts.on_error)
 end
 
 ---@param opts? ActionOptions

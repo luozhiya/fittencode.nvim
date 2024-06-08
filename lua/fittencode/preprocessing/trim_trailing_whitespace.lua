@@ -1,6 +1,9 @@
 ---@param lines string[]
 ---@return string[]
 local function trim_trailing_whitespace(prefix, lines, opts)
+  if not opts then
+    return lines
+  end
   for i, line in ipairs(lines) do
     lines[i] = line:gsub('%s*$', '')
   end

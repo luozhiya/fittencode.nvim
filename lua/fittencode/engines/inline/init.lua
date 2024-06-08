@@ -47,6 +47,17 @@ local function suggestions_modify_enabled()
   return M.is_inline_enabled() and M.has_suggestions()
 end
 
+local function make_prefix(buffer, row)
+  local prefix = {}
+  local cur_line = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]
+  if row > 1 then
+    local prev_line = api.nvim_buf_get_lines(buffer, row - 1, row, false)[1]
+    prefix[#prefix + 1] = prev_line
+  end
+  prefix[#prefix + 1] = cur_line
+  return prefix
+end
+
 ---@param ctx PromptContext
 ---@param task_id integer
 ---@param suggestions? Suggestions
@@ -62,6 +73,7 @@ local function preprocessing(ctx, task_id, suggestions)
   local format = PromptProviders.get_suggestions_preprocessing_format(ctx.prompt_ty)
   local opts = {
     suggestions = suggestions,
+    prefix = make_prefix(ctx.buffer, row),
   }
   opts = vim.tbl_deep_extend('force', opts, format or {})
   return Preprocessing.run(opts)

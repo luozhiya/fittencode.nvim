@@ -13,6 +13,9 @@ local function merge_multi(suggestions)
 end
 
 local function merge_lines(prefix, lines, opts)
+  if not opts then
+    return lines
+  end
   if not prefix or #prefix == 0 then
     return lines
   end
