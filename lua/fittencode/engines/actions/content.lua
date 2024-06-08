@@ -98,9 +98,7 @@ function M:on_start(opts)
     return
   end
   self.current_eval = opts.current_eval
-  self.current_action = opts.current_action
   self.conversations[self.current_eval] = Conversation:new(self.current_eval, opts.action)
-  self.conversations[self.current_eval].current_action = opts.current_action
   self.conversations[self.current_eval].location = opts.location
   self.conversations[self.current_eval].prompt = opts.prompt
   self.conversations[self.current_eval].headless = opts.headless
@@ -111,7 +109,7 @@ function M:on_start(opts)
   end
 
   local source_info = ' (' .. opts.location[1] .. ' ' .. opts.location[2] .. ':' .. opts.location[3] .. ')'
-  local c_in = '# In`[' .. self.current_action .. ']`:= ' .. opts.action .. source_info
+  local c_in = '# In`[' .. self.current_eval .. ']`:= ' .. opts.action .. source_info
   if not self.chat:is_empty() then
     self:commit('\n\n')
   end
@@ -138,7 +136,7 @@ function M:on_start(opts)
       '',
     }
   })
-  local c_out = '# Out`[' .. self.current_action .. ']`='
+  local c_out = '# Out`[' .. self.current_eval .. ']`='
   cursor = self:commit({
     lines = {
       c_out,

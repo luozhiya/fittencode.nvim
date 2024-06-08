@@ -59,7 +59,7 @@ local ACTIONS = {
 }
 
 local current_eval = 1
-local current_action = 1
+local current_headless = 1
 
 ---@type Chat
 local chat = nil
@@ -132,14 +132,18 @@ local function on_stage_end(is_error, headless, elapsed_time, depth, suggestions
   local ready = false
   if is_error then
     status:update(SC.ERROR)
-    local err_msg = 'Error: fetch failed.'
-    content:on_status(err_msg)
+    if not headless then
+      local err_msg = 'Error: fetch failed.'
+      content:on_status(err_msg)
+    end
     schedule(on_error)
   else
     if depth == 0 then
       status:update(SC.NO_MORE_SUGGESTIONS)
-      local msg = 'No more suggestions.'
-      content:on_status(msg)
+      if not headless then
+        local msg = 'No more suggestions.'
+        content:on_status(msg)
+      end
       schedule(on_success)
     else
       status:update(SC.SUGGESTIONS_READY)
@@ -147,21 +151,21 @@ local function on_stage_end(is_error, headless, elapsed_time, depth, suggestions
     end
   end
 
-  content:on_end({
-    suggestions = suggestions,
-    elapsed_time = elapsed_time,
-    depth = depth,
-  })
-
   if ready then
     schedule(on_success, suggestions)
   end
 
-  current_eval = current_eval + 1
-  if not headless then
-    current_action = current_action + 1
+  if headless then
+    current_headless = current_headless + 1
+  else
+    content:on_end({
+      suggestions = suggestions,
+      elapsed_time = elapsed_time,
+      depth = depth,
+    })
+    current_eval = current_eval + 1
+    lock = false
   end
-  lock = false
 end
 
 ---@param action integer
@@ -185,7 +189,9 @@ local function chain_actions(presug, action, solved_prefix, headless, elapsed_ti
       else
         depth = depth + 1
         local new_presug = Merge.run(presug, lines, true)
-        content:on_suggestions(lines)
+        if not headless then
+          content:on_suggestions(lines)
+        end
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         chain_actions(new_presug, action, new_solved_prefix, headless, elapsed_time, depth, on_success, on_error)
       end
@@ -357,7 +363,9 @@ local function _start_action(action, opts, headless, elapsed_time, depth, on_suc
         resolve({ nil, lines })
       else
         depth = depth + 1
-        content:on_suggestions(lines)
+        if not headless then
+          content:on_suggestions(lines)
+        end
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         resolve({ solved_prefix, lines })
       end
@@ -379,7 +387,6 @@ local function start_content(action_name, prompt_opts, range)
   end
   content:on_start({
     current_eval = current_eval,
-    current_action = current_action,
     action = action_name,
     prompt = vim.split(prompt_preview.content, '\n'),
     headless = prompt_opts.action.headless,
@@ -391,34 +398,8 @@ local function start_content(action_name, prompt_opts, range)
   })
 end
 
----@param action integer
----@param opts? ActionOptions
----@return nil
-function ActionsEngine.start_action(action, opts)
-  opts = opts or {}
-
-  local action_name = get_action_name(action)
-  if not action_name then
-    return
-  end
-
-  local headless = opts.headless == true
-
-  if lock then
-    return
-  end
-
-  lock = true
-
+local function _start_action_wrap(window, buffer, action, action_name, headless, opts)
   status:update(SC.GENERATING)
-
-  local window = api.nvim_get_current_win()
-  local buffer = api.nvim_win_get_buf(window)
-
-  if not headless then
-    chat:show()
-    fn.win_gotoid(window)
-  end
 
   local range = {
     start = { 0, 0 },
@@ -444,8 +425,41 @@ function ActionsEngine.start_action(action, opts)
     action = opts,
   }
 
-  start_content(action_name, prompt_opts, range)
+  if not headless then
+    start_content(action_name, prompt_opts, range)
+  end
   _start_action(action, prompt_opts, headless, 0, 0, opts.on_success, opts.on_error)
+end
+
+---@param action integer
+---@param opts? ActionOptions
+---@return nil
+function ActionsEngine.start_action(action, opts)
+  opts = opts or {}
+
+  local action_name = get_action_name(action)
+  if not action_name then
+    return
+  end
+
+  local window = api.nvim_get_current_win()
+  local buffer = api.nvim_win_get_buf(window)
+
+  local headless = opts.headless == true
+  if headless then
+    _start_action_wrap(window, buffer, action, action_name, true, opts)
+    return
+  end
+
+  if lock then
+    return
+  end
+  lock = true
+
+  chat:show()
+  fn.win_gotoid(window)
+
+  _start_action_wrap(window, buffer, action, action_name, false, opts)
 end
 
 ---@param opts? ActionOptions
