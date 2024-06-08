@@ -152,6 +152,7 @@ local function on_stage_end(is_error, headless, suggestions, on_success, on_erro
   end
 
   content:on_end({
+    suggestions = suggestions,
     elapsed_time = elapsed_time,
     depth = depth,
   })
