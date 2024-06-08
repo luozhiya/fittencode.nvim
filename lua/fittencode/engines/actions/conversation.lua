@@ -8,6 +8,7 @@
 ---@field depth integer
 ---@field location table -- [filename, row_start, row_end]
 ---@field headless boolean
+---@field current_action integer
 local M = {}
 
 function M:new(id, actions, references)

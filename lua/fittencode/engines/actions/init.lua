@@ -60,6 +60,7 @@ local ACTIONS = {
 }
 
 local current_eval = 1
+local current_action = 1
 
 ---@type Chat
 local chat = nil
@@ -132,7 +133,7 @@ local function filter_suggestions(window, buffer, task_id, suggestions)
   }), ms
 end
 
-local function on_stage_end(is_error, on_success, on_error)
+local function on_stage_end(is_error, headless, on_success, on_error)
   local ready = false
   if is_error then
     status:update(SC.ERROR)
@@ -161,15 +162,18 @@ local function on_stage_end(is_error, on_success, on_error)
   end
 
   current_eval = current_eval + 1
+  if not headless then
+    current_action = current_action + 1
+  end
   lock = false
 end
 
 ---@param action integer
 ---@param solved_prefix string
 ---@param on_error function
-local function chain_actions(window, buffer, action, solved_prefix, on_success, on_error)
+local function chain_actions(window, buffer, action, solved_prefix, headless, on_success, on_error)
   if not solved_prefix or depth >= MAX_DEPTH then
-    on_stage_end(false, on_success, on_error)
+    on_stage_end(false, headless, on_success, on_error)
     return
   end
   local task_id = tasks:create(0, 0)
@@ -179,16 +183,16 @@ local function chain_actions(window, buffer, action, solved_prefix, on_success, 
   }, function(_, prompt, suggestions)
     local lines, ms = filter_suggestions(window, buffer, task_id, suggestions)
     if not lines or #lines == 0 then
-      on_stage_end(false, on_success, on_error)
+      on_stage_end(false, headless, on_success, on_error)
     else
       elapsed_time = elapsed_time + ms
       depth = depth + 1
       content:on_suggestions(lines)
       local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-      chain_actions(window, buffer, action, new_solved_prefix, on_success, on_error)
+      chain_actions(window, buffer, action, new_solved_prefix, headless, on_success, on_error)
     end
   end, function()
-    on_stage_end(true, on_success, on_error)
+    on_stage_end(true, headless, on_success, on_error)
   end)
 end
 
@@ -336,7 +340,7 @@ local function make_filetype(buffer, range)
   return filetype
 end
 
-local function _start_action(window, buffer, action, opts, on_success, on_error)
+local function _start_action(window, buffer, action, opts, headless, on_success, on_error)
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
@@ -354,9 +358,9 @@ local function _start_action(window, buffer, action, opts, on_success, on_error)
       reject()
     end)
   end):forward(function(solved_prefix)
-    chain_actions(window, buffer, action, solved_prefix, on_success, on_error)
+    chain_actions(window, buffer, action, solved_prefix, headless, on_success, on_error)
   end, function()
-    on_stage_end(true, on_success, on_error)
+    on_stage_end(true, headless, on_success, on_error)
   end)
 end
 
@@ -367,6 +371,7 @@ local function start_content(action_name, prompt_opts, range)
   end
   content:on_start({
     current_eval = current_eval,
+    current_action = current_action,
     action = action_name,
     prompt = vim.split(prompt_preview.content, '\n'),
     headless = prompt_opts.action.headless,
@@ -438,7 +443,7 @@ function ActionsEngine.start_action(action, opts)
   }
 
   start_content(action_name, prompt_opts, range)
-  _start_action(chat.window, chat.buffer, action, prompt_opts, opts.on_success, opts.on_error)
+  _start_action(chat.window, chat.buffer, action, prompt_opts, headless, opts.on_success, opts.on_error)
 end
 
 ---@param opts? ActionOptions
