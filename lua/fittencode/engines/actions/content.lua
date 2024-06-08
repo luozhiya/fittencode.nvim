@@ -288,7 +288,7 @@ end
 
 function M:get_conversation_index(row, col)
   for i, cursor in ipairs(self.cursors) do
-    if cursor then
+    if cursor and #cursor == 5 then
       if row >= cursor[ViewBlock.IN][1][1] and row <= cursor[ViewBlock.QED][2][1] then
         return i
       end
