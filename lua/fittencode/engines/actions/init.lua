@@ -157,7 +157,6 @@ local function on_stage_end(is_error, headless, suggestions, on_success, on_erro
   })
 
   if ready then
-    Log.debug('on_stage_end suggestions: {}', suggestions)
     schedule(on_success, suggestions)
   end
 
@@ -172,7 +171,6 @@ end
 ---@param solved_prefix string
 ---@param on_error function
 local function chain_actions(presug, action, solved_prefix, headless, on_success, on_error)
-  Log.debug('presug: {}', presug)
   if not solved_prefix or depth >= MAX_DEPTH then
     on_stage_end(false, headless, presug, on_success, on_error)
     return
@@ -315,7 +313,6 @@ local function make_range(buffer)
   local region = nil
 
   local mode = api.nvim_get_mode().mode
-  Log.debug('Action mode: {}', mode)
   if VMODE[mode] then
     in_v = true
     if fn.has('nvim-0.10') == 1 then
@@ -344,9 +341,7 @@ end
 
 local function make_filetype(buffer, range)
   local filetype = api.nvim_get_option_value('filetype', { buf = buffer })
-  Log.debug('Action option filetype: {}', filetype)
   local langs = get_tslangs(buffer, range)
-  Log.debug('Action langs: {}', langs)
   -- Markdown contains blocks of code
   -- JS or CSS is embedded in the HTML
   if #langs >= 2 then
@@ -359,7 +354,6 @@ local function _start_action(action, opts, headless, on_success, on_error)
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
-      Log.debug('suggestions: {}', suggestions)
       local lines, ms = preprocessing(nil, task_id, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
@@ -375,7 +369,6 @@ local function _start_action(action, opts, headless, on_success, on_error)
     end)
   end):forward(function(pair)
     local solved_prefix, new_presug = unpack(pair)
-    Log.debug('new_presug: {}', new_presug)
     chain_actions(new_presug, action, solved_prefix, headless, on_success, on_error)
   end, function()
     on_stage_end(true, headless, nil, on_success, on_error)
@@ -475,10 +468,8 @@ function ActionsEngine.edit_code(opts)
     local input_opts = { prompt = 'Prompt for FittenCode EditCode: ', default = '', }
     vim.ui.input(input_opts, function(prompt)
       if not prompt or #prompt == 0 then
-        Log.debug('No Prompt for FittenCode EditCode')
         return
       end
-      Log.debug('Prompt for FittenCode EditCode: ' .. prompt)
       ActionsEngine.start_action(ACTIONS.EditCode, {
         prompt = prompt,
         content = merged.content
@@ -589,10 +580,8 @@ function ActionsEngine.generate_code(opts)
     local input_opts = { prompt = 'Enter instructions: ', default = '', }
     vim.ui.input(input_opts, function(content)
       if not content or #content == 0 then
-        Log.debug('No Content for FittenCode GenerateCode')
         return
       end
-      Log.debug('Enter instructions: ' .. content)
       ActionsEngine.start_action(ACTIONS.GenerateCode, {
         content = content }
       )
@@ -611,10 +600,8 @@ function ActionsEngine.start_chat(opts)
     local input_opts = { prompt = 'Ask... (Fitten Code Fast): ', default = '', }
     vim.ui.input(input_opts, function(content)
       if not content or #content == 0 then
-        Log.debug('No Content for FittenCode StartChat')
         return
       end
-      Log.debug('Ask... (Fitten Code Fast): ' .. content)
       ActionsEngine.start_action(ACTIONS.StartChat, {
         content = content }
       )
