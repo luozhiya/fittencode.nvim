@@ -73,14 +73,10 @@ function M.get_cursor(window)
 end
 
 -- Debounce a function call.
--- * If a timer is already running, reset it.
--- * If a timer is not running, start a new timer with the given `wait` time.
--- * When the timer expires, call the `callback` function.
--- * If an error occurs, call `on_error` with the error message.
----@param timer uv_timer_t|nil
+---@param timer? uv_timer_t
 ---@param callback function
 ---@param wait integer
----@param on_error function|nil
+---@param on_error? function
 function M.debounce(timer, callback, wait, on_error)
   if type(wait) ~= 'number' or wait < 0 then
     return
@@ -88,7 +84,7 @@ function M.debounce(timer, callback, wait, on_error)
     callback()
     return
   end
-  local function destroy_timer()
+  local _destroy_timer = function()
     if timer then
       if timer:has_ref() then
         timer:stop()
@@ -99,7 +95,7 @@ function M.debounce(timer, callback, wait, on_error)
       timer = nil
     end
   end
-  if not timer then
+  local _create_timer = function()
     timer = uv.new_timer()
     if timer == nil then
       if on_error then
@@ -111,13 +107,18 @@ function M.debounce(timer, callback, wait, on_error)
       wait,
       0,
       vim.schedule_wrap(function()
-        destroy_timer()
+        _destroy_timer()
         callback()
       end)
     )
-  else
-    timer:again()
   end
+  if not timer then
+    _create_timer()
+  else
+    _destroy_timer()
+    _create_timer()
+  end
+  return timer
 end
 
 local function sysname()

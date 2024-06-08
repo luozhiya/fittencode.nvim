@@ -7,12 +7,12 @@ local Log = require('fittencode.log')
 
 local M = {}
 
-local DEFER = 1000
+local DEFER = 2000
 
 -- milliseconds
-local IPL_DEBOUNCE_TIME = 500
+local IPL_DEBOUNCE_TIME = 1000
 
----@type uv_timer_t
+---@type uv_timer_t?
 local ipl_timer = nil
 
 local function _identify_current_buffer()
@@ -46,19 +46,26 @@ local function _identify_current_buffer()
   API.identify_programming_language({
     headless = true,
     content = content,
+    preprocess_format = {
+      condense_blank_line = {
+        convert_whitespace_to_blank = true,
+      },
+      trim_trailing_whitespace = true,
+      filter = {
+        count = 1,
+        exclude_markdown_code_blocks_marker = true,
+        remove_blank_lines = true,
+      }
+    },
     on_success = function(suggestions)
       if not suggestions or #suggestions == 0 then
         return
       end
       local lang = suggestions[1]
-      if #lang == 0 then
+      if #lang > 10 then
         return
       end
       lang = lang:lower()
-      lang = lang:gsub('^%s*(.-)%s*$', '%1')
-      if #lang == 0 then
-        return
-      end
       lang = lang:gsub('c%+%+', 'cpp')
       lang = lang:match('^(%w+)')
       api.nvim_set_option_value('filetype', lang, {
@@ -70,7 +77,7 @@ local function _identify_current_buffer()
 end
 
 local function _ipl_wrap()
-  Base.debounce(ipl_timer, function()
+  ipl_timer = Base.debounce(ipl_timer, function()
     _identify_current_buffer()
   end, IPL_DEBOUNCE_TIME)
 end
@@ -79,7 +86,7 @@ local function register_identify_current_buffer()
   api.nvim_create_autocmd({ 'TextChangedI', 'BufReadPost' }, {
     group = Base.augroup('Actions', 'IdentifyProgrammingLanguage'),
     pattern = '*',
-    callback = function(params)
+    callback = function()
       if not API.ready_for_generate() then
         vim.defer_fn(function()
           _ipl_wrap()

@@ -2,7 +2,7 @@ local api = vim.api
 
 local Base = require('fittencode.base')
 local Log = require('fittencode.log')
-local SuggestionsCache = require('fittencode.engines.inline.suggestions_cache')
+local SuggestionsCache = require('fittencode.engines.inline.cache')
 local Unicode = require('fittencode.unicode')
 
 ---@alias AcceptMode 'stage' | 'commit'

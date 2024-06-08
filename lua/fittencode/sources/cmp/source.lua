@@ -106,9 +106,9 @@ function source:complete(request, callback)
       character = character,
       reason = request.option.reason,
     }
-    Log.debug('Source(cmp) request: {}', info)
+    -- Log.debug('Source(cmp) request: {}', info)
     local response = convert_to_lsp_completion_response(line, character, cursor_before_line, suggestions)
-    Log.debug('LSP CompletionResponse: {}', response)
+    -- Log.debug('LSP CompletionResponse: {}', response)
     callback(response)
   end, function()
     callback()

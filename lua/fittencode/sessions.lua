@@ -71,7 +71,7 @@ function M.logout()
 end
 
 function M.load_last_session()
-  Log.info('Loading last session...')
+  -- Log.info('Loading last session...')
   key_storage:load(function(name)
     current_username = name
     Log.info('Last session for user {} loaded successful', name)
@@ -134,10 +134,9 @@ end
 ---@param on_success function|nil
 ---@param on_error function|nil
 function M.request_generate_one_stage(task_id, opts, on_success, on_error)
-  Log.debug('Requesting generate one stage...')
   local api_key = key_storage:get_key_by_name(current_username)
   if api_key == nil then
-    Log.debug('Key is not found')
+    -- Log.debug('Key is not found')
     schedule(on_error)
     return
   end
@@ -154,7 +153,7 @@ end
 
 function M.setup()
   client = Client:new()
-  Log.debug('FittenClient rest implementation is: {}', client:get_restimpl_name())
+  -- Log.debug('FittenClient rest implementation is: {}', client:get_restimpl_name())
   key_storage = KeyStorage:new({
     path = KEY_STORE_PATH,
   })

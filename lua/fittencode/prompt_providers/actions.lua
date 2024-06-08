@@ -177,6 +177,7 @@ end
 ---@param ctx PromptContext
 ---@return Prompt?
 function M:execute(ctx)
+  Log.debug('Executing action prompt provider: {}', ctx)
   if (not ctx.solved_prefix and not ctx.solved_content) and (not api.nvim_buf_is_valid(ctx.buffer) or ctx.range == nil) then
     return
   end
@@ -187,8 +188,10 @@ function M:execute(ctx)
   local instruction_type = make_instruction_type(name)
 
   local filename = ''
+  local display_filename = ''
   if ctx.buffer then
     filename = Path.name(ctx.buffer, no_lang)
+    display_filename = Path.name(ctx.buffer, false)
   end
   local within_the_line = false
   local content = ''
@@ -212,6 +215,7 @@ function M:execute(ctx)
     name = self.name,
     priority = self.priority,
     filename = filename,
+    display_filename = display_filename,
     content = content,
     prefix = prefix,
     suffix = suffix,
