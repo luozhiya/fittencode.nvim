@@ -40,9 +40,10 @@ function M.map(mode, lhs, rhs, opts)
   vim.keymap.set(mode, lhs, rhs, opts)
 end
 
+---@param tag string
 ---@param name string
-function M.augroup(name)
-  return api.nvim_create_augroup('FittenCode/' .. name, { clear = true })
+function M.augroup(tag, name)
+  return api.nvim_create_augroup('FittenCode/' .. tag .. '/' .. name, { clear = true })
 end
 
 ---@param name string

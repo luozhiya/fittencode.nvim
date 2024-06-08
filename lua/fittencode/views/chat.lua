@@ -109,7 +109,7 @@ function M:create(opts)
   end
 
   api.nvim_create_autocmd({ 'CursorMoved' }, {
-    group = Base.augroup('Chat/CursorMoved'),
+    group = Base.augroup('Chat', 'CursorMoved'),
     pattern = '*',
     callback = function()
       M:update_highlight()

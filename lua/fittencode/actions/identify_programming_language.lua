@@ -77,7 +77,7 @@ end
 
 local function register_identify_current_buffer()
   api.nvim_create_autocmd({ 'TextChangedI', 'BufReadPost' }, {
-    group = Base.augroup('IdentifyProgrammingLanguage'),
+    group = Base.augroup('Actions', 'IdentifyProgrammingLanguage'),
     pattern = '*',
     callback = function(params)
       if not API.ready_for_generate() then
