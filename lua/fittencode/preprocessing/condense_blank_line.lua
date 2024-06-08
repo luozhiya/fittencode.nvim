@@ -25,16 +25,17 @@ local function remove_lines_after(lines, row)
 end
 
 local function is_remove_all(prefix)
-  if prefix and #prefix > 0 then
-    local cur_line = prefix[#prefix]
-    local prev_line = nil
-    if #prefix > 1 then
-      prev_line = prefix[#prefix - 1]
-    end
-    if #cur_line == 0 then
-      if not prev_line or #prev_line == 0 then
-        return true
-      end
+  if not prefix or #prefix == 0 then
+    return true
+  end
+  local cur_line = prefix[#prefix]
+  local prev_line = nil
+  if #prefix > 1 then
+    prev_line = prefix[#prefix - 1]
+  end
+  if #cur_line == 0 then
+    if not prev_line or #prev_line == 0 then
+      return true
     end
   end
   return false
@@ -81,9 +82,7 @@ local function condense_blank_line(prefix, lines, opts)
     return
   end
   lines = condense_reverse(lines)
-  if prefix and #prefix > 0 then
-    lines = condense(opts.mode or 'first', prefix, lines)
-  end
+  lines = condense(opts.mode or 'first', prefix, lines)
   return lines
 end
 

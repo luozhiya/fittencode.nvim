@@ -127,7 +127,8 @@ local function preprocessing(presug, task_id, suggestions)
     suggestions = suggestions,
     condense_blank_line = {
       mode = 'all'
-    }
+    },
+    trim_trailing_whitespace = true,
   }), ms
 end
 
@@ -156,6 +157,7 @@ local function on_stage_end(is_error, headless, suggestions, on_success, on_erro
   })
 
   if ready then
+    Log.debug('on_stage_end suggestions: {}', suggestions)
     schedule(on_success, suggestions)
   end
 
@@ -170,6 +172,7 @@ end
 ---@param solved_prefix string
 ---@param on_error function
 local function chain_actions(presug, action, solved_prefix, headless, on_success, on_error)
+  Log.debug('presug: {}', presug)
   if not solved_prefix or depth >= MAX_DEPTH then
     on_stage_end(false, headless, presug, on_success, on_error)
     return
@@ -183,18 +186,19 @@ local function chain_actions(presug, action, solved_prefix, headless, on_success
       local lines, ms = preprocessing(presug, task_id, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
-        reject(false, presug)
+        reject({ false, presug })
       else
         depth = depth + 1
-        local new_presug = Merge.run(presug, lines)
+        local new_presug = Merge.run(presug, lines, true)
         content:on_suggestions(lines)
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         chain_actions(new_presug, action, new_solved_prefix, headless, on_success, on_error)
       end
     end, function()
-      reject(true, presug)
+      reject({ true, presug })
     end)
-  end):forward(nil, function(is_error, prefix)
+  end):forward(nil, function(pair)
+    local is_error, prefix = unpack(pair)
     local lines = Preprocessing.run({
       prefix = prefix,
       suggestions = { '' },
@@ -202,7 +206,7 @@ local function chain_actions(presug, action, solved_prefix, headless, on_success
         fenced_code_blocks = 'start'
       }
     })
-    local new_presug = Merge.run(prefix, lines)
+    local new_presug = Merge.run(prefix, lines, true)
     on_stage_end(is_error, headless, new_presug, on_success, on_error)
   end)
 end
@@ -355,20 +359,23 @@ local function _start_action(action, opts, headless, on_success, on_error)
   Promise:new(function(resolve, reject)
     local task_id = tasks:create(0, 0)
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
+      Log.debug('suggestions: {}', suggestions)
       local lines, ms = preprocessing(nil, task_id, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
-        resolve(nil, lines)
+        resolve({ nil, lines })
       else
         depth = depth + 1
         content:on_suggestions(lines)
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-        resolve(solved_prefix, lines)
+        resolve({ solved_prefix, lines })
       end
     end, function()
       reject()
     end)
-  end):forward(function(solved_prefix, new_presug)
+  end):forward(function(pair)
+    local solved_prefix, new_presug = unpack(pair)
+    Log.debug('new_presug: {}', new_presug)
     chain_actions(new_presug, action, solved_prefix, headless, on_success, on_error)
   end, function()
     on_stage_end(true, headless, nil, on_success, on_error)

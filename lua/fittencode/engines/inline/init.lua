@@ -71,9 +71,17 @@ local function preprocessing(ctx, task_id, suggestions)
     return
   end
   local format = PromptProviders.get_suggestions_preprocessing_format(ctx.prompt_ty)
+  ---@type SuggestionsPreprocessingOptions
   local opts = {
     suggestions = suggestions,
     prefix = make_prefix(ctx.buffer, row),
+    condense_blank_line = {
+      mode = 'first'
+    },
+    replace_slash = true,
+    markdown_prettify = {
+      separate_code_block_marker = true,
+    }
   }
   opts = vim.tbl_deep_extend('force', opts, format or {})
   return Preprocessing.run(opts)

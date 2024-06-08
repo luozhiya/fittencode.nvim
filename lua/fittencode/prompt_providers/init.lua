@@ -110,7 +110,7 @@ end
 function M.get_suggestions_preprocessing_format(prompt_ty)
   local format = nil
   for _, provider in ipairs(providers) do
-    if provider:is_available(prompt_ty) then
+    if provider:is_available(prompt_ty) and provider.get_suggestions_preprocessing_format then
       format = provider:get_suggestions_preprocessing_format()
       break
     end

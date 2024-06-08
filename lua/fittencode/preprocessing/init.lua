@@ -20,7 +20,7 @@ local M = {}
 
 ---@class SuggestionsPreprocessingFormat
 ---@field condense_blank_line? PreprocessingCondensedBlankLineOptions
----@field normalize_indent? boolean
+---@field normalize_indent? PreprocessingNormalizeIndentOptions
 ---@field replace_slash? boolean
 ---@field trim_trailing_whitespace? boolean
 ---@field markdown_prettify? PreprocessingMarkdownPrettifyOptions
