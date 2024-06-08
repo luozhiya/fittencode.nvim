@@ -32,21 +32,28 @@ local function _call_model(self, method, ...)
   return self.model[method](...)
 end
 
+local function _modify_buffer(buffer, fx)
+  if not buffer or not api.nvim_buf_is_valid(buffer) then
+    return
+  end
+  api.nvim_set_option_value('modifiable', true, { buf = buffer })
+  api.nvim_set_option_value('readonly', false, { buf = buffer })
+  local ret = fx()
+  api.nvim_set_option_value('modifiable', false, { buf = buffer })
+  api.nvim_set_option_value('readonly', true, { buf = buffer })
+  return ret
+end
+
 local function _commit(window, buffer, lines)
-  local cursor = nil
-  if buffer and api.nvim_buf_is_valid(buffer) then
-    api.nvim_set_option_value('modifiable', true, { buf = buffer })
-    api.nvim_set_option_value('readonly', false, { buf = buffer })
-    cursor = Lines.set_text({
+  local cursor = _modify_buffer(buffer, function()
+    return Lines.set_text({
       window = window,
       buffer = buffer,
       lines = lines,
       is_undo_disabled = true,
       position = 'end',
     })
-    api.nvim_set_option_value('modifiable', false, { buf = buffer })
-    api.nvim_set_option_value('readonly', true, { buf = buffer })
-  end
+  end)
   return cursor
 end
 
@@ -193,7 +200,16 @@ function M:goto_conversation(direction)
   if not range then
     return
   end
-  api.nvim_win_set_cursor(self.window, { range[1][1] + 1, range[1][2] })
+  local start_row = range[1][1]
+  local end_row = range[2][1]
+  api.nvim_win_set_cursor(self.window, { start_row + 1, end_row })
+  Lines.highlight_lines({
+    buffer = self.buffer,
+    hl = Color.FittenChatConversation,
+    start_row = start_row,
+    end_row = end_row,
+    show_time = 500,
+  })
 end
 
 function M:goto_previous_conversation()
@@ -211,15 +227,27 @@ function M:copy_conversation()
   end
   local start_row = range[1][1]
   local end_row = range[2][1]
+  Lines.highlight_lines({
+    buffer = self.buffer,
+    hl = Color.FittenChatConversation,
+    start_row = start_row,
+    end_row = end_row,
+    show_time = 500,
+  })
   local lines = api.nvim_buf_get_lines(self.buffer, start_row, end_row + 1, false)
   vim.fn.setreg('+', table.concat(lines, '\n'))
 end
 
 function M:copy_all_conversations()
-  local conversations = _call_model(self, 'get_conversations', 'all')
-  if not conversations then
-    return
-  end
+  local lines = api.nvim_buf_get_lines(self.buffer, 0, -1, false)
+  Lines.highlight_lines({
+    buffer = self.buffer,
+    hl = Color.FittenChatConversation,
+    start_row = 0,
+    end_row = #lines - 1,
+    show_time = 500,
+  })
+  vim.fn.setreg('+', table.concat(lines, '\n'))
 end
 
 function M:delete_conversation()
@@ -234,13 +262,9 @@ function M:delete_conversation()
     Log.debug('delete_conversation next {}', next)
     end_row = next[1][1] - 1
   end
-  if self.buffer and api.nvim_buf_is_valid(self.buffer) then
-    api.nvim_set_option_value('modifiable', true, { buf = self.buffer })
-    api.nvim_set_option_value('readonly', false, { buf = self.buffer })
+  _modify_buffer(self.buffer, function()
     api.nvim_buf_set_lines(self.buffer, start_row, end_row + 1, false, {})
-    api.nvim_set_option_value('modifiable', false, { buf = self.buffer })
-    api.nvim_set_option_value('readonly', true, { buf = self.buffer })
-  end
+  end)
 end
 
 function M:delete_all_conversations()
