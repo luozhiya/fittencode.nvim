@@ -46,6 +46,9 @@ local function _identify_current_buffer()
   API.identify_programming_language({
     headless = true,
     content = content,
+    preprocess_format = {
+      trim_trailing_whitespace = true,
+    },
     on_success = function(suggestions)
       if not suggestions or #suggestions == 0 then
         return

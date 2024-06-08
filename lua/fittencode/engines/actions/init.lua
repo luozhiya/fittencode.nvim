@@ -87,6 +87,7 @@ local status = nil
 ---@field content? string
 ---@field language? string
 ---@field headless? boolean
+---@field preprocess_format? SuggestionsPreprocessingFormat
 ---@field on_success? function
 ---@field on_error? function
 
@@ -117,20 +118,21 @@ end
 ---@param task_id integer
 ---@param suggestions Suggestions
 ---@return Suggestions?, integer?
-local function preprocessing(presug, task_id, headless, suggestions)
+local function preprocessing(presug, task_id, headless, preprocess_format, suggestions)
   local match = headless and headless_tasks:match_clean(task_id, 0, 0) or tasks:match_clean(task_id, 0, 0)
   local ms = match[2]
   if not match[1] or not suggestions or #suggestions == 0 then
     return nil, ms
   end
-  return Preprocessing.run({
+  local opts = {
     prefix = presug,
     suggestions = suggestions,
     condense_blank_line = {
       mode = 'all'
     },
-    -- trim_trailing_whitespace = true,
-  }), ms
+  }
+  opts = vim.tbl_deep_extend('force', opts, preprocess_format or {})
+  return Preprocessing.run(opts), ms
 end
 
 local function on_stage_end(is_error, headless, elapsed_time, depth, suggestions, on_success, on_error)
@@ -176,7 +178,8 @@ end
 ---@param action integer
 ---@param solved_prefix string
 ---@param on_error function
-local function chain_actions(presug, action, solved_prefix, headless, elapsed_time, depth, on_success, on_error)
+local function chain_actions(presug, action, solved_prefix, headless, elapsed_time, depth, preprocess_format, on_success,
+                             on_error)
   if not solved_prefix or depth >= MAX_DEPTH then
     on_stage_end(false, headless, elapsed_time, depth, presug, on_success, on_error)
     return
@@ -192,7 +195,7 @@ local function chain_actions(presug, action, solved_prefix, headless, elapsed_ti
       prompt_ty = get_action_type(action),
       solved_prefix = solved_prefix,
     }, function(_, prompt, suggestions)
-      local lines, ms = preprocessing(presug, task_id, headless, suggestions)
+      local lines, ms = preprocessing(presug, task_id, headless, preprocess_format, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
         reject({ false, presug })
@@ -203,7 +206,8 @@ local function chain_actions(presug, action, solved_prefix, headless, elapsed_ti
           content:on_suggestions(lines)
         end
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-        chain_actions(new_presug, action, new_solved_prefix, headless, elapsed_time, depth, on_success, on_error)
+        chain_actions(new_presug, action, new_solved_prefix, headless, elapsed_time, depth, preprocess_format, on_success,
+          on_error)
       end
     end, function()
       reject({ true, presug })
@@ -363,7 +367,7 @@ local function make_filetype(buffer, range)
   return filetype
 end
 
-local function _start_action(action, opts, headless, elapsed_time, depth, on_success, on_error)
+local function _start_action(action, opts, headless, elapsed_time, depth, preprocess_format, on_success, on_error)
   Promise:new(function(resolve, reject)
     local task_id = nil
     if headless then
@@ -372,7 +376,7 @@ local function _start_action(action, opts, headless, elapsed_time, depth, on_suc
       task_id = tasks:create(0, 0)
     end
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
-      local lines, ms = preprocessing(nil, task_id, headless, suggestions)
+      local lines, ms = preprocessing(nil, task_id, headless, preprocess_format, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
         resolve({ nil, lines })
@@ -389,7 +393,8 @@ local function _start_action(action, opts, headless, elapsed_time, depth, on_suc
     end)
   end):forward(function(pair)
     local solved_prefix, new_presug = unpack(pair)
-    chain_actions(new_presug, action, solved_prefix, headless, elapsed_time, depth, on_success, on_error)
+    chain_actions(new_presug, action, solved_prefix, headless, elapsed_time, depth, preprocess_format, on_success,
+      on_error)
   end, function()
     on_stage_end(true, headless, elapsed_time, depth, nil, on_success, on_error)
   end)
@@ -413,6 +418,7 @@ local function start_content(action_name, prompt_opts, range)
   })
 end
 
+---@param opts ActionOptions
 local function _start_action_wrap(window, buffer, action, action_name, headless, opts)
   status:update(SC.GENERATING)
 
@@ -443,7 +449,7 @@ local function _start_action_wrap(window, buffer, action, action_name, headless,
   if not headless then
     start_content(action_name, prompt_opts, range)
   end
-  _start_action(action, prompt_opts, headless, 0, 0, opts.on_success, opts.on_error)
+  _start_action(action, prompt_opts, headless, 0, 0, opts.preprocess_format, opts.on_success, opts.on_error)
 end
 
 ---@param action integer
