@@ -665,9 +665,7 @@ local CHAT_MODEL = {
 
 function ActionsEngine.setup()
   chat = Chat:new(CHAT_MODEL)
-  chat:create({
-    keymaps = Config.options.keymaps.chat,
-  })
+  chat:create()
   content = Content:new(chat)
   tasks = TaskScheduler:new()
   tasks:setup()

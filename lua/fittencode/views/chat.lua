@@ -93,7 +93,6 @@ function M:update_highlight()
 end
 
 ---@class ChatCreateOptions
----@field keymaps? table
 
 ---@param opts ChatCreateOptions
 function M:create(opts)
@@ -104,14 +103,14 @@ function M:create(opts)
   self.buffer = api.nvim_create_buf(false, true)
   api.nvim_buf_set_name(self.buffer, 'FittenCodeChat')
 
-  local FX = {
+  local Fx = {
     close = function() self:close() end,
   }
 
-  for key, value in pairs(opts.keymaps or {}) do
+  for key, value in pairs(Config.options.keymaps.chat) do
     Base.map('n', key, function()
-      if FX[value] then
-        FX[value]()
+      if Fx[value] then
+        Fx[value]()
       end
     end, { buffer = self.buffer })
   end
@@ -123,7 +122,7 @@ function M:create(opts)
         self:update_highlight()
       end,
       buffer = self.buffer,
-      desc = 'On Cursor Moved',
+      desc = 'Highlight conversation at cursor',
     })
   end
 
