@@ -22,6 +22,7 @@ local SC = Status.C
 ---@class ActionsEngine
 ---@field chat Chat
 ---@field tasks TaskScheduler
+---@field headless_tasks TaskScheduler
 ---@field status Status
 ---@field lock boolean
 ---@field current_eval number
@@ -70,6 +71,9 @@ local content = nil
 ---@class TaskScheduler
 local tasks = nil
 
+---@class TaskScheduler
+local headless_tasks = nil
+
 -- One by one evaluation
 local lock = false
 
@@ -113,9 +117,10 @@ end
 ---@param task_id integer
 ---@param suggestions Suggestions
 ---@return Suggestions?, integer?
-local function preprocessing(presug, task_id, suggestions)
-  local matched, ms = tasks:match_clean(task_id, 0, 0)
-  if not matched or not suggestions or #suggestions == 0 then
+local function preprocessing(presug, task_id, headless, suggestions)
+  local match = headless and headless_tasks:match_clean(task_id, 0, 0) or tasks:match_clean(task_id, 0, 0)
+  local ms = match[2]
+  if not match[1] or not suggestions or #suggestions == 0 then
     return nil, ms
   end
   return Preprocessing.run({
@@ -124,7 +129,7 @@ local function preprocessing(presug, task_id, suggestions)
     condense_blank_line = {
       mode = 'all'
     },
-    trim_trailing_whitespace = true,
+    -- trim_trailing_whitespace = true,
   }), ms
 end
 
@@ -177,12 +182,17 @@ local function chain_actions(presug, action, solved_prefix, headless, elapsed_ti
     return
   end
   Promise:new(function(resolve, reject)
-    local task_id = tasks:create(0, 0)
+    local task_id = nil
+    if headless then
+      task_id = headless_tasks:create(0, 0)
+    else
+      task_id = tasks:create(0, 0)
+    end
     Sessions.request_generate_one_stage(task_id, {
       prompt_ty = get_action_type(action),
       solved_prefix = solved_prefix,
     }, function(_, prompt, suggestions)
-      local lines, ms = preprocessing(presug, task_id, suggestions)
+      local lines, ms = preprocessing(presug, task_id, headless, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
         reject({ false, presug })
@@ -355,9 +365,14 @@ end
 
 local function _start_action(action, opts, headless, elapsed_time, depth, on_success, on_error)
   Promise:new(function(resolve, reject)
-    local task_id = tasks:create(0, 0)
+    local task_id = nil
+    if headless then
+      task_id = headless_tasks:create(0, 0)
+    else
+      task_id = tasks:create(0, 0)
+    end
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
-      local lines, ms = preprocessing(nil, task_id, suggestions)
+      local lines, ms = preprocessing(nil, task_id, headless, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
         resolve({ nil, lines })
@@ -685,6 +700,8 @@ function ActionsEngine.setup()
   content = Content:new(chat)
   tasks = TaskScheduler:new()
   tasks:setup()
+  headless_tasks = TaskScheduler:new()
+  headless_tasks:setup()
   status = Status:new({
     tag = 'ActionsEngine',
     ready_idle = true,

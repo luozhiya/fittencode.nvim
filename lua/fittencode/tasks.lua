@@ -62,7 +62,7 @@ end
 ---@param task_id integer
 ---@param row integer
 ---@param col integer
----@return boolean, integer
+---@return table<boolean, integer>
 function TaskScheduler:match_clean(task_id, row, col)
   local match_found = false
   local ms = 0
@@ -76,7 +76,7 @@ function TaskScheduler:match_clean(task_id, row, col)
     end
   end
   self:schedule_clean(task_id)
-  return match_found, ms
+  return { match_found, ms }
 end
 
 ---@param timestamp integer
