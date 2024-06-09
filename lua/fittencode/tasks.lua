@@ -63,9 +63,10 @@ end
 ---@param row integer
 ---@param col integer
 ---@return table<boolean, integer>
-function TaskScheduler:match_clean(task_id, row, col)
+function TaskScheduler:match_clean(task_id, row, col, clean)
   local match_found = false
   local ms = 0
+  clean = clean == false and false or true
   for i = #self.list, 1, -1 do
     local task = self.list[i]
     if task.timestamp == task_id and task.row == row and task.col == col then
@@ -75,7 +76,9 @@ function TaskScheduler:match_clean(task_id, row, col)
       break
     end
   end
-  self:schedule_clean(task_id)
+  if clean then
+    self:schedule_clean(task_id)
+  end
   return { match_found, ms }
 end
 

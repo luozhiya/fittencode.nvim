@@ -119,7 +119,7 @@ end
 ---@param suggestions Suggestions
 ---@return Suggestions?, integer?
 local function preprocessing(presug, task_id, headless, preprocess_format, suggestions)
-  local match = headless and headless_tasks:match_clean(task_id, 0, 0) or tasks:match_clean(task_id, 0, 0)
+  local match = headless and headless_tasks:match_clean(task_id, 0, 0, false) or tasks:match_clean(task_id, 0, 0)
   local ms = match[2]
   if not match[1] or not suggestions or #suggestions == 0 then
     return nil, ms
