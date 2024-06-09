@@ -1,5 +1,6 @@
 local function is_marker(line)
-  return line:match('^```')
+  -- return line:match('^```')
+  return line == '```'
 end
 
 ---@param prefix? string[]
@@ -12,7 +13,7 @@ local function filter_lines(prefix, lines, opts)
   end
   local count = opts.count or #lines
   local pattern = opts.pattern
-  local exclude_markdown_code_blocks = opts.exclude_markdown_code_blocks or false
+  local exclude_markdown_code_blocks_marker = opts.exclude_markdown_code_blocks_marker or false
   local filtered_lines = {}
   if count == #lines and not pattern then
     return lines
@@ -21,7 +22,7 @@ local function filter_lines(prefix, lines, opts)
   for i = 1, #lines do
     local line = lines[i]
     if (not pattern or (pattern and line:match(pattern))) and
-        ((not is_marker(line) and exclude_markdown_code_blocks) or not exclude_markdown_code_blocks) then
+        (not is_marker(line) or (is_marker(line) and not exclude_markdown_code_blocks_marker)) then
       filtered_lines[#filtered_lines + 1] = line
       j = j + 1
       if j > count then

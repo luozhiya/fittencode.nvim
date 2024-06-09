@@ -113,7 +113,7 @@ end
 ---@return Suggestions?, integer?
 local function preprocessing(presug, task_id, headless, preprocess_format, suggestions)
   local match = headless and tasks[TASK_HEADLESS]:match_clean(task_id, 0, 0, false) or
-  tasks[TASK_DEFAULT]:match_clean(task_id, 0, 0)
+      tasks[TASK_DEFAULT]:match_clean(task_id, 0, 0)
   local ms = match[2]
   if not match[1] or not suggestions or #suggestions == 0 then
     return nil, ms
@@ -123,6 +123,10 @@ local function preprocessing(presug, task_id, headless, preprocess_format, sugge
     suggestions = suggestions,
     condense_blank_line = {
       mode = 'all'
+    },
+    replace_slash = true,
+    markdown_prettify = {
+      separate_code_block_marker = true,
     },
   }
   opts = vim.tbl_deep_extend('force', opts, preprocess_format or {})

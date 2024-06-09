@@ -98,7 +98,7 @@ function M.get_suggestions_preprocessing_format()
   return {
     filter = {
       count = 1,
-      exclude_markdown_code_blocks = true,
+      exclude_markdown_code_blocks_marker = true,
     }
   }
 end

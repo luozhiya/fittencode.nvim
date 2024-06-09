@@ -16,7 +16,7 @@ local M = {}
 ---@class PreprocessingFilterOptions
 ---@field count? integer
 ---@field pattern? string
----@field exclude_markdown_code_blocks? boolean
+---@field exclude_markdown_code_blocks_marker? boolean
 
 ---@class SuggestionsPreprocessingFormat
 ---@field condense_blank_line? PreprocessingCondensedBlankLineOptions
