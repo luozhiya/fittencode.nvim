@@ -20,12 +20,6 @@ local schedule = Base.schedule
 local SC = Status.C
 
 ---@class ActionsEngine
----@field chat Chat
----@field tasks TaskScheduler
----@field headless_tasks TaskScheduler
----@field status Status
----@field lock boolean
----@field current_eval number
 ---@field start_chat function
 ---@field document_code function
 ---@field edit_code function
@@ -68,11 +62,10 @@ local chat = nil
 ---@type ActionsContent
 local content = nil
 
----@class TaskScheduler
-local tasks = nil
-
----@class TaskScheduler
-local headless_tasks = nil
+local TASK_DEFAULT = 1
+local TASK_HEADLESS = 2
+---@type table<integer, TaskScheduler>
+local tasks = {}
 
 -- One by one evaluation
 local lock = false
@@ -119,7 +112,8 @@ end
 ---@param suggestions Suggestions
 ---@return Suggestions?, integer?
 local function preprocessing(presug, task_id, headless, preprocess_format, suggestions)
-  local match = headless and headless_tasks:match_clean(task_id, 0, 0, false) or tasks:match_clean(task_id, 0, 0)
+  local match = headless and tasks[TASK_HEADLESS]:match_clean(task_id, 0, 0, false) or
+  tasks[TASK_DEFAULT]:match_clean(task_id, 0, 0)
   local ms = match[2]
   if not match[1] or not suggestions or #suggestions == 0 then
     return nil, ms
@@ -187,9 +181,9 @@ local function chain_actions(presug, action, solved_prefix, headless, elapsed_ti
   Promise:new(function(resolve, reject)
     local task_id = nil
     if headless then
-      task_id = headless_tasks:create(0, 0)
+      task_id = tasks[TASK_HEADLESS]:create(0, 0)
     else
-      task_id = tasks:create(0, 0)
+      task_id = tasks[TASK_DEFAULT]:create(0, 0)
     end
     Sessions.request_generate_one_stage(task_id, {
       prompt_ty = get_action_type(action),
@@ -371,9 +365,9 @@ local function _start_action(action, opts, headless, elapsed_time, depth, prepro
   Promise:new(function(resolve, reject)
     local task_id = nil
     if headless then
-      task_id = headless_tasks:create(0, 0)
+      task_id = tasks[TASK_HEADLESS]:create(0, 0)
     else
-      task_id = tasks:create(0, 0)
+      task_id = tasks[TASK_DEFAULT]:create(0, 0)
     end
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
       local lines, ms = preprocessing(nil, task_id, headless, preprocess_format, suggestions)
@@ -704,10 +698,10 @@ function ActionsEngine.setup()
   chat = Chat:new(CHAT_MODEL)
   chat:create()
   content = Content:new(chat)
-  tasks = TaskScheduler:new()
-  tasks:setup()
-  headless_tasks = TaskScheduler:new()
-  headless_tasks:setup()
+  tasks[TASK_DEFAULT] = TaskScheduler:new()
+  tasks[TASK_DEFAULT]:setup()
+  tasks[TASK_HEADLESS] = TaskScheduler:new()
+  tasks[TASK_HEADLESS]:setup()
   status = Status:new({
     tag = 'ActionsEngine',
     ready_idle = true,
