@@ -327,12 +327,16 @@ end
 local function make_range(buffer)
   local in_v = false
   local region = nil
+  ---@type integer[][][]
+  local pos = nil
 
   local mode = api.nvim_get_mode().mode
   if VMODE[mode] then
     in_v = true
     if fn.has('nvim-0.10') == 1 then
       region = fn.getregion(fn.getpos('.'), fn.getpos('v'), { type = fn.mode() })
+      -- [bufnum, lnum, col, off]
+      pos = fn.getregionpos(fn.getpos('.'), fn.getpos('v'))
     end
   end
 
@@ -342,6 +346,10 @@ local function make_range(buffer)
 
   local start = api.nvim_buf_get_mark(buffer, '<')
   local end_ = api.nvim_buf_get_mark(buffer, '>')
+  if pos then
+    start = { pos[1][1][2], pos[1][1][3] }
+    end_ = { pos[1][2][2], pos[1][2][3] }
+  end
 
   ---@type ActionRange
   local range = {

@@ -217,6 +217,9 @@ function M:on_status(msg)
       msg,
       '```',
     },
+    format = {
+      start_space = true,
+    }
   })
 end
 
