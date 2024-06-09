@@ -80,6 +80,7 @@ local status = nil
 ---@field content? string
 ---@field language? string
 ---@field headless? boolean
+---@field silence? boolean
 ---@field preprocess_format? SuggestionsPreprocessingFormat
 ---@field on_success? function
 ---@field on_error? function
@@ -112,8 +113,8 @@ end
 ---@param suggestions Suggestions
 ---@return Suggestions?, integer?
 local function preprocessing(presug, task_id, headless, preprocess_format, suggestions)
-  local match = headless and tasks[TASK_HEADLESS]:match_clean(task_id, 0, 0, false) or
-      tasks[TASK_DEFAULT]:match_clean(task_id, 0, 0)
+  local match = headless and tasks[TASK_HEADLESS]:match_clean(task_id, nil, nil, false) or
+      tasks[TASK_DEFAULT]:match_clean(task_id, nil, nil)
   local ms = match[2]
   if not match[1] or not suggestions or #suggestions == 0 then
     return nil, ms
@@ -185,9 +186,9 @@ local function chain_actions(presug, action, solved_prefix, headless, elapsed_ti
   Promise:new(function(resolve, reject)
     local task_id = nil
     if headless then
-      task_id = tasks[TASK_HEADLESS]:create(0, 0)
+      task_id = tasks[TASK_HEADLESS]:create()
     else
-      task_id = tasks[TASK_DEFAULT]:create(0, 0)
+      task_id = tasks[TASK_DEFAULT]:create()
     end
     Sessions.request_generate_one_stage(task_id, {
       prompt_ty = get_action_type(action),
@@ -201,7 +202,7 @@ local function chain_actions(presug, action, solved_prefix, headless, elapsed_ti
         depth = depth + 1
         local new_presug = Merge.run(presug, lines, true)
         if not headless then
-          content:on_suggestions(lines)
+          content:on_suggestions(vim.deepcopy(lines))
         end
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         chain_actions(new_presug, action, new_solved_prefix, headless, elapsed_time, depth, preprocess_format, on_success,
@@ -369,9 +370,9 @@ local function _start_action(action, opts, headless, elapsed_time, depth, prepro
   Promise:new(function(resolve, reject)
     local task_id = nil
     if headless then
-      task_id = tasks[TASK_HEADLESS]:create(0, 0)
+      task_id = tasks[TASK_HEADLESS]:create()
     else
-      task_id = tasks[TASK_DEFAULT]:create(0, 0)
+      task_id = tasks[TASK_DEFAULT]:create()
     end
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
       local lines, ms = preprocessing(nil, task_id, headless, preprocess_format, suggestions)
@@ -381,7 +382,7 @@ local function _start_action(action, opts, headless, elapsed_time, depth, prepro
       else
         depth = depth + 1
         if not headless then
-          content:on_suggestions(lines)
+          content:on_suggestions(vim.deepcopy(lines))
         end
         local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         resolve({ solved_prefix, lines })
@@ -475,8 +476,10 @@ function ActionsEngine.start_action(action, opts)
   end
   lock = true
 
-  chat:show()
-  fn.win_gotoid(window)
+  if not opts.silence then
+    chat:show()
+    fn.win_gotoid(window)
+  end
 
   _start_action_wrap(window, buffer, action, action_name, false, opts)
 end

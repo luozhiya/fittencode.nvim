@@ -134,7 +134,6 @@ end
 ---@param on_success function|nil
 ---@param on_error function|nil
 function M.request_generate_one_stage(task_id, opts, on_success, on_error)
-  Log.debug('Requesting generate one stage...')
   local api_key = key_storage:get_key_by_name(current_username)
   if api_key == nil then
     Log.debug('Key is not found')

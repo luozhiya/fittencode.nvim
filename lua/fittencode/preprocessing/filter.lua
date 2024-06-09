@@ -1,3 +1,5 @@
+local Log = require('fittencode.log')
+
 local function is_marker(line)
   -- return line:match('^```')
   return line == '```'
@@ -15,7 +17,7 @@ local function filter_lines(prefix, lines, opts)
   local pattern = opts.pattern
   local exclude_markdown_code_blocks_marker = opts.exclude_markdown_code_blocks_marker or false
   local filtered_lines = {}
-  if count == #lines and not pattern then
+  if count == #lines and not pattern and not exclude_markdown_code_blocks_marker then
     return lines
   end
   local j = 1

@@ -41,13 +41,17 @@ function TaskScheduler:setup()
   end
 end
 
----@param row integer
----@param col integer
+---@param row? integer
+---@param col? integer
 ---@return integer
 function TaskScheduler:create(row, col)
   local timestamp = uv.hrtime()
   table.insert(self.list, #self.list + 1, { row = row, col = col, timestamp = timestamp })
-  Log.debug('TASK CREATED: {}', self.list[#self.list])
+  if row and col then
+    Log.debug('Task {} created at row: {}, col: {}', string.format('%x', timestamp), row, col)
+  else
+    Log.debug('Task {} created', string.format('%x', timestamp))
+  end
   return timestamp
 end
 
@@ -60,8 +64,8 @@ function TaskScheduler:schedule_clean(task_id)
 end
 
 ---@param task_id integer
----@param row integer
----@param col integer
+---@param row? integer
+---@param col? integer
 ---@return table<boolean, integer>
 function TaskScheduler:match_clean(task_id, row, col, clean)
   local match_found = false
@@ -71,7 +75,7 @@ function TaskScheduler:match_clean(task_id, row, col, clean)
     local task = self.list[i]
     if task.timestamp == task_id and task.row == row and task.col == col then
       ms = math.floor((uv.hrtime() - task.timestamp) / MS_TO_NS)
-      Log.debug('TASK MATCHED, time elapsed: {} ms, task: {}', ms, task)
+      Log.debug('Task {} matched, time elapsed: {}', string.format('%x', task_id), ms)
       match_found = true
       break
     end
