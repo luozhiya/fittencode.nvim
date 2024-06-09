@@ -340,15 +340,16 @@ local function make_range(buffer)
     end
   end
 
-  if not region then
-    api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
-  end
+  local start = { 0, 0 }
+  local end_ = { 0, 0 }
 
-  local start = api.nvim_buf_get_mark(buffer, '<')
-  local end_ = api.nvim_buf_get_mark(buffer, '>')
   if pos then
     start = { pos[1][1][2], pos[1][1][3] }
     end_ = { pos[1][2][2], pos[1][2][3] }
+  else
+    api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
+    start = api.nvim_buf_get_mark(buffer, '<')
+    end_ = api.nvim_buf_get_mark(buffer, '>')
   end
 
   ---@type ActionRange
