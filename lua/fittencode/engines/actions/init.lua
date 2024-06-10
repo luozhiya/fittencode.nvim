@@ -200,10 +200,10 @@ local function chain_actions(presug, action, solved_prefix, headless, elapsed_ti
         reject({ false, presug })
       else
         depth = depth + 1
-        local new_presug = Merge.run(presug, lines, true)
         if not headless then
           content:on_suggestions(vim.deepcopy(lines))
         end
+        local new_presug = Merge.run(presug, lines, true)
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
         chain_actions(new_presug, action, new_solved_prefix, headless, elapsed_time, depth, preprocess_format, on_success,
           on_error)
