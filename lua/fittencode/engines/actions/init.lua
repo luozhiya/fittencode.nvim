@@ -165,7 +165,7 @@ local function on_stage_end(is_error, headless, elapsed_time, depth, suggestions
     current_headless = current_headless + 1
   else
     content:on_end({
-      suggestions = suggestions,
+      suggestions = vim.deepcopy(suggestions),
       elapsed_time = elapsed_time,
       depth = depth,
     })
