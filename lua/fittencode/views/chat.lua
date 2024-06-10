@@ -199,7 +199,7 @@ function M:commit(lines)
     -- pcall(vim.treesitter.stop, self.buffer)
     -- pcall(vim.treesitter.start, self.buffer, 'markdown')
     if self.buffer and api.nvim_buf_is_valid(self.buffer) then
-      vim.treesitter.get_parser(self.buffer, 'markdown'):parse()
+      vim.treesitter.get_parser(self.buffer, 'markdown'):parse(true)
       vim.cmd.redraw()
     end
   end, self.update_ts_interval)
