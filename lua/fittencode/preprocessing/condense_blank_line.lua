@@ -1,8 +1,11 @@
+local Log = require('fittencode.log')
+
 ---@class PreprocessingCondensedBlankLineOptions
 ---@field range? string
 ---@field remove_all? boolean
 ---@field convert_whitespace_to_blank? boolean
 
+---@param lines string[]
 local function is_all_blank(lines)
   for _, line in ipairs(lines) do
     if #line ~= 0 then
@@ -12,6 +15,7 @@ local function is_all_blank(lines)
   return true
 end
 
+---@param lines string[]
 local function find_last_non_blank_line(lines)
   for i = #lines, 1, -1 do
     if #lines[i] ~= 0 then
@@ -20,12 +24,15 @@ local function find_last_non_blank_line(lines)
   end
 end
 
+---@param lines string[]
+---@param row number
 local function remove_lines_after(lines, row)
   for i = row + 1, #lines do
     table.remove(lines, row)
   end
 end
 
+---@param prefix? string[]
 local function is_remove_all(prefix)
   if not prefix or #prefix == 0 then
     return false
@@ -43,7 +50,15 @@ local function is_remove_all(prefix)
   return false
 end
 
+---@param remove_all? boolean
+---@param range? string
+---@param prefix? string[]
+---@param lines? string[]
+---@return string[]?
 local function condense(remove_all, range, prefix, lines)
+  if not lines or #lines == 0 then
+    return
+  end
   if remove_all == nil then
     remove_all = is_remove_all(prefix)
   end
@@ -66,7 +81,12 @@ local function condense(remove_all, range, prefix, lines)
   return condensed
 end
 
+---@param lines? string[]
+---@return string[]?
 local function condense_reverse(lines)
+  if not lines then
+    return
+  end
   local non_blank = find_last_non_blank_line(lines)
   if non_blank then
     remove_lines_after(lines, non_blank + 2)
@@ -74,8 +94,11 @@ local function condense_reverse(lines)
   return lines
 end
 
+---@param lines? string[]
+---@param convert? boolean
+---@return string[]?
 local function _convert_whitespace_to_blank(lines, convert)
-  if not convert then
+  if not convert or not lines then
     return lines
   end
   local new_lines = {}
@@ -89,20 +112,21 @@ local function _convert_whitespace_to_blank(lines, convert)
 end
 
 ---@param prefix? string[]
----@param lines string[]
+---@param lines? string[]
 ---@param opts? PreprocessingCondensedBlankLineOptions
 ---@return string[]?
 local function condense_blank_line(prefix, lines, opts)
-  if not opts then
+  if not opts or not lines then
     return lines
   end
   if is_all_blank(lines) then
     return
   end
   local convert_whitespace_to_blank = opts.convert_whitespace_to_blank or false
+  local range = opts.range or 'first'
   lines = _convert_whitespace_to_blank(lines, convert_whitespace_to_blank)
   lines = condense_reverse(lines)
-  lines = condense(opts.remove_all, opts.range or 'first', prefix, lines)
+  lines = condense(opts.remove_all, range, prefix, lines)
   return lines
 end
 

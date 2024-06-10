@@ -1,9 +1,9 @@
 ---@param prefix? string[]
----@param lines string[]
+---@param lines? string[]
 ---@param opts? PreprocessingNormalizeIndentOptions
 ---@return string[]?
 local function normalize_indent(prefix, lines, opts)
-  if not opts then
+  if not lines or #lines == 0 or not opts then
     return lines
   end
   local expandtab = opts.expandtab

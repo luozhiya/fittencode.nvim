@@ -192,8 +192,12 @@ function M:close()
   self.window = nil
 end
 
+---@param lines? string[]
 ---@return table<integer, integer>[]?
 function M:commit(lines)
+  if not lines then
+    return
+  end
   local cursors = _commit(self.window, self.buffer, lines)
   self.update_ts_timer = Base.debounce(self.update_ts_timer, function()
     -- pcall(vim.treesitter.stop, self.buffer)

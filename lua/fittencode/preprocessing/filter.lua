@@ -1,11 +1,15 @@
 local Log = require('fittencode.log')
 
+---@param line? string
 local function is_marker(line)
-  return line:match('^```') or line:match('```$')
+  return line and (line:match('^```') or line:match('```$'))
 end
 
+---@param lines? string[]
+---@param pattern? string
+---@return string[]?
 local function _filter_pattern(lines, pattern)
-  if not pattern then
+  if not lines or #lines == 0 or not pattern then
     return lines
   end
   local filtered_lines = vim.tbl_filter(function(line)
@@ -14,8 +18,11 @@ local function _filter_pattern(lines, pattern)
   return filtered_lines
 end
 
+---@param lines? string[]
+---@param exclude? boolean
+---@return string[]?
 local function _filter_exclude_markdown_code_blocks_marker(lines, exclude)
-  if not exclude then
+  if not lines or #lines == 0 or not exclude then
     return lines
   end
   local filtered_lines = vim.tbl_filter(function(line)
@@ -24,8 +31,11 @@ local function _filter_exclude_markdown_code_blocks_marker(lines, exclude)
   return filtered_lines
 end
 
+---@param lines? string[]
+---@param remove? boolean
+---@return string[]?
 local function _filter_remove_blank_lines(lines, remove)
-  if not remove then
+  if not lines or #lines == 0 or not remove then
     return lines
   end
   local filtered_lines = vim.tbl_filter(function(line)
@@ -34,8 +44,11 @@ local function _filter_remove_blank_lines(lines, remove)
   return filtered_lines
 end
 
+---@param lines? string[]
+---@param count? number
+---@return string[]?
 local function _filter_count(lines, count)
-  if count >= #lines then
+  if not lines or count >= #lines then
     return lines
   end
   local filtered_lines = {}
@@ -46,11 +59,11 @@ local function _filter_count(lines, count)
 end
 
 ---@param prefix? string[]
----@param lines string[]
+---@param lines? string[]
 ---@param opts? PreprocessingFilterOptions
 ---@return string[]?
 local function filter_lines(prefix, lines, opts)
-  if not opts then
+  if not opts or not lines then
     return lines
   end
   local count = opts.count or #lines

@@ -40,17 +40,17 @@ end
 ---@field start_space? boolean
 
 ---@class ChatCommitOptions
----@field lines? string|string[]
+---@field lines? string[]
 ---@field format? ChatCommitFormat
 
 ---@param line string
 local function _end(line)
-  return line:match('```$')
+  return line and line:match('```$')
 end
 
 ---@param line string
 local function _start(line)
-  return line:match('^```')
+  return line and line:match('^```')
 end
 
 local function remove_blank_lines_start(lines)
@@ -60,13 +60,19 @@ local function remove_blank_lines_start(lines)
   })
 end
 
+---@param last_lines? string[]
+---@param lines? string[]
+---@param format? ChatCommitFormat
 local function format_lines(last_lines, lines, format)
-  if not format then
+  if not format or not last_lines or #last_lines == 0 or not lines then
     return lines
   end
   local last = last_lines[#last_lines]
   if format.start_space then
     lines = remove_blank_lines_start(lines)
+    if not lines or #lines == 0 then
+      return
+    end
     if #last == 0 or _end(last) then
       if not _start(lines[1]) then
         table.insert(lines, 1, '')
@@ -87,16 +93,19 @@ function M:commit(opts)
   if not opts then
     return
   end
+  ---@type string[]?
   local lines = nil
   local format = nil
   if type(opts) == 'string' then
-    ---@diagnostic disable-next-line: param-type-mismatch
     lines = vim.split(opts, '\n')
   elseif type(opts) == 'table' then
     lines = opts.lines
     format = opts.format
   end
   lines = format_lines(self.last_lines, lines, format)
+  if not lines then
+    return
+  end
   self.last_lines = lines
   return self.chat:commit(lines)
 end
@@ -175,6 +184,7 @@ local function merge_cursors(c1, c2)
   return c1
 end
 
+---@param suggestions? Suggestions
 function M:on_suggestions(suggestions)
   if not suggestions then
     return
