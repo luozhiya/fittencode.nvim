@@ -8,7 +8,7 @@ local Log = require('fittencode.log')
 ---@field tag string
 ---@field current integer
 ---@field idle_timer? uv_timer_t
----@field IDLE_CYCLE integer
+---@field idle_interval integer
 ---@field update function
 ---@field get_current function
 local M = {}
@@ -33,7 +33,7 @@ function M:new(opts)
     current = C.IDLE,
     ---@type uv_timer_t
     idle_timer = nil,
-    IDLE_CYCLE = 5000, -- ms
+    idle_interval = 5000, -- ms
     filters = { C.ERROR, C.NO_MORE_SUGGESTIONS }
   }
   if obj.ready_idle then
@@ -64,7 +64,7 @@ function M:update(status)
     if vim.tbl_contains(self.filters, self.current) then
       self:update(C.IDLE)
     end
-  end, self.IDLE_CYCLE)
+  end, self.idle_interval)
 end
 
 function M:get_current()

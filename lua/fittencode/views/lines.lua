@@ -216,7 +216,7 @@ end
 ---@field cursor? integer[]
 
 ---@param opts LinesSetTextOptions
----@return table[]?
+---@return table<integer, integer>[]?
 function M.set_text(opts)
   local window = opts.window
   local buffer = opts.buffer
@@ -246,17 +246,17 @@ function M.set_text(opts)
   if row == nil or col == nil then
     return
   end
-  local curosr = {}
+  local curosrs = {}
   format_wrap(buffer, function()
-    curosr[1] = { row, col }
+    curosrs[1] = { row, col }
     if not is_undo_disabled then
       undojoin()
     end
     -- Emit events `CursorMovedI` `CursorHoldI`
     append_text_at_pos(buffer, row, col, lines)
-    curosr[2] = move_cursor_to_text_end(window, row, col, lines)
+    curosrs[2] = move_cursor_to_text_end(window, row, col, lines)
   end)
-  return curosr
+  return curosrs
 end
 
 ---@class RenderVirtTextOptions

@@ -82,6 +82,7 @@ local function format_lines(last_lines, lines, format)
 end
 
 ---@param opts? ChatCommitOptions|string
+---@return table<integer, integer>[]?
 function M:commit(opts)
   if not opts then
     return
@@ -114,7 +115,7 @@ function M:on_start(opts)
   if not self.chat:is_empty() then
     self:commit('\n\n')
   end
-  local cursor = self:commit({
+  local cursors = self:commit({
     lines = {
       c_in,
     }
@@ -126,11 +127,11 @@ function M:on_start(opts)
     }
   })
   self.cursors[self.current_eval] = {}
-  self.cursors[self.current_eval][ViewBlock.IN] = cursor
-  cursor = self:commit({
+  self.cursors[self.current_eval][ViewBlock.IN] = cursors
+  cursors = self:commit({
     lines = opts.prompt
   })
-  self.cursors[self.current_eval][ViewBlock.IN_CONTENT] = cursor
+  self.cursors[self.current_eval][ViewBlock.IN_CONTENT] = cursors
   self:commit({
     lines = {
       '',
@@ -138,12 +139,12 @@ function M:on_start(opts)
     }
   })
   local c_out = '# Out`[' .. self.current_eval .. ']`='
-  cursor = self:commit({
+  cursors = self:commit({
     lines = {
       c_out,
     }
   })
-  self.cursors[self.current_eval][ViewBlock.OUT] = cursor
+  self.cursors[self.current_eval][ViewBlock.OUT] = cursors
 end
 
 function M:on_end(opts)
@@ -156,7 +157,7 @@ function M:on_end(opts)
   self.conversations[self.current_eval].suggestions = opts.suggestions
 
   local qed = '> Q.E.D.' .. '(' .. opts.elapsed_time .. ' ms)'
-  local cursor = self:commit({
+  local cursors = self:commit({
     lines = {
       qed,
     },
@@ -164,7 +165,7 @@ function M:on_end(opts)
       start_space = true,
     }
   })
-  self.cursors[self.current_eval][ViewBlock.QED] = cursor
+  self.cursors[self.current_eval][ViewBlock.QED] = cursors
 end
 
 local function merge_cursors(c1, c2)
@@ -180,19 +181,19 @@ function M:on_suggestions(suggestions)
   end
   if not self.has_suggestions[self.current_eval] then
     self.has_suggestions[self.current_eval] = true
-    local cursor = self:commit({
+    local cursors = self:commit({
       lines = suggestions,
       format = {
         start_space = true,
       }
     })
-    self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = cursor
+    self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = cursors
   else
-    local cursor = self:commit({
+    local cursors = self:commit({
       lines = suggestions,
     })
     self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = merge_cursors(
-      self.cursors[self.current_eval][ViewBlock.OUT_CONTENT], cursor)
+      self.cursors[self.current_eval][ViewBlock.OUT_CONTENT], cursors)
   end
 end
 

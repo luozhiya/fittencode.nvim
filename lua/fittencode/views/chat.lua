@@ -14,12 +14,15 @@ local Log = require('fittencode.log')
 ---@field create function
 ---@field last_cursor? table
 ---@field model table
+---@field update_ts_timer? uv_timer_t
+---@field update_ts_interval? integer
 ---@field is_visible function
 local M = {}
 
 function M:new(model)
   local o = {
     model = model,
+    update_ts_interval = 500,
   }
   self.__index = self
   return setmetatable(o, self)
@@ -32,6 +35,9 @@ local function _call_model(self, method, ...)
   return self.model[method](...)
 end
 
+---@param buffer integer
+---@param fx function
+---@return any
 local function _modify_buffer(buffer, fx)
   if not buffer or not api.nvim_buf_is_valid(buffer) then
     return
@@ -44,8 +50,9 @@ local function _modify_buffer(buffer, fx)
   return ret
 end
 
+---@return table<integer, integer>[]?
 local function _commit(window, buffer, lines)
-  local cursor = _modify_buffer(buffer, function()
+  local cursors = _modify_buffer(buffer, function()
     return Lines.set_text({
       window = window,
       buffer = buffer,
@@ -54,7 +61,7 @@ local function _commit(window, buffer, lines)
       position = 'end',
     })
   end)
-  return cursor
+  return cursors
 end
 
 local function set_content(window, buffer, text)
@@ -185,9 +192,18 @@ function M:close()
   self.window = nil
 end
 
----@return integer[]?
+---@return table<integer, integer>[]?
 function M:commit(lines)
-  return _commit(self.window, self.buffer, lines)
+  local cursors = _commit(self.window, self.buffer, lines)
+  self.update_ts_timer = Base.debounce(self.update_ts_timer, function()
+    -- pcall(vim.treesitter.stop, self.buffer)
+    -- pcall(vim.treesitter.start, self.buffer, 'markdown')
+    if self.buffer and api.nvim_buf_is_valid(self.buffer) then
+      vim.treesitter.get_parser(self.buffer, 'markdown'):parse()
+      vim.cmd.redraw()
+    end
+  end, self.update_ts_interval)
+  return cursors
 end
 
 function M:is_visible()

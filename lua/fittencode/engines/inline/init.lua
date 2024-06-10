@@ -38,7 +38,7 @@ local generate_one_stage_timer = nil
 local ignore_event = false
 
 -- milliseconds
-local CURSORMOVED_DEBOUNCE_TIME = 120
+local CURSORMOVED_INTERVAL = 120
 
 ---@type uv_timer_t?
 local cursormoved_timer = nil
@@ -514,7 +514,7 @@ function M.on_cursor_moved()
   end
   cursormoved_timer = Base.debounce(cursormoved_timer, function()
     _on_cursor_moved()
-  end, CURSORMOVED_DEBOUNCE_TIME)
+  end, CURSORMOVED_INTERVAL)
 end
 
 local KEYS = {

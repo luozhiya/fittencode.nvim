@@ -177,7 +177,6 @@ end
 ---@param ctx PromptContext
 ---@return Prompt?
 function M:execute(ctx)
-  Log.debug('Executing action prompt provider: {}', ctx)
   if (not ctx.solved_prefix and not ctx.solved_content) and (not api.nvim_buf_is_valid(ctx.buffer) or ctx.range == nil) then
     return
   end
