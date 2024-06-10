@@ -182,55 +182,6 @@ local function on_stage_end(is_error, headless, elapsed_time, depth, suggestions
   end
 end
 
----@param action integer
----@param solved_prefix string
----@param on_error function
-local function chain_actions(presug, action, solved_prefix, headless, elapsed_time, depth, preprocess_format, on_success,
-                             on_error)
-  local _fence_end = function(is_error, prefix)
-    local lines = Preprocessing.run({
-      prefix = prefix,
-      suggestions = { '' },
-      markdown_prettify = {
-        fenced_code_blocks = 'start'
-      }
-    })
-    local new_presug = Merge.run(prefix, lines, true)
-    on_stage_end(is_error, headless, elapsed_time, depth, new_presug, on_success, on_error)
-  end
-  if not solved_prefix or depth >= MAX_DEPTH then
-    _fence_end(false, presug)
-    return
-  end
-  Promise:new(function(resolve, reject)
-    local task_id = _create_task(headless)
-    Sessions.request_generate_one_stage(task_id, {
-      prompt_ty = get_action_type(action),
-      solved_prefix = solved_prefix,
-    }, function(_, prompt, suggestions)
-      local lines, ms = preprocessing(presug, task_id, headless, preprocess_format, suggestions)
-      elapsed_time = elapsed_time + ms
-      if not lines or #lines == 0 then
-        reject({ false, presug })
-      else
-        depth = depth + 1
-        if not headless then
-          content:on_suggestions(vim.deepcopy(lines))
-        end
-        local new_presug = Merge.run(presug, lines, true)
-        local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-        chain_actions(new_presug, action, new_solved_prefix, headless, elapsed_time, depth, preprocess_format,
-          on_success,
-          on_error)
-      end
-    end, function()
-      reject({ true, presug })
-    end)
-  end):forward(nil, function(pair)
-    _fence_end(unpack(pair))
-  end)
-end
-
 ---@param line? string
 ---@return number?
 local function find_nospace(line)
@@ -378,34 +329,6 @@ local function make_filetype(buffer, range)
   return filetype
 end
 
-local function _start_action(action, opts, headless, elapsed_time, depth, preprocess_format, on_success, on_error)
-  Promise:new(function(resolve, reject)
-    local task_id = _create_task(headless)
-    Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
-      local lines, ms = preprocessing(nil, task_id, headless, preprocess_format, suggestions)
-      elapsed_time = elapsed_time + ms
-      if not lines or #lines == 0 then
-        resolve({ nil, lines })
-      else
-        depth = depth + 1
-        if not headless then
-          content:on_suggestions(vim.deepcopy(lines))
-        end
-        local solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-        resolve({ solved_prefix, lines })
-      end
-    end, function()
-      reject()
-    end)
-  end):forward(function(pair)
-    local solved_prefix, new_presug = unpack(pair)
-    chain_actions(new_presug, action, solved_prefix, headless, elapsed_time, depth, preprocess_format, on_success,
-      on_error)
-  end, function()
-    on_stage_end(true, headless, elapsed_time, depth, nil, on_success, on_error)
-  end)
-end
-
 local function start_content(action_name, ctx, range)
   local preview = PromptProviders.get_prompt_one(ctx)
   if not preview then
@@ -425,6 +348,90 @@ local function start_content(action_name, ctx, range)
     }
   })
   return true
+end
+
+---@class ChainActionsOptions
+---@field start boolean
+---@field prompt_ctx? PromptContext
+---@field presug? Suggestions
+---@field action integer
+---@field solved_prefix? string
+---@field headless boolean
+---@field elapsed_time integer
+---@field depth integer
+---@field preprocess_format? SuggestionsPreprocessingFormat
+---@field on_success function
+---@field on_error function
+
+---@param opts ChainActionsOptions
+local function chain_actions(opts)
+  local start = opts.start
+  local presug = opts.presug
+  local action = opts.action
+  local solved_prefix = opts.solved_prefix
+  local headless = opts.headless
+  local elapsed_time = opts.elapsed_time
+  local depth = opts.depth
+  local preprocess_format = opts.preprocess_format
+  local on_success = opts.on_success
+  local on_error = opts.on_error
+
+  local _fence_end = function(is_error, prefix)
+    local lines = Preprocessing.run({
+      prefix = prefix,
+      suggestions = { '' },
+      markdown_prettify = {
+        fenced_code_blocks = 'start'
+      }
+    })
+    local new_presug = Merge.run(prefix, lines, true)
+    on_stage_end(is_error, headless, elapsed_time, depth, new_presug, on_success, on_error)
+  end
+  if not start and (not solved_prefix or depth >= MAX_DEPTH) then
+    _fence_end(false, presug)
+    return
+  end
+  local prompt_ctx = opts.prompt_ctx
+  if not prompt_ctx then
+    prompt_ctx = {
+      prompt_ty = get_action_type(action),
+      solved_prefix = solved_prefix,
+    }
+  end
+  Promise:new(function(resolve, reject)
+    local task_id = _create_task(headless)
+    Sessions.request_generate_one_stage(task_id, prompt_ctx, function(_, prompt, suggestions)
+      local lines, ms = preprocessing(presug, task_id, headless, preprocess_format, suggestions)
+      elapsed_time = elapsed_time + ms
+      if not lines or #lines == 0 then
+        reject({ false, presug })
+      else
+        depth = depth + 1
+        if not headless then
+          content:on_suggestions(vim.deepcopy(lines))
+        end
+        local new_presug = Merge.run(presug, lines, true)
+        local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
+        chain_actions({
+          start = false,
+          prompt_ctx = nil,
+          presug = new_presug,
+          action = action,
+          solved_prefix = new_solved_prefix,
+          headless = headless,
+          elapsed_time = elapsed_time,
+          depth = depth,
+          preprocess_format = preprocess_format,
+          on_success = on_success,
+          on_error = on_error,
+        })
+      end
+    end, function()
+      reject({ true, presug })
+    end)
+  end):forward(nil, function(pair)
+    _fence_end(unpack(pair))
+  end)
 end
 
 ---@param opts ActionOptions
@@ -460,7 +467,19 @@ local function _start_action_wrap(window, buffer, action, action_name, headless,
       return false
     end
   end
-  _start_action(action, prompt_ctx, headless, 0, 0, opts.preprocess_format, opts.on_success, opts.on_error)
+  chain_actions({
+    start = true,
+    prompt_ctx = prompt_ctx,
+    presug = nil,
+    action = action,
+    solved_prefix = nil,
+    headless = headless,
+    elapsed_time = 0,
+    depth = 0,
+    preprocess_format = opts.preprocess_format,
+    on_success = opts.on_success,
+    on_error = opts.on_error,
+  })
   return true
 end
 
