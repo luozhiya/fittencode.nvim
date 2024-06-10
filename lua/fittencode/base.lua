@@ -63,9 +63,12 @@ end
 -- * Returns a tuple of row and column.
 -- * Row and column are 0-based.
 ---@param window number|nil
----@return integer, integer
+---@return integer?, integer?
 function M.get_cursor(window)
   window = window or api.nvim_get_current_win()
+  if not api.nvim_win_is_valid(window) then
+    return
+  end
   local cursor = api.nvim_win_get_cursor(window)
   local row = cursor[1] - 1
   local col = cursor[2]

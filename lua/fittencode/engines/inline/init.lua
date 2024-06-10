@@ -53,6 +53,9 @@ end
 ---@return Suggestions?
 local function preprocessing(ctx, task_id, suggestions)
   local row, col = Base.get_cursor(ctx.window)
+  if not row or not col then
+    return
+  end
   local match = tasks:match_clean(task_id, row, col)
   if not match[1] then
     return
