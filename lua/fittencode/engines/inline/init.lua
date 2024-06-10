@@ -235,8 +235,10 @@ end
 
 local function generate_one_stage_current_force(on_success, on_error)
   M.reset()
-
   local row, col = Base.get_cursor()
+  if not row or not col then
+    return
+  end
   M.generate_one_stage(row, col, true, 0, on_success, on_error)
 end
 
@@ -434,6 +436,9 @@ function M.on_text_changed()
   local window = api.nvim_get_current_win()
   local buffer = api.nvim_win_get_buf(window)
   local row, col = Base.get_cursor(window)
+  if not row or not col then
+    return
+  end
   if model:is_advance(window, buffer) then
     model:accept({
       mode = 'commit',
@@ -495,6 +500,9 @@ function M.on_cursor_hold()
     return
   end
   local row, col = Base.get_cursor()
+  if not row or not col then
+    return
+  end
   M.generate_one_stage(row, col)
 end
 
@@ -505,7 +513,11 @@ local function _on_cursor_moved()
   if not suggestions_modify_enabled() then
     return
   end
-  if not model:cache_hit(Base.get_cursor()) then
+  local row, col = Base.get_cursor()
+  if not row or not col then
+    return
+  end
+  if not model:cache_hit(row, col) then
     clear_virt_text_all()
     model:reset()
   end

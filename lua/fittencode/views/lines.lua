@@ -78,9 +78,12 @@ end
 
 ---@param virt_text VirtText
 ---@param hl_mode string
----@return integer[]
+---@return integer[]?
 local function set_extmark(virt_text, hl_mode)
   local row, col = Base.get_cursor()
+  if not row or not col then
+    return
+  end
   local ids = {}
 
   if vim.fn.has('nvim-0.10') == 1 then
@@ -116,6 +119,9 @@ local function move_to_center_vertical(virt_height)
     return
   end
   local row, _ = Base.get_cursor()
+  if not row then
+    return
+  end
   local relative_row = row - fn.line('w0')
   local height = api.nvim_win_get_height(0)
   local center = math.ceil(height / 2)

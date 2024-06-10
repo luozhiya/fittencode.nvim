@@ -493,6 +493,9 @@ function InlineModel:is_advance(window, buffer)
     return false
   end
   local row, col = Base.get_cursor(window)
+  if not row or not col then
+    return false
+  end
   local char = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]:sub(col, col)
   if not char or char == '' then
     return false
