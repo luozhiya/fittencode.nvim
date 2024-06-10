@@ -109,6 +109,14 @@ local function get_action_type(action)
   return ACTION_TYPES[action]
 end
 
+local function _create_task(headless)
+  if headless then
+    return tasks[TASK_HEADLESS]:create()
+  else
+    return tasks[TASK_DEFAULT]:create()
+  end
+end
+
 ---@param task_id integer
 ---@param suggestions Suggestions
 ---@return Suggestions?, integer?
@@ -158,7 +166,7 @@ local function on_stage_end(is_error, headless, elapsed_time, depth, suggestions
   end
 
   if ready then
-    schedule(on_success, suggestions)
+    schedule(on_success, vim.deepcopy(suggestions))
   end
 
   if headless then
@@ -179,17 +187,23 @@ end
 ---@param on_error function
 local function chain_actions(presug, action, solved_prefix, headless, elapsed_time, depth, preprocess_format, on_success,
                              on_error)
+  local _fence_end = function(is_error, prefix)
+    local lines = Preprocessing.run({
+      prefix = prefix,
+      suggestions = { '' },
+      markdown_prettify = {
+        fenced_code_blocks = 'start'
+      }
+    })
+    local new_presug = Merge.run(prefix, lines, true)
+    on_stage_end(is_error, headless, elapsed_time, depth, new_presug, on_success, on_error)
+  end
   if not solved_prefix or depth >= MAX_DEPTH then
-    on_stage_end(false, headless, elapsed_time, depth, presug, on_success, on_error)
+    _fence_end(false, presug)
     return
   end
   Promise:new(function(resolve, reject)
-    local task_id = nil
-    if headless then
-      task_id = tasks[TASK_HEADLESS]:create()
-    else
-      task_id = tasks[TASK_DEFAULT]:create()
-    end
+    local task_id = _create_task(headless)
     Sessions.request_generate_one_stage(task_id, {
       prompt_ty = get_action_type(action),
       solved_prefix = solved_prefix,
@@ -205,23 +219,15 @@ local function chain_actions(presug, action, solved_prefix, headless, elapsed_ti
         end
         local new_presug = Merge.run(presug, lines, true)
         local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-        chain_actions(new_presug, action, new_solved_prefix, headless, elapsed_time, depth, preprocess_format, on_success,
+        chain_actions(new_presug, action, new_solved_prefix, headless, elapsed_time, depth, preprocess_format,
+          on_success,
           on_error)
       end
     end, function()
       reject({ true, presug })
     end)
   end):forward(nil, function(pair)
-    local is_error, prefix = unpack(pair)
-    local lines = Preprocessing.run({
-      prefix = prefix,
-      suggestions = { '' },
-      markdown_prettify = {
-        fenced_code_blocks = 'start'
-      }
-    })
-    local new_presug = Merge.run(prefix, lines, true)
-    on_stage_end(is_error, headless, elapsed_time, depth, new_presug, on_success, on_error)
+    _fence_end(unpack(pair))
   end)
 end
 
@@ -374,12 +380,7 @@ end
 
 local function _start_action(action, opts, headless, elapsed_time, depth, preprocess_format, on_success, on_error)
   Promise:new(function(resolve, reject)
-    local task_id = nil
-    if headless then
-      task_id = tasks[TASK_HEADLESS]:create()
-    else
-      task_id = tasks[TASK_DEFAULT]:create()
-    end
+    local task_id = _create_task(headless)
     Sessions.request_generate_one_stage(task_id, opts, function(_, prompt, suggestions)
       local lines, ms = preprocessing(nil, task_id, headless, preprocess_format, suggestions)
       elapsed_time = elapsed_time + ms
