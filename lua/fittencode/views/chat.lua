@@ -132,7 +132,7 @@ function M:create(opts)
       if Fx[value] then
         Fx[value]()
       end
-    end, { buffer = self.buffer })
+    end, { buffer = self.buffer, nowait = true })
   end
 
   if Config.options.chat.highlight_conversation_at_cursor then

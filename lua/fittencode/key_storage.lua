@@ -33,24 +33,24 @@ end
 ---@param on_success function|nil
 ---@param on_error function|nil
 function KeyStorage:load(on_success, on_error)
-  Log.debug('Loading key file: {}', self.path)
+  -- Log.debug('Loading key file: {}', self.path)
   if not FS.exists(self.path) then
-    Log.error('Key file not found')
+    -- Log.error('Key file not found')
     schedule(on_error)
     return
   end
   FS.read(self.path, function(data)
     local success, result = pcall(fn.json_decode, data)
     if success == false then
-      Log.error('Failed to parse key file; error: {}', result)
+      -- Log.error('Failed to parse key file; error: {}', result)
       schedule(on_error)
       return
     end
     self.keys = result
-    Log.debug('Key file loaded successful')
+    -- Log.debug('Key file loaded successful')
     schedule(on_success, self.keys.name)
   end, function(err)
-    Log.error('Failed to load Key file; error: {}', err)
+    -- Log.error('Failed to load Key file; error: {}', err)
     schedule(on_error)
   end)
 end
@@ -58,18 +58,18 @@ end
 ---@param on_success function|nil
 ---@param on_error function|nil
 function KeyStorage:save(on_success, on_error)
-  Log.debug('Saving key file: {}', self.path)
+  -- Log.debug('Saving key file: {}', self.path)
   local success, encode_keys = pcall(fn.json_encode, self.keys)
   if not success then
-    Log.error('Failed to encode key file; error: {}', encode_keys)
+    -- Log.error('Failed to encode key file; error: {}', encode_keys)
     schedule(on_error)
     return
   end
   FS.write_mkdir(encode_keys, self.path, function()
-    Log.info('Key file saved successful')
+    -- Log.info('Key file saved successful')
     schedule(on_success)
   end, function(err)
-    Log.error('Failed to save key file; error: {}', err)
+    -- Log.error('Failed to save key file; error: {}', err)
     schedule(on_error)
   end)
 end
@@ -77,14 +77,14 @@ end
 ---@param on_success function|nil
 ---@param on_error function|nil
 function KeyStorage:clear(on_success, on_error)
-  Log.debug('Clearing key file: {}', self.path)
+  -- Log.debug('Clearing key file: {}', self.path)
   self.keys = {}
   uv.fs_unlink(self.path, function(err)
     if err then
-      Log.error('Failed to delete key file; error: {}', err)
+      -- Log.error('Failed to delete key file; error: {}', err)
       schedule(on_error)
     else
-      Log.info('Delete key file successful')
+      -- Log.info('Delete key file successful')
       schedule(on_success)
     end
   end)

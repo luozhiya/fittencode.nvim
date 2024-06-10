@@ -71,4 +71,23 @@ function M:execute(ctx)
   }
 end
 
+local function make_prefix(buffer, row)
+  local prefix = {}
+  local cur_line = api.nvim_buf_get_lines(buffer, row, row + 1, false)[1]
+  if row > 1 then
+    local prev_line = api.nvim_buf_get_lines(buffer, row - 1, row, false)[1]
+    prefix[#prefix + 1] = prev_line
+  end
+  prefix[#prefix + 1] = cur_line
+  return prefix
+end
+
+---@return SuggestionsPreprocessingFormat?
+function M:get_suggestions_preprocessing_format(ctx)
+  ---@type SuggestionsPreprocessingFormat
+  return {
+    prefix = make_prefix(ctx.buffer, ctx.row)
+  }
+end
+
 return M

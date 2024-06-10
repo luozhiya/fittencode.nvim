@@ -8,7 +8,7 @@ local Log = require('fittencode.log')
 local Model = require('fittencode.engines.inline.model')
 local Sessions = require('fittencode.sessions')
 local Status = require('fittencode.status')
-local SuggestionsPreprocessing = require('fittencode.suggestions_preprocessing')
+local Preprocessing = require('fittencode.preprocessing')
 local TaskScheduler = require('fittencode.tasks')
 local PromptProviders = require('fittencode.prompt_providers')
 
@@ -32,7 +32,7 @@ local IDS_PROMPT = 2
 ---@type integer[][]
 local extmark_ids = { {}, {} }
 
----@type uv_timer_t
+---@type uv_timer_t?
 local generate_one_stage_timer = nil
 
 local ignore_event = false
@@ -40,33 +40,40 @@ local ignore_event = false
 -- milliseconds
 local CURSORMOVED_DEBOUNCE_TIME = 120
 
----@type uv_timer_t
+---@type uv_timer_t?
 local cursormoved_timer = nil
 
 local function suggestions_modify_enabled()
   return M.is_inline_enabled() and M.has_suggestions()
 end
 
+---@param ctx PromptContext
 ---@param task_id integer
 ---@param suggestions? Suggestions
 ---@return Suggestions?
-local function process_suggestions(task_id, suggestions)
-  local window = api.nvim_get_current_win()
-  local buffer = api.nvim_win_get_buf(window)
-  local row, col = Base.get_cursor(window)
-  if not tasks:match_clean(task_id, row, col) then
+local function preprocessing(ctx, task_id, suggestions)
+  local row, col = Base.get_cursor(ctx.window)
+  local match = tasks:match_clean(task_id, row, col)
+  if not match[1] then
     return
   end
-
   if not suggestions or #suggestions == 0 then
     return
   end
-
-  return SuggestionsPreprocessing.run({
-    window = window,
-    buffer = buffer,
+  local format = PromptProviders.get_suggestions_preprocessing_format(ctx)
+  ---@type SuggestionsPreprocessingOptions
+  local opts = {
     suggestions = suggestions,
-  })
+    condense_blank_line = {
+      range = 'first'
+    },
+    replace_slash = true,
+    markdown_prettify = {
+      separate_code_block_marker = true,
+    }
+  }
+  opts = vim.tbl_deep_extend('force', opts, format or {})
+  return Preprocessing.run(opts)
 end
 
 ---@param ss SuggestionsSegments
@@ -155,16 +162,17 @@ local function _generate_one_stage(row, col, on_success, on_error)
   status:update(SC.GENERATING)
 
   local task_id = tasks:create(row, col)
-  Sessions.request_generate_one_stage(task_id, PromptProviders.get_current_prompt_ctx(), function(id, _, suggestions)
-    local processed = process_suggestions(id, suggestions)
-    if processed then
+  local ctx = PromptProviders.get_current_prompt_ctx(row, col)
+  Sessions.request_generate_one_stage(task_id, ctx, function(id, _, suggestions)
+    local results = preprocessing(ctx, id, suggestions)
+    if results then
       status:update(SC.SUGGESTIONS_READY)
-      apply_new_suggestions(task_id, row, col, processed)
-      schedule(on_success, processed)
+      apply_new_suggestions(task_id, row, col, results)
+      schedule(on_success, results)
     else
       status:update(SC.NO_MORE_SUGGESTIONS)
       schedule(on_success)
-      Log.debug('No More Suggestions')
+      -- Log.debug('No More Suggestions')
     end
   end, function()
     status:update(SC.ERROR)
@@ -183,10 +191,10 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
     status:update(SC.SUGGESTIONS_READY)
     render_virt_text_segments(model:get_suggestions_segments())
     schedule(on_success, model:make_new_trim_commmited_suggestions())
-    Log.debug('CACHE HIT')
+    -- Log.debug('Cache hit')
     return
   else
-    Log.debug('NO CACHE HIT')
+    -- Log.debug('Cache miss')
   end
 
   if suggestions_modify_enabled() then
@@ -195,7 +203,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   model:reset()
 
   if not Sessions.ready_for_generate() then
-    Log.debug('Not ready for generate')
+    -- Log.debug('Not ready for generate')
     schedule(on_error)
     return
   end
@@ -203,9 +211,11 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
   if delaytime == nil then
     delaytime = Config.options.delay_completion.delaytime
   end
-  Log.debug('Delay completion request for delaytime: {} ms', delaytime)
+  if delaytime > 0 then
+    Log.debug('Delay completion request for delaytime: {} ms', delaytime)
+  end
 
-  Base.debounce(generate_one_stage_timer, function()
+  generate_one_stage_timer = Base.debounce(generate_one_stage_timer, function()
     _generate_one_stage(row, col, on_success, on_error)
   end, delaytime)
 end
@@ -502,7 +512,7 @@ function M.on_cursor_moved()
   if ignore_event then
     return
   end
-  Base.debounce(cursormoved_timer, function()
+  cursormoved_timer = Base.debounce(cursormoved_timer, function()
     _on_cursor_moved()
   end, CURSORMOVED_DEBOUNCE_TIME)
 end
@@ -578,7 +588,7 @@ end
 
 function M.setup()
   model = Model:new()
-  tasks = TaskScheduler:new()
+  tasks = TaskScheduler:new('InlineEngine')
   tasks:setup()
   status = Status:new({ tag = 'InlineEngine' })
   if Config.options.completion_mode == 'inline' then

@@ -17,7 +17,10 @@ vim.opt.runtimepath:append(root('tests'))
 -- require('tests.CATCHME.inline_model.word6')
 -- require('tests.CATCHME.inline_model.line')
 
-require('tests.CATCHME.concurrency.promise_tests')
+-- require('tests.CATCHME.concurrency.promise_tests')
+
+-- require('tests.CATCHME.preprocessing.condense_blank_line')
+require('tests.CATCHME.preprocessing.markdown_prettify')
 
 -- vim.cmd([[
 --   sleep 1000m
