@@ -166,6 +166,7 @@ local function on_stage_end(is_error, headless, elapsed_time, depth, suggestions
   end
 
   if ready then
+    -- Log.debug('Stage End Suggestions: {}', suggestions)
     schedule(on_success, vim.deepcopy(suggestions))
   end
 
@@ -306,7 +307,9 @@ local function make_range(buffer)
     start = { pos[1][1][2], pos[1][1][3] }
     end_ = { pos[#pos][2][2], pos[#pos][2][3] }
   else
-    api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
+    if in_v then
+      api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false)
+    end
     start = api.nvim_buf_get_mark(buffer, '<')
     end_ = api.nvim_buf_get_mark(buffer, '>')
   end
@@ -406,7 +409,9 @@ local function chain_actions(opts)
   Promise:new(function(resolve, reject)
     local task_id = _create_task(headless)
     Sessions.request_generate_one_stage(task_id, prompt_ctx, function(_, prompt, suggestions)
+      -- Log.debug('Generated Suggestions: {}', suggestions)
       local lines, ms = preprocessing(presug, task_id, headless, preprocess_format, suggestions)
+      -- Log.debug('Preprocessed Lines: {}', lines)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
         reject({ false, presug })
