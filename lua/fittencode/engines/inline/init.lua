@@ -43,7 +43,7 @@ local CURSORMOVED_INTERVAL = 120
 ---@type uv_timer_t?
 local cursormoved_timer = nil
 
-local function suggestions_modify_enabled()
+local function inline_suggestions_ready()
   return M.is_inline_enabled() and M.has_suggestions()
 end
 
@@ -144,16 +144,17 @@ end
 ---@param col integer
 ---@param suggestions? Suggestions
 local function apply_new_suggestions(task_id, row, col, suggestions)
-  if suggestions then
-    model:recalculate({
-      task_id = task_id,
-      row = row,
-      col = col,
-      suggestions = suggestions,
-    })
-    if suggestions_modify_enabled() then
-      render_virt_text_segments(model:get_suggestions_segments())
-    end
+  if not suggestions or #suggestions == 0 then
+    return
+  end
+  model:recalculate({
+    task_id = task_id,
+    row = row,
+    col = col,
+    suggestions = suggestions,
+  })
+  if inline_suggestions_ready() then
+    render_virt_text_segments(model:get_suggestions_segments())
   end
 end
 
@@ -168,7 +169,7 @@ local function _generate_one_stage(row, col, on_success, on_error)
   local ctx = PromptProviders.get_current_prompt_ctx(row, col)
   Sessions.request_generate_one_stage(task_id, ctx, function(id, _, suggestions)
     local results = preprocessing(ctx, id, suggestions)
-    if results then
+    if results and #results > 0 then
       status:update(SC.SUGGESTIONS_READY)
       apply_new_suggestions(task_id, row, col, results)
       schedule(on_success, results)
@@ -200,7 +201,7 @@ function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
     -- Log.debug('Cache miss')
   end
 
-  if suggestions_modify_enabled() then
+  if inline_suggestions_ready() then
     clear_virt_text_all()
   end
   model:reset()
@@ -313,7 +314,7 @@ end
 ---@param direction AcceptDirection
 ---@param mode? AcceptMode
 local function _accept_impl(range, direction, mode)
-  if not suggestions_modify_enabled() then
+  if not inline_suggestions_ready() then
     return
   end
   mode = mode or Config.options.inline_completion.accept_mode
@@ -430,7 +431,7 @@ function M.on_text_changed()
   if Lines.is_rendering(api.nvim_get_current_buf(), extmark_ids[IDS_PROMPT]) then
     clear_virt_text_prompt()
   end
-  if not suggestions_modify_enabled() then
+  if not inline_suggestions_ready() then
     return
   end
   local window = api.nvim_get_current_win()
@@ -510,7 +511,7 @@ local function _on_cursor_moved()
   if Lines.is_rendering(api.nvim_get_current_buf(), extmark_ids[IDS_PROMPT]) then
     clear_virt_text_prompt()
   end
-  if not suggestions_modify_enabled() then
+  if not inline_suggestions_ready() then
     return
   end
   local row, col = Base.get_cursor()
