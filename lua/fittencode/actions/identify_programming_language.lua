@@ -68,10 +68,12 @@ local function _identify_current_buffer()
       lang = lang:lower()
       lang = lang:gsub('c%+%+', 'cpp')
       lang = lang:match('^(%w+)')
-      api.nvim_set_option_value('filetype', lang, {
-        buf = buffer,
-      })
-      api.nvim_buf_set_var(buffer, 'fittencode_identify_programming_language', lang)
+      if api.nvim_buf_is_valid(buffer) then
+        api.nvim_set_option_value('filetype', lang, {
+          buf = buffer,
+        })
+        api.nvim_buf_set_var(buffer, 'fittencode_identify_programming_language', lang)
+      end
     end,
   })
 end
