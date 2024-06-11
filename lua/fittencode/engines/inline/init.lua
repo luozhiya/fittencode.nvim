@@ -168,11 +168,11 @@ local function _generate_one_stage(row, col, on_success, on_error)
   local task_id = tasks:create(row, col)
   local ctx = PromptProviders.get_current_prompt_ctx(row, col)
   Sessions.request_generate_one_stage(task_id, ctx, function(id, _, suggestions)
-    local results = preprocessing(ctx, id, suggestions)
-    if results and #results > 0 then
+    local lines = preprocessing(ctx, id, suggestions)
+    if lines and #lines > 0 then
       status:update(SC.SUGGESTIONS_READY)
-      apply_new_suggestions(task_id, row, col, results)
-      schedule(on_success, results)
+      apply_new_suggestions(task_id, row, col, lines)
+      schedule(on_success, vim.deepcopy(lines))
     else
       status:update(SC.NO_MORE_SUGGESTIONS)
       schedule(on_success)
@@ -231,7 +231,7 @@ end
 
 ---@return string[]
 function M.get_suggestions()
-  return model:get_suggestions() or {}
+  return vim.deepcopy(model:get_suggestions() or {})
 end
 
 local function generate_one_stage_current_force(on_success, on_error)
