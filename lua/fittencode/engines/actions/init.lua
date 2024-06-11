@@ -289,8 +289,13 @@ local function make_range(buffer)
     in_v = true
     if fn.has('nvim-0.10') == 1 then
       region = fn.getregion(fn.getpos('.'), fn.getpos('v'), { type = fn.mode() })
+    end
+    if fn.has('nvim-0.11') == 1 then
       -- [bufnum, lnum, col, off]
-      pos = fn.getregionpos(fn.getpos('.'), fn.getpos('v'))
+      local success, result = pcall(fn.getregionpos, fn.getpos('.'), fn.getpos('v'))
+      if success then
+        pos = result
+      end
     end
   end
 
