@@ -21,7 +21,6 @@ local ViewBlock = {
   OUT_CONTENT = 4,
   QED = 5,
 }
-local CURSORS = 5
 
 function M:new(chat)
   local obj = {
@@ -224,10 +223,10 @@ function M:on_status(msg)
 end
 
 function M:get_conversation_index(row, col)
-  for i, cursor in ipairs(self.cursors) do
-    if cursor and #cursor == CURSORS then
-      if row >= cursor[ViewBlock.IN][1][1] and row <= cursor[ViewBlock.QED][2][1] then
-        return i
+  for k, v in pairs(self.cursors) do
+    if v and #v == 5 then
+      if row >= v[ViewBlock.IN][1][1] and row <= v[ViewBlock.QED][2][1] then
+        return k
       end
     end
   end
@@ -238,15 +237,15 @@ function M:get_conversations_range_by_index(direction, base)
   if direction == 'current' then
     next = base
   elseif direction == 'forward' then
-    for j = base + 1, #self.cursors do
-      if self.cursors[j] and #self.cursors[j] == CURSORS then
+    for j = base + 1, self.current_eval do
+      if self.cursors[j] then
         next = j
         break
       end
     end
   elseif direction == 'backward' then
     for j = base - 1, 1, -1 do
-      if self.cursors[j] and #self.cursors[j] == CURSORS then
+      if self.cursors[j] then
         next = j
         break
       end
@@ -255,7 +254,7 @@ function M:get_conversations_range_by_index(direction, base)
   if not next then
     return
   end
-  if self.cursors[next] and #self.cursors[next] == CURSORS then
+  if self.cursors[next] then
     return {
       { self.cursors[next][ViewBlock.IN][1][1],  0 },
       { self.cursors[next][ViewBlock.QED][2][1], 0 }
@@ -309,7 +308,7 @@ function M:delete_conversations(range, row, col)
       current[2][1] = forward[1][1] - 1
       current[2][2] = 0
       local yoffset = current[2][1] - current[1][1] + 1
-      for j = base + 1, #self.cursors do
+      for j = base + 1, self.current_eval do
         if self.cursors[j] then
           for b = ViewBlock.IN, ViewBlock.QED do
             self.cursors[j][b][1][1] = self.cursors[j][b][1][1] - yoffset
@@ -320,7 +319,7 @@ function M:delete_conversations(range, row, col)
     end
     self.conversations[base] = nil
     self.has_suggestions[base] = nil
-    self.cursors[base] = {}
+    self.cursors[base] = nil
     self.last_lines = nil
     return current
   end
