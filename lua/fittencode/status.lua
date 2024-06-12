@@ -17,11 +17,12 @@ local M = {}
 
 ---@type StatusCodes
 local C = {
-  IDLE = 0,
-  GENERATING = 1,
-  ERROR = 2,
-  NO_MORE_SUGGESTIONS = 3,
-  SUGGESTIONS_READY = 4,
+  DISABLED = 1,
+  IDLE = 2,
+  GENERATING = 3,
+  ERROR = 4,
+  NO_MORE_SUGGESTIONS = 5,
+  SUGGESTIONS_READY = 6,
 }
 
 M.C = C

@@ -418,6 +418,63 @@ function M.is_inline_enabled()
   return true
 end
 
+---@class EnableCompletionsOptions
+---@field enable? boolean
+---@field mode? 'inline' | 'source' | 'all'
+---@field global? boolean
+---@field suffixes? string[]
+function M.enable_completions(opts)
+  if not opts then
+    return
+  end
+  local enable = opts.enable
+  local mode = opts.mode or 'inline'
+  local global = opts.global
+  local suffixes = opts.suffixes
+  global = global == nil and true or global
+  enable = enable == nil and true or enable
+  local _inline = function()
+    return mode == 'inline' or mode == 'all'
+  end
+  local _source = function()
+    return mode == 'source' or mode == 'all'
+  end
+  local _global = function()
+    if _inline() then
+      Config.options.inline_completion.enable = enable
+    end
+    if _source() then
+      Config.options.source_completion.enable = enable
+    end
+  end
+  local _suffixes = function(tbl, filters)
+    if enable then
+      tbl = vim.tbl_extend('force', tbl, filters)
+    else
+      tbl = vim.tbl_filter(function(ft)
+        return not vim.tbl_contains(filters, ft)
+      end, tbl)
+    end
+  end
+  local _local = function()
+    if _inline() then
+      _suffixes(Config.options.disable_specific_inline_completion.suffixes, suffixes)
+    else
+      _suffixes(Config.options.source_completion.disable_specific_source_completion.suffixes, suffixes)
+    end
+  end
+  if global then
+    _global()
+  else
+    _local()
+  end
+  if enable then
+    status:update(SC.IDLE)
+  else
+    status:update(SC.DISABLED)
+  end
+end
+
 ---@return integer
 function M.get_status()
   return status:get_current()
