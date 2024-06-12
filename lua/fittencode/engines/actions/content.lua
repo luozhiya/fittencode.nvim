@@ -12,7 +12,6 @@ local Log = require('fittencode.log')
 ---@field on_suggestions function
 ---@field on_status function
 ---@field on_end function
----@field get_current_suggestions function
 local M = {}
 
 local ViewBlock = {
@@ -221,10 +220,6 @@ function M:on_status(msg)
       start_space = true,
     }
   })
-end
-
-function M:get_current_suggestions()
-  return self.conversations[self.current_eval].suggestions
 end
 
 function M:get_conversation_index(row, col)
