@@ -35,8 +35,8 @@ function M.login(username, password)
     return username == nil or username == '' or password == nil or password == ''
   end
   if invalid() then
-    username = vim.fn.input('Username ')
-    password = vim.fn.inputsecret('Password ')
+    username = fn.input('Username ')
+    password = fn.inputsecret('Password ')
   end
   if invalid() then
     Log.e('Invalid username or password')

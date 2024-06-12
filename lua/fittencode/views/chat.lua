@@ -1,4 +1,5 @@
 local api = vim.api
+local fn = vim.fn
 
 local Base = require('fittencode.base')
 local Config = require('fittencode.config')
@@ -260,7 +261,7 @@ function M:copy_conversation()
     show_time = 500,
   })
   local lines = api.nvim_buf_get_lines(self.buffer, start_row, end_row + 1, false)
-  vim.fn.setreg('+', table.concat(lines, '\n'))
+  fn.setreg('+', table.concat(lines, '\n'))
 end
 
 function M:copy_all_conversations()
@@ -272,7 +273,7 @@ function M:copy_all_conversations()
     end_row = #lines - 1,
     show_time = 500,
   })
-  vim.fn.setreg('+', table.concat(lines, '\n'))
+  fn.setreg('+', table.concat(lines, '\n'))
 end
 
 function M:delete_conversation()
