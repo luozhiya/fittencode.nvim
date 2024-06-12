@@ -277,22 +277,25 @@ function M:copy_all_conversations()
 end
 
 function M:delete_conversation()
-  -- local range = _call_model(self, 'delete_conversations', 'current', Base.get_cursor(self.window))
-  -- if not range then
-  --   return
-  -- end
-  -- local start_row = range[1][1]
-  -- local end_row = range[2][1]
-  -- _modify_buffer(self.buffer, function()
-  --   api.nvim_buf_set_lines(self.buffer, start_row, end_row + 1, false, {})
-  -- end)
+  local range = _call_model(self, 'delete_conversations', 'current', Base.get_cursor(self.window))
+  if not range then
+    return
+  end
+  local start_row = range[1][1]
+  local end_row = range[2][1]
+  _modify_buffer(self.buffer, function()
+    api.nvim_buf_set_lines(self.buffer, start_row, end_row + 1, false, {})
+  end)
+  local last = api.nvim_buf_get_lines(self.buffer, -2, -1, false)
+  table.insert(last, 1, '')
+  _call_model(self, 'set_last_lines', last)
 end
 
 function M:delete_all_conversations()
-  -- _call_model(self, 'delete_conversations', 'all')
-  -- _modify_buffer(self.buffer, function()
-  --   api.nvim_buf_set_lines(self.buffer, 0, -1, false, {})
-  -- end)
+  _call_model(self, 'delete_conversations', 'all')
+  _modify_buffer(self.buffer, function()
+    api.nvim_buf_set_lines(self.buffer, 0, -1, false, {})
+  end)
 end
 
 return M
