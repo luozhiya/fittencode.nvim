@@ -286,8 +286,9 @@ function M:delete_conversation()
   _modify_buffer(self.buffer, function()
     api.nvim_buf_set_lines(self.buffer, start_row, end_row + 1, false, {})
   end)
-  local lastline = api.nvim_buf_get_lines(self.buffer, -2, -1, false)[1]
-  _call_model(self, 'set_last_lines', lastline)
+  local last = api.nvim_buf_get_lines(self.buffer, -2, -1, false)
+  table.insert(last, 1, '')
+  _call_model(self, 'set_last_lines', last)
 end
 
 function M:delete_all_conversations()
