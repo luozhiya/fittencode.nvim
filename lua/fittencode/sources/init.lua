@@ -6,7 +6,6 @@ local M = {}
 ---@class SourceCompletionOptions
 ---@field enable boolean
 ---@field engine string
----@field disable_specific_source_completion table
 
 local builtins = {
   ['cmp'] = function()
@@ -15,11 +14,14 @@ local builtins = {
 }
 
 function M.is_available()
+  if Config.options.completion_mode ~= 'source' then
+    return false
+  end
   if not Config.options.source_completion.enable then
     return false
   end
   local filetype = vim.bo.filetype
-  if vim.tbl_contains(Config.options.source_completion.disable_specific_source_completion.suffixes, filetype) then
+  if vim.tbl_contains(Config.options.disable_specific_inline_completion.suffixes, filetype) then
     return false
   end
   return true

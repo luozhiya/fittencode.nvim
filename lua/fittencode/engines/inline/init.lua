@@ -47,6 +47,14 @@ local function inline_suggestions_ready()
   return M.is_inline_enabled() and M.has_suggestions()
 end
 
+function M.update_disabled()
+  if not M.is_inline_enabled() and not require('fittencode.sources').is_available() then
+    status:update(SC.DISABLED)
+  else
+    status:update(SC.IDLE)
+  end
+end
+
 ---@param ctx PromptContext
 ---@param task_id integer
 ---@param suggestions? Suggestions
@@ -245,11 +253,10 @@ end
 
 -- When manually triggering completion, if no suggestions are generated, a prompt will appear to the right of the cursor.
 function M.triggering_completion()
-  Log.debug('Triggering completion...')
-
   if not M.is_inline_enabled() then
     return
   end
+  Log.debug('Triggering completion...')
 
   local prompt = ' (Currently no completion options available)'
   local fx = function()
@@ -356,11 +363,7 @@ local function _accept_impl(range, direction, mode)
     if mode == 'stage' then
       set_text_event_filter(segments.stage)
     end
-    if Config.options.inline_completion.auto_triggering_completion then
-      generate_one_stage_current_force()
-    else
-      model:reset()
-    end
+    M.reset()
   else
     render_virt_text_segments(segments)
   end
@@ -395,7 +398,7 @@ function M.revoke_line()
 end
 
 function M.reset()
-  status:update(SC.IDLE)
+  M.update_disabled()
   if M.is_inline_enabled() then
     clear_virt_text_all()
   end
@@ -418,6 +421,48 @@ function M.is_inline_enabled()
   return true
 end
 
+---@class EnableCompletionsOptions
+---@field enable? boolean
+---@field mode? 'inline' | 'source'
+---@field global? boolean
+---@field suffixes? string[]
+
+---@param opts? EnableCompletionsOptions
+function M.enable_completions(opts)
+  if not opts then
+    return
+  end
+  local enable = opts.enable
+  local mode = opts.mode
+  local global = opts.global
+  local suffixes = opts.suffixes or {}
+  global = global == nil and true or global
+  enable = enable == nil and true or enable
+  local _suffixes = function(tbl, filters)
+    if enable then
+      return vim.tbl_filter(function(ft)
+        return not vim.tbl_contains(filters, ft)
+      end, tbl)
+    else
+      return vim.tbl_extend('force', tbl, filters)
+    end
+  end
+  if global then
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    Config.options.inline_completion.enable = enable
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    Config.options.source_completion.enable = enable
+  else
+    Config.options.disable_specific_inline_completion.suffixes = _suffixes(Config.options.disable_specific_inline_completion.suffixes, suffixes)
+  end
+  if mode == 'inline' then
+    Config.options.completion_mode = 'inline'
+  elseif mode == 'source' then
+    Config.options.completion_mode = 'source'
+  end
+  M.reset()
+end
+
 ---@return integer
 function M.get_status()
   return status:get_current()
@@ -425,6 +470,9 @@ end
 
 ---@return boolean?
 function M.on_text_changed()
+  if not M.is_inline_enabled() then
+    return
+  end
   if ignore_event then
     return
   end
@@ -473,17 +521,23 @@ end, {
   '<Delete>',
 })
 
+local function on_key_filtered(key)
+  if vim.tbl_contains(FILTERED_KEYS, key) then
+    M.reset()
+    if Config.options.inline_completion.disable_completion_when_delete then
+      ignore_event = true
+    end
+  else
+    ignore_event = false
+  end
+end
+
 local function setup_keyfilters()
   vim.on_key(function(key)
     vim.schedule(function()
       if api.nvim_get_mode().mode == 'i' then
-        if vim.tbl_contains(FILTERED_KEYS, key) then
-          M.reset()
-          if Config.options.inline_completion.disable_completion_when_delete then
-            ignore_event = true
-          end
-        else
-          ignore_event = false
+        if M.is_inline_enabled() then
+          on_key_filtered(key)
         end
       end
     end)
@@ -491,10 +545,10 @@ local function setup_keyfilters()
 end
 
 function M.on_cursor_hold()
-  if ignore_event then
+  if not M.is_inline_enabled() then
     return
   end
-  if not M.is_inline_enabled() then
+  if ignore_event then
     return
   end
   if not Config.options.inline_completion.auto_triggering_completion then
@@ -525,6 +579,9 @@ local function _on_cursor_moved()
 end
 
 function M.on_cursor_moved()
+  if not M.is_inline_enabled() then
+    return
+  end
   if ignore_event then
     return
   end
@@ -600,6 +657,14 @@ local function setup_autocmds()
     end,
     desc = 'On Leave',
   })
+
+  api.nvim_create_autocmd({ 'FileType', 'BufEnter' }, {
+    group = Base.augroup('Engines', 'UpdateStatus'),
+    callback = function()
+      M.update_disabled()
+    end,
+    desc = 'On FileType/BufEnter'
+  })
 end
 
 function M.setup()
@@ -607,13 +672,10 @@ function M.setup()
   tasks = TaskScheduler:new('InlineEngine')
   tasks:setup()
   status = Status:new({ tag = 'InlineEngine' })
-  if Config.options.completion_mode == 'inline' then
-    setup_keymaps()
-    setup_keyfilters()
-    setup_autocmds()
-  elseif Config.options.completion_mode == 'source' then
-    require('fittencode.sources').setup()
-  end
+  setup_keymaps()
+  setup_keyfilters()
+  setup_autocmds()
+  require('fittencode.sources').setup()
 end
 
 return M

@@ -211,6 +211,8 @@ require('cmp').setup({
 ```
 
 ## 🚀 Usage
+- Optional parameters are enclosed in square brackets `[]`.
+- Essential parameters are enclosed in `<>`
 
 ### Account Commands
 
@@ -220,34 +222,55 @@ require('cmp').setup({
 | `Fitten login`    | Try the command `Fitten login` to login.                           |
 | `Fitten logout`   | Logout account                                                     |
 
-### Action Commands
-- Try the command `Fitten generate_unit_test <test_framework> <language>` to generate unit test with specific test framework and language.
+### Completions Commands
 
-| Command                                | Description                   |
-|----------------------------------------|-------------------------------|
-| `Fitten document_code`                 | Document code                 |
-| `Fitten edit_code`                     | Edit code                     |
-| `Fitten explain_code`                  | Explain code                  |
-| `Fitten find_bugs`                     | Find bugs                     |
-| `Fitten generate_unit_test`            | Generate unit test            |
-| `Fitten implement_features`            | Implement features            |
-| `Fitten optimize_code`                 | Optimize code                 |
-| `Fitten refactor_code`                 | Refactor code                 |
-| `Fitten identify_programming_language` | Identify programming language |
-| `Fitten analyze_data`                  | Analyze data                  |
-| `Fitten translate_text`                | Translate text                |
-| `Fitten translate_text_into_chinese`   | Translate text into Chinese   |
-| `Fitten translate_text_into_english`   | Translate text into English   |
-| `Fitten start_chat`                    | Start chat                    |
+| Command                                  | Description                           |
+|------------------------------------------|---------------------------------------|
+| `Fitten enable_completions [filetypes]`  | Enable global/filetypes completions.  |
+| `Fitten disable_completions [filetypes]` | Disable global/filetypes completions. |
 
-### Default Mappings
+### Actions Commands
+
+| Command                                                 | Description                   |
+|---------------------------------------------------------|-------------------------------|
+| `Fitten document_code`                                  | Document code                 |
+| `Fitten edit_code`                                      | Edit code                     |
+| `Fitten explain_code`                                   | Explain code                  |
+| `Fitten find_bugs`                                      | Find bugs                     |
+| `Fitten generate_unit_test [test_framework] [language]` | Generate unit test            |
+| `Fitten implement_features`                             | Implement features            |
+| `Fitten optimize_code`                                  | Optimize code                 |
+| `Fitten refactor_code`                                  | Refactor code                 |
+| `Fitten identify_programming_language`                  | Identify programming language |
+| `Fitten analyze_data`                                   | Analyze data                  |
+| `Fitten translate_text`                                 | Translate text                |
+| `Fitten translate_text_into_chinese`                    | Translate text into Chinese   |
+| `Fitten translate_text_into_english`                    | Translate text into English   |
+| `Fitten start_chat`                                     | Start chat                    |
+| `Fitten show_chat`                                      | Show chat window              |
+| `Fitten toggle_chat`                                    | Toggle chat window            |
+
+### Completions Mappings
 
 | Mappings    | Action                         |
 |-------------|--------------------------------|
 | `Tab`       | Accept all suggestions         |
 | `Ctrl + 🡫` | Accept line                    |
 | `Ctrl + 🡪` | Accept word                    |
+| `Ctrl + 🡩` | Revoke line                    |
+| `Ctrl + 🡨` | Revoke word                    |
 | `Alt + \`   | Manually triggering completion |
+
+### Chat Mappings
+| Mappings | Action                      |
+|----------|-----------------------------|
+| `q`      | Close chat                  |
+| `[c`     | Go to previous conversation |
+| `]c`     | Go to next conversation     |
+| `c`      | Copy conversation           |
+| `C`      | Copy all conversations      |
+| `d`      | Delete conversation         |
+| `D`      | Delete all conversations    |
 
 ## ✏️ APIs
 
@@ -255,7 +278,7 @@ require('cmp').setup({
 
 - Access the APIs by calling `require('fittencode').<api_name>()`.
 
-### Parameters Types
+### Parameters/Return Types
 
 ```lua
 -- Log levels
@@ -283,36 +306,59 @@ vim.log = {
 
 ---@class TranslateTextOptions : ActionOptions
 ---@field target_language string
+
+---@class EnableCompletionsOptions
+---@field enable? boolean
+---@field mode? 'inline' | 'source'
+---@field global? boolean
+---@field suffixes? string[]
+
+---@type StatusCodes
+local StatusCodes = {
+  DISABLED = 1,
+  IDLE = 2,
+  GENERATING = 3,
+  ERROR = 4,
+  NO_MORE_SUGGESTIONS = 5,
+  SUGGESTIONS_READY = 6,
+}
 ```
 
 ### List of APIs
 
-| API Prototype                                       | Description                                                     |
-|-----------------------------------------------------|-----------------------------------------------------------------|
-| `login(username, password)`                         | Login to Fitten Code AI                                         |
-| `logout()`                                          | Logout from Fitten Code AI                                      |
-| `register()`                                        | Register to Fitten Code AI                                      |
-| `set_log_level(level)`                              | Set the log level                                               |
-| `get_current_status()`                              | Get the current status of the `InlineEngine` and `ActionEngine` |
-| `triggering_completion()`                           | Manually triggering completion                                  |
-| `has_suggestion()`                                  | Check if there is a suggestion                                  |
-| `accept_all_suggestions()`                          | Accept all suggestions                                          |
-| `accept_line()`                                     | Accept line                                                     |
-| `accept_word()`                                     | Accept word                                                     |
-| `document_code(ActionOptions)`                      | Document code                                                   |
-| `edit_code(ActionOptions)`                          | Edit code                                                       |
-| `explain_code(ActionOptions)`                       | Explain code                                                    |
-| `find_bugs(ActionOptions)`                          | Find bugs                                                       |
-| `generate_unit_test(GenerateUnitTestOptions)`       | Generate unit test                                              |
-| `implement_features(ImplementFeaturesOptions)`      | Implement features                                              |
-| `optimize_code(ActionOptions)`                      | Optimize code                                                   |
-| `refactor_code(ActionOptions)`                      | Refactor code                                                   |
-| `identify_programming_language(ActionOptions)`      | Identify programming language                                   |
-| `analyze_data(ActionOptions)`                       | Analyze data                                                    |
-| `translate_text(TranslateTextOptions)`              | Translate text                                                  |
-| `translate_text_into_chinese(TranslateTextOptions)` | Translate text into Chinese                                     |
-| `translate_text_into_english(TranslateTextOptions)` | Translate text into English                                     |
-| `start_chat(ActionOptions)`                         | Start chat                                                      |
+| API Prototype                                       | Description                                                    |
+|-----------------------------------------------------|----------------------------------------------------------------|
+| `login(username, password)`                         | Login to Fitten Code AI                                        |
+| `logout()`                                          | Logout from Fitten Code AI                                     |
+| `register()`                                        | Register to Fitten Code AI                                     |
+| `set_log_level(level)`                              | Set the log level                                              |
+| `get_current_status()`                              | Get the `StatusCodes` of the `InlineEngine` and `ActionEngine` |
+| `triggering_completion()`                           | Manually triggering completion                                 |
+| `has_suggestion()`                                  | Check if there is a suggestion                                 |
+| `accept_all_suggestions()`                          | Accept all suggestions                                         |
+| `accept_line()`                                     | Accept line                                                    |
+| `accept_word()`                                     | Accept word                                                    |
+| `accept_char()`                                     | Accept character                                               |
+| `revoke_line()`                                     | Revoke line                                                    |
+| `revoke_word()`                                     | Revoke word                                                    |
+| `revoke_char()`                                     | Revoke character                                               |
+| `document_code(ActionOptions)`                      | Document code                                                  |
+| `edit_code(ActionOptions)`                          | Edit code                                                      |
+| `explain_code(ActionOptions)`                       | Explain code                                                   |
+| `find_bugs(ActionOptions)`                          | Find bugs                                                      |
+| `generate_unit_test(GenerateUnitTestOptions)`       | Generate unit test                                             |
+| `implement_features(ImplementFeaturesOptions)`      | Implement features                                             |
+| `optimize_code(ActionOptions)`                      | Optimize code                                                  |
+| `refactor_code(ActionOptions)`                      | Refactor code                                                  |
+| `identify_programming_language(ActionOptions)`      | Identify programming language                                  |
+| `analyze_data(ActionOptions)`                       | Analyze data                                                   |
+| `translate_text(TranslateTextOptions)`              | Translate text                                                 |
+| `translate_text_into_chinese(TranslateTextOptions)` | Translate text into Chinese                                    |
+| `translate_text_into_english(TranslateTextOptions)` | Translate text into English                                    |
+| `start_chat(ActionOptions)`                         | Start chat                                                     |
+| `enable_completions(EnableCompletionsOptions)`      | Enable completions                                             |
+| `show_chat()`                                       | Show chat window                                               |
+| `toggle_chat()`                                     | Toggle chat window                                             |
 
 ## 🎉 Special Thanks
 
