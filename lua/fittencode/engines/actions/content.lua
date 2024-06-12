@@ -12,7 +12,6 @@ local Log = require('fittencode.log')
 ---@field on_suggestions function
 ---@field on_status function
 ---@field on_end function
----@field get_current_suggestions function
 local M = {}
 
 local ViewBlock = {
@@ -22,6 +21,7 @@ local ViewBlock = {
   OUT_CONTENT = 4,
   QED = 5,
 }
+local CURSORS = 5
 
 function M:new(chat)
   local obj = {
@@ -223,13 +223,9 @@ function M:on_status(msg)
   })
 end
 
-function M:get_current_suggestions()
-  return self.conversations[self.current_eval].suggestions
-end
-
 function M:get_conversation_index(row, col)
   for i, cursor in ipairs(self.cursors) do
-    if cursor and #cursor == 5 then
+    if cursor and #cursor == CURSORS then
       if row >= cursor[ViewBlock.IN][1][1] and row <= cursor[ViewBlock.QED][2][1] then
         return i
       end
@@ -237,22 +233,42 @@ function M:get_conversation_index(row, col)
   end
 end
 
-function M:get_conversations_range(direction, row, col)
-  local i = self:get_conversation_index(row, col)
-  if not i then
+function M:get_conversations_range_by_index(direction, base)
+  local next = nil
+  if direction == 'current' then
+    next = base
+  elseif direction == 'forward' then
+    for j = base + 1, #self.cursors do
+      if self.cursors[j] and #self.cursors[j] == CURSORS then
+        next = j
+        break
+      end
+    end
+  elseif direction == 'backward' then
+    for j = base - 1, 1, -1 do
+      if self.cursors[j] and #self.cursors[j] == CURSORS then
+        next = j
+        break
+      end
+    end
+  end
+  if not next then
     return
   end
-  if direction == 'forward' then
-    i = i + 1
-  elseif direction == 'backward' then
-    i = i - 1
-  end
-  if self.cursors[i] then
+  if self.cursors[next] and #self.cursors[next] == CURSORS then
     return {
-      { self.cursors[i][ViewBlock.IN][1][1],  0 },
-      { self.cursors[i][ViewBlock.QED][2][1], 0 }
+      { self.cursors[next][ViewBlock.IN][1][1],  0 },
+      { self.cursors[next][ViewBlock.QED][2][1], 0 }
     }
   end
+end
+
+function M:get_conversations_range(direction, row, col)
+  local base = self:get_conversation_index(row, col)
+  if not base then
+    return
+  end
+  return self:get_conversations_range_by_index(direction, base)
 end
 
 function M:get_conversations(range, row, col)
@@ -265,6 +281,53 @@ function M:get_conversations(range, row, col)
     end
     return self.conversations[i]
   end
+end
+
+function M:delete_conversations(range, row, col)
+  if range == 'all' then
+    self.conversations = {}
+    self.has_suggestions = {}
+    self.cursors = {}
+    self.last_lines = nil
+  elseif range == 'current' then
+    local base = self:get_conversation_index(row, col)
+    if not base then
+      return
+    end
+    local current = self:get_conversations_range_by_index('current', base)
+    if not current then
+      return
+    end
+    local forward = self:get_conversations_range_by_index('forward', base)
+    local backward = self:get_conversations_range_by_index('backward', base)
+    if not forward then
+      if backward then
+        current[1][1] = backward[2][1] + 1
+        current[1][2] = 0
+      end
+    else
+      current[2][1] = forward[1][1] - 1
+      current[2][2] = 0
+      local yoffset = current[2][1] - current[1][1] + 1
+      for j = base + 1, #self.cursors do
+        if self.cursors[j] then
+          for b = ViewBlock.IN, ViewBlock.QED do
+            self.cursors[j][b][1][1] = self.cursors[j][b][1][1] - yoffset
+            self.cursors[j][b][2][1] = self.cursors[j][b][2][1] - yoffset
+          end
+        end
+      end
+    end
+    self.conversations[base] = nil
+    self.has_suggestions[base] = nil
+    self.cursors[base] = {}
+    self.last_lines = nil
+    return current
+  end
+end
+
+function M:set_last_lines(lines)
+  self.last_lines = lines
 end
 
 return M
