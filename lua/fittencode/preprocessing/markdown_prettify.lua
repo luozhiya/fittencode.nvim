@@ -1,3 +1,4 @@
+local Log = require('fittencode.log')
 local Merge = require('fittencode.preprocessing.merge')
 
 ---@param lines? string[]

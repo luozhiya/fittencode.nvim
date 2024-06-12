@@ -742,7 +742,13 @@ local CHAT_MODEL = {
   end,
   get_conversations = function(range, row, col)
     return content:get_conversations(range, row, col)
-  end
+  end,
+  delete_conversations = function(range, row, col)
+    return content:delete_conversations(range, row, col)
+  end,
+  set_last_lines = function(lines)
+    return content:set_last_lines(lines)
+  end,
 }
 
 function ActionsEngine.setup()
