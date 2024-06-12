@@ -1,3 +1,4 @@
+local Log = require('fittencode.log')
 local Merge = require('fittencode.preprocessing.merge')
 
 ---@param lines? string[]
@@ -35,17 +36,20 @@ local function _fenced_code(prefix, lines, fenced_code_blocks)
   if not lines or #lines == 0 or not fenced_code_blocks then
     return lines
   end
+  Log.debug('fenced_code_blocks: {}', fenced_code_blocks)
   local fenced_code_open = false
   local check = prefix
   if fenced_code_blocks == 'end' then
     check = Merge.run(prefix, lines)
   end
   check = check or {}
+  Log.debug('check: {}', check)
   vim.tbl_map(function(x)
     if x:match('^```') or x:match('```$') then
       fenced_code_open = not fenced_code_open
     end
   end, check)
+  Log.debug('fenced_code_open: {}', fenced_code_open)
   if fenced_code_open then
     if fenced_code_blocks == 'start' then
       if lines[1] ~= '' then
@@ -56,6 +60,7 @@ local function _fenced_code(prefix, lines, fenced_code_blocks)
       lines[#lines + 1] = '```'
     end
   end
+  Log.debug('lines: {}', lines)
   return lines
 end
 

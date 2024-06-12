@@ -228,10 +228,10 @@ function M:get_current_suggestions()
 end
 
 function M:get_conversation_index(row, col)
-  for i, cursor in ipairs(self.cursors) do
-    if cursor and #cursor == 5 then
-      if row >= cursor[ViewBlock.IN][1][1] and row <= cursor[ViewBlock.QED][2][1] then
-        return i
+  for k, v in pairs(self.cursors) do
+    if v and #v == 5 then
+      if row >= v[ViewBlock.IN][1][1] and row <= v[ViewBlock.QED][2][1] then
+        return k
       end
     end
   end
@@ -243,11 +243,21 @@ function M:get_conversations_range(direction, row, col)
     return
   end
   if direction == 'forward' then
-    i = i + 1
+    for j = i + 1, #self.cursors do
+      if self.cursors[j] and #self.cursors[j] == 5 then
+        i = j
+        break
+      end
+    end
   elseif direction == 'backward' then
-    i = i - 1
+    for j = i - 1, 1, -1 do
+      if self.cursors[j] and #self.cursors[j] == 5 then
+        i = j
+        break
+      end
+    end
   end
-  if self.cursors[i] then
+  if self.cursors[i] and #self.cursors[i] == 5 then
     return {
       { self.cursors[i][ViewBlock.IN][1][1],  0 },
       { self.cursors[i][ViewBlock.QED][2][1], 0 }
@@ -265,6 +275,66 @@ function M:get_conversations(range, row, col)
     end
     return self.conversations[i]
   end
+end
+
+function M:delete_conversations(range, row, col)
+  if range == 'all' then
+    self.conversations = {}
+    self.has_suggestions = {}
+    self.cursors = {}
+    self.last_lines = nil
+  elseif range == 'current' then
+    local i = self:get_conversation_index(row, col)
+    if not i then
+      return
+    end
+    local cr = self:get_conversations_range('current', row, col)
+    if not cr then
+      return
+    end
+    local yoffset = cr[2][1] - cr[1][1] + 1
+    local is_end = true
+    for j = i + 1, #self.cursors do
+      if self.cursors[j] and #self.cursors[j] == 5 then
+        yoffset = yoffset + 1
+        is_end = false
+        break
+      end
+    end
+    local is_start = true
+    for j = i - 1, 1, -1 do
+      if self.cursors[j] and #self.cursors[j] == 5 then
+        is_start = false
+        break
+      end
+    end
+    if is_end then
+      if not is_start then
+        cr[1][1] = cr[1][1] - 1
+        cr[1][2] = 0
+      end
+    else
+      cr[2][1] = cr[2][1] + 1
+      cr[2][2] = 0
+      for j = i + 1, #self.cursors do
+        if self.cursors[j] then
+          for b = 1, 5 do
+            self.cursors[j][b][1][1] = self.cursors[j][b][1][1] - yoffset
+            self.cursors[j][b][2][1] = self.cursors[j][b][2][1] - yoffset
+          end
+        end
+      end
+    end
+    self.conversations[i] = nil
+    self.has_suggestions[i] = nil
+    self.cursors[i] = nil
+    self.last_lines = nil
+    return cr
+  end
+end
+
+function M:set_last_lines(lines)
+  self.last_lines = lines
 end
 
 return M
