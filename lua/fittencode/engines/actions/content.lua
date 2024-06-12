@@ -237,7 +237,7 @@ function M:get_conversation_index(row, col)
   end
 end
 
-function M:get_conversations_range_by_base(direction, base)
+function M:get_conversations_range_by_index(direction, base)
   local next = nil
   if direction == 'current' then
     next = base
@@ -272,7 +272,7 @@ function M:get_conversations_range(direction, row, col)
   if not base then
     return
   end
-  return self:get_conversations_range_by_base(direction, base)
+  return self:get_conversations_range_by_index(direction, base)
 end
 
 function M:get_conversations(range, row, col)
@@ -298,12 +298,12 @@ function M:delete_conversations(range, row, col)
     if not base then
       return
     end
-    local current = self:get_conversations_range_by_base('current', base)
+    local current = self:get_conversations_range_by_index('current', base)
     if not current then
       return
     end
-    local forward = self:get_conversations_range_by_base('forward', base)
-    local backward = self:get_conversations_range_by_base('backward', base)
+    local forward = self:get_conversations_range_by_index('forward', base)
+    local backward = self:get_conversations_range_by_index('backward', base)
     if not forward then
       if backward then
         current[1][1] = backward[2][1] + 1
