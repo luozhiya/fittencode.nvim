@@ -237,32 +237,42 @@ function M:get_conversation_index(row, col)
   end
 end
 
-function M:get_conversations_range(direction, row, col)
-  local i = self:get_conversation_index(row, col)
-  if not i then
-    return
-  end
-  if direction == 'forward' then
-    for j = i + 1, #self.cursors do
+function M:get_conversations_range_by_base(direction, base)
+  local next = nil
+  if direction == 'current' then
+    next = base
+  elseif direction == 'forward' then
+    for j = base + 1, #self.cursors do
       if self.cursors[j] and #self.cursors[j] == 5 then
-        i = j
+        next = j
         break
       end
     end
   elseif direction == 'backward' then
-    for j = i - 1, 1, -1 do
+    for j = base - 1, 1, -1 do
       if self.cursors[j] and #self.cursors[j] == 5 then
-        i = j
+        next = j
         break
       end
     end
   end
-  if self.cursors[i] and #self.cursors[i] == 5 then
+  if not next then
+    return
+  end
+  if self.cursors[next] and #self.cursors[next] == 5 then
     return {
-      { self.cursors[i][ViewBlock.IN][1][1],  0 },
-      { self.cursors[i][ViewBlock.QED][2][1], 0 }
+      { self.cursors[next][ViewBlock.IN][1][1],  0 },
+      { self.cursors[next][ViewBlock.QED][2][1], 0 }
     }
   end
+end
+
+function M:get_conversations_range(direction, row, col)
+  local base = self:get_conversation_index(row, col)
+  if not base then
+    return
+  end
+  return self:get_conversations_range_by_base(direction, base)
 end
 
 function M:get_conversations(range, row, col)
@@ -284,52 +294,39 @@ function M:delete_conversations(range, row, col)
     self.cursors = {}
     self.last_lines = nil
   elseif range == 'current' then
-    local i = self:get_conversation_index(row, col)
-    if not i then
+    local base = self:get_conversation_index(row, col)
+    if not base then
       return
     end
-    local cr = self:get_conversations_range('current', row, col)
-    if not cr then
+    local current = self:get_conversations_range_by_base('current', base)
+    if not current then
       return
     end
-    local yoffset = cr[2][1] - cr[1][1] + 1
-    local is_end = true
-    for j = i + 1, #self.cursors do
-      if self.cursors[j] and #self.cursors[j] == 5 then
-        yoffset = yoffset + 1
-        is_end = false
-        break
-      end
-    end
-    local is_start = true
-    for j = i - 1, 1, -1 do
-      if self.cursors[j] and #self.cursors[j] == 5 then
-        is_start = false
-        break
-      end
-    end
-    if is_end then
-      if not is_start then
-        cr[1][1] = cr[1][1] - 1
-        cr[1][2] = 0
+    local forward = self:get_conversations_range_by_base('forward', base)
+    local backward = self:get_conversations_range_by_base('backward', base)
+    if not forward then
+      if backward then
+        current[1][1] = backward[2][1] + 1
+        current[1][2] = 0
       end
     else
-      cr[2][1] = cr[2][1] + 1
-      cr[2][2] = 0
-      for j = i + 1, #self.cursors do
+      current[2][1] = forward[1][1] - 1
+      current[2][2] = 0
+      local yoffset = current[2][1] - current[1][1] + 1
+      for j = base + 1, #self.cursors do
         if self.cursors[j] then
-          for b = 1, 5 do
+          for b = ViewBlock.IN, ViewBlock.QED do
             self.cursors[j][b][1][1] = self.cursors[j][b][1][1] - yoffset
             self.cursors[j][b][2][1] = self.cursors[j][b][2][1] - yoffset
           end
         end
       end
     end
-    self.conversations[i] = nil
-    self.has_suggestions[i] = nil
-    self.cursors[i] = nil
+    self.conversations[base] = nil
+    self.has_suggestions[base] = nil
+    self.cursors[base] = nil
     self.last_lines = nil
-    return cr
+    return current
   end
 end
 
