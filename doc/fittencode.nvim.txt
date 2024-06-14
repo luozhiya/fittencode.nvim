@@ -1,4 +1,4 @@
-*fittencode.nvim.txt*       For Neovim >= 0.8.0      Last change: 2024 June 12
+*fittencode.nvim.txt*       For Neovim >= 0.8.0      Last change: 2024 June 14
 
 ==============================================================================
 Table of Contents                          *fittencode.nvim-table-of-contents*
@@ -238,6 +238,9 @@ SOURCE MODE ~
 
 USAGE                                  *fittencode.nvim-fittencode.nvim-usage*
 
+- Optional parameters are enclosed in square brackets `[]`.
+- Essential parameters are enclosed in `<>`
+
 
 ACCOUNT COMMANDS ~
 
@@ -252,50 +255,81 @@ ACCOUNT COMMANDS ~
   Fitten logout     Logout account
   -------------------------------------------------------------------------
 
-ACTION COMMANDS ~
+COMPLETIONS COMMANDS ~
 
-- Try the command `Fitten generate_unit_test <test_framework> <language>` to generate unit test with specific test framework and language.
-
-  -----------------------------------------------------------------------
+  ---------------------------------------------------------------------------
   Command                                  Description
-  ---------------------------------------- ------------------------------
-  Fitten document_code                     Document code
+  ---------------------------------------- ----------------------------------
+  Fitten enable_completions [filetypes]    Enable global/filetypes
+                                           completions.
 
-  Fitten edit_code                         Edit code
+  Fitten disable_completions [filetypes]   Disable global/filetypes
+                                           completions.
+  ---------------------------------------------------------------------------
 
-  Fitten explain_code                      Explain code
+ACTIONS COMMANDS ~
 
-  Fitten find_bugs                         Find bugs
+  ---------------------------------------------------------------------------------
+  Command                                                 Description
+  ------------------------------------------------------- -------------------------
+  Fitten document_code                                    Document code
 
-  Fitten generate_unit_test                Generate unit test
+  Fitten edit_code                                        Edit code
 
-  Fitten implement_features                Implement features
+  Fitten explain_code                                     Explain code
 
-  Fitten optimize_code                     Optimize code
+  Fitten find_bugs                                        Find bugs
 
-  Fitten refactor_code                     Refactor code
+  Fitten generate_unit_test [test_framework] [language]   Generate unit test
 
-  Fitten identify_programming_language     Identify programming language
+  Fitten implement_features                               Implement features
 
-  Fitten analyze_data                      Analyze data
+  Fitten optimize_code                                    Optimize code
 
-  Fitten translate_text                    Translate text
+  Fitten refactor_code                                    Refactor code
 
-  Fitten translate_text_into_chinese       Translate text into Chinese
+  Fitten identify_programming_language                    Identify programming
+                                                          language
 
-  Fitten translate_text_into_english       Translate text into English
+  Fitten analyze_data                                     Analyze data
 
-  Fitten start_chat                        Start chat
-  -----------------------------------------------------------------------
+  Fitten translate_text                                   Translate text
 
-DEFAULT MAPPINGS ~
+  Fitten translate_text_into_chinese                      Translate text into
+                                                          Chinese
+
+  Fitten translate_text_into_english                      Translate text into
+                                                          English
+
+  Fitten start_chat                                       Start chat
+
+  Fitten show_chat                                        Show chat window
+
+  Fitten toggle_chat                                      Toggle chat window
+  ---------------------------------------------------------------------------------
+
+COMPLETIONS MAPPINGS ~
 
   Mappings   Action
   ---------- --------------------------------
   Tab        Accept all suggestions
   Ctrl + 🡫   Accept line
   Ctrl + 🡪   Accept word
+  Ctrl + 🡩   Revoke line
+  Ctrl + 🡨   Revoke word
   Alt + \    Manually triggering completion
+
+CHAT MAPPINGS ~
+
+  Mappings   Action
+  ---------- -----------------------------
+  q          Close chat
+  [c         Go to previous conversation
+  ]c         Go to next conversation
+  c          Copy conversation
+  C          Copy all conversations
+  d          Delete conversation
+  D          Delete all conversations
 
 APIS                                    *fittencode.nvim-fittencode.nvim-apis*
 
@@ -305,7 +339,7 @@ plugins or scripts.
 - Access the APIs by calling `require('fittencode').<api_name>()`.
 
 
-PARAMETERS TYPES ~
+PARAMETERS/RETURN TYPES ~
 
 >lua
     -- Log levels
@@ -333,14 +367,30 @@ PARAMETERS TYPES ~
     
     ---@class TranslateTextOptions : ActionOptions
     ---@field target_language string
+    
+    ---@class EnableCompletionsOptions
+    ---@field enable? boolean
+    ---@field mode? 'inline' | 'source'
+    ---@field global? boolean
+    ---@field suffixes? string[]
+    
+    ---@type StatusCodes
+    local StatusCodes = {
+      DISABLED = 1,
+      IDLE = 2,
+      GENERATING = 3,
+      ERROR = 4,
+      NO_MORE_SUGGESTIONS = 5,
+      SUGGESTIONS_READY = 6,
+    }
 <
 
 
 LIST OF APIS ~
 
-  -------------------------------------------------------------------------------------------
+  ------------------------------------------------------------------------------------------
   API Prototype                                       Description
-  --------------------------------------------------- ---------------------------------------
+  --------------------------------------------------- --------------------------------------
   login(username, password)                           Login to Fitten Code AI
 
   logout()                                            Logout from Fitten Code AI
@@ -349,7 +399,7 @@ LIST OF APIS ~
 
   set_log_level(level)                                Set the log level
 
-  get_current_status()                                Get the current status of the
+  get_current_status()                                Get the StatusCodes of the
                                                       InlineEngine and ActionEngine
 
   triggering_completion()                             Manually triggering completion
@@ -361,6 +411,14 @@ LIST OF APIS ~
   accept_line()                                       Accept line
 
   accept_word()                                       Accept word
+
+  accept_char()                                       Accept character
+
+  revoke_line()                                       Revoke line
+
+  revoke_word()                                       Revoke word
+
+  revoke_char()                                       Revoke character
 
   document_code(ActionOptions)                        Document code
 
@@ -389,7 +447,13 @@ LIST OF APIS ~
   translate_text_into_english(TranslateTextOptions)   Translate text into English
 
   start_chat(ActionOptions)                           Start chat
-  -------------------------------------------------------------------------------------------
+
+  enable_completions(EnableCompletionsOptions)        Enable completions
+
+  show_chat()                                         Show chat window
+
+  toggle_chat()                                       Toggle chat window
+  ------------------------------------------------------------------------------------------
 
 SPECIAL THANKS                *fittencode.nvim-fittencode.nvim-special-thanks*
 
