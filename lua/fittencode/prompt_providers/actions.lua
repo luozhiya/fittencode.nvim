@@ -62,7 +62,7 @@ local NO_LANG_ACTIONS = {
 }
 
 local MAP_ACTION_PROMPTS = {
-  StartChat = 'Answer the question above',
+  StartChat = 'Answer the question above, Fenced code block languages',
   DocumentCode = 'Document the code above, Add comments to every line of the code',
   EditCode = function(ctx)
     return ctx.prompt
@@ -91,7 +91,7 @@ local MAP_ACTION_PROMPTS = {
     return 'Translate the text above' .. ' into ' .. ctx.action.target_language
   end,
   SummarizeText = 'Summarize the text above and then represent the outline in a multi-level sequence',
-  GenerateCode = 'Generate code based on the description above and fenced code block languages'
+  GenerateCode = 'Generate code based on the text above, Fenced code block languages'
 }
 
 local function make_language(ctx)
@@ -147,6 +147,7 @@ local function make_prefix(content, prompt, source_type, instruction_type)
     mark_prompt_prefix,
     prompt,
     ':',
+    '\n',
   }, '')
   return prefix
 end
