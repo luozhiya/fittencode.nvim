@@ -74,7 +74,7 @@ end
 function TaskScheduler:match_clean(task_id, row, col, clean)
   local match_found = false
   local ms = 0
-  clean = clean == false and false or true
+  clean = clean == nil and true or clean
   for i = #self.list, 1, -1 do
     local task = self.list[i]
     if task.timestamp == task_id and task.row == row and task.col == col then

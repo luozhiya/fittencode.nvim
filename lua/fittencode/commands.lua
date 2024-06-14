@@ -116,6 +116,26 @@ local function _summarize_text(...)
   return _action_apis_wrap_content(API.summarize_text, ...)
 end
 
+local function _enable_completions_impl(enable, suffixes)
+  ---@type EnableCompletionsOptions
+  local opts = {
+    enable = enable,
+    suffixes = suffixes,
+    global = #suffixes == 0,
+  }
+  API.enable_completions(opts)
+end
+
+local function _enable_completions(...)
+  local args = { ... }
+  _enable_completions_impl(true, args)
+end
+
+local function _disable_completions(...)
+  local args = { ... }
+  _enable_completions_impl(false, args)
+end
+
 function M.setup()
   ---@type FittenCommands
   local commands = {
@@ -165,6 +185,10 @@ function M.setup()
     show_chat = API.show_chat,
     -- Arguments: Nop
     toggle_chat = API.toggle_chat,
+    -- Arguments: { filetype }
+    enable_completions = _enable_completions,
+    -- Arguments: { filetype }
+    disable_completions = _disable_completions,
   }
   Base.command('Fitten', function(line)
     ---@type string[]

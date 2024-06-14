@@ -1,4 +1,62 @@
+---@class FittenCodeConfig
+---@field options FittenCodeOptions
 local M = {}
+
+---@class FittenCodeOptions
+---@field action table<string, FittenCodeActionOptions|FittenCodeActionIdentifyProgrammingLanguageOptions>
+---@field disable_specific_inline_completion FittenCodeDisableSpecificInlineCompletionOptions
+---@field inline_completion FittenCodeInlineCompletionOptions
+---@field delay_completion FittenCodeDelayCompletionOptions
+---@field prompt FittenCodePromptOptions
+---@field chat FittenCodeChatOptions
+---@field use_default_keymaps boolean
+---@field keymaps table<string, table<string, string>>
+---@field source_completion FittenCodeSourceCompletionOptions
+---@field completion_mode 'inline' |'source'
+---@field rest FittenCodeRestOptions
+---@field syntax_highlighting FittenCodeSyntaxHighlightingOptions
+---@field log FittenCodeLogOptions
+
+---@class FittenCodeActionOptions
+---@field show_in_editor_context_menu boolean
+
+---@class FittenCodeActionIdentifyProgrammingLanguageOptions:FittenCodeActionOptions
+---@field identify_buffer boolean
+
+---@class FittenCodeDisableSpecificInlineCompletionOptions
+---@field suffixes table<string, boolean>
+
+---@class FittenCodeInlineCompletionOptions
+---@field enable boolean
+---@field disable_completion_within_the_line boolean
+---@field disable_completion_when_delete boolean
+---@field auto_triggering_completion boolean
+---@field accept_mode 'commit' |'stage'
+
+---@class FittenCodeDelayCompletionOptions
+---@field delaytime integer
+
+---@class FittenCodePromptOptions
+---@field max_characters integer
+
+---@class FittenCodeChatOptions
+---@field highlight_conversation_at_cursor boolean
+
+---@class FittenCodeSourceCompletionOptions
+---@field enable boolean
+---@field engine 'cmp' | 'coc' | 'ycm' | 'omni'
+
+---@class FittenCodeRestOptions
+---@field backend 'curl' | 'libcurl' | 'libuv'
+
+---@class FittenCodeSyntaxHighlightingOptions
+---@field use_neovim_colors boolean
+
+---@class FittenCodeLogOptions
+---@field level string
+---@field max_size integer
+---@field new_file_on_startup boolean
+---@field async boolean
 
 ---@class FittenCodeOptions
 local defaults = {
@@ -119,11 +177,6 @@ local defaults = {
     -- * 'ycm' > https://github.com/ycm-core/YouCompleteMe
     -- * 'omni' > Neovim builtin ommifunc
     engine = 'cmp',
-    disable_specific_source_completion = {
-      -- Disable completion for some specific file suffixes by entering them below
-      -- For example, `suffixes = {'lua', 'cpp'}`
-      suffixes = {},
-    },
   },
   -- Set the mode of the completion.
   -- Available options:

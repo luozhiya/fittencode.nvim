@@ -32,6 +32,10 @@ M.api = {
   triggering_completion = function()
     InlineEngine.triggering_completion()
   end,
+  ---@param opts? EnableCompletionsOptions
+  enable_completions = function(opts)
+    InlineEngine.enable_completions(opts)
+  end,
   ---@return boolean
   has_suggestions = function()
     return InlineEngine.has_suggestions()

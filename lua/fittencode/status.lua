@@ -17,11 +17,12 @@ local M = {}
 
 ---@type StatusCodes
 local C = {
-  IDLE = 0,
-  GENERATING = 1,
-  ERROR = 2,
-  NO_MORE_SUGGESTIONS = 3,
-  SUGGESTIONS_READY = 4,
+  DISABLED = 1,
+  IDLE = 2,
+  GENERATING = 3,
+  ERROR = 4,
+  NO_MORE_SUGGESTIONS = 5,
+  SUGGESTIONS_READY = 6,
 }
 
 M.C = C
@@ -48,6 +49,16 @@ local function get_status_name(status)
   return Base.tbl_key_by_value(C, status)
 end
 
+local function _force_update_lualine()
+  local ok, lualine = pcall(require, 'lualine')
+  if ok then
+    lualine.refresh({
+      scope = 'all',
+      place = { 'statusline' },
+    })
+  end
+end
+
 ---@param status integer
 function M:update(status)
   local name = get_status_name(status)
@@ -58,6 +69,7 @@ function M:update(status)
     self.current = status
     -- Force `lualine` to update statusline
     -- vim.cmd('redrawstatus')
+    _force_update_lualine()
     Log.debug('{} -> {}', self.tag, name)
   end
   self.idle_timer = Base.debounce(self.idle_timer, function()
