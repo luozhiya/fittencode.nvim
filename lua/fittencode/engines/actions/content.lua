@@ -177,6 +177,9 @@ function M:on_end(opts)
 end
 
 local function merge_cursors(c1, c2)
+  if not c1 or not c2 then
+    return c1 or c2
+  end
   if c1[2][1] == c2[1][1] then
     return { { c1[1][1], c1[1][2] }, { c2[2][1], c2[2][2] } }
   end
@@ -190,23 +193,16 @@ function M:on_suggestions(suggestions, force_start_space)
   end
   if not self.has_suggestions[self.current_eval] then
     self.has_suggestions[self.current_eval] = true
-    local cursors = self:commit({
-      lines = suggestions,
-      format = {
-        start_space = true,
-      }
-    })
-    self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = cursors
-  else
-    local cursors = self:commit({
-      lines = suggestions,
-      format = {
-        start_space = force_start_space,
-      }
-    })
-    self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = merge_cursors(
-      self.cursors[self.current_eval][ViewBlock.OUT_CONTENT], cursors)
+    force_start_space = true
   end
+  local cursors = self:commit({
+    lines = suggestions,
+    format = {
+      start_space = force_start_space,
+    }
+  })
+  self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = merge_cursors(
+    self.cursors[self.current_eval][ViewBlock.OUT_CONTENT], cursors)
 end
 
 function M:on_status(msg)
