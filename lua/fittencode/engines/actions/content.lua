@@ -92,6 +92,16 @@ local function format_lines(last_lines, lines, format)
     else
       table.insert(lines, 1, '')
     end
+  elseif format.start == 'compress' then
+    lines = remove_blank_lines_start(lines) or {}
+    if #last == 0 or _end(last) then
+      -- nothing
+    else
+      table.insert(lines, 1, '')
+      if not _start(lines[2]) then
+        table.insert(lines, 1, '')
+      end
+    end
   end
   return lines
 end
@@ -112,7 +122,7 @@ function M:commit(opts)
     format = opts.format
   end
   lines = format_lines(self.last_lines, lines, format)
-  if not lines then
+  if not lines or #lines == 0 then
     return
   end
   self.last_lines = lines
@@ -197,18 +207,18 @@ local function merge_cursors(c1, c2)
 end
 
 ---@param suggestions? Suggestions
-function M:on_suggestions(suggestions, force_start)
+function M:on_suggestions(suggestions, start)
   if not suggestions then
     return
   end
   if not self.has_suggestions[self.current_eval] then
     self.has_suggestions[self.current_eval] = true
-    force_start = 'space'
+    start = 'space'
   end
   local cursors = self:commit({
     lines = suggestions,
     format = {
-      start = force_start,
+      start = start,
     }
   })
   self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = merge_cursors(

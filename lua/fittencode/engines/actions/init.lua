@@ -439,11 +439,18 @@ local function chain_actions(opts)
     local new_presug = nil
     local new_solved_prefix = nil
     if extra_newline then
+      if not headless then
+        content:on_suggestions({
+          '',
+          '',
+        }, 'compress')
+      end
       new_presug = presug and vim.deepcopy(presug) or {}
       new_solved_prefix = prompt.prefix .. '\n'
     else
       if not headless then
-        content:on_suggestions(vim.deepcopy(lines), force_start_newline and 'newline' or nil)
+        content:on_suggestions(vim.deepcopy(lines))
+        -- content:on_suggestions(vim.deepcopy(lines), force_start_newline and 'newline' or nil)
       end
       new_presug = Merge.run(presug, lines, true)
       new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
