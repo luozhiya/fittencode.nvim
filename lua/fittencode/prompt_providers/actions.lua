@@ -62,12 +62,12 @@ local NO_LANG_ACTIONS = {
 }
 
 local MAP_ACTION_PROMPTS = {
-  StartChat = 'Answer the question above, Fenced code block languages',
+  StartChat = 'Provide detailed answers to the above questions, Fenced code block languages',
   DocumentCode = 'Document the code above, Add comments to every line of the code',
   EditCode = function(ctx)
     return ctx.prompt
   end,
-  ExplainCode = 'Explain the code above, Break it down step by step',
+  ExplainCode = 'Explain the code above and break it down step by step, provide the necessary summary',
   FindBugs = 'Find bugs in the code above',
   GenerateUnitTest = function(ctx)
     local opts = ctx.action or {}

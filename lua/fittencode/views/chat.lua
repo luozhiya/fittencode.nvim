@@ -54,6 +54,9 @@ end
 ---@return table<integer, integer>[]?
 local function _commit(window, buffer, lines)
   local cursors = _modify_buffer(buffer, function()
+    if Base.vmode() then
+      api.nvim_win_call(window, function() api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false) end)
+    end
     return Lines.set_text({
       window = window,
       buffer = buffer,

@@ -205,6 +205,13 @@ function M.buffer_characters(buffer)
   return count, lines
 end
 
+local VMODE = { ['v'] = true, ['V'] = true, [api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
+
+function M.vmode()
+  local mode = api.nvim_get_mode().mode
+  return VMODE[mode]
+end
+
 ---@class NeovimVersion
 ---@field nvim string
 ---@field buildtype string

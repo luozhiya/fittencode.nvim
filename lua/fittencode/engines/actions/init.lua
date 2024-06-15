@@ -230,8 +230,6 @@ end
 ---@field vmode boolean
 ---@field region? string[]
 
-local VMODE = { ['v'] = true, ['V'] = true, [api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
-
 ---@param buffer number
 ---@param range ActionRange
 local function normalize_range(buffer, range)
@@ -285,8 +283,7 @@ local function make_range(buffer)
   ---@type integer[][][]
   local pos = nil
 
-  local mode = api.nvim_get_mode().mode
-  if VMODE[mode] then
+  if Base.vmode() then
     in_v = true
     if fn.has('nvim-0.10') == 1 then
       region = fn.getregion(fn.getpos('.'), fn.getpos('v'), { type = fn.mode() })
@@ -392,6 +389,9 @@ local function chain_actions(opts)
         fenced_code_blocks = 'start'
       }
     })
+    if lines and #lines > 1 then
+      content:on_suggestions(vim.deepcopy(lines))
+    end
     local new_presug = Merge.run(prefix, lines, true)
     on_stage_end(is_error, headless, elapsed_time, depth, new_presug, on_success, on_error)
   end
