@@ -36,7 +36,7 @@ function M:new(chat)
 end
 
 ---@class ChatCommitFormat
----@field start_space? boolean
+---@field start? 'space' | 'newline'
 
 ---@class ChatCommitOptions
 ---@field lines? string[]
@@ -67,7 +67,7 @@ local function format_lines(last_lines, lines, format)
     return lines
   end
   local last = last_lines[#last_lines]
-  if format.start_space then
+  if format.start == 'space' then
     lines = remove_blank_lines_start(lines)
     if not lines or #lines == 0 then
       return
@@ -81,6 +81,16 @@ local function format_lines(last_lines, lines, format)
       if not _start(lines[2]) then
         table.insert(lines, 1, '')
       end
+    end
+  elseif format.start == 'newline' then
+    lines = remove_blank_lines_start(lines)
+    if not lines or #lines == 0 then
+      return
+    end
+    if #last == 0 or _end(last) then
+      -- nothing
+    else
+      table.insert(lines, 1, '')
     end
   end
   return lines
@@ -170,7 +180,7 @@ function M:on_end(opts)
       qed,
     },
     format = {
-      start_space = true,
+      start = 'space',
     }
   })
   self.cursors[self.current_eval][ViewBlock.QED] = cursors
@@ -187,18 +197,18 @@ local function merge_cursors(c1, c2)
 end
 
 ---@param suggestions? Suggestions
-function M:on_suggestions(suggestions, force_start_space)
+function M:on_suggestions(suggestions, force_start)
   if not suggestions then
     return
   end
   if not self.has_suggestions[self.current_eval] then
     self.has_suggestions[self.current_eval] = true
-    force_start_space = true
+    force_start = 'space'
   end
   local cursors = self:commit({
     lines = suggestions,
     format = {
-      start_space = force_start_space,
+      start = force_start,
     }
   })
   self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = merge_cursors(
@@ -216,7 +226,7 @@ function M:on_status(msg)
       '```',
     },
     format = {
-      start_space = true,
+      start = 'space',
     }
   })
 end

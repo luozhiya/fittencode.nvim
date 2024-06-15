@@ -2,7 +2,7 @@ local function make_prefix(content)
   local prefix = table.concat({
     'Format:',
     '\n',
-    '- `Synopsis`',
+    '- `Introduction`',
     '\n',
     '- `Breakdown` of the code explained in line by line',
     '\n',

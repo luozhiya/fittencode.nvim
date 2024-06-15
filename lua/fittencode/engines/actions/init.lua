@@ -423,33 +423,27 @@ local function chain_actions(opts)
           resolve({ prompt, lines })
         end
       else
-        local force_start_space = false
+        local force_start_newline = false
         if extra_newline then
-          force_start_space = true
+          force_start_newline = true
         end
         extra_newline = false
-        resolve({ prompt, lines, force_start_space })
+        resolve({ prompt, lines, force_start_newline })
       end
     end, function()
       reject({ true, presug })
     end)
   end):forward(function(pl)
-    local prompt, lines, force_start_space = unpack(pl)
+    local prompt, lines, force_start_newline = unpack(pl)
     depth = depth + 1
     local new_presug = nil
     local new_solved_prefix = nil
     if extra_newline then
-      -- if not headless then
-      --   content:on_suggestions({
-      --     '',
-      --     '',
-      --   })
-      -- end
       new_presug = presug and vim.deepcopy(presug) or {}
       new_solved_prefix = prompt.prefix .. '\n'
     else
       if not headless then
-        content:on_suggestions(vim.deepcopy(lines), force_start_space)
+        content:on_suggestions(vim.deepcopy(lines), force_start_newline and 'newline' or nil)
       end
       new_presug = Merge.run(presug, lines, true)
       new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
