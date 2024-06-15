@@ -184,7 +184,7 @@ local function merge_cursors(c1, c2)
 end
 
 ---@param suggestions? Suggestions
-function M:on_suggestions(suggestions)
+function M:on_suggestions(suggestions, force_start_space)
   if not suggestions then
     return
   end
@@ -200,6 +200,9 @@ function M:on_suggestions(suggestions)
   else
     local cursors = self:commit({
       lines = suggestions,
+      format = {
+        start_space = force_start_space,
+      }
     })
     self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = merge_cursors(
       self.cursors[self.current_eval][ViewBlock.OUT_CONTENT], cursors)

@@ -94,6 +94,11 @@ local MAP_ACTION_PROMPTS = {
   GenerateCode = 'Generate code based on the text above, Fenced code block languages'
 }
 
+local MAP_ACTION_PERFIX = {
+  ExplainCode = require('fittencode.prompt_providers.actions.explain_code').make_prefix,
+  StartChat = require('fittencode.prompt_providers.actions.start_chat').make_prefix,
+}
+
 local function make_language(ctx)
   local filetype = ctx.filetype or ''
   local language = ctx.action.language or filetype
@@ -193,6 +198,9 @@ function M:execute(ctx)
     filename = Path.name(ctx.buffer, no_lang)
     display_filename = Path.name(ctx.buffer, false)
   end
+  if name == 'StartChat' then
+    filename = 'ask.md'
+  end
   local within_the_line = false
   local content = ''
 
@@ -202,8 +210,12 @@ function M:execute(ctx)
   else
     local language = make_language(ctx)
     content = make_content_with_prefix_suffix(ctx, language, no_lang)
-    local prompt = make_prompt(ctx, name, language, no_lang)
-    prefix = make_prefix(content, prompt, source_type, instruction_type)
+    if MAP_ACTION_PERFIX[name] then
+      prefix = MAP_ACTION_PERFIX[name](content)
+    else
+      local prompt = make_prompt(ctx, name, language, no_lang)
+      prefix = make_prefix(content, prompt, source_type, instruction_type)
+    end
   end
   local suffix = ''
 
