@@ -81,6 +81,7 @@ local status = nil
 ---@field language? string
 ---@field headless? boolean
 ---@field silence? boolean
+---@field depth? integer
 ---@field preprocess_format? SuggestionsPreprocessingFormat
 ---@field on_success? function
 ---@field on_error? function
@@ -364,6 +365,7 @@ end
 ---@field headless boolean
 ---@field elapsed_time integer
 ---@field depth integer
+---@field max_depth integer
 ---@field extra_newline boolean
 ---@field preprocess_format? SuggestionsPreprocessingFormat
 ---@field on_success function
@@ -378,6 +380,7 @@ local function chain_actions(opts)
   local headless = opts.headless
   local elapsed_time = opts.elapsed_time
   local depth = opts.depth
+  local max_depth = opts.max_depth
   local extra_newline = opts.extra_newline
   local preprocess_format = opts.preprocess_format
   local on_success = opts.on_success
@@ -397,7 +400,7 @@ local function chain_actions(opts)
     local new_presug = Merge.run(prefix, lines, true)
     on_stage_end(is_error, headless, elapsed_time, depth, new_presug, on_success, on_error)
   end
-  if not start and (not solved_prefix or depth >= MAX_DEPTH) then
+  if not start and (not solved_prefix or depth >= max_depth) then
     _fence_end(false, presug)
     return
   end
@@ -464,6 +467,7 @@ local function chain_actions(opts)
       headless = headless,
       elapsed_time = elapsed_time,
       depth = depth,
+      max_depth = max_depth,
       extra_newline = extra_newline,
       preprocess_format = preprocess_format,
       on_success = on_success,
@@ -507,6 +511,7 @@ local function _start_action_wrap(window, buffer, action, action_name, headless,
       return false
     end
   end
+
   chain_actions({
     start = true,
     prompt_ctx = prompt_ctx,
@@ -516,6 +521,8 @@ local function _start_action_wrap(window, buffer, action, action_name, headless,
     headless = headless,
     elapsed_time = 0,
     depth = 0,
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    max_depth = opts.depth == nil and MAX_DEPTH or opts.depth,
     extra_newline = false,
     preprocess_format = opts.preprocess_format,
     on_success = opts.on_success,

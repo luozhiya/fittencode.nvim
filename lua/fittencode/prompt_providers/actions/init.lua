@@ -83,7 +83,7 @@ local MAP_ACTION_PROMPTS = {
   end,
   OptimizeCode = 'Optimize the code above to make it faster and more efficient',
   RefactorCode = 'Refactor the code above',
-  IdentifyProgrammingLanguage = 'Identify the language used in the code above and Give the name in short',
+  IdentifyProgrammingLanguage = 'Identify the language used in the code above, Give the language only',
   AnalyzeData = 'Analyze the data above and Give the pattern of the data',
   TranslateText = function(ctx)
     assert(ctx.action)
@@ -97,6 +97,7 @@ local MAP_ACTION_PROMPTS = {
 local MAP_ACTION_PERFIX = {
   ExplainCode = require('fittencode.prompt_providers.actions.explain_code').make_prefix,
   StartChat = require('fittencode.prompt_providers.actions.start_chat').make_prefix,
+  IdentifyProgrammingLanguage = require('fittencode.prompt_providers.actions.identify_programming_language').make_prefix,
 }
 
 local function make_language(ctx)

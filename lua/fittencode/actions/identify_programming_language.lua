@@ -46,6 +46,7 @@ local function _identify_current_buffer()
   API.identify_programming_language({
     headless = true,
     content = content,
+    depth = 1,
     preprocess_format = {
       condense_blank_line = {
         convert_whitespace_to_blank = true,
@@ -61,13 +62,18 @@ local function _identify_current_buffer()
       if not suggestions or #suggestions == 0 then
         return
       end
+      ---@type string
       local lang = suggestions[1]
-      if #lang > 10 then
+      lang = lang:match(':%s*(.*)$')
+      if not lang then
+        return
+      end
+      lang = vim.trim(lang)
+      if #lang == 0 then
         return
       end
       lang = lang:lower()
       lang = lang:gsub('c%+%+', 'cpp')
-      lang = lang:match('^(%w+)')
       if api.nvim_buf_is_valid(buffer) then
         api.nvim_set_option_value('filetype', lang, {
           buf = buffer,
