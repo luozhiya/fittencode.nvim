@@ -81,6 +81,7 @@ local status = nil
 ---@field language? string
 ---@field headless? boolean
 ---@field silence? boolean
+---@field depth? integer
 ---@field preprocess_format? SuggestionsPreprocessingFormat
 ---@field on_success? function
 ---@field on_error? function
@@ -364,6 +365,8 @@ end
 ---@field headless boolean
 ---@field elapsed_time integer
 ---@field depth integer
+---@field max_depth integer
+---@field extra_newline boolean
 ---@field preprocess_format? SuggestionsPreprocessingFormat
 ---@field on_success function
 ---@field on_error function
@@ -377,6 +380,8 @@ local function chain_actions(opts)
   local headless = opts.headless
   local elapsed_time = opts.elapsed_time
   local depth = opts.depth
+  local max_depth = opts.max_depth
+  local extra_newline = opts.extra_newline
   local preprocess_format = opts.preprocess_format
   local on_success = opts.on_success
   local on_error = opts.on_error
@@ -395,7 +400,7 @@ local function chain_actions(opts)
     local new_presug = Merge.run(prefix, lines, true)
     on_stage_end(is_error, headless, elapsed_time, depth, new_presug, on_success, on_error)
   end
-  if not start and (not solved_prefix or depth >= MAX_DEPTH) then
+  if not start and (not solved_prefix or depth >= max_depth) then
     _fence_end(false, presug)
     return
   end
@@ -409,38 +414,67 @@ local function chain_actions(opts)
   Promise:new(function(resolve, reject)
     local task_id = _create_task(headless)
     Sessions.request_generate_one_stage(task_id, prompt_ctx, function(_, prompt, suggestions)
-      -- Log.debug('Generated Suggestions: {}', suggestions)
+      Log.debug('Generated Suggestions: {}', suggestions)
       local lines, ms = preprocessing(presug, task_id, headless, preprocess_format, suggestions)
-      -- Log.debug('Preprocessed Lines: {}', lines)
+      Log.debug('Preprocessed Lines: {}', lines)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
-        reject({ false, presug })
-      else
-        depth = depth + 1
-        if not headless then
-          content:on_suggestions(vim.deepcopy(lines))
+        if extra_newline then
+          reject({ false, presug })
+        else
+          extra_newline = true
+          resolve({ prompt, lines })
         end
-        local new_presug = Merge.run(presug, lines, true)
-        local new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
-        chain_actions({
-          start = false,
-          prompt_ctx = nil,
-          presug = new_presug,
-          action = action,
-          solved_prefix = new_solved_prefix,
-          headless = headless,
-          elapsed_time = elapsed_time,
-          depth = depth,
-          preprocess_format = preprocess_format,
-          on_success = on_success,
-          on_error = on_error,
-        })
+      else
+        local force_start_newline = false
+        if extra_newline then
+          force_start_newline = true
+        end
+        extra_newline = false
+        resolve({ prompt, lines, force_start_newline })
       end
     end, function()
       reject({ true, presug })
     end)
-  end):forward(nil, function(pair)
-    _fence_end(unpack(pair))
+  end):forward(function(pl)
+    local prompt, lines, force_start_newline = unpack(pl)
+    depth = depth + 1
+    local new_presug = nil
+    local new_solved_prefix = nil
+    if extra_newline then
+      if not headless then
+        content:on_suggestions({
+          '',
+          '',
+        }, 'compress')
+      end
+      new_presug = presug and vim.deepcopy(presug) or {}
+      new_solved_prefix = prompt.prefix .. '\n'
+    else
+      if not headless then
+        content:on_suggestions(vim.deepcopy(lines))
+        -- content:on_suggestions(vim.deepcopy(lines), force_start_newline and 'newline' or nil)
+      end
+      new_presug = Merge.run(presug, lines, true)
+      new_solved_prefix = prompt.prefix .. table.concat(lines, '\n')
+    end
+    chain_actions({
+      start = false,
+      prompt_ctx = nil,
+      presug = new_presug,
+      action = action,
+      solved_prefix = new_solved_prefix,
+      headless = headless,
+      elapsed_time = elapsed_time,
+      depth = depth,
+      max_depth = max_depth,
+      extra_newline = extra_newline,
+      preprocess_format = preprocess_format,
+      on_success = on_success,
+      on_error = on_error,
+    })
+  end, function(es)
+    _fence_end(unpack(es))
   end)
 end
 
@@ -477,6 +511,7 @@ local function _start_action_wrap(window, buffer, action, action_name, headless,
       return false
     end
   end
+
   chain_actions({
     start = true,
     prompt_ctx = prompt_ctx,
@@ -486,6 +521,9 @@ local function _start_action_wrap(window, buffer, action, action_name, headless,
     headless = headless,
     elapsed_time = 0,
     depth = 0,
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    max_depth = opts.depth == nil and MAX_DEPTH or opts.depth,
+    extra_newline = false,
     preprocess_format = opts.preprocess_format,
     on_success = opts.on_success,
     on_error = opts.on_error,

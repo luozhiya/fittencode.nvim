@@ -36,7 +36,7 @@ function M:new(chat)
 end
 
 ---@class ChatCommitFormat
----@field start_space? boolean
+---@field start? 'space' | 'newline'
 
 ---@class ChatCommitOptions
 ---@field lines? string[]
@@ -67,7 +67,7 @@ local function format_lines(last_lines, lines, format)
     return lines
   end
   local last = last_lines[#last_lines]
-  if format.start_space then
+  if format.start == 'space' then
     lines = remove_blank_lines_start(lines)
     if not lines or #lines == 0 then
       return
@@ -76,6 +76,26 @@ local function format_lines(last_lines, lines, format)
       if not _start(lines[1]) then
         table.insert(lines, 1, '')
       end
+    else
+      table.insert(lines, 1, '')
+      if not _start(lines[2]) then
+        table.insert(lines, 1, '')
+      end
+    end
+  elseif format.start == 'newline' then
+    lines = remove_blank_lines_start(lines)
+    if not lines or #lines == 0 then
+      return
+    end
+    if #last == 0 or _end(last) then
+      -- nothing
+    else
+      table.insert(lines, 1, '')
+    end
+  elseif format.start == 'compress' then
+    lines = remove_blank_lines_start(lines) or {}
+    if #last == 0 or _end(last) then
+      -- nothing
     else
       table.insert(lines, 1, '')
       if not _start(lines[2]) then
@@ -102,7 +122,7 @@ function M:commit(opts)
     format = opts.format
   end
   lines = format_lines(self.last_lines, lines, format)
-  if not lines then
+  if not lines or #lines == 0 then
     return
   end
   self.last_lines = lines
@@ -170,13 +190,16 @@ function M:on_end(opts)
       qed,
     },
     format = {
-      start_space = true,
+      start = 'space',
     }
   })
   self.cursors[self.current_eval][ViewBlock.QED] = cursors
 end
 
 local function merge_cursors(c1, c2)
+  if not c1 or not c2 then
+    return c1 or c2
+  end
   if c1[2][1] == c2[1][1] then
     return { { c1[1][1], c1[1][2] }, { c2[2][1], c2[2][2] } }
   end
@@ -184,26 +207,22 @@ local function merge_cursors(c1, c2)
 end
 
 ---@param suggestions? Suggestions
-function M:on_suggestions(suggestions)
+function M:on_suggestions(suggestions, start)
   if not suggestions then
     return
   end
   if not self.has_suggestions[self.current_eval] then
     self.has_suggestions[self.current_eval] = true
-    local cursors = self:commit({
-      lines = suggestions,
-      format = {
-        start_space = true,
-      }
-    })
-    self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = cursors
-  else
-    local cursors = self:commit({
-      lines = suggestions,
-    })
-    self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = merge_cursors(
-      self.cursors[self.current_eval][ViewBlock.OUT_CONTENT], cursors)
+    start = 'space'
   end
+  local cursors = self:commit({
+    lines = suggestions,
+    format = {
+      start = start,
+    }
+  })
+  self.cursors[self.current_eval][ViewBlock.OUT_CONTENT] = merge_cursors(
+    self.cursors[self.current_eval][ViewBlock.OUT_CONTENT], cursors)
 end
 
 function M:on_status(msg)
@@ -217,7 +236,7 @@ function M:on_status(msg)
       '```',
     },
     format = {
-      start_space = true,
+      start = 'space',
     }
   })
 end

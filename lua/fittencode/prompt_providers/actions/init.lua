@@ -83,7 +83,7 @@ local MAP_ACTION_PROMPTS = {
   end,
   OptimizeCode = 'Optimize the code above to make it faster and more efficient',
   RefactorCode = 'Refactor the code above',
-  IdentifyProgrammingLanguage = 'Identify the language used in the code above and Give the name in short',
+  IdentifyProgrammingLanguage = 'Identify the language used in the code above, Give the language only',
   AnalyzeData = 'Analyze the data above and Give the pattern of the data',
   TranslateText = function(ctx)
     assert(ctx.action)
@@ -92,6 +92,12 @@ local MAP_ACTION_PROMPTS = {
   end,
   SummarizeText = 'Summarize the text above and then represent the outline in a multi-level sequence',
   GenerateCode = 'Generate code based on the text above, Fenced code block languages'
+}
+
+local MAP_ACTION_PERFIX = {
+  ExplainCode = require('fittencode.prompt_providers.actions.explain_code').make_prefix,
+  StartChat = require('fittencode.prompt_providers.actions.start_chat').make_prefix,
+  IdentifyProgrammingLanguage = require('fittencode.prompt_providers.actions.identify_programming_language').make_prefix,
 }
 
 local function make_language(ctx)
@@ -193,6 +199,9 @@ function M:execute(ctx)
     filename = Path.name(ctx.buffer, no_lang)
     display_filename = Path.name(ctx.buffer, false)
   end
+  if name == 'StartChat' then
+    filename = 'ask.md'
+  end
   local within_the_line = false
   local content = ''
 
@@ -202,8 +211,12 @@ function M:execute(ctx)
   else
     local language = make_language(ctx)
     content = make_content_with_prefix_suffix(ctx, language, no_lang)
-    local prompt = make_prompt(ctx, name, language, no_lang)
-    prefix = make_prefix(content, prompt, source_type, instruction_type)
+    if MAP_ACTION_PERFIX[name] then
+      prefix = MAP_ACTION_PERFIX[name](content)
+    else
+      local prompt = make_prompt(ctx, name, language, no_lang)
+      prefix = make_prefix(content, prompt, source_type, instruction_type)
+    end
   end
   local suffix = ''
 
