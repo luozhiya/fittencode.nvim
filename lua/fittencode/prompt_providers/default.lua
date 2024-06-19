@@ -34,7 +34,7 @@ end
 ---@param ctx PromptContextDefault
 ---@return Prompt?
 function M:execute(ctx)
-  if not api.nvim_buf_is_valid(ctx.buffer) or ctx.row == nil or ctx.col == nil then
+  if not ctx.buffer or not api.nvim_buf_is_valid(ctx.buffer) or ctx.row == nil or ctx.col == nil then
     return
   end
 
