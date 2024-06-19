@@ -446,7 +446,7 @@ local function chain_actions(opts)
         content:on_suggestions({
           '',
           '',
-        }, 'compress')
+        })
       end
       new_presug = presug and vim.deepcopy(presug) or {}
       new_solved_prefix = prompt.prefix .. '\n'
