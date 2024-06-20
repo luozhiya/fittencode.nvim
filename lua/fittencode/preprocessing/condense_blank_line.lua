@@ -64,16 +64,19 @@ local function condense(remove_all, range, prefix, lines)
   end
   local condensed = {}
   local is_processed = false
+  local count = 1
   for i, line in ipairs(lines) do
-    if #line == 0 and (range == 'all' or (range == 'first' and not is_processed)) then
+    if #line == 0 and (range == 'all' or (range == 'first' and not is_processed) or range == 'paragraph') then
       if remove_all then
         -- ignore
-      elseif i ~= 1 then
+      elseif i ~= 1 and (range ~= 'paragraph' or (range == 'paragraph' and count ~= 1)) then
         -- ignore
       else
         table.insert(condensed, line)
       end
+      count = count + 1
     else
+      count = 1
       is_processed = true
       table.insert(condensed, line)
     end
