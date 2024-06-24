@@ -41,6 +41,17 @@ local M = {}
 
 ---@class FittenCodeChatOptions
 ---@field highlight_conversation_at_cursor boolean
+---@field style 'sidebar' | 'floating'
+---@field sidebar FittenCodeChatSidebarOptions
+---@field floating FittenCodeChatFloatingOptions
+
+---@class FittenCodeChatSidebarOptions
+---@field width integer
+---@field position 'left' | 'right'
+
+---@class FittenCodeChatFloatingOptions
+---@field border 'rounded' | 'none'
+---@field size table<string, number>
 
 ---@class FittenCodeSourceCompletionOptions
 ---@field enable boolean
@@ -143,8 +154,31 @@ local defaults = {
   chat = {
     -- Highlight the conversation in the chat window at the current cursor position.
     highlight_conversation_at_cursor = false,
+    -- Style
+    -- Available options:
+    -- * `sidebar` (Siderbar style, also default)
+    -- * `floating` (Floating style)
+    style = 'floating',
+    sidebar = {
+      -- Width of the sidebar in characters.
+      width = 42,
+      -- Position of the sidebar.
+      -- Available options:
+      -- * `left`
+      -- * `right`
+      position = 'left',
+    },
+    floating = {
+      -- Border style of the floating window.
+      -- Same border values as `nvim_open_win`.
+      border = 'rounded',
+      -- Size of the floating window.
+      -- <= 1: percentage of the screen size
+      -- >  1: number of lines/columns
+      size = { width = 0.8, height = 0.8 },
+    }
   },
-  -- Enable/Disable the default keymaps in inline completion.
+  -- Enable/Disable the default keymaps.
   use_default_keymaps = true,
   -- Default keymaps
   keymaps = {

@@ -100,6 +100,14 @@ local function set_option_value_win(window)
   api.nvim_set_option_value('number', false, { win = window })
   api.nvim_set_option_value('relativenumber', false, { win = window })
   api.nvim_set_option_value('conceallevel', 3, { win = window })
+  api.nvim_set_option_value('foldenable', false, { win = window })
+  api.nvim_set_option_value('colorcolumn', '', { win = window })
+  api.nvim_set_option_value('foldcolumn', '0', { win = window })
+  api.nvim_set_option_value('winfixwidth', true, { win = window })
+  api.nvim_set_option_value('list', false, { win = window })
+  if Config.options.chat.style == 'floating' then
+    api.nvim_set_option_value('signcolumn', 'no', { win = window })
+  end
   -- api.nvim_set_option_value('scrolloff', 8, { win = window })
 end
 
@@ -160,7 +168,46 @@ function M:create(opts)
   set_option_value_buf(self.buffer)
 end
 
-function M:show()
+local function _relsize(base, ratio)
+  if ratio <= 0 then
+    return base
+  elseif ratio > 1 then
+    return math.min(base, ratio)
+  end
+  return math.floor(base * ratio)
+end
+
+local function calculate_rect()
+  local width = _relsize(vim.o.columns, Config.options.chat.floating.size[1] or 0.8)
+  local height = _relsize(vim.o.lines, Config.options.chat.floating.size[2] or 0.8)
+  local row = math.floor((vim.o.lines - height) / 2)
+  local col = math.floor((vim.o.columns - width) / 2)
+  return { row = row, col = col, width = width, height = height }
+end
+
+local function set_autocmds_win(window)
+  api.nvim_create_autocmd('VimResized', {
+    callback = function()
+      if not (window and vim.api.nvim_win_is_valid(window)) then
+        return true
+      end
+      if Config.options.chat.style ~= 'floating' then
+        return true
+      end
+      local rect = calculate_rect()
+      vim.api.nvim_win_set_config(window, {
+        relative = 'editor',
+        row = rect.row,
+        col = rect.col,
+        width = rect.width,
+        height = rect.height,
+      })
+      set_option_value_win(window)
+    end,
+  })
+end
+
+function M:show(parent)
   if not self.buffer or not api.nvim_buf_is_valid(self.buffer) then
     return
   end
@@ -172,11 +219,37 @@ function M:show()
     self.window = nil
   end
 
-  vim.cmd('topleft vsplit')
-  self.window = api.nvim_get_current_win()
-  vim.api.nvim_win_set_width(self.window, 42)
-  api.nvim_win_set_buf(self.window, self.buffer)
+  if Config.options.chat.style == 'sidebar' then
+    if Config.options.chat.sidebar.position == 'left' then
+      vim.cmd('topleft vsplit')
+    elseif Config.options.chat.sidebar.position == 'right' then
+      vim.cmd('vertical botright vsplit')
+    else
+      return
+    end
+    self.window = api.nvim_get_current_win()
+    fn.win_gotoid(parent)
+    local width = math.max(30, Config.options.chat.sidebar.width or 42)
+    vim.api.nvim_win_set_width(self.window, width)
+    api.nvim_win_set_buf(self.window, self.buffer)
+  elseif Config.options.chat.style == 'floating' then
+    local rect = calculate_rect()
+    self.window = api.nvim_open_win(self.buffer, true, {
+      relative = 'editor',
+      row = rect.row,
+      col = rect.col,
+      width = rect.width,
+      height = rect.height,
+      border = Config.options.chat.floating.border or 'rounded',
+      -- noautocmd = true,
+      title = 'FittenCode Chat',
+      title_pos = 'center'
+    })
+  else
+    return
+  end
   set_option_value_win(self.window)
+  set_autocmds_win(self.window)
 
   if self.last_cursor then
     api.nvim_win_set_cursor(self.window, { self.last_cursor[1] + 1, self.last_cursor[2] })
