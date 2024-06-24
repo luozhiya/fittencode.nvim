@@ -145,6 +145,33 @@ use {
     -- Maximum number of characters to prompt for completion/chat.
     max_characters = 1000000,
   },
+  chat = {
+    -- Highlight the conversation in the chat window at the current cursor position.
+    highlight_conversation_at_cursor = false,
+    -- Style
+    -- Available options:
+    -- * `sidebar` (Siderbar style, also default)
+    -- * `floating` (Floating style)
+    style = 'sidebar',
+    sidebar = {
+      -- Width of the sidebar in characters.
+      width = 42,
+      -- Position of the sidebar.
+      -- Available options:
+      -- * `left`
+      -- * `right`
+      position = 'left',
+    },
+    floating = {
+      -- Border style of the floating window.
+      -- Same border values as `nvim_open_win`.
+      border = 'rounded',
+      -- Size of the floating window.
+      -- <= 1: percentage of the screen size
+      -- >  1: number of lines/columns
+      size = { width = 0.8, height = 0.8 },
+    }
+  },
   -- Enable/Disable the default keymaps in inline completion.
   use_default_keymaps = true,
   -- Default keymaps

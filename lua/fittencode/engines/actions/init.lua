@@ -557,8 +557,7 @@ function ActionsEngine.start_action(action, opts)
   lock = true
 
   if not opts.silence then
-    chat:show()
-    fn.win_gotoid(window)
+    chat:show(window)
   end
 
   if not _start_action_wrap(window, buffer, action, action_name, false, opts) then
