@@ -1,4 +1,4 @@
-*fittencode.nvim.txt*       For Neovim >= 0.8.0      Last change: 2024 June 24
+*fittencode.nvim.txt*       For Neovim >= 0.8.0      Last change: 2024 June 25
 
 ==============================================================================
 Table of Contents                          *fittencode.nvim-table-of-contents*
@@ -221,24 +221,11 @@ DEFAULTS ~
       source_completion = {
         -- Enable source completion.
         enable = true,
-	-- trigger characters for source completion.
-    	-- Available options:
-    	-- * A  list of characters like {'a', 'b', 'c', ...}
-    	-- * A function that returns a list of characters like `function() return {'a', 'b', 'c', ...}`
-    	trigger_chars = function()
-	  local chars = {}
-  	  if #chars == 0 then
-  	    for i = 32, 126 do
-  	      chars[#chars + 1] = string.char(i)
-  	    end
-  	    chars[#chars + 1] = ' '
-  	    chars[#chars + 1] = '\n'
-  	    chars[#chars + 1] = '\r'
-  	    chars[#chars + 1] = '\r\n'
-  	    chars[#chars + 1] = '\t'
-  	  end
-  	  return chars
-	end,
+        -- trigger characters for source completion.
+        -- Available options:
+        -- * A  list of characters like {'a', 'b', 'c', ...}
+        -- * A function that returns a list of characters like `function() return {'a', 'b', 'c', ...}`
+        trigger_chars = {},
       },
       -- Set the mode of the completion.
       -- Available options:
@@ -289,16 +276,16 @@ USAGE                                  *fittencode.nvim-fittencode.nvim-usage*
 
 ACCOUNT COMMANDS ~
 
-  -------------------------------------------------------------------------
+  --------------------------------------------------------------------------
   Command           Description
-  ----------------- -------------------------------------------------------
-  Fitten register   If you haven’t registered yet, please run the command
-                    to register.
+  ----------------- --------------------------------------------------------
+  Fitten register   If you haven’t registered yet, please run the command to
+                    register.
 
   Fitten login      Try the command Fitten login to login.
 
   Fitten logout     Logout account
-  -------------------------------------------------------------------------
+  --------------------------------------------------------------------------
 
 COMPLETIONS COMMANDS ~
 
@@ -314,9 +301,9 @@ COMPLETIONS COMMANDS ~
 
 ACTIONS COMMANDS ~
 
-  ---------------------------------------------------------------------------------
+  --------------------------------------------------------------------------------
   Command                                                 Description
-  ------------------------------------------------------- -------------------------
+  ------------------------------------------------------- ------------------------
   Fitten document_code                                    Document code
 
   Fitten edit_code                                        Edit code
@@ -351,7 +338,7 @@ ACTIONS COMMANDS ~
   Fitten show_chat                                        Show chat window
 
   Fitten toggle_chat                                      Toggle chat window
-  ---------------------------------------------------------------------------------
+  --------------------------------------------------------------------------------
 
 COMPLETIONS MAPPINGS ~
 
@@ -398,27 +385,27 @@ PARAMETERS/RETURN TYPES ~
         OFF = 5,
       },
     }
-
+    
     ---@class ActionOptions
     ---@field prompt? string
     ---@field content? string
     ---@field language? string
-
+    
     ---@class GenerateUnitTestOptions : ActionOptions
     ---@field test_framework string
-
+    
     ---@class ImplementFeaturesOptions : ActionOptions
     ---@field feature_type string
-
+    
     ---@class TranslateTextOptions : ActionOptions
     ---@field target_language string
-
+    
     ---@class EnableCompletionsOptions
     ---@field enable? boolean
     ---@field mode? 'inline' | 'source'
     ---@field global? boolean
     ---@field suffixes? string[]
-
+    
     ---@type StatusCodes
     local StatusCodes = {
       DISABLED = 1,
