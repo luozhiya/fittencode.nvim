@@ -40,6 +40,9 @@ M.api = {
   has_suggestions = function()
     return InlineEngine.has_suggestions()
   end,
+  dismiss_suggestions = function()
+    InlineEngine.dismiss()
+  end,
   accept_all_suggestions = function()
     InlineEngine.accept_all_suggestions()
   end,
