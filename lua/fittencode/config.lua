@@ -56,6 +56,7 @@ local M = {}
 ---@class FittenCodeSourceCompletionOptions
 ---@field enable boolean
 ---@field engine 'cmp' | 'coc' | 'ycm' | 'omni'
+---@field trigger_chars string[]
 
 ---@class FittenCodeRestOptions
 ---@field backend 'curl' | 'libcurl' | 'libuv'
@@ -211,6 +212,7 @@ local defaults = {
     -- * 'ycm' > https://github.com/ycm-core/YouCompleteMe
     -- * 'omni' > Neovim builtin ommifunc
     engine = 'cmp',
+    trigger_chars = {},
   },
   -- Set the mode of the completion.
   -- Available options:
