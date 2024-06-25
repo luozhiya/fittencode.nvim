@@ -198,6 +198,11 @@ use {
   source_completion = {
     -- Enable source completion.
     enable = true,
+    -- trigger characters for source completion.
+    -- Available options:
+    -- * A  list of characters like {'a', 'b', 'c', ...}
+    -- * A function that returns a list of characters like `function() return {'a', 'b', 'c', ...}`
+    trigger_chars = {},
   },
   -- Set the mode of the completion.
   -- Available options:
@@ -238,13 +243,14 @@ require('cmp').setup({
 ```
 
 ## 🚀 Usage
+
 - Optional parameters are enclosed in square brackets `[]`.
 - Essential parameters are enclosed in `<>`
 
 ### Account Commands
 
 | Command           | Description                                                        |
-|-------------------|--------------------------------------------------------------------|
+| ----------------- | ------------------------------------------------------------------ |
 | `Fitten register` | If you haven't registered yet, please run the command to register. |
 | `Fitten login`    | Try the command `Fitten login` to login.                           |
 | `Fitten logout`   | Logout account                                                     |
@@ -252,14 +258,14 @@ require('cmp').setup({
 ### Completions Commands
 
 | Command                                  | Description                           |
-|------------------------------------------|---------------------------------------|
+| ---------------------------------------- | ------------------------------------- |
 | `Fitten enable_completions [filetypes]`  | Enable global/filetypes completions.  |
 | `Fitten disable_completions [filetypes]` | Disable global/filetypes completions. |
 
 ### Actions Commands
 
 | Command                                                 | Description                   |
-|---------------------------------------------------------|-------------------------------|
+| ------------------------------------------------------- | ----------------------------- |
 | `Fitten document_code`                                  | Document code                 |
 | `Fitten edit_code`                                      | Edit code                     |
 | `Fitten explain_code`                                   | Explain code                  |
@@ -279,18 +285,19 @@ require('cmp').setup({
 
 ### Completions Mappings
 
-| Mappings    | Action                         |
-|-------------|--------------------------------|
-| `Tab`       | Accept all suggestions         |
+| Mappings   | Action                         |
+| ---------- | ------------------------------ |
+| `Tab`      | Accept all suggestions         |
 | `Ctrl + 🡫` | Accept line                    |
 | `Ctrl + 🡪` | Accept word                    |
 | `Ctrl + 🡩` | Revoke line                    |
 | `Ctrl + 🡨` | Revoke word                    |
-| `Alt + \`   | Manually triggering completion |
+| `Alt + \`  | Manually triggering completion |
 
 ### Chat Mappings
+
 | Mappings | Action                      |
-|----------|-----------------------------|
+| -------- | --------------------------- |
 | `q`      | Close chat                  |
 | `[c`     | Go to previous conversation |
 | `]c`     | Go to next conversation     |
@@ -354,7 +361,7 @@ local StatusCodes = {
 ### List of APIs
 
 | API Prototype                                       | Description                                                    |
-|-----------------------------------------------------|----------------------------------------------------------------|
+| --------------------------------------------------- | -------------------------------------------------------------- |
 | `login(username, password)`                         | Login to Fitten Code AI                                        |
 | `logout()`                                          | Logout from Fitten Code AI                                     |
 | `register()`                                        | Register to Fitten Code AI                                     |

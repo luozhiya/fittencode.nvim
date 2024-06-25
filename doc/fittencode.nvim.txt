@@ -221,6 +221,24 @@ DEFAULTS ~
       source_completion = {
         -- Enable source completion.
         enable = true,
+	-- trigger characters for source completion.
+    	-- Available options:
+    	-- * A  list of characters like {'a', 'b', 'c', ...}
+    	-- * A function that returns a list of characters like `function() return {'a', 'b', 'c', ...}`
+    	trigger_chars = function()
+	  local chars = {}
+  	  if #chars == 0 then
+  	    for i = 32, 126 do
+  	      chars[#chars + 1] = string.char(i)
+  	    end
+  	    chars[#chars + 1] = ' '
+  	    chars[#chars + 1] = '\n'
+  	    chars[#chars + 1] = '\r'
+  	    chars[#chars + 1] = '\r\n'
+  	    chars[#chars + 1] = '\t'
+  	  end
+  	  return chars
+	end,
       },
       -- Set the mode of the completion.
       -- Available options:
@@ -380,27 +398,27 @@ PARAMETERS/RETURN TYPES ~
         OFF = 5,
       },
     }
-    
+
     ---@class ActionOptions
     ---@field prompt? string
     ---@field content? string
     ---@field language? string
-    
+
     ---@class GenerateUnitTestOptions : ActionOptions
     ---@field test_framework string
-    
+
     ---@class ImplementFeaturesOptions : ActionOptions
     ---@field feature_type string
-    
+
     ---@class TranslateTextOptions : ActionOptions
     ---@field target_language string
-    
+
     ---@class EnableCompletionsOptions
     ---@field enable? boolean
     ---@field mode? 'inline' | 'source'
     ---@field global? boolean
     ---@field suffixes? string[]
-    
+
     ---@type StatusCodes
     local StatusCodes = {
       DISABLED = 1,

@@ -1,4 +1,5 @@
 local Base = require('fittencode.base')
+local Config = require('fittencode.config')
 local Engine = require('fittencode.engines.inline')
 local Log = require('fittencode.log')
 local Sources = require('fittencode.sources')
@@ -9,15 +10,23 @@ local source = {}
 
 ---@return string[]
 local function get_trigger_characters()
-  local chars = {}
-  for i = 32, 126 do
-    chars[#chars + 1] = string.char(i)
+  local chars = nil
+  if type(Config.options.source_completion.trigger_chars) == 'function' then
+    chars = Config.options.source_completion.trigger_chars()
+  else
+    chars = Config.options.source_completion.trigger_chars
   end
-  chars[#chars + 1] = ' '
-  chars[#chars + 1] = '\n'
-  chars[#chars + 1] = '\r'
-  chars[#chars + 1] = '\r\n'
-  chars[#chars + 1] = '\t'
+
+  if #chars == 0 then
+    for i = 32, 126 do
+      chars[#chars + 1] = string.char(i)
+    end
+    chars[#chars + 1] = ' '
+    chars[#chars + 1] = '\n'
+    chars[#chars + 1] = '\r'
+    chars[#chars + 1] = '\r\n'
+    chars[#chars + 1] = '\t'
+  end
   return chars
 end
 
