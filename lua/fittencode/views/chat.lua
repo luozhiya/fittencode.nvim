@@ -168,6 +168,10 @@ function M:create(opts)
   set_option_value_buf(self.buffer)
 end
 
+function M:is_created()
+  return self.buffer and api.nvim_buf_is_valid(self.buffer)
+end
+
 local function _relsize(base, ratio)
   if ratio <= 0 then
     return base
