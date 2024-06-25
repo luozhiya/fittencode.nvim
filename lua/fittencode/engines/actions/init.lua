@@ -556,6 +556,10 @@ function ActionsEngine.start_action(action, opts)
   end
   lock = true
 
+  if not chat:is_created() then
+    chat:create()
+  end
+
   if not opts.silence then
     chat:show(window)
   end
@@ -790,7 +794,6 @@ local CHAT_MODEL = {
 
 function ActionsEngine.setup()
   chat = Chat:new(CHAT_MODEL)
-  chat:create()
   content = Content:new(chat)
   tasks[TASK_DEFAULT] = TaskScheduler:new('ActionsEngine/Default')
   tasks[TASK_DEFAULT]:setup()
