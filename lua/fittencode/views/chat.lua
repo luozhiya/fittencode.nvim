@@ -372,7 +372,10 @@ function M:delete_conversation()
 end
 
 function M:delete_all_conversations()
-  _call_model(self, 'delete_conversations', 'all')
+  local range = _call_model(self, 'delete_conversations', 'all')
+  if not range then
+    return
+  end
   _modify_buffer(self.buffer, function()
     api.nvim_buf_set_lines(self.buffer, 0, -1, false, {})
   end)

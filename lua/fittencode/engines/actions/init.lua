@@ -779,15 +779,27 @@ end
 
 local CHAT_MODEL = {
   get_conversations_range = function(direction, row, col)
+    if lock then
+      return
+    end
     return content:get_conversations_range(direction, row, col)
   end,
   get_conversations = function(range, row, col)
+    if lock then
+      return
+    end
     return content:get_conversations(range, row, col)
   end,
   delete_conversations = function(range, row, col)
+    if lock then
+      return
+    end
     return content:delete_conversations(range, row, col)
   end,
   set_last_lines = function(lines)
+    if lock then
+      return
+    end
     return content:set_last_lines(lines)
   end,
 }

@@ -307,6 +307,7 @@ function M:delete_conversations(range, row, col)
     self.has_suggestions = {}
     self.cursors = {}
     self.last_lines = nil
+    return {}
   elseif range == 'current' then
     local base = self:get_conversation_index(row, col)
     if not base then

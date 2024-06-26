@@ -159,7 +159,7 @@ local defaults = {
     -- Available options:
     -- * `sidebar` (Siderbar style, also default)
     -- * `floating` (Floating style)
-    style = 'floating',
+    style = 'sidebar',
     sidebar = {
       -- Width of the sidebar in characters.
       width = 42,
