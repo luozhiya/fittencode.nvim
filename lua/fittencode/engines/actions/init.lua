@@ -766,6 +766,9 @@ function ActionsEngine.get_status()
 end
 
 function ActionsEngine.show_chat()
+  if not chat:is_created() then
+    chat:create()
+  end
   chat:show()
 end
 
@@ -773,7 +776,7 @@ function ActionsEngine.toggle_chat()
   if chat:is_visible() then
     chat:close()
   else
-    chat:show()
+    ActionsEngine.show_chat()
   end
 end
 
