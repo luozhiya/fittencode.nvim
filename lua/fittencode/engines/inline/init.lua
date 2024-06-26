@@ -36,12 +36,22 @@ local extmark_ids = { {}, {} }
 local generate_one_stage_timer = nil
 
 local ignore_event = false
+local ignore_cursor = nil
 
 -- milliseconds
 local CURSORMOVED_INTERVAL = 120
 
 ---@type uv_timer_t?
 local cursormoved_timer = nil
+
+local function testandclear_cursor_ignored(row, col)
+  local c = ignore_cursor
+  ignore_cursor = nil
+  if c and c[1] == row and c[2] == col then
+    return true
+  end
+  return false
+end
 
 local function inline_suggestions_ready()
   return M.is_inline_enabled() and M.has_suggestions()
@@ -279,6 +289,7 @@ function M.triggering_completion()
   end, function()
     fx()
   end)
+  ignore_cursor = { Base.get_cursor() }
 end
 
 ---@param fx? function
@@ -510,6 +521,8 @@ end
 
 function M.on_leave()
   M.reset()
+  ignore_event = false
+  ignore_cursor = nil
 end
 
 -- '<80>kd', '<80>kD' in Lua
@@ -556,6 +569,9 @@ function M.on_cursor_hold()
   end
   local row, col = Base.get_cursor()
   if not row or not col then
+    return
+  end
+  if testandclear_cursor_ignored(row, col) then
     return
   end
   M.generate_one_stage(row, col)
@@ -665,6 +681,11 @@ local function setup_autocmds()
     end,
     desc = 'On FileType/BufEnter'
   })
+end
+
+function M.dismiss()
+  M.reset()
+  ignore_cursor = { Base.get_cursor() }
 end
 
 function M.setup()

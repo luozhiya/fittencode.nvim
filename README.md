@@ -368,7 +368,8 @@ local StatusCodes = {
 | `set_log_level(level)`                              | Set the log level                                              |
 | `get_current_status()`                              | Get the `StatusCodes` of the `InlineEngine` and `ActionEngine` |
 | `triggering_completion()`                           | Manually triggering completion                                 |
-| `has_suggestions()`                                 | Check if there is a suggestion                                 |
+| `has_suggestions()`                                 | Check if there are suggestions                                 |
+| `dismiss_suggestions()`                             | Dismiss suggestions                                            |
 | `accept_all_suggestions()`                          | Accept all suggestions                                         |
 | `accept_line()`                                     | Accept line                                                    |
 | `accept_word()`                                     | Accept word                                                    |
