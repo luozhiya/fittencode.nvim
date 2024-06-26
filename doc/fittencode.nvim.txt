@@ -1,4 +1,4 @@
-*fittencode.nvim.txt*       For Neovim >= 0.8.0      Last change: 2024 June 25
+*fittencode.nvim.txt*       For Neovim >= 0.8.0      Last change: 2024 June 26
 
 ==============================================================================
 Table of Contents                          *fittencode.nvim-table-of-contents*
@@ -436,7 +436,9 @@ LIST OF APIS ~
 
   triggering_completion()                             Manually triggering completion
 
-  has_suggestions()                                   Check if there is a suggestion
+  has_suggestions()                                   Check if there are suggestions
+
+  dismiss_suggestions()                               Dismiss suggestions
 
   accept_all_suggestions()                            Accept all suggestions
 
