@@ -187,6 +187,7 @@ local function _generate_one_stage(row, col, on_success, on_error)
   local ctx = PromptProviders.get_current_prompt_ctx(row, col)
   Sessions.request_generate_one_stage(task_id, ctx, function(id, _, suggestions)
     local lines = preprocessing(ctx, id, suggestions)
+    Log.debug('InlineEngine<{}> Preprocessed: {}', string.format('%x', id), lines)
     if lines and #lines > 0 then
       status:update(SC.SUGGESTIONS_READY)
       apply_new_suggestions(task_id, row, col, lines)
@@ -209,14 +210,16 @@ end
 ---@param on_success? function
 ---@param on_error? function
 function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
+  Log.debug('Start generating one stage')
+
   if not force and model:cache_hit(row, col) and M.has_suggestions() then
     status:update(SC.SUGGESTIONS_READY)
     render_virt_text_segments(model:get_suggestions_segments())
     schedule(on_success, model:make_new_trim_commmited_suggestions())
-    -- Log.debug('Cache hit')
+    Log.debug('CACHE HIT')
     return
   else
-    -- Log.debug('Cache miss')
+    Log.debug('CACHE MISS')
   end
 
   if inline_suggestions_ready() then
@@ -374,7 +377,12 @@ local function _accept_impl(range, direction, mode)
     if mode == 'stage' then
       set_text_event_filter(segments.stage)
     end
-    M.reset()
+    M:reset()
+    if Config.options.inline_completion.auto_triggering_completion then
+      -- generate_one_stage_current_force()
+    else
+      ignore_cursor = { Base.get_cursor() }
+    end
   else
     render_virt_text_segments(segments)
   end

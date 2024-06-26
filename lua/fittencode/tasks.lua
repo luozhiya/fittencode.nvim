@@ -52,9 +52,9 @@ function TaskScheduler:create(row, col)
   local timestamp = uv.hrtime()
   table.insert(self.list, #self.list + 1, { row = row, col = col, timestamp = timestamp })
   if row and col then
-    -- Log.debug('Task<{}>: {} Created at ({}, {})', self.tag, string.format('%x', timestamp), row, col)
+    Log.debug('Task<{}>: {} Created at ({}, {})', self.tag, string.format('%x', timestamp), row, col)
   else
-    -- Log.debug('Task<{}>: {} Created', self.tag, string.format('%x', timestamp))
+    Log.debug('Task<{}>: {} Created', self.tag, string.format('%x', timestamp))
   end
   return timestamp
 end
@@ -79,7 +79,7 @@ function TaskScheduler:match_clean(task_id, row, col, clean)
     local task = self.list[i]
     if task.timestamp == task_id and task.row == row and task.col == col then
       ms = math.floor((uv.hrtime() - task.timestamp) / MS_TO_NS)
-      -- Log.debug('Task<{}>: {} Matched, Time elapsed: {} ms', self.tag, string.format('%x', task_id), ms)
+      Log.debug('Task<{}>: {} Matched, Time elapsed: {} ms', self.tag, string.format('%x', task_id), ms)
       match_found = true
       break
     end

@@ -413,10 +413,9 @@ local function chain_actions(opts)
   end
   Promise:new(function(resolve, reject)
     local task_id = _create_task(headless)
-    Sessions.request_generate_one_stage(task_id, prompt_ctx, function(_, prompt, suggestions)
-      Log.debug('Generated Suggestions: {}', suggestions)
-      local lines, ms = preprocessing(presug, task_id, headless, preprocess_format, suggestions)
-      Log.debug('Preprocessed Lines: {}', lines)
+    Sessions.request_generate_one_stage(task_id, prompt_ctx, function(id, prompt, suggestions)
+      local lines, ms = preprocessing(presug, id, headless, preprocess_format, suggestions)
+      Log.debug('ActionsEngine<{}> Preprocessed: {}, Generated: {}', string.format('%x', id), lines, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
         if extra_newline then
