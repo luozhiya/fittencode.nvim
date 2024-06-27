@@ -48,6 +48,7 @@ local M = {}
 ---@class FittenCodeChatSidebarOptions
 ---@field width integer
 ---@field position 'left' | 'right'
+---@field focus boolean
 
 ---@class FittenCodeChatFloatingOptions
 ---@field border 'rounded' | 'none'
@@ -168,6 +169,8 @@ local defaults = {
       -- * `left`
       -- * `right`
       position = 'left',
+      -- Focus the chat window when there is a new action is performed.
+      focus = false,
     },
     floating = {
       -- Border style of the floating window.

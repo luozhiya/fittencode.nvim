@@ -511,6 +511,10 @@ local function _start_action_wrap(window, buffer, action, action_name, headless,
     end
   end
 
+  if not opts.silence then
+    chat:try_focus()
+  end
+
   chain_actions({
     start = true,
     prompt_ctx = prompt_ctx,
@@ -546,6 +550,7 @@ function ActionsEngine.start_action(action, opts)
 
   local headless = opts.headless == true
   if headless then
+    opts.silence = true
     _start_action_wrap(window, buffer, action, action_name, true, opts)
     return
   end
@@ -768,7 +773,8 @@ function ActionsEngine.show_chat()
   if not chat:is_created() then
     chat:create()
   end
-  chat:show()
+  chat:show(api.nvim_get_current_win())
+  chat:try_focus()
 end
 
 function ActionsEngine.toggle_chat()

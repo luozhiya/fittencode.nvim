@@ -187,7 +187,7 @@ local function _generate_one_stage(row, col, on_success, on_error)
   local ctx = PromptProviders.get_current_prompt_ctx(row, col)
   Sessions.request_generate_one_stage(task_id, ctx, function(id, _, suggestions)
     local lines = preprocessing(ctx, id, suggestions)
-    Log.debug('InlineEngine<{}> Preprocessed: {}', string.format('%x', id), lines)
+    Log.debug('InlineEngine<{}> Preprocessed: {}, Generated: {}', string.format('%x', id), lines, suggestions)
     if lines and #lines > 0 then
       status:update(SC.SUGGESTIONS_READY)
       apply_new_suggestions(task_id, row, col, lines)
