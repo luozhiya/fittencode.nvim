@@ -69,7 +69,7 @@ function M:update(status)
     -- Force `lualine` to update statusline
     -- vim.cmd('redrawstatus')
     _force_update_lualine()
-    Log.debug('{} -> {}', self.tag, name)
+    Log.debug(self.tag .. ' > ' .. name)
   end
   self.idle_timer = Base.debounce(self.idle_timer, function()
     if vim.tbl_contains(self.filters, self.current) then

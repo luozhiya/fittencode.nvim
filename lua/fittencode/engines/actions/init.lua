@@ -1,5 +1,6 @@
 local api = vim.api
 local fn = vim.fn
+local uv = vim.uv or vim.loop
 
 local Base = require('fittencode.base')
 local Chat = require('fittencode.views.chat')
@@ -12,7 +13,6 @@ local PromptProviders = require('fittencode.prompt_providers')
 local Sessions = require('fittencode.sessions')
 local Status = require('fittencode.status')
 local Preprocessing = require('fittencode.preprocessing')
-local TaskScheduler = require('fittencode.tasks')
 local Unicode = require('fittencode.unicode')
 
 local schedule = Base.schedule
@@ -62,11 +62,6 @@ local chat = nil
 ---@type ActionsContent
 local content = nil
 
-local TASK_DEFAULT = 1
-local TASK_HEADLESS = 2
----@type table<integer, TaskScheduler>
-local tasks = {}
-
 -- One by one evaluation
 local lock = false
 
@@ -110,22 +105,13 @@ local function get_action_type(action)
   return ACTION_TYPES[action]
 end
 
-local function _create_task(headless)
-  if headless then
-    return tasks[TASK_HEADLESS]:create()
-  else
-    return tasks[TASK_DEFAULT]:create()
-  end
-end
-
----@param task_id integer
+---@param timestamp integer
 ---@param suggestions Suggestions
 ---@return Suggestions?, integer?
-local function preprocessing(presug, task_id, headless, preprocess_format, suggestions)
-  local match = headless and tasks[TASK_HEADLESS]:match_clean(task_id, nil, nil, false) or
-      tasks[TASK_DEFAULT]:match_clean(task_id, nil, nil)
-  local ms = match[2]
-  if not match[1] or not suggestions or #suggestions == 0 then
+local function preprocessing(presug, timestamp, preprocess_format, suggestions)
+  local ms = math.floor((uv.hrtime() - timestamp) / 1000000)
+  Log.debug('A<{}> Received and time elapsed: {} ms', string.format('%x', timestamp), ms)
+  if not suggestions or #suggestions == 0 then
     return nil, ms
   end
   local opts = {
@@ -412,10 +398,11 @@ local function chain_actions(opts)
     }
   end
   Promise:new(function(resolve, reject)
-    local task_id = _create_task(headless)
-    Sessions.request_generate_one_stage(task_id, prompt_ctx, function(id, prompt, suggestions)
-      local lines, ms = preprocessing(presug, id, headless, preprocess_format, suggestions)
-      Log.debug('ActionsEngine<{}> Preprocessed: {}, Generated: {}', string.format('%x', id), lines, suggestions)
+    local last_timestamp = uv.hrtime()
+    Log.debug('A<{}> Send request', string.format('%x', last_timestamp))
+    Sessions.request_generate_one_stage(last_timestamp, prompt_ctx, function(timestamp, prompt, suggestions)
+      local lines, ms = preprocessing(presug, timestamp, preprocess_format, suggestions)
+      Log.debug('A<{}> Preprocessed: {}, Generated: {}', string.format('%x', timestamp), lines, suggestions)
       elapsed_time = elapsed_time + ms
       if not lines or #lines == 0 then
         if extra_newline then
@@ -815,12 +802,8 @@ local CHAT_MODEL = {
 function ActionsEngine.setup()
   chat = Chat:new(CHAT_MODEL)
   content = Content:new(chat)
-  tasks[TASK_DEFAULT] = TaskScheduler:new('ActionsEngine/Default')
-  tasks[TASK_DEFAULT]:setup()
-  tasks[TASK_HEADLESS] = TaskScheduler:new('ActionsEngine/Headless')
-  tasks[TASK_HEADLESS]:setup()
   status = Status:new({
-    tag = 'ActionsEngine',
+    tag = 'A',
     ready_idle = true,
   })
   setup_actions_menu()

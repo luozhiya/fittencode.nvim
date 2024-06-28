@@ -130,10 +130,10 @@ function M.ready_for_generate()
   return key_storage:get_key_by_name(current_username) ~= nil
 end
 
----@param task_id integer
+---@param timestamp integer
 ---@param on_success function|nil
 ---@param on_error function|nil
-function M.request_generate_one_stage(task_id, opts, on_success, on_error)
+function M.request_generate_one_stage(timestamp, opts, on_success, on_error)
   local api_key = key_storage:get_key_by_name(current_username)
   if api_key == nil then
     -- Log.debug('Key is not found')
@@ -147,7 +147,7 @@ function M.request_generate_one_stage(task_id, opts, on_success, on_error)
   end
 
   client:generate_one_stage(api_key, params, function(generated_text)
-    schedule(on_success, task_id, prompt, generate_suggestions(generated_text))
+    schedule(on_success, timestamp, prompt, generate_suggestions(generated_text))
   end, on_error)
 end
 
