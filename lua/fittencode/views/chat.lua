@@ -211,6 +211,15 @@ local function set_autocmds_win(window)
   })
 end
 
+function M:try_focus()
+  if self.window and api.nvim_win_is_valid(self.window) and Config.options.chat.sidebar.focus and Config.options.chat.style == 'sidebar' then
+    fn.win_gotoid(self.window)
+    if Base.vmode() then
+      api.nvim_win_call(self.window, function() api.nvim_feedkeys(api.nvim_replace_termcodes('<ESC>', true, true, true), 'nx', false) end)
+    end
+  end
+end
+
 function M:show(parent)
   if not self.buffer or not api.nvim_buf_is_valid(self.buffer) then
     return
