@@ -1,4 +1,5 @@
 local api = vim.api
+local uv = vim.uv or vim.loop
 
 local Base = require('fittencode.base')
 local Config = require('fittencode.config')
@@ -9,7 +10,6 @@ local Model = require('fittencode.engines.inline.model')
 local Sessions = require('fittencode.sessions')
 local Status = require('fittencode.status')
 local Preprocessing = require('fittencode.preprocessing')
-local TaskScheduler = require('fittencode.tasks')
 local PromptProviders = require('fittencode.prompt_providers')
 
 local schedule = Base.schedule
@@ -20,9 +20,6 @@ local M = {}
 
 ---@class InlineModel
 local model = nil
-
----@class TaskScheduler
-local tasks = nil
 
 ---@type Status
 local status = nil
@@ -43,6 +40,8 @@ local CURSORMOVED_INTERVAL = 120
 
 ---@type uv_timer_t?
 local cursormoved_timer = nil
+
+local last_timestamp = 0
 
 local function testandclear_cursor_ignored(row, col)
   local c = ignore_cursor
@@ -66,18 +65,16 @@ function M.update_disabled()
 end
 
 ---@param ctx PromptContext
----@param task_id integer
+---@param timestamp integer
 ---@param suggestions? Suggestions
 ---@return Suggestions?
-local function preprocessing(ctx, task_id, suggestions)
-  local row, col = Base.get_cursor(ctx.window)
-  if not row or not col then
+local function preprocessing(ctx, timestamp, suggestions)
+  if timestamp ~= last_timestamp then
+    Log.debug('I<{}> Received but outdated', string.format('%x', timestamp))
     return
   end
-  local match = tasks:match_clean(task_id, row, col)
-  if not match[1] then
-    return
-  end
+  local ms = math.floor((uv.hrtime() - timestamp) / 1000000)
+  Log.debug('I<{}> Received and time elapsed: {} ms', string.format('%x', timestamp), ms)
   if not suggestions or #suggestions == 0 then
     return
   end
@@ -183,14 +180,15 @@ end
 local function _generate_one_stage(row, col, on_success, on_error)
   status:update(SC.GENERATING)
 
-  local task_id = tasks:create(row, col)
+  last_timestamp = uv.hrtime()
   local ctx = PromptProviders.get_current_prompt_ctx(row, col)
-  Sessions.request_generate_one_stage(task_id, ctx, function(id, _, suggestions)
-    local lines = preprocessing(ctx, id, suggestions)
-    Log.debug('InlineEngine<{}> Preprocessed: {}, Generated: {}', string.format('%x', id), lines, suggestions)
+  Log.debug('I<{}> Send request at cursor: {}', string.format('%x', last_timestamp), { row, col })
+  Sessions.request_generate_one_stage(last_timestamp, ctx, function(timestamp, _, suggestions)
+    local lines = preprocessing(ctx, timestamp, suggestions)
     if lines and #lines > 0 then
+      Log.debug('I<{}> Preprocessed: {}, Generated: {}', string.format('%x', timestamp), lines, suggestions)
       status:update(SC.SUGGESTIONS_READY)
-      apply_new_suggestions(task_id, row, col, lines)
+      apply_new_suggestions(timestamp, row, col, lines)
       schedule(on_success, vim.deepcopy(lines))
     else
       status:update(SC.NO_MORE_SUGGESTIONS)
@@ -210,16 +208,16 @@ end
 ---@param on_success? function
 ---@param on_error? function
 function M.generate_one_stage(row, col, force, delaytime, on_success, on_error)
-  Log.debug('Start generating one stage')
+  -- Log.debug('Start generating one stage')
 
   if not force and model:cache_hit(row, col) and M.has_suggestions() then
     status:update(SC.SUGGESTIONS_READY)
     render_virt_text_segments(model:get_suggestions_segments())
     schedule(on_success, model:make_new_trim_commmited_suggestions())
-    Log.debug('CACHE HIT')
+    -- Log.debug('CACHE HIT')
     return
   else
-    Log.debug('CACHE MISS')
+    -- Log.debug('CACHE MISS')
   end
 
   if inline_suggestions_ready() then
@@ -422,7 +420,7 @@ function M.reset()
     clear_virt_text_all()
   end
   model:reset()
-  tasks:clear()
+  last_timestamp = 0
 end
 
 ---@return boolean
@@ -698,9 +696,7 @@ end
 
 function M.setup()
   model = Model:new()
-  tasks = TaskScheduler:new('InlineEngine')
-  tasks:setup()
-  status = Status:new({ tag = 'InlineEngine' })
+  status = Status:new({ tag = 'I' })
   setup_keymaps()
   setup_keyfilters()
   setup_autocmds()

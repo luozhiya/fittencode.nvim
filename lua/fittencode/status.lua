@@ -13,9 +13,7 @@ local Log = require('fittencode.log')
 ---@field get_current function
 local M = {}
 
----@alias StatusCodes table<string, integer>
-
----@type StatusCodes
+---@class StatusCodes
 local C = {
   DISABLED = 1,
   IDLE = 2,
@@ -25,7 +23,8 @@ local C = {
   SUGGESTIONS_READY = 6,
 }
 
-M.C = C
+---@type StatusCodes
+M.C = vim.deepcopy(C)
 
 function M:new(opts)
   local obj = {
@@ -70,7 +69,7 @@ function M:update(status)
     -- Force `lualine` to update statusline
     -- vim.cmd('redrawstatus')
     _force_update_lualine()
-    Log.debug('{} -> {}', self.tag, name)
+    Log.debug(self.tag .. ' > ' .. name)
   end
   self.idle_timer = Base.debounce(self.idle_timer, function()
     if vim.tbl_contains(self.filters, self.current) then

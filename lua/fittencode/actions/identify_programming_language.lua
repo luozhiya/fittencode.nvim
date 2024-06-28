@@ -4,6 +4,7 @@ local API = require('fittencode.api').api
 local Base = require('fittencode.base')
 local Config = require('fittencode.config')
 local Log = require('fittencode.log')
+local Status = require('fittencode.status')
 
 local M = {}
 
@@ -16,6 +17,10 @@ local IPL_DEBOUNCE_TIME = 1000
 local ipl_timer = nil
 
 local function _identify_current_buffer()
+  local inline = API.get_current_status()
+  if inline == Status.C.GENERATING then
+    return
+  end
   local buffer = api.nvim_get_current_buf()
   local name = api.nvim_buf_get_name(buffer)
   local ext = vim.fn.fnamemodify(name, ':e')
