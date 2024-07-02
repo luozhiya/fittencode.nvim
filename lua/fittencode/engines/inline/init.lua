@@ -612,7 +612,7 @@ function M.on_cursor_moved()
   end, CURSORMOVED_INTERVAL)
 end
 
-local KEYS = {
+local supported_keys = {
   accept_all_suggestions = { true },
   accept_char = { true },
   accept_word = { true },
@@ -625,21 +625,14 @@ local KEYS = {
 
 local function setup_keymaps()
   for key, value in pairs(Config.options.keymaps.inline) do
-    Base.map('i', key, function()
-      local v = KEYS[value]
-      if v == nil then
-        return
-      end
-      if v[1] then
-        if M.has_suggestions() then
-          M[value]()
-        else
-          Lines.feedkeys(key)
-        end
-      else
-        M[value]()
-      end
-    end)
+    local v = supported_keys[value]
+    if v then
+      Base.map('i', key, function()
+        return M.is_inline_enabled() and (not v[1] or (v[1] and M.has_suggestions()))
+            and '<cmd>lua require("fittencode.engines.inline").' .. value .. '()<cr>'
+            or key
+      end, { expr = true })
+    end
   end
 end
 

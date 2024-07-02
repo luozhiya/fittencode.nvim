@@ -36,9 +36,6 @@ local function make_engine(engine)
 end
 
 function M.setup()
-  if not Config.options.source_completion.enable then
-    return
-  end
   make_engine(Config.options.source_completion.engine)
 end
 
