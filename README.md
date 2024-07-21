@@ -242,6 +242,39 @@ require('cmp').setup({
 })
 ```
 
+### Highlighting & Icon
+FittenCode's cmp source now has a builtin highlight group CmpItemKindFittencode. To add an icon to FittenCode for lspkind, simply add FittenCode to your lspkind symbol map.
+
+``` lua
+-- lspkind.lua
+local lspkind = require("lspkind")
+lspkind.init({
+  symbol_map = {
+    FittenCode = "",
+  },
+})
+
+vim.api.nvim_set_hl(0, "CmpItemKindFittenCode", {fg ="#6CC644"})
+
+```
+Alternatively, you can add FittemCode to the lspkind symbol_map within the cmp format function.
+```lua
+-- cmp.lua
+cmp.setup {
+  ...
+  formatting = {
+    format = lspkind.cmp_format({
+      mode = "symbol",
+      max_width = 50,
+      symbol_map = { FittenCode = "" }
+    })
+  }
+  ...
+}
+```
+
+If you do not use lspkind, simply add the custom icon however you normally handle kind formatting and it will integrate as if it was any other normal lsp completion kind.
+
 ## 🚀 Usage
 
 - Optional parameters are enclosed in square brackets `[]`.

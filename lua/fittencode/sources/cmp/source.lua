@@ -87,6 +87,7 @@ local function convert_to_lsp_completion_response(line, character, cursor_before
     },
     insertTextMode = 1,
     cmp = {
+      kind_hl_group = 'CmpItemKindFittenCode',
       kind_text = 'FittenCode',
     },
   })
