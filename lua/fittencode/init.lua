@@ -18,7 +18,7 @@ function M.setup(opts)
   require('fittencode.engines').setup()
   require('fittencode.actions').setup()
   require('fittencode.prompt_providers').setup()
-  require('fittencode.color').setup_highlight()
+  require('fittencode.color').setup()
   require('fittencode.commands').setup()
   Sessions.load_last_session()
 end
