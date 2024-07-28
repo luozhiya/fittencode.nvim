@@ -60,32 +60,23 @@ end
 
 -- Use `get_word` so that the word is the same as in `core.confirm`
 -- https://github.com/hrsh7th/nvim-cmp/pull/1860
----@param suggestions string
+-- https://github.com/hrsh7th/nvim-cmp/pull/2002
+---@param suggestions string[]
 ---@return lsp.CompletionResponse?
 local function convert_to_lsp_completion_response(line, character, cursor_before_line, suggestions)
   cursor_before_line = cursor_before_line or ''
   local LABEL_LIMIT = 80
-  local label = cursor_before_line .. suggestions
-  if #label > LABEL_LIMIT then
-    label = string.sub(label, 1, LABEL_LIMIT)
-  end
-  label = label:gsub('\n', '<\\n>')
+  local text = cursor_before_line .. table.concat(suggestions, '\n')
+  local first = suggestions[1]
+  local label = (#first > LABEL_LIMIT or #suggestions > 1) and string.sub(first, 1, LABEL_LIMIT - 3) .. '...' or first
   local items = {}
   table.insert(items, {
-    label = label,
-    word = label,
-    textEdit = {
-      range = {
-        start = { line = line, character = character },
-        ['end'] = { line = line, character = character },
-      },
-      newText = suggestions,
-    },
+    label = cursor_before_line .. label,
+    insertText = text,
     documentation = {
       kind = 'markdown',
-      value = '```' .. vim.bo.ft .. '\n' .. cursor_before_line .. suggestions .. '\n```',
+      value = '```' .. vim.bo.ft .. '\n' .. text .. '\n```',
     },
-    insertTextMode = 1,
     cmp = {
       kind_hl_group = 'CmpItemKindFittenCode',
       kind_text = 'FittenCode',
@@ -105,11 +96,12 @@ function source:complete(request, callback)
     return
   end
   Engine.generate_one_stage(row, col, true, 0, function(suggestions)
-    if not suggestions then
+    -- We skip the suggestion where the first element is empty, as nvim-cmp trim the completion item
+    -- Ref: `lazy/nvim-cmp/lua/cmp/entry.lua`
+    if not suggestions or #suggestions == 0 or suggestions[1] == '' then
       callback()
       return
     end
-    suggestions = table.concat(suggestions, '\n')
     local cursor_before_line = request.context.cursor_before_line:sub(request.offset)
     local line = request.context.cursor.line
     local character = request.context.cursor.character
