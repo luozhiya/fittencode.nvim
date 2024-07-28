@@ -237,7 +237,8 @@ require('fittencode').setup({
 require('cmp').setup({
   sources = { name = 'fittencode', group_index = 1 },
   mapping = {
-    ['<cr>'] = cmp.mapping.confirm({ behavior = cmp.ConfirmBehavior.Insert, select = false }),
+    -- Accept multi-line completion
+    ['<c-y>'] = cmp.mapping.confirm({ behavior = cmp.ConfirmBehavior.Insert, select = false }),
   }
 })
 ```
