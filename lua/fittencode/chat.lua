@@ -1,4 +1,4 @@
-local Config = require("fittencode.config")
+local Config = require('fittencode.config')
 
 ---@class fittencode.Action
 local M = {}
