@@ -77,17 +77,7 @@ local function tick(action, opts)
     end
 end
 
-local function setup()
-    vim.api.nvim_create_autocmd({ 'VimLeavePre' }, {
-        group = vim.api.nvim_create_augroup('fittencode.user_center.autosave', { clear = true }),
-        pattern = '*',
-        callback = function()
-            save()
-        end,
-    })
-end
-
 return {
     tick = tick,
-    setup = setup,
+    _save = save,
 }

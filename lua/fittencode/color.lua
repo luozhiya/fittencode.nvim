@@ -1,16 +1,6 @@
-local function setup_highlight()
-end
-
-local function setup()
-    vim.api.nvim_create_autocmd({ 'ColorScheme', 'VimEnter' }, {
-        group = vim.api.nvim_create_augroup('fittencode.colorscheme', { clear = true }),
-        pattern = '*',
-        callback = function(ev)
-            setup_highlight()
-        end,
-    })
+local function apply_color_scheme()
 end
 
 return {
-    setup = setup
+    apply_color_scheme = apply_color_scheme
 }

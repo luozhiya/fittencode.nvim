@@ -4,15 +4,7 @@ local M = {}
 ---@param opts? fittencode.Config
 function M.setup(opts)
     require('fittencode.config').setup(opts)
-    -- local m = {
-    --     'log',
-    --     'command',
-    --     'integration',
-    --     'user_center',
-    -- }
-    -- for _, mod in ipairs(m) do
-    --     require('fittencode.' .. mod)
-    -- end
+    require('fittencode.integration').setup()
 end
 
 return setmetatable(M, {
