@@ -177,32 +177,6 @@ function M.setup(opts)
     end
     options = vim.tbl_deep_extend('force', defaults, opts)
 
-    vim.api.nvim_create_user_command('FittenCode', function(input)
-        require('fittencode.command').execute(input)
-    end, {
-        nargs = '*',
-        complete = function(...)
-            return require('fittencode.command').complete(...)
-        end,
-        desc = 'FittenCode',
-    })
-
-    vim.api.nvim_create_autocmd({ 'VimLeavePre' }, {
-        group = vim.api.nvim_create_augroup('fittencode.user_center.autosave', { clear = true }),
-        pattern = '*',
-        callback = function()
-            require('fittencode.user_center')._save()
-        end,
-    })
-
-    vim.api.nvim_create_autocmd({ 'ColorScheme', 'VimEnter' }, {
-        group = vim.api.nvim_create_augroup('fittencode.colorscheme', { clear = true }),
-        pattern = '*',
-        callback = function(ev)
-            require('fittencode.color').apply_color_scheme()
-        end,
-    })
-
     if options.integration.completion.enable then
         if options.integration.completion.engine == 'cmp' then
             require('fittencode.integration.cmp').register_source()

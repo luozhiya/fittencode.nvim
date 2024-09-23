@@ -15,9 +15,12 @@ local model = {
 -- New session when suggestion is available
 -- Register keys
 ---@class fittencode.InlineCompletionSession
-local session
+local session = nil
 
 local function dismiss_suggestions()
+    if not string.match(vim.fn.mode(), '^[iR]') then
+        return
+    end
 end
 
 local function lazy_completion()
@@ -69,10 +72,12 @@ local function refine_generated_text_into_suggestions(generated_text)
     return lines
 end
 
----@type fun(arg1: any, arg2: function, arg3: function): any
-local generate_one_stage
+local generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion)
 
 local function triggering_completion(force, on_success, on_error)
+    if not string.match(vim.fn.mode(), '^[iR]') then
+        return
+    end
     force = force or false
     local row, col = unpack(vim.api.nvim_win_get_cursor(0))
     local timestamp = vim.uv.hrtime()
@@ -98,57 +103,53 @@ local function triggering_completion(force, on_success, on_error)
     end)
 end
 
-local function setup()
-    vim.api.nvim_create_autocmd({ 'InsertEnter', 'CursorMovedI', 'CompleteChanged' }, {
-        group = vim.api.nvim_create_augroup('fittencode.inline.hold', { clear = true }),
-        pattern = '*',
-        callback = function(ev)
-            print(string.format('event fired: %s', vim.inspect(ev)))
-            triggering_completion(false)
-        end,
-    })
+local au_inline = vim.api.nvim_create_augroup('fittencode.inline', { clear = true })
 
-    vim.api.nvim_create_autocmd({ 'BufEnter' }, {
-        group = vim.api.nvim_create_augroup('fittencode.inline.hold_bufevent', { clear = true }),
-        pattern = '*',
-        callback = function()
-            if string.match(vim.fn.mode(), '^[iR]') then
-                triggering_completion(false)
+local function setup_autocmds(enable)
+    local autocmds = {
+        { { 'InsertEnter', 'CursorMovedI', 'CompleteChanged' }, function() triggering_completion(false) end },
+        { { 'BufEnter' },                                       function() triggering_completion(false) end },
+        { { 'InsertLeave' },                                    function() dismiss_suggestions() end },
+        { { 'BufLeave' },                                       function() dismiss_suggestions() end },
+        { { 'TextChangedI' },                                   function() lazy_completion() end },
+    }
+    if enable then
+        for _, autocmd in ipairs(autocmds) do
+            vim.api.nvim_create_autocmd(autocmd[1], {
+                group = au_inline,
+                callback = autocmd[2],
+            })
+        end
+    else
+        vim.api.nvim_del_augroup_by_id(au_inline)
+    end
+end
+
+local function enable_completions(enable, global, suffixes)
+    enable = enable == nil and true or enable
+    global = global == nil and true or global
+    suffixes = suffixes or {}
+    if global then
+        if Config.inline_completion.enable ~= enable then
+            setup_autocmds(enable)
+            Config.inline_completion.enable = enable
+        end
+    else
+        local merge = function(tbl, filters)
+            if enable then
+                return vim.tbl_filter(function(ft)
+                    return not vim.tbl_contains(filters, ft)
+                end, tbl)
+            else
+                return vim.tbl_extend('force', tbl, filters)
             end
-        end,
-    })
-
-    vim.api.nvim_create_autocmd({ 'InsertLeave' }, {
-        group = vim.api.nvim_create_augroup('fittencode.inline.dismiss_suggestions', { clear = true }),
-        pattern = '*',
-        callback = function()
-            dismiss_suggestions()
-        end,
-    })
-
-    vim.api.nvim_create_autocmd({ 'BufLeave' }, {
-        group = vim.api.nvim_create_augroup('fittencode.inline.dismiss_suggestions_bufevent', { clear = true }),
-        pattern = '*',
-        callback = function()
-            if string.match(vim.fn.mode(), '^[iR]') then
-                dismiss_suggestions()
-            end
-        end,
-    })
-
-    vim.api.nvim_create_autocmd({ 'TextChangedI' }, {
-        group = vim.api.nvim_create_augroup('fittencode.lazy_completion', { clear = true }),
-        pattern = '*',
-        callback = function()
-            lazy_completion()
-        end,
-    })
-
-    generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion)
+        end
+        Config.inline_completion.suffixes = merge(Config.inline_completion.suffixes, suffixes)
+    end
 end
 
 return {
-    setup = setup,
     build_prompt_for_completion = build_prompt_for_completion,
     refine_generated_text_into_suggestions = refine_generated_text_into_suggestions,
+    enable_completions = enable_completions,
 }
