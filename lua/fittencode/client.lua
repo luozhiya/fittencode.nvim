@@ -11,25 +11,25 @@ local function schedule_call(fx, ...)
     end
 end
 
-local URLs = {
+local urls = {
     register = 'https://codewebchat.fittenlab.cn/?ide=neovim',
     login = 'https://fc.fittenlab.cn/codeuser/login',
     get_ft_token = 'https://fc.fittenlab.cn/codeuser/get_ft_token',
     generate_one_stage = 'https://fc.fittenlab.cn/codeapi/completion/generate_one_stage',
 }
 
-local KEYRING_STORE = vim.fn.stdpath('data') .. '/fittencode' .. '/api_key.json'
+local keyring_store = vim.fn.stdpath('data') .. '/fittencode' .. '/api_key.json'
 local keyring = nil
 
 local function load_last_session()
-    local _, store = pcall(vim.fn.json_decode, vim.fn.readfile(KEYRING_STORE))
+    local _, store = pcall(vim.fn.json_decode, vim.fn.readfile(keyring_store))
     if _ and store.key then
         keyring = store
     end
 end
 
 local function register()
-    vim.ui.open(URLs.register)
+    vim.ui.open(urls.register)
 end
 
 local function login(on_success, on_error)
@@ -43,7 +43,7 @@ local function login(on_success, on_error)
     local password = vim.fn.inputsecret('Password ')
 
     Promise:new(function(resolve, reject)
-        Curl.post(URLs.login, {
+        Curl.post(urls.login, {
             headers = {
                 ['Content-Type'] = 'application/json',
             },
@@ -69,7 +69,7 @@ local function login(on_success, on_error)
         })
     end):forward(function(token)
         return Promise:new(function(resolve, reject)
-            Curl.get(URLs.get_ft_token, {
+            Curl.get(urls.get_ft_token, {
                 headers = {
                     ['Authorization'] = 'Bearer ' .. token,
                 },
@@ -98,7 +98,7 @@ local function login(on_success, on_error)
             key = fico_token,
         }
         Log.notify_info('Login successful')
-        vim.fn.writefile(vim.fn.json_encode(keyring), KEYRING_STORE)
+        vim.fn.writefile(vim.fn.json_encode(keyring), keyring_store)
         schedule_call(on_success)
     end, function()
         schedule_call(on_error)
@@ -107,11 +107,11 @@ end
 
 local function logout()
     keyring = nil
-    if vim.fn.filereadable(KEYRING_STORE) == 0 then
+    if vim.fn.filereadable(keyring_store) == 0 then
         Log.notify_info('You are already logged out')
         return
     end
-    vim.fn.delete(KEYRING_STORE)
+    vim.fn.delete(keyring_store)
     Log.notify_info('Logout successful')
 end
 
@@ -129,7 +129,7 @@ local function generate_one_stage(prompt, on_success, on_error)
         schedule_call(on_error)
         return
     end
-    local url = URLs.generate_one_stage .. '/' .. keyring.key .. '?ide=neovim&v=0.2.0'
+    local url = urls.generate_one_stage .. '/' .. keyring.key .. '?ide=neovim&v=0.2.0'
     Promise:new(function(resolve, reject)
         Curl.post(url, {
             headers = {

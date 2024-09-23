@@ -20,18 +20,22 @@ local M = {}
 ]]
 local levels = vim.deepcopy(vim.log.levels)
 
-local first_log = true
+local log_path = vim.fn.stdpath('log') .. '/fittencode' .. '/fittencode.log'
+local max_size = 2 * 1024 * 1024 -- 2MB
 
-local LogPath = vim.fn.stdpath('log') .. '/fittencode' .. '/fittencode.log'
-local MaxSize = 10 * 1024 * 1024 -- 10MB
+local names = {
+    TRACE = 'TRACE',
+    DEBUG = 'DEBUG',
+    INFO = 'INFO',
+    WARN = 'WARN',
+    ERROR = 'ERROR',
+    OFF = 'OFF',
+}
+
+local preface = true
 
 local function level_name(level)
-    for k, v in pairs(levels) do
-        if v == level then
-            return k
-        end
-    end
-    return 'UNKNOWN'
+    return names[level]
 end
 
 local function neovim_version()
@@ -52,13 +56,18 @@ local function neovim_version()
     local luajit_start, luajit_end, luajit = find_part(buildtype_end, 'LuaJIT ')
 
     return {
-        nvim = nvim or 'UNKNOWN',
-        buildtype = buildtype or 'UNKNOWN',
-        luajit = luajit or 'UNKNOWN',
+        nvim = nvim,
+        buildtype = buildtype,
+        luajit = luajit,
     }
 end
 
-local function write_first_log(f)
+local function write_preface(f)
+    if not preface then
+        return
+    end
+    preface = false
+
     local edge = string.rep('=', 80) .. '\n'
     f:write(edge)
 
@@ -79,17 +88,7 @@ local function write_first_log(f)
     f:write(edge)
 end
 
-local function log_file(msg)
-    local f = assert(io.open(LogPath, 'a'))
-    if first_log then
-        write_first_log(f)
-        first_log = false
-    end
-    f:write(string.format('%s\n', msg))
-    f:close()
-end
-
-local function expand_msg(msg, ...)
+local function expand_braces(msg, ...)
     msg = msg or ''
     local count = 0
     msg, count = msg:gsub('{}', '%%s')
@@ -104,46 +103,41 @@ local function expand_msg(msg, ...)
     return msg
 end
 
-function M.log(level, msg, ...)
+local function log(level, msg, ...)
     if level >= Config.log.level and Config.log.level ~= levels.OFF then
-        msg = expand_msg(msg, ...)
+        msg = expand_braces(msg, ...)
         local ms = string.format('%03d', math.floor((vim.uv.hrtime() / 1e6) % 1000))
         local timestamp = os.date('%Y-%m-%d %H:%M:%S') .. '.' .. ms
         local tag = string.format('[%-5s %s] ', level_name(level), timestamp)
         msg = tag .. (msg or '')
-        log_file(msg)
+        local f = assert(io.open(log_path, 'a'))
+        write_preface(f)
+        f:write(string.format('%s\n', msg))
+        f:close()
     end
 end
 
-function M.notify(level, msg, ...)
-    msg = expand_msg(msg, ...)
+local function notify(level, msg, ...)
+    msg = expand_braces(msg, ...)
     vim.schedule(function()
-        vim.notify(msg, level, { title = 'Fittencode' })
+        vim.notify(msg, level, { title = 'FittenCode' })
     end)
-    M.log(level, msg)
+    log(level, msg)
 end
 
 function M.setup()
-    local log_dir = vim.fn.fnamemodify(LogPath, ':h')
-    if vim.fn.mkdir(log_dir, 'p') ~= 1 then
-        vim.api.nvim_err_writeln('Failed to create log directory: ' .. log_dir)
+    vim.fn.mkdir(vim.fn.fnamemodify(log_path, ':h'), 'p')
+    if vim.fn.getfsize(log_path) > max_size then
+        vim.fn.delete(log_path)
     end
-
-    local log_size = vim.fn.getfsize(LogPath)
-    if log_size > 0 and log_size > MaxSize then
-        if vim.fn.delete(LogPath) ~= 0 then
-            vim.api.nvim_err_writeln('Failed to delete log file: ' .. LogPath)
-        end
+    for k, v in pairs(levels) do
+        M[k:lower()] = function(...) log(v, ...) end
+        M['notify_' .. k:lower()] = function(...) notify(v, ...) end
     end
 end
 
 function M.set_level(level)
     Config.log.level = level
-end
-
-for k, v in pairs(levels) do
-    M[k:lower()] = function(...) M.log(v, ...) end
-    M['notify_' .. k:lower()] = function(...) M.notify(v, ...) end
 end
 
 return M
