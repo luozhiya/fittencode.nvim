@@ -35,7 +35,7 @@ local names = {
 local preface = true
 
 local function level_name(level)
-    return names[level]
+    return names[level] or '----'
 end
 
 local function neovim_version()
@@ -105,6 +105,12 @@ end
 
 local function log(level, msg, ...)
     if level >= Config.log.level and Config.log.level ~= levels.OFF then
+        if preface then
+            vim.fn.mkdir(vim.fn.fnamemodify(log_path, ':h'), 'p')
+            if vim.fn.getfsize(log_path) > max_size then
+                vim.fn.delete(log_path)
+            end
+        end
         msg = expand_braces(msg, ...)
         local ms = string.format('%03d', math.floor((vim.uv.hrtime() / 1e6) % 1000))
         local timestamp = os.date('%Y-%m-%d %H:%M:%S') .. '.' .. ms
@@ -125,19 +131,21 @@ local function notify(level, msg, ...)
     log(level, msg)
 end
 
-function M.setup()
-    vim.fn.mkdir(vim.fn.fnamemodify(log_path, ':h'), 'p')
-    if vim.fn.getfsize(log_path) > max_size then
-        vim.fn.delete(log_path)
-    end
-    for k, v in pairs(levels) do
-        M[k:lower()] = function(...) log(v, ...) end
-        M['notify_' .. k:lower()] = function(...) notify(v, ...) end
-    end
-end
-
 function M.set_level(level)
     Config.log.level = level
 end
 
-return M
+return setmetatable(M, {
+    __index = function(_, key)
+        if key:sub(1, 7) == 'notify_' then
+            local level = key:sub(8):upper()
+            if levels[level] then
+                return function(...) notify(levels[level], ...) end
+            end
+        else
+            if levels[key:upper()] then
+                return function(...) log(levels[key:upper()], ...) end
+            end
+        end
+    end,
+})

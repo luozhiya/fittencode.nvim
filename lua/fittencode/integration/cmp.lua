@@ -1,5 +1,5 @@
-local Config = require('fittencode.config')
 local Client = require('fittencode.client')
+local Config = require('fittencode.config')
 local Inline = require('fittencode.inline')
 
 ---@class CmpSource
@@ -88,7 +88,7 @@ end
 ---@param request cmp.SourceCompletionApiParams
 ---@param callback fun(response:lsp.CompletionResponse|nil)
 function source:complete(request, callback)
-    Client.generate_one_stage(Inline.make_prompt(), function(completion_data)
+    Client.generate_one_stage(Inline.build_prompt_for_completion(), function(completion_data)
         local suggestions = Inline.transform_generated_text(completion_data.generated_text)
         if not suggestions then
             callback()
@@ -111,15 +111,9 @@ local function register_source()
         return
     end
     cmp.register_source('fittencode', require('fittencode.integration.cmp').source:new())
-    cmp.register_source('fittencode_chat', require('fittencode.integration.cmp').chat_source:new())
 end
-
--- Only for fittencode chat input buffer.
--- For example, when you type `@` in a chat input buffer, it will trigger completions (@project/@workspace)
-local chat_source = {}
 
 return {
     source = source,
-    chat_source = chat_source,
     register_source = register_source,
 }

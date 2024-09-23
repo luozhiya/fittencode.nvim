@@ -1,15 +1,7 @@
 local Curl = require('plenary.curl')
+local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
-
-local function schedule_call(fx, ...)
-    if fx then
-        local args = { ... }
-        vim.schedule(function()
-            fx(unpack(args))
-        end)
-    end
-end
 
 local urls = {
     register = 'https://codewebchat.fittenlab.cn/?ide=neovim',
@@ -35,7 +27,7 @@ end
 local function login(on_success, on_error)
     if keyring then
         Log.notify_info('You are already logged in')
-        schedule_call(on_success)
+        Fn.schedule_call(on_success)
         return
     end
 
@@ -91,7 +83,7 @@ local function login(on_success, on_error)
             })
         end)
     end, function()
-        schedule_call(on_error)
+        Fn.schedule_call(on_error)
     end):forward(function(fico_token)
         keyring = {
             name = username,
@@ -99,9 +91,9 @@ local function login(on_success, on_error)
         }
         Log.notify_info('Login successful')
         vim.fn.writefile(vim.fn.json_encode(keyring), keyring_store)
-        schedule_call(on_success)
+        Fn.schedule_call(on_success)
     end, function()
-        schedule_call(on_error)
+        Fn.schedule_call(on_error)
     end)
 end
 
@@ -123,10 +115,18 @@ end
 -- 	"delta_line": 0,
 -- 	"ex_msg": ""
 -- }
+--
+-- {
+--     "generated_text": "",
+--     "server_request_id": "1727078210.6858685.173478",
+--     "delta_char": 5,
+--     "delta_line": 0,
+--     "ex_msg": "1+2)*3"
+-- }
 local function generate_one_stage(prompt, on_success, on_error)
     if not keyring then
         Log.notify_error('You are not logged in, please try `FittenCode login` first')
-        schedule_call(on_error)
+        Fn.schedule_call(on_error)
         return
     end
     local url = urls.generate_one_stage .. '/' .. keyring.key .. '?ide=neovim&v=0.2.0'
@@ -153,9 +153,9 @@ local function generate_one_stage(prompt, on_success, on_error)
             end)
         })
     end):forward(function(completion_data)
-        schedule_call(on_success, completion_data)
+        Fn.schedule_call(on_success, completion_data)
     end, function()
-        schedule_call(on_error)
+        Fn.schedule_call(on_error)
     end)
 end
 
