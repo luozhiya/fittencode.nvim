@@ -202,6 +202,12 @@ function M.setup(opts)
             require('fittencode.color').apply_color_scheme()
         end,
     })
+
+    if options.integration.completion.enable then
+        if options.integration.completion.engine == 'cmp' then
+            require('fittencode.integration.cmp').register_source()
+        end
+    end
 end
 
 return setmetatable(M, {

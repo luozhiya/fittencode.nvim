@@ -4,7 +4,6 @@ local M = {}
 ---@param opts? fittencode.Config
 function M.setup(opts)
     require('fittencode.config').setup(opts)
-    require('fittencode.integration').setup()
 end
 
 return setmetatable(M, {
