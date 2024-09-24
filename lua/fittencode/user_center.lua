@@ -78,7 +78,7 @@ local function tick(action, opts)
 end
 
 vim.api.nvim_create_autocmd({ 'VimLeavePre' }, {
-    group = vim.api.nvim_create_augroup('fittencode.user_center.autosave', { clear = true }),
+    group = vim.api.nvim_create_augroup('fittencode.user_center', { clear = true }),
     pattern = '*',
     callback = function()
         save()

@@ -2,6 +2,8 @@
 --   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
 --   https://medium.com/swlh/implement-a-simple-promise-in-javascript-20c9705f197a
 
+local Fn = require('fittencode.fn')
+
 -- A Promise is in one of these states:
 -- - PENDING: initial state, neither fulfilled nor rejected.
 -- - FULFILLED: meaning that the operation was completed successfully.
@@ -51,7 +53,7 @@ function Promise:new(executor)
             end, obj.promise_reactions[PromiseState.REJECTED])
         end
     end
-    executor(resolve, reject)
+    Fn.schedule_call(executor, resolve, reject)
     self.__index = self
     return setmetatable(obj, self)
 end
@@ -97,6 +99,14 @@ function Promise:forward(on_fulfilled, on_rejected)
             end
         end
     end)
+end
+
+function Promise:cancel()
+    self.state = PromiseState.REJECTED
+    self.reason = 'Promise Cancelled'
+    vim.tbl_map(function(callback)
+        callback(self)
+    end, self.promise_reactions[PromiseState.REJECTED])
 end
 
 return Promise

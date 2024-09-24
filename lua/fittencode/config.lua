@@ -148,18 +148,18 @@ local defaults = {
             -- Default trigger characters
             trigger_chars = {},
         },
-        telescope = {
-            enable = false,
-        },
-        neotree = {
-            enable = false,
-        },
-        neogit = {
-            enable = false,
-        },
-        vgit = {
-            enable = false,
-        },
+        -- telescope = {
+        --     enable = false,
+        -- },
+        -- neotree = {
+        --     enable = false,
+        -- },
+        -- neogit = {
+        --     enable = false,
+        -- },
+        -- vgit = {
+        --     enable = false,
+        -- },
     },
     log = {
         level = vim.log.levels.WARN,
