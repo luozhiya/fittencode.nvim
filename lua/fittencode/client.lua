@@ -15,7 +15,7 @@ local keyring = nil
 
 local function load_last_session()
     local _, store = pcall(vim.fn.json_decode, vim.fn.readfile(keyring_store))
-    if _ and store.key then
+    if _ and store.key and store.key ~= '' then
         keyring = store
     end
 end
@@ -49,14 +49,14 @@ local function login(on_success, on_error)
             on_callback = vim.schedule_wrap(function(res)
                 if res.status ~= 200 then
                     reject()
-                    return
+                else
+                    local _, login_data = pcall(vim.fn.json_decode, res)
+                    if not _ or login_data.code ~= 200 then
+                        reject()
+                    else
+                        resolve(login_data.data.token)
+                    end
                 end
-                local _, login_data = pcall(vim.fn.json_decode, res)
-                if not _ or login_data.code ~= 200 then
-                    reject()
-                    return
-                end
-                resolve(login_data.data.token)
             end)
         })
     end):forward(function(token)
@@ -71,14 +71,14 @@ local function login(on_success, on_error)
                 on_callback = vim.schedule_wrap(function(res)
                     if res.status ~= 200 then
                         reject()
-                        return
+                    else
+                        local _, fico_data = pcall(vim.fn.json_decode, res)
+                        if not _ or fico_data.data == nil or fico_data.data.fico_token == nil then
+                            reject()
+                        else
+                            resolve(fico_data.data.fico_token)
+                        end
                     end
-                    local _, fico_data = pcall(vim.fn.json_decode, res)
-                    if not _ or fico_data.data == nil or fico_data.data.fico_token == nil then
-                        reject()
-                        return
-                    end
-                    resolve(fico_data.data.fico_token)
                 end),
             })
         end)
@@ -142,14 +142,14 @@ local function generate_one_stage(prompt, on_success, on_error)
             on_callback = vim.schedule_wrap(function(res)
                 if res.status ~= 200 then
                     reject()
-                    return
+                else
+                    local _, completion_data = pcall(vim.fn.json_decode, res)
+                    if not _ then
+                        reject()
+                    else
+                        resolve(completion_data)
+                    end
                 end
-                local _, completion_data = pcall(vim.fn.json_decode, res)
-                if not _ then
-                    reject()
-                    return
-                end
-                resolve(completion_data)
             end)
         })
     end):forward(function(completion_data)
