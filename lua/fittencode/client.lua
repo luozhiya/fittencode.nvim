@@ -131,44 +131,33 @@ local function generate_one_stage(prompt, on_success, on_error)
         return
     end
     local url = urls.generate_one_stage .. '/' .. keyring.key .. '?ide=neovim&v=0.2.0'
-
-    return function()
-        local process = nil
-        return Promise:new(function(resolve, reject)
-            local _, result = pcall(curl.post, url, {
-                headers = {
-                    ['Content-Type'] = 'application/json',
-                },
-                body = vim.fn.json_encode(prompt),
-                on_error = vim.schedule_wrap(function()
+    Promise:new(function(resolve, reject)
+        curl.post(url, {
+            headers = {
+                ['Content-Type'] = 'application/json',
+            },
+            body = vim.fn.json_encode(prompt),
+            on_error = vim.schedule_wrap(function()
+                reject()
+            end),
+            on_callback = vim.schedule_wrap(function(res)
+                if res.status ~= 200 then
                     reject()
-                end),
-                on_callback = vim.schedule_wrap(function(res)
-                    if res.status ~= 200 then
+                else
+                    local _, completion_data = pcall(vim.fn.json_decode, res)
+                    if not _ then
                         reject()
                     else
-                        local _, completion_data = pcall(vim.fn.json_decode, res)
-                        if not _ then
-                            reject()
-                        else
-                            resolve(completion_data)
-                        end
+                        resolve(completion_data)
                     end
-                end)
-            })
-            if not _ then
-                reject()
-            end
-            process = result
-        end):forward(function(completion_data)
-            Fn.schedule_call(on_success, completion_data)
-        end, function()
-            if process then
-                process:shutdown(0, 2)
-            end
-            Fn.schedule_call(on_error)
-        end)
-    end
+                end
+            end)
+        })
+    end):forward(function(completion_data)
+        Fn.schedule_call(on_success, completion_data)
+    end, function()
+        Fn.schedule_call(on_error)
+    end)
 end
 
 local function chat()
