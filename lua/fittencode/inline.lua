@@ -78,7 +78,7 @@ local function triggering_completion(force, on_success, on_error)
     if not string.match(vim.fn.mode(), '^[iR]') then
         return
     end
-    force = force or false
+    force = force == nil and false or force
     local row, col = unpack(vim.api.nvim_win_get_cursor(0))
     local timestamp = vim.uv.hrtime()
     if not force and model.cache_hit(row, col) then
@@ -107,8 +107,8 @@ local au_inline = vim.api.nvim_create_augroup('fittencode.inline', { clear = tru
 
 local function setup_autocmds(enable)
     local autocmds = {
-        { { 'InsertEnter', 'CursorMovedI', 'CompleteChanged' }, function() triggering_completion(false) end },
-        { { 'BufEnter' },                                       function() triggering_completion(false) end },
+        { { 'InsertEnter', 'CursorMovedI', 'CompleteChanged' }, function() triggering_completion() end },
+        { { 'BufEnter' },                                       function() triggering_completion() end },
         { { 'InsertLeave' },                                    function() dismiss_suggestions() end },
         { { 'BufLeave' },                                       function() dismiss_suggestions() end },
         { { 'TextChangedI' },                                   function() lazy_completion() end },
