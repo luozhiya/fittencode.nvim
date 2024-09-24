@@ -1,7 +1,8 @@
-local Curl = require('plenary.curl')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
+
+local curl = require('plenary.curl')
 
 local urls = {
     register = 'https://codewebchat.fittenlab.cn/?ide=neovim',
@@ -35,7 +36,7 @@ local function login(on_success, on_error)
     local password = vim.fn.inputsecret('Password ')
 
     Promise:new(function(resolve, reject)
-        Curl.post(urls.login, {
+        curl.post(urls.login, {
             headers = {
                 ['Content-Type'] = 'application/json',
             },
@@ -61,7 +62,7 @@ local function login(on_success, on_error)
         })
     end):forward(function(token)
         return Promise:new(function(resolve, reject)
-            Curl.get(urls.get_ft_token, {
+            curl.get(urls.get_ft_token, {
                 headers = {
                     ['Authorization'] = 'Bearer ' .. token,
                 },
@@ -131,7 +132,7 @@ local function generate_one_stage(prompt, on_success, on_error)
     end
     local url = urls.generate_one_stage .. '/' .. keyring.key .. '?ide=neovim&v=0.2.0'
     Promise:new(function(resolve, reject)
-        Curl.post(url, {
+        curl.post(url, {
             headers = {
                 ['Content-Type'] = 'application/json',
             },

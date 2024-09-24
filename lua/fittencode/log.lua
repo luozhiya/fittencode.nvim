@@ -83,7 +83,6 @@ local function write_preface(f)
     for _, entry in ipairs(info) do
         f:write(string.format('%s: %s\n', entry[1], entry[2]))
     end
-
     f:write(edge)
 end
 
