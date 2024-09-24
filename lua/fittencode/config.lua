@@ -176,12 +176,6 @@ function M.setup(opts)
         defaults.keymaps.inline = {}
     end
     options = vim.tbl_deep_extend('force', defaults, opts)
-
-    if options.integration.completion.enable then
-        if options.integration.completion.engine == 'cmp' then
-            require('fittencode.integration.cmp').register_source()
-        end
-    end
 end
 
 return setmetatable(M, {

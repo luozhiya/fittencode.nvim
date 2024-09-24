@@ -46,7 +46,6 @@ local function neovim_version()
         if not start then
             return nil
         end
-
         local end_ = version:find('\n', start + #part) or #version
         return start + #part, end_, version:sub(start + #part, end_ - 1)
     end
@@ -135,17 +134,9 @@ function M.set_level(level)
     Config.log.level = level
 end
 
-return setmetatable(M, {
-    __index = function(_, key)
-        if key:sub(1, 7) == 'notify_' then
-            local level = key:sub(8):upper()
-            if levels[level] then
-                return function(...) notify(levels[level], ...) end
-            end
-        else
-            if levels[key:upper()] then
-                return function(...) log(levels[key:upper()], ...) end
-            end
-        end
-    end,
-})
+for level, name in pairs(names) do
+    M[name:lower()] = function(...) log(levels[name], ...) end
+    M['notify_' .. name:lower()] = function(...) notify(levels[name], ...) end
+end
+
+return M
