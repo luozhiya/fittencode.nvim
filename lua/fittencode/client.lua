@@ -37,6 +37,35 @@ local keyring = nil
 
 local ide = '?ide=neovim&v=0.2.0'
 
+---@class Message
+---@field source 'Bot'|'User'
+
+---@class Header
+
+---@class State
+---@field type 'userCanReply' | 'waitingForBotAnswer'
+---@field response_placeholder string
+
+---@class Content
+---@field messages Message[]
+---@field state State
+---@field type 'messageExchange'
+
+---@class Conversation
+---@field content Content
+---@field header Header
+---@field id string
+---@field inputs string[]
+---@field mode 'chat'
+
+-- local fitten_ai_api_key
+-- local has_fitten_ai_api_key
+-- local surface_prompt_for_fitten_ai_plus
+local mode = 'chat'
+---@type Conversation[]
+local conversations = {}
+local selected_conversation_id = nil
+
 local function load_last_session()
     local _, store = pcall(vim.fn.json_decode, vim.fn.readfile(keyring_store))
     if _ and store.key and store.key ~= '' then
@@ -261,38 +290,96 @@ local function chat(inputs, on_success, on_error)
     return stream()
 end
 
-local function start_chat(user, reference, pro, on_success, on_error)
+local function random(length)
+    local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    local result = {}
+
+    for i = 1, length do
+        local index = math.random(1, #chars)
+        table.insert(result, chars:sub(index, index))
+    end
+
+    return table.concat(result)
+end
+
+local function update_conversation(e, id)
+    conversations[id] = e
+    selected_conversation_id = id
+end
+
+-- Clicking on the "Start Chat" button
+local function start_chat()
+    local id = random(36).sub(2, 10)
     local inputs = {
         '<|system|>',
-        'Reply same language as the user\'s input.',
+        "Reply same language as the user's input.",
         '<|end|>',
-        '<|user|>',
-        pro and '@FCPS ' or '' .. user,
-        '<|end|>',
-        '<|assistant|>',
     }
-    if reference then
-        inputs = {
-            '<|system|>',
-            'Reply same language as the user\'s input.',
-            '<|end|>',
-            '<|user|>',
-            'The following code is selected by the user, which may be mentioned in the subsequent conversation:',
-            '```',
-            reference,
-            '```',
-            '<|end|>',
-            '<|assistant|>',
-            'Understand, you can continue to enter your problem.',
-            '<|end|>',
-            '<|user|>',
-            pro and '@FCPS ' or '' .. user,
-            '<|end|>',
-            '<|assistant|>',
-        }
-    end
-    return chat(table.concat(inputs, '\n') .. '\n', on_success, on_error)
+    local e = {
+        id = id,
+        content = {
+            type = 'messageExchange',
+            messages = {},
+            state = {
+                type = 'userCanReply',
+                response_placeholder = 'Ask…'
+            }
+        },
+        reference = {
+            select_text = '',
+            select_range = '',
+        },
+        inputs = inputs,
+    }
+    update_conversation(e, id)
 end
+
+-- Clicking on the "Send" button
+local function send_message(data)
+    local e = conversations[data.id]
+    if not e then
+        return
+    end
+    local inputs = {
+        '<|user|>',
+        data.message,
+        '<|end|>'
+    }
+    vim.list_extend(e.inputs, inputs)
+end
+
+-- local function start_chat(user, reference, pro, on_success, on_error)
+--     local inputs = {
+--         '<|system|>',
+--         'Reply same language as the user\'s input.',
+--         '<|end|>',
+--         '<|user|>',
+--         pro and '@FCPS ' or '' .. user,
+--         '<|end|>',
+--         '<|assistant|>',
+--     }
+--     if reference then
+--         inputs = {
+--             '<|system|>',
+--             'Reply same language as the user\'s input.',
+--             '<|end|>',
+--             '<|user|>',
+--             'The following code is selected by the user, which may be mentioned in the subsequent conversation:',
+--             '```',
+--             reference,
+--             '```',
+--             '<|end|>',
+--             '<|assistant|>',
+--             'Understand, you can continue to enter your problem.',
+--             '<|end|>',
+--             '<|user|>',
+--             pro and '@FCPS ' or '' .. user,
+--             '<|end|>',
+--             '<|assistant|>',
+--         }
+--     end
+--     return chat(table.concat(inputs, '\n') .. '\n', on_success, on_error)
+-- end
 
 -- Fast
 -- Fast, and easy to use for daily use.
@@ -305,9 +392,9 @@ end
 -- <|end|>
 -- <|assistant|>
 --
-local function fast(user, reference, on_success, on_error)
-    return start_chat(user, reference, false, on_success, on_error)
-end
+-- local function fast(user, reference, on_success, on_error)
+--     return start_chat(user, reference, false, on_success, on_error)
+-- end
 
 -- Search
 -- [Free Public Beta] High accuracy, supports online search, and can solve more challenging problems.
@@ -319,9 +406,9 @@ end
 -- @FCPS 1
 -- <|end|>
 -- <|assistant|>
-local function pro_search(user, reference, on_success, on_error)
-    return start_chat(user, reference, true, on_success, on_error)
-end
+-- local function pro_search(user, reference, on_success, on_error)
+--     return start_chat(user, reference, true, on_success, on_error)
+-- end
 
 local function explain_code(context, code, on_success, on_error)
     local inputs = {
