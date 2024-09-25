@@ -319,6 +319,30 @@ local function pro_search(user, reference, on_success, on_error)
     return fast(user, reference, true, on_success, on_error)
 end
 
+local function explain_code(context, code, on_success, on_error)
+    local inputs = {
+        '<|system|>',
+        'Reply same language as the user\'s input.',
+        '<|end|>',
+        '<|user|>',
+        'Below is the user\'s code context, which may be needed for subsequent inquiries.',
+        '```',
+        context,
+        '```',
+        '<|end|>',
+        '<|assistant|>',
+        'Understood, you can continue to enter your question.',
+        '<|end|>',
+        '<|user|>',
+        'Break down and explain the following code in detail step by step, then summarize the code (emphasize its main function).',
+        '```',
+        code,
+        '```',
+        '<|end|>',
+    }
+    return chat(table.concat(inputs, '\n') .. '\n', on_success, on_error)
+end
+
 return {
     load_last_session = load_last_session,
     register = register,
@@ -327,4 +351,5 @@ return {
     generate_one_stage = generate_one_stage,
     fast = fast,
     pro_search = pro_search,
+    explain_code = explain_code,
 }
