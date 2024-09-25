@@ -35,6 +35,8 @@ end
 local keyring_store = vim.fn.stdpath('data') .. '/fittencode' .. '/api_key.json'
 local keyring = nil
 
+local ide = '?ide=neovim&v=0.2.0'
+
 local function load_last_session()
     local _, store = pcall(vim.fn.json_decode, vim.fn.readfile(keyring_store))
     if _ and store.key and store.key ~= '' then
@@ -214,7 +216,7 @@ local function generate_one_stage(prompt, on_success, on_error)
     local headers = {
         ['Content-Type'] = 'application/json',
     }
-    local url = urls.generate_one_stage .. '/' .. keyring.key .. '?ide=neovim&v=0.2.0'
+    local url = urls.generate_one_stage .. '/' .. keyring.key .. ide
     return post(url, headers, vim.fn.json_encode(prompt), on_success, nil, on_error)
 end
 
@@ -229,7 +231,7 @@ local function chat(system, user, on_success, on_error)
         local headers = {
             ['Content-Type'] = 'application/json',
         }
-        local url = urls.chat .. '?ft_token=' .. keyring.key .. '?ide=neovim&v=0.2.0'
+        local url = urls.chat .. '?ft_token=' .. keyring.key .. ide
         local inputs = '<|system|>\n' .. system .. '\n<|end|>\n<|user|>\n' .. user .. '\n<|end|>\n<|assistant|>'
         local body = {
             inputs = inputs,
