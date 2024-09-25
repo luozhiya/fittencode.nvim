@@ -261,24 +261,13 @@ local function chat(inputs, on_success, on_error)
     return stream()
 end
 
--- Fast
--- Fast, and easy to use for daily use.
---
--- <|system|>
--- Reply same language as the user's input.
--- <|end|>
--- <|user|>
--- 1
--- <|end|>
--- <|assistant|>
---
-local function fast(user, reference, pro_search, on_success, on_error)
+local function start_chat(user, reference, pro, on_success, on_error)
     local inputs = {
         '<|system|>',
         'Reply same language as the user\'s input.',
         '<|end|>',
         '<|user|>',
-        pro_search and '@FCPS ' or '' .. user,
+        pro and '@FCPS ' or '' .. user,
         '<|end|>',
         '<|assistant|>',
     }
@@ -297,12 +286,27 @@ local function fast(user, reference, pro_search, on_success, on_error)
             'Understand, you can continue to enter your problem.',
             '<|end|>',
             '<|user|>',
-            pro_search and '@FCPS ' or '' .. user,
+            pro and '@FCPS ' or '' .. user,
             '<|end|>',
             '<|assistant|>',
         }
     end
     return chat(table.concat(inputs, '\n') .. '\n', on_success, on_error)
+end
+
+-- Fast
+-- Fast, and easy to use for daily use.
+--
+-- <|system|>
+-- Reply same language as the user's input.
+-- <|end|>
+-- <|user|>
+-- 1
+-- <|end|>
+-- <|assistant|>
+--
+local function fast(user, reference, on_success, on_error)
+    return start_chat(user, reference, false, on_success, on_error)
 end
 
 -- Search
@@ -316,7 +320,7 @@ end
 -- <|end|>
 -- <|assistant|>
 local function pro_search(user, reference, on_success, on_error)
-    return fast(user, reference, true, on_success, on_error)
+    return start_chat(user, reference, true, on_success, on_error)
 end
 
 local function explain_code(context, code, on_success, on_error)
@@ -349,7 +353,8 @@ return {
     login = login,
     logout = logout,
     generate_one_stage = generate_one_stage,
-    fast = fast,
-    pro_search = pro_search,
+    start_chat = start_chat,
     explain_code = explain_code,
+    find_bugs = find_bugs,
+    reply = reply,
 }
