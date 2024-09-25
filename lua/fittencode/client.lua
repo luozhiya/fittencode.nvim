@@ -347,6 +347,26 @@ local function explain_code(context, code, on_success, on_error)
     return chat(table.concat(inputs, '\n') .. '\n', on_success, on_error)
 end
 
+local function find_bugs(code, on_success, on_error)
+    local inputs = {
+        '<|system|>',
+        'Reply same language as the user\'s input.',
+        '<|end|>',
+        '<|user|>',
+        'Selected Code:',
+        '```',
+        code,
+        '```',
+        'What potential issues could the above code have?',
+        'Only consider defects that would lead to erroneous behavior.',
+        '<|end|>',
+    }
+    return chat(table.concat(inputs, '\n') .. '\n', on_success, on_error)
+end
+
+local function reply(user, reference, on_success, on_error)
+end
+
 return {
     load_last_session = load_last_session,
     register = register,
