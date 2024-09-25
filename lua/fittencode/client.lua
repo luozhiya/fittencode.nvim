@@ -220,7 +220,7 @@ local function generate_one_stage(prompt, on_success, on_error)
     return post(url, headers, vim.fn.json_encode(prompt), on_success, nil, on_error)
 end
 
-local function chat(system, user, on_success, on_error)
+local function chat(inputs, on_success, on_error)
     if not keyring_check() then
         Fn.schedule_call(on_error)
         return
@@ -232,14 +232,13 @@ local function chat(system, user, on_success, on_error)
             ['Content-Type'] = 'application/json',
         }
         local url = urls.chat .. '?ft_token=' .. keyring.key .. ide
-        local inputs = '<|system|>\n' .. system .. '\n<|end|>\n<|user|>\n' .. user .. '\n<|end|>\n<|assistant|>'
         local body = {
             inputs = inputs,
             ft_token = keyring.key,
         }
-        local Q = ''
         local T = ''
         return post(url, headers, vim.fn.json_encode(body), nil, function(res)
+            local Q = ''
             T = T .. res
             local r = T:find('\n')
             while r do
@@ -250,7 +249,7 @@ local function chat(system, user, on_success, on_error)
                     Log.error('Error decoding json: {}', e)
                     return
                 end
-                if not (t.delta and t.delta:find('heartbeat')) then
+                if t.delta and not t.delta:find('heartbeat') then
                     Q = Q .. t.delta
                 end
                 r = T:find('\n')
@@ -262,11 +261,31 @@ local function chat(system, user, on_success, on_error)
     return stream()
 end
 
+-- <|system|>
+-- Reply same language as the user's input.
+-- <|end|>
+-- <|user|>
+-- @FCPS 1
+-- <|end|>
+-- <|assistant|>
+local function pro_search(user, on_success, on_error)
+    local inputs = {
+        '<|system|>',
+        'Reply same language as the user\'s input.',
+        '<|end|>',
+        '<|user|>',
+        '@FCPS ' ..user,
+        '<|end|>',
+        '<|assistant|>',
+    }
+    return chat(inputs, on_success, on_error)
+end
+
 return {
     load_last_session = load_last_session,
     register = register,
     login = login,
     logout = logout,
     generate_one_stage = generate_one_stage,
-    chat = chat,
+    pro_search = pro_search,
 }
