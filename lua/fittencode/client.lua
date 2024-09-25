@@ -32,6 +32,9 @@ for k, v in pairs(urls) do
     end
 end
 
+---@type 'default' | 'enterprise'
+local FITTEN_VERSION = 'default'
+
 local keyring_store = vim.fn.stdpath('data') .. '/fittencode' .. '/api_key.json'
 local keyring = nil
 
@@ -309,6 +312,34 @@ local function update_conversation(e, id)
     selected_conversation_id = id
 end
 
+-- async function fQ(e, t, n, r, o)
+local function chat(e, data, on_success, on_error)
+    -- 1. Check keyring
+    if not keyring_check() then
+        Fn.schedule_call(on_error)
+        return
+    end
+    assert(keyring)
+
+    -- 2. Check prefix
+    local prefix = {
+        '@_workspace',
+        '@workspace',
+        '@_project',
+        '@project',
+        '@_workspace(',
+        '@workspace(',
+    }
+
+    -- 3. initialPrompt
+
+    -- 4. Send Post Request
+
+    -- 5. Receive Response
+
+    -- 6. Update Conversation State
+end
+
 -- Clicking on the "Start Chat" button
 local function start_chat()
     local id = random(36).sub(2, 10)
@@ -336,9 +367,6 @@ local function start_chat()
     update_conversation(e, id)
 end
 
-local function codeapi(e, data)
-end
-
 -- Clicking on the "Send" button
 local function send_message(data, model, on_success, on_error)
     local e = conversations[data.id]
@@ -351,7 +379,7 @@ local function send_message(data, model, on_success, on_error)
         '<|end|>'
     }
     vim.list_extend(e.inputs, inputs)
-    codeapi(e, data)
+    chat(e, data, on_success, on_error)
 end
 
 -- local function start_chat(user, reference, pro, on_success, on_error)
