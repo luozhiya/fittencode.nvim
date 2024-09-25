@@ -37,6 +37,8 @@ local keyring = nil
 
 local ide = '?ide=neovim&v=0.2.0'
 
+---@alias Model 'Fast' | 'Search'
+
 ---@class Message
 ---@field source 'Bot'|'User'
 
@@ -249,46 +251,46 @@ local function generate_one_stage(prompt, on_success, on_error)
     return post(url, headers, vim.fn.json_encode(prompt), on_success, nil, on_error)
 end
 
-local function chat(inputs, on_success, on_error)
-    if not keyring_check() then
-        Fn.schedule_call(on_error)
-        return
-    end
-    assert(keyring)
+-- local function chat(inputs, on_success, on_error)
+--     if not keyring_check() then
+--         Fn.schedule_call(on_error)
+--         return
+--     end
+--     assert(keyring)
 
-    local function stream()
-        local headers = {
-            ['Content-Type'] = 'application/json',
-        }
-        local url = urls.chat .. '?ft_token=' .. keyring.key .. ide
-        local body = {
-            inputs = inputs,
-            ft_token = keyring.key,
-        }
-        local T = ''
-        return post(url, headers, vim.fn.json_encode(body), nil, function(res)
-            local Q = ''
-            T = T .. res
-            local r = T:find('\n')
-            while r do
-                local e = vim.trim(T:sub(1, r - 1))
-                T = T:sub(r + 1)
-                local _, t = pcall(vim.fn.json_decode, e)
-                if not _ then
-                    Log.error('Error decoding json: {}', e)
-                    return
-                end
-                if t.delta and not t.delta:find('heartbeat') then
-                    Q = Q .. t.delta
-                end
-                r = T:find('\n')
-            end
-            Fn.schedule_call(on_success, Q)
-        end, on_error)
-    end
+--     local function stream()
+--         local headers = {
+--             ['Content-Type'] = 'application/json',
+--         }
+--         local url = urls.chat .. '?ft_token=' .. keyring.key .. ide
+--         local body = {
+--             inputs = inputs,
+--             ft_token = keyring.key,
+--         }
+--         local T = ''
+--         return post(url, headers, vim.fn.json_encode(body), nil, function(res)
+--             local Q = ''
+--             T = T .. res
+--             local r = T:find('\n')
+--             while r do
+--                 local e = vim.trim(T:sub(1, r - 1))
+--                 T = T:sub(r + 1)
+--                 local _, t = pcall(vim.fn.json_decode, e)
+--                 if not _ then
+--                     Log.error('Error decoding json: {}', e)
+--                     return
+--                 end
+--                 if t.delta and not t.delta:find('heartbeat') then
+--                     Q = Q .. t.delta
+--                 end
+--                 r = T:find('\n')
+--             end
+--             Fn.schedule_call(on_success, Q)
+--         end, on_error)
+--     end
 
-    return stream()
-end
+--     return stream()
+-- end
 
 local function random(length)
     local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -334,18 +336,22 @@ local function start_chat()
     update_conversation(e, id)
 end
 
+local function codeapi(e, data)
+end
+
 -- Clicking on the "Send" button
-local function send_message(data)
+local function send_message(data, model, on_success, on_error)
     local e = conversations[data.id]
     if not e then
         return
     end
     local inputs = {
         '<|user|>',
-        data.message,
+        model == 'Search' and '@FCPS ' or '' .. data.message,
         '<|end|>'
     }
     vim.list_extend(e.inputs, inputs)
+    codeapi(e, data)
 end
 
 -- local function start_chat(user, reference, pro, on_success, on_error)
@@ -451,9 +457,6 @@ local function find_bugs(code, on_success, on_error)
     return chat(table.concat(inputs, '\n') .. '\n', on_success, on_error)
 end
 
-local function reply(user, reference, on_success, on_error)
-end
-
 return {
     load_last_session = load_last_session,
     register = register,
@@ -463,5 +466,5 @@ return {
     start_chat = start_chat,
     explain_code = explain_code,
     find_bugs = find_bugs,
-    reply = reply,
+    send_message = send_message,
 }
