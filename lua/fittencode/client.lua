@@ -261,6 +261,53 @@ local function chat(inputs, on_success, on_error)
     return stream()
 end
 
+-- Fast
+-- Fast, and easy to use for daily use.
+--
+-- <|system|>
+-- Reply same language as the user's input.
+-- <|end|>
+-- <|user|>
+-- 1
+-- <|end|>
+-- <|assistant|>
+--
+local function fast(user, reference, pro_search, on_success, on_error)
+    local inputs = {
+        '<|system|>',
+        'Reply same language as the user\'s input.',
+        '<|end|>',
+        '<|user|>',
+        pro_search and '@FCPS ' or '' .. user,
+        '<|end|>',
+        '<|assistant|>',
+    }
+    if reference then
+        inputs = {
+            '<|system|>',
+            'Reply same language as the user\'s input.',
+            '<|end|>',
+            '<|user|>',
+            'The following code is selected by the user, which may be mentioned in the subsequent conversation:',
+            '```',
+            reference,
+            '```',
+            '<|end|>',
+            '<|assistant|>',
+            'Understand, you can continue to enter your problem.',
+            '<|end|>',
+            '<|user|>',
+            pro_search and '@FCPS ' or '' .. user,
+            '<|end|>',
+            '<|assistant|>',
+        }
+    end
+    return chat(table.concat(inputs, '\n') .. '\n', on_success, on_error)
+end
+
+-- Search
+-- [Free Public Beta] High accuracy, supports online search, and can solve more challenging problems.
+--
 -- <|system|>
 -- Reply same language as the user's input.
 -- <|end|>
@@ -268,17 +315,8 @@ end
 -- @FCPS 1
 -- <|end|>
 -- <|assistant|>
-local function pro_search(user, on_success, on_error)
-    local inputs = {
-        '<|system|>',
-        'Reply same language as the user\'s input.',
-        '<|end|>',
-        '<|user|>',
-        '@FCPS ' ..user,
-        '<|end|>',
-        '<|assistant|>',
-    }
-    return chat(inputs, on_success, on_error)
+local function pro_search(user, reference, on_success, on_error)
+    return fast(user, reference, true, on_success, on_error)
 end
 
 return {
@@ -287,5 +325,6 @@ return {
     login = login,
     logout = logout,
     generate_one_stage = generate_one_stage,
+    fast = fast,
     pro_search = pro_search,
 }
