@@ -70,6 +70,11 @@ local curl = {
 }
 
 local function spawn_curl(args, opts)
+    vim.list_extend(args, curl.default_args)
+    for k, v in pairs(opts.headers or {}) do
+        args[#args + 1] = '-H'
+        args[#args + 1] = k .. ': ' .. v
+    end
     local params = {
         cmd = curl.cmd,
         args = args,
@@ -105,32 +110,121 @@ local function get(url, opts)
     local args = {
         url,
     }
-    vim.list_extend(args, curl.default_args)
-    for k, v in pairs(opts.headers or {}) do
-        args[#args + 1] = '-H'
-        args[#args + 1] = k .. ': ' .. v
-    end
     return spawn_curl(args, opts)
 end
+
+local function sysname()
+    return vim.uv.os_uname().sysname:lower()
+end
+
+---@return boolean
+local function is_windows()
+    return sysname():find('windows') ~= nil
+end
+
+---@return boolean
+local function is_mingw()
+    return sysname():find('mingw') ~= nil
+end
+
+---@return boolean
+local function is_wsl()
+    return vim.fn.has('wsl') == 1
+end
+
+---@return boolean
+local function is_kernel()
+    return sysname():find('linux') ~= nil
+end
+
+---@return boolean
+local function is_macos()
+    return sysname():find('darwin') ~= nil
+end
+
+-- libuv command line length limit
+-- * win32 `CreateProcess` 32767
+-- * unix  `fork`          128 KB to 2 MB (getconf ARG_MAX)
+local max_arg_length
+
+local function arg_max()
+    if max_arg_length ~= nil then
+        return max_arg_length
+    end
+    if is_windows() then
+        max_arg_length = 32767
+    else
+        local sys = tonumber(vim.fn.system('getconf ARG_MAX'))
+        max_arg_length = sys or (128 * 1024)
+    end
+    max_arg_length = math.max(200, max_arg_length - 2048)
+    return max_arg_length
+end
+
+-- local function write(data, path, on_success, on_error)
+--     Promise:new(function(resolve, reject)
+--         uv.fs_open(
+--             path,
+--             'w',
+--             438, -- decimal 438 = octal 0666
+--             function(e_open, fd)
+--                 if e_open then
+--                     reject(e_open)
+--                 else
+--                     assert(fd ~= nil)
+--                     resolve(fd)
+--                 end
+--             end)
+--     end):forward(function(fd)
+--         return Promise:new(function(resolve, reject)
+--             uv.fs_write(
+--                 fd,
+--                 data,
+--                 -1,
+--                 function(e_write, _)
+--                     if e_write then
+--                         reject(e_write)
+--                     else
+--                         uv.fs_close(fd, function(_, _) end)
+--                         resolve()
+--                     end
+--                 end)
+--         end)
+--     end, function(e_open)
+--         schedule(on_error, uv_err(e_open))
+--     end):forward(function()
+--         schedule(on_success, data, path)
+--     end, function(e_write)
+--         schedule(on_error, uv_err(e_write))
+--     end)
+-- end
 
 local function post(url, opts)
     local _, body = pcall(vim.fn.json_encode, opts.body)
     if not _ then
         return
     end
-    local args = {
-        url,
-        '-X',
-        'POST',
-        '-d',
-        body,
-    }
-    vim.list_extend(args, curl.default_args)
-    for k, v in pairs(opts.headers or {}) do
-        args[#args + 1] = '-H'
-        args[#args + 1] = k .. ': ' .. v
+    local wrap_call = function(file)
+        local args = {
+            url,
+            '-X',
+            'POST',
+            '-d',
+            file and '@' or '' .. body,
+        }
+        return spawn_curl(args, opts)
     end
-    return spawn_curl(args, opts)
+    if #body > arg_max() then
+        -- Promise:new(function(resolve, reject)
+        --     write_tmp_file(body, function(path)
+        --         request(path)
+        --     end)
+        -- end):forward(function(path)
+        --     vim.uv.fs_unlink(path)
+        -- end)
+    else
+        return wrap_call()
+    end
 end
 
 return {
