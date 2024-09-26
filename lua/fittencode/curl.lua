@@ -7,19 +7,19 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
 
     local output = ''
     local error = ''
-    local handle = nil
+    local process = nil
     local pid = nil
 
     local stdout = assert(vim.uv.new_pipe())
     local stderr = assert(vim.uv.new_pipe())
 
     ---@diagnostic disable-next-line: missing-fields
-    handle, pid = vim.uv.spawn(cmd, {
+    process, pid = vim.uv.spawn(cmd, {
         args = args,
         stdio = { nil, stdout, stderr },
     }, function(exit_code, exit_signal)
-        assert(handle)
-        handle:close()
+        assert(process)
+        process:close()
         stdout:close()
         stderr:close()
         local check = assert(vim.uv.new_check())
@@ -37,22 +37,23 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
         end)
     end)
 
-    Fn.schedule_call(on_create, { handle = handle, pid = pid, })
+    Fn.schedule_call(on_create, { process = process, pid = pid, })
 
-    local function on_chunk(err, chunk, is_stderr)
-        assert(not err, err)
-        if chunk then
-            if is_stderr then
-                error = error .. chunk
-            else
-                Fn.schedule_call(on_stream, chunk)
-                output = output .. chunk
-            end
+    local function on_stdout(err, chunk)
+        Fn.schedule_call(on_stream, { error = err, chunk = chunk })
+        if not err and chunk then
+            output = output .. chunk
         end
     end
 
-    vim.uv.read_start(stdout, function(err, chunk) on_chunk(err, chunk) end)
-    vim.uv.read_start(stderr, function(err, chunk) on_chunk(err, chunk, true) end)
+    local function on_stderr(err, chunk)
+        if not err and chunk then
+            error = error .. chunk
+        end
+    end
+
+    vim.uv.read_start(stdout, function(err, chunk) on_stdout(err, chunk) end)
+    vim.uv.read_start(stderr, function(err, chunk) on_stderr(err, chunk) end)
 end
 
 local curl = {
@@ -86,9 +87,6 @@ local function spawn_curl(args, opts)
     Fn.schedule_call(opts.on_create, spawn(params, on_once, opts.on_stream, opts.on_error, opts.on_exit))
 end
 
--- headers = {
---     ['Authorization'] = 'Bearer ' .. token,
--- },
 local function get(url, opts)
     local args = {
         url,
@@ -103,26 +101,6 @@ end
 ---@return boolean
 local function is_windows()
     return sysname():find('windows') ~= nil
-end
-
----@return boolean
-local function is_mingw()
-    return sysname():find('mingw') ~= nil
-end
-
----@return boolean
-local function is_wsl()
-    return vim.fn.has('wsl') == 1
-end
-
----@return boolean
-local function is_kernel()
-    return sysname():find('linux') ~= nil
-end
-
----@return boolean
-local function is_macos()
-    return sysname():find('darwin') ~= nil
 end
 
 -- libuv command line length limit

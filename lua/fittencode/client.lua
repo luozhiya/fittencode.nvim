@@ -3,7 +3,7 @@ local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
 
-local curl = require('plenary.curl')
+local curl = require('fittencode.curl')
 
 local urls = {
     -- Account
@@ -102,16 +102,12 @@ local function login(on_success, on_error)
             on_error = vim.schedule_wrap(function()
                 reject()
             end),
-            on_callback = vim.schedule_wrap(function(res)
-                if res.status ~= 200 then
+            on_once = vim.schedule_wrap(function(res)
+                local _, login_data = pcall(vim.fn.json_decode, res)
+                if not _ or login_data.code ~= 200 then
                     reject()
                 else
-                    local _, login_data = pcall(vim.fn.json_decode, res)
-                    if not _ or login_data.code ~= 200 then
-                        reject()
-                    else
-                        resolve(login_data.data.token)
-                    end
+                    resolve(login_data.data.token)
                 end
             end)
         })
@@ -124,16 +120,12 @@ local function login(on_success, on_error)
                 on_error = vim.schedule_wrap(function()
                     reject()
                 end),
-                on_callback = vim.schedule_wrap(function(res)
-                    if res.status ~= 200 then
+                on_once = vim.schedule_wrap(function(res)
+                    local _, fico_data = pcall(vim.fn.json_decode, res)
+                    if not _ or fico_data.data == nil or fico_data.data.fico_token == nil then
                         reject()
                     else
-                        local _, fico_data = pcall(vim.fn.json_decode, res)
-                        if not _ or fico_data.data == nil or fico_data.data.fico_token == nil then
-                            reject()
-                        else
-                            resolve(fico_data.data.fico_token)
-                        end
+                        resolve(fico_data.data.fico_token)
                     end
                 end),
             })
@@ -163,47 +155,45 @@ local function logout()
     Log.notify_info('Logout successful')
 end
 
-local function post(url, headers, body, on_callback, on_stream, on_error)
+local function post(url, headers, body, on_create, on_once, on_stream, on_error, on_exit)
     local function request()
         local canceled = false
+        ---@type uv_process_t?
+        local process = nil
         local opts = {
             headers = headers,
             body = body,
+            on_create = vim.schedule_wrap(function(data)
+                if canceled then return end
+                process = data.process
+            end),
+            on_once = vim.schedule_wrap(function(res)
+                if canceled then return end
+                local _, completion_data = pcall(vim.fn.json_decode, res)
+                if not _ then
+                    Fn.schedule_call(on_error)
+                else
+                    Fn.schedule_call(on_once, completion_data)
+                end
+            end),
+            on_stream = vim.schedule_wrap(function(error, chunk)
+                if canceled then return end
+                if error then
+                    Fn.schedule_call(on_error)
+                else
+                    Fn.schedule_call(on_stream, chunk)
+                end
+            end),
             on_error = vim.schedule_wrap(function()
                 if canceled then return end
                 Fn.schedule_call(on_error)
             end),
-            callback = vim.schedule_wrap(function(res)
-                if canceled then return end
-                if res.status ~= 200 then
-                    Fn.schedule_call(on_error)
-                else
-                    local _, completion_data = pcall(vim.fn.json_decode, res.body)
-                    if not _ then
-                        Fn.schedule_call(on_error)
-                    else
-                        Fn.schedule_call(on_callback, completion_data)
-                    end
-                end
-            end),
-            stream = vim.schedule_wrap(function(err, res)
-                if canceled then return end
-                if err then
-                    Fn.schedule_call(on_error)
-                else
-                    Fn.schedule_call(on_stream, res)
-                end
-            end),
         }
-        local _, job = pcall(curl.post, url, opts)
-        if not _ then
-            Fn.schedule_call(on_error)
-            return function() end
-        end
+        curl.post(url, opts)
         return function()
-            if not canceled then
+            if not canceled and process then
                 pcall(function()
-                    job:shutdown(0, 2)
+                    vim.uv.process_kill(process)
                 end)
                 canceled = true
             end
