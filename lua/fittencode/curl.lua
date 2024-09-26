@@ -149,7 +149,16 @@ local function post(url, opts)
         Fn.schedule_call(opts.on_error, { error = 'vim.fn.json_encode failed', })
         return
     end
-    if #body > arg_max() then
+    if #body <= arg_max() then
+        local args = {
+            url,
+            '-X',
+            'POST',
+            '-d',
+            body,
+        }
+        spawn_curl(args, opts)
+    else
         local tmp = vim.fn.tempname()
         vim.uv.fs_open(tmp, 'w', 438, function(e_open, fd)
             if e_open then
@@ -182,15 +191,6 @@ local function post(url, opts)
                 end)
             end
         end)
-    else
-        local args = {
-            url,
-            '-X',
-            'POST',
-            '-d',
-            body,
-        }
-        spawn_curl(args, opts)
     end
 end
 
