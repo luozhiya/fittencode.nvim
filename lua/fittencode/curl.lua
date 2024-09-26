@@ -74,7 +74,11 @@ local curl = {
     success = 0
 }
 
-local function spawn_curl(params, opts)
+local function spawn_curl(args, opts)
+    local params = {
+        cmd = curl.cmd,
+        args = args,
+    }
     local on_once = function(code, output, error)
         if code ~= curl.success then
             Fn.schedule_call(opts.on_error, {
@@ -111,11 +115,7 @@ local function get(url, opts)
         args[#args + 1] = '-H'
         args[#args + 1] = k .. ': ' .. v
     end
-    local params = {
-        cmd = curl.cmd,
-        args = args,
-    }
-    return spawn_curl(params, opts)
+    return spawn_curl(args, opts)
 end
 
 local function post(url, opts)
@@ -135,11 +135,7 @@ local function post(url, opts)
         args[#args + 1] = '-H'
         args[#args + 1] = k .. ': ' .. v
     end
-    local params = {
-        cmd = curl.cmd,
-        args = args,
-    }
-    return spawn_curl(params, opts)
+    return spawn_curl(args, opts)
 end
 
 return {
