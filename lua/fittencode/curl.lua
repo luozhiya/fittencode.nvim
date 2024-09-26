@@ -58,29 +58,26 @@ local function spawn(params, on_once, on_stream, on_error, on_exit)
     return handle, pid
 end
 
-local curl = {
-    cmd = 'curl',
-    default_args = {
+local function spawn_curl(args, opts)
+    local cmd = 'curl'
+    local default_args = {
         '-s',
         '--connect-timeout',
         10, -- seconds
         '--show-error',
-    },
-    exit_code_success = 0
-}
-
-local function spawn_curl(args, opts)
-    vim.list_extend(args, curl.default_args)
+    }
+    local exit_code_success = 0
+    vim.list_extend(args, default_args)
     for k, v in pairs(opts.headers or {}) do
         args[#args + 1] = '-H'
         args[#args + 1] = k .. ': ' .. v
     end
     local params = {
-        cmd = curl.cmd,
+        cmd = cmd,
         args = args,
     }
     local on_once = function(exit_code, output, error)
-        if exit_code ~= curl.exit_code_success then
+        if exit_code ~= exit_code_success then
             Fn.schedule_call(opts.on_error, {
                 exit_code = exit_code,
                 error = error,
@@ -157,7 +154,7 @@ local function arg_max()
         local sys = tonumber(vim.fn.system('getconf ARG_MAX'))
         max_arg_length = sys or (128 * 1024)
     end
-    max_arg_length = math.max(200, max_arg_length - 2048)
+    max_arg_length = math.max(256, max_arg_length - 2048)
     return max_arg_length
 end
 
