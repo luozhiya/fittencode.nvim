@@ -7,18 +7,17 @@ local function spawn(params, on_once, on_stream, on_error, on_exit)
     local output = ''
     local error = ''
     local handle = nil
+    local pid = nil
 
     local stdout = assert(vim.uv.new_pipe())
     local stderr = assert(vim.uv.new_pipe())
 
     ---@diagnostic disable-next-line: missing-fields
-    handle = vim.uv.spawn(cmd, {
+    handle, pid = vim.uv.spawn(cmd, {
         args = args,
         stdio = { nil, stdout, stderr },
-    }, function(code, signal)
-        if not handle then
-            return
-        end
+    }, function(exit_code, exit_signal)
+        assert(handle)
         handle:close()
         stdout:close()
         stderr:close()
@@ -28,10 +27,10 @@ local function spawn(params, on_once, on_stream, on_error, on_exit)
                 return
             end
             check:stop()
-            if signal ~= 0 then
-                Fn.schedule_call(on_error, signal)
+            if exit_signal ~= 0 then
+                Fn.schedule_call(on_error, exit_signal)
             else
-                Fn.schedule_call(on_once, code, output, error)
+                Fn.schedule_call(on_once, exit_code, output, error)
             end
             Fn.schedule_call(on_exit)
         end)
@@ -39,11 +38,7 @@ local function spawn(params, on_once, on_stream, on_error, on_exit)
 
     local function on_chunk(err, chunk, is_stderr)
         assert(not err, err)
-        local process_chunk = function(c)
-            return c:gsub('\r\n', '\n')
-        end
         if chunk then
-            chunk = process_chunk(chunk)
             if is_stderr then
                 error = error .. chunk
             else
@@ -60,18 +55,18 @@ local function spawn(params, on_once, on_stream, on_error, on_exit)
         on_chunk(err, chunk, true)
     end)
 
-    return handle
+    return handle, pid
 end
 
 local curl = {
     cmd = 'curl',
-    args = {
+    default_args = {
         '-s',
         '--connect-timeout',
         10, -- seconds
         '--show-error',
     },
-    success = 0
+    exit_code_success = 0
 }
 
 local function spawn_curl(args, opts)
@@ -79,10 +74,10 @@ local function spawn_curl(args, opts)
         cmd = curl.cmd,
         args = args,
     }
-    local on_once = function(code, output, error)
-        if code ~= curl.success then
+    local on_once = function(exit_code, output, error)
+        if exit_code ~= curl.exit_code_success then
             Fn.schedule_call(opts.on_error, {
-                code = code,
+                exit_code = exit_code,
                 error = error,
             })
         else
@@ -92,9 +87,9 @@ local function spawn_curl(args, opts)
     local on_stream = function(chunk)
         Fn.schedule_call(opts.on_stream, chunk)
     end
-    local on_error = function(signal)
+    local on_error = function(exit_signal)
         Fn.schedule_call(opts.on_error, {
-            signal = signal,
+            exit_signal = exit_signal,
         })
     end
     local on_exit = function()
@@ -110,7 +105,7 @@ local function get(url, opts)
     local args = {
         url,
     }
-    vim.list_extend(args, curl.args)
+    vim.list_extend(args, curl.default_args)
     for k, v in pairs(opts.headers or {}) do
         args[#args + 1] = '-H'
         args[#args + 1] = k .. ': ' .. v
@@ -130,7 +125,7 @@ local function post(url, opts)
         '-d',
         body,
     }
-    vim.list_extend(args, curl.args)
+    vim.list_extend(args, curl.default_args)
     for k, v in pairs(opts.headers or {}) do
         args[#args + 1] = '-H'
         args[#args + 1] = k .. ': ' .. v

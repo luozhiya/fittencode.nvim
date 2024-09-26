@@ -1,12 +1,12 @@
 ---@class fittencode.Config
 local M = {}
 
----@alias FittenCodeVersion 'default' | 'enterprise'
+---@alias fittencode.Version 'default' | 'enterprise'
 
 ---@class fittencode.Config
 local defaults = {
     fitten = {
-        ---@type FittenCodeVersion
+        ---@type fittencode.Version
         -- Avaiable options:
         -- * 'default'
         -- * 'enterprise'
