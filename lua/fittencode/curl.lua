@@ -204,13 +204,13 @@ local function post(url, opts)
     if not _ then
         return
     end
-    local wrap_call = function(file)
+    local by_file = function(file)
         local args = {
             url,
             '-X',
             'POST',
             '-d',
-            file and '@' or '' .. body,
+            file and ('@' .. file) or body,
         }
         return spawn_curl(args, opts)
     end
@@ -223,7 +223,7 @@ local function post(url, opts)
         --     vim.uv.fs_unlink(path)
         -- end)
     else
-        return wrap_call()
+        return by_file()
     end
 end
 
