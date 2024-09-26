@@ -143,44 +143,6 @@ local function arg_max()
     return max_arg_length
 end
 
--- local function write(data, path, on_success, on_error)
---     Promise:new(function(resolve, reject)
---         uv.fs_open(
---             path,
---             'w',
---             438, -- decimal 438 = octal 0666
---             function(e_open, fd)
---                 if e_open then
---                     reject(e_open)
---                 else
---                     assert(fd ~= nil)
---                     resolve(fd)
---                 end
---             end)
---     end):forward(function(fd)
---         return Promise:new(function(resolve, reject)
---             uv.fs_write(
---                 fd,
---                 data,
---                 -1,
---                 function(e_write, _)
---                     if e_write then
---                         reject(e_write)
---                     else
---                         uv.fs_close(fd, function(_, _) end)
---                         resolve()
---                     end
---                 end)
---         end)
---     end, function(e_open)
---         schedule(on_error, uv_err(e_open))
---     end):forward(function()
---         schedule(on_success, data, path)
---     end, function(e_write)
---         schedule(on_error, uv_err(e_write))
---     end)
--- end
-
 local function post(url, opts)
     local _, body = pcall(vim.fn.json_encode, opts.body)
     if not _ then
