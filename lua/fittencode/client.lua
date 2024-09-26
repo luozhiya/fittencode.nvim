@@ -239,7 +239,7 @@ local function generate_one_stage(prompt, on_success, on_error)
         ['Content-Type'] = 'application/json',
     }
     local url = urls.generate_one_stage .. '/' .. keyring.key .. ide
-    return post(url, headers, vim.fn.json_encode(prompt), on_success, nil, on_error)
+    return post(url, headers, vim.fn.json_encode(prompt), nil, on_success, nil, on_error)
 end
 
 -- local function chat(inputs, on_success, on_error)
