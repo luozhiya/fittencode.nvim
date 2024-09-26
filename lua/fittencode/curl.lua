@@ -15,7 +15,7 @@ local function spawn(params, on_once, on_stream, on_error, on_exit)
     handle = vim.uv.spawn(cmd, {
         args = args,
         stdio = { nil, stdout, stderr },
-    }, function(exit_code, signal)
+    }, function(code, signal)
         if not handle then
             return
         end
@@ -31,7 +31,7 @@ local function spawn(params, on_once, on_stream, on_error, on_exit)
             if signal ~= 0 then
                 Fn.schedule_call(on_error, signal)
             else
-                Fn.schedule_call(on_once, exit_code, output, error)
+                Fn.schedule_call(on_once, code, output, error)
             end
             Fn.schedule_call(on_exit)
         end)
@@ -86,7 +86,7 @@ local function spawn_curl(args, opts)
                 error = error,
             })
         else
-            Fn.schedule_call(opts.on_success, output)
+            Fn.schedule_call(opts.on_once, output)
         end
     end
     local on_stream = function(chunk)
