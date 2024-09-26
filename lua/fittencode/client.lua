@@ -1,3 +1,4 @@
+local Config = require('fittencode.config')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
@@ -28,12 +29,9 @@ local urls = {
 
 for k, v in pairs(urls) do
     if not v:match('^https?://') then
-        urls[k] = 'https://fc.fittenlab.cn' .. v
+        urls[k] = Config.fitten.api_endpoint .. v
     end
 end
-
----@type 'default' | 'enterprise'
-local FITTEN_VERSION = 'default'
 
 local keyring_store = vim.fn.stdpath('data') .. '/fittencode' .. '/api_key.json'
 local keyring = nil
@@ -48,13 +46,13 @@ local ide = '?ide=neovim&v=0.2.0'
 ---@class Header
 
 ---@class State
----@field type 'userCanReply' | 'waitingForBotAnswer'
+---@field type 'user_can_reply' | 'waiting_for_bot_answer'
 ---@field response_placeholder string
 
 ---@class Content
 ---@field messages Message[]
 ---@field state State
----@field type 'messageExchange'
+---@field type 'message_exchange'
 
 ---@class Conversation
 ---@field content Content
@@ -66,7 +64,7 @@ local ide = '?ide=neovim&v=0.2.0'
 -- local fitten_ai_api_key
 -- local has_fitten_ai_api_key
 -- local surface_prompt_for_fitten_ai_plus
-local mode = 'chat'
+local type = 'chat'
 ---@type Conversation[]
 local conversations = {}
 local selected_conversation_id = nil
@@ -351,10 +349,10 @@ local function start_chat()
     local e = {
         id = id,
         content = {
-            type = 'messageExchange',
+            type = 'message_exchange',
             messages = {},
             state = {
-                type = 'userCanReply',
+                type = 'user_can_reply',
                 response_placeholder = 'Ask…'
             }
         },
@@ -368,7 +366,7 @@ local function start_chat()
 end
 
 -- Clicking on the "Send" button
-local function send_message(data, model, on_success, on_error)
+local function send_message(data, model, on_stream, on_error)
     local e = conversations[data.id]
     if not e then
         return
@@ -379,7 +377,7 @@ local function send_message(data, model, on_success, on_error)
         '<|end|>'
     }
     vim.list_extend(e.inputs, inputs)
-    chat(e, data, on_success, on_error)
+    return chat(e, data, on_stream, on_error)
 end
 
 -- local function start_chat(user, reference, pro, on_success, on_error)

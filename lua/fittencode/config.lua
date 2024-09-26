@@ -1,8 +1,19 @@
 ---@class fittencode.Config
 local M = {}
 
+---@alias FittenCodeVersion 'default' | 'enterprise'
+
 ---@class fittencode.Config
 local defaults = {
+    fitten = {
+        ---@type FittenCodeVersion
+        -- Avaiable options:
+        -- * 'default'
+        -- * 'enterprise'
+        version = 'default',
+        api_endpoint = 'https://fc.fittenlab.cn',
+        api_key = '',
+    },
     action = {
         document_code = {
             -- Show "Fitten Code - Document Code" in the editor context menu, when you right-click on the code.
