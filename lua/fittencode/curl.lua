@@ -1,6 +1,6 @@
 local Fn = require('fittencode.fn')
 
-local function spawn(params, on_once, on_stream, on_error, on_exit)
+local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     local cmd = params.cmd
     local args = params.args
 
@@ -28,13 +28,15 @@ local function spawn(params, on_once, on_stream, on_error, on_exit)
             end
             check:stop()
             if exit_signal ~= 0 then
-                Fn.schedule_call(on_error, exit_signal)
+                Fn.schedule_call(on_error, { exit_signal = exit_signal, })
             else
-                Fn.schedule_call(on_once, exit_code, output, error)
+                Fn.schedule_call(on_once, { exit_code = exit_code, output = output, error = error, })
             end
             Fn.schedule_call(on_exit)
         end)
     end)
+
+    Fn.schedule_call(on_create, { handle = handle, pid = pid, })
 
     local function on_chunk(err, chunk, is_stderr)
         assert(not err, err)
@@ -48,14 +50,8 @@ local function spawn(params, on_once, on_stream, on_error, on_exit)
         end
     end
 
-    vim.uv.read_start(stdout, function(err, chunk)
-        on_chunk(err, chunk)
-    end)
-    vim.uv.read_start(stderr, function(err, chunk)
-        on_chunk(err, chunk, true)
-    end)
-
-    return handle, pid
+    vim.uv.read_start(stdout, function(err, chunk) on_chunk(err, chunk) end)
+    vim.uv.read_start(stderr, function(err, chunk) on_chunk(err, chunk, true) end)
 end
 
 local curl = {
@@ -81,26 +77,12 @@ local function spawn_curl(args, opts)
     }
     local on_once = function(exit_code, output, error)
         if exit_code ~= curl.exit_code_success then
-            Fn.schedule_call(opts.on_error, {
-                exit_code = exit_code,
-                error = error,
-            })
+            Fn.schedule_call(opts.on_error, { exit_code = exit_code, error = error, })
         else
             Fn.schedule_call(opts.on_once, output)
         end
     end
-    local on_stream = function(chunk)
-        Fn.schedule_call(opts.on_stream, chunk)
-    end
-    local on_error = function(exit_signal)
-        Fn.schedule_call(opts.on_error, {
-            exit_signal = exit_signal,
-        })
-    end
-    local on_exit = function()
-        Fn.schedule_call(opts.on_exit)
-    end
-    return spawn(params, on_once, on_stream, on_error, on_exit)
+    Fn.schedule_call(opts.on_create, spawn(params, on_once, opts.on_stream, opts.on_error, opts.on_exit))
 end
 
 -- headers = {
@@ -110,7 +92,7 @@ local function get(url, opts)
     local args = {
         url,
     }
-    return spawn_curl(args, opts)
+    spawn_curl(args, opts)
 end
 
 local function sysname()
@@ -202,28 +184,51 @@ end
 local function post(url, opts)
     local _, body = pcall(vim.fn.json_encode, opts.body)
     if not _ then
+        Fn.schedule_call(opts.on_error, { error = 'vim.fn.json_encode failed', })
         return
     end
-    local by_file = function(file)
+    if #body > arg_max() then
+        local tmp = vim.fn.tempname()
+        vim.uv.fs_open(tmp, 'w', 438, function(e_open, fd)
+            if e_open then
+                Fn.schedule_call(opts.on_error, { error = e_open, })
+            else
+                assert(fd ~= nil)
+                vim.uv.fs_write(fd, body, -1, function(e_write, _)
+                    if e_write then
+                        Fn.schedule_call(opts.on_error, { error = e_write, })
+                    else
+                        vim.uv.fs_close(fd, function(_, _) end)
+                        local args = {
+                            url,
+                            '-X',
+                            'POST',
+                            '-d',
+                            '@' .. tmp,
+                        }
+                        local xopts = vim.deepcopy(opts)
+                        xopts.on_error = function(err)
+                            Fn.schedule_call(opts.on_error, err)
+                            vim.uv.fs_unlink(tmp, function(_, _) end)
+                        end
+                        xopts.on_exit = function()
+                            Fn.schedule_call(opts.on_exit)
+                            vim.uv.fs_unlink(tmp, function(_, _) end)
+                        end
+                        spawn_curl(args, opts)
+                    end
+                end)
+            end
+        end)
+    else
         local args = {
             url,
             '-X',
             'POST',
             '-d',
-            file and ('@' .. file) or body,
+            body,
         }
-        return spawn_curl(args, opts)
-    end
-    if #body > arg_max() then
-        -- Promise:new(function(resolve, reject)
-        --     write_tmp_file(body, function(path)
-        --         request(path)
-        --     end)
-        -- end):forward(function(path)
-        --     vim.uv.fs_unlink(path)
-        -- end)
-    else
-        return by_file()
+        spawn_curl(args, opts)
     end
 end
 
