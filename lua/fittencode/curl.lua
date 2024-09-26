@@ -1,4 +1,5 @@
 local Fn = require('fittencode.fn')
+local Promise = require('fittencode.promise')
 
 local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     local cmd = params.cmd
@@ -159,37 +160,45 @@ local function post(url, opts)
         }
         spawn_curl(args, opts)
     else
-        local tmp = vim.fn.tempname()
-        vim.uv.fs_open(tmp, 'w', 438, function(e_open, fd)
-            if e_open then
-                Fn.schedule_call(opts.on_error, { error = e_open, })
-            else
-                assert(fd ~= nil)
-                vim.uv.fs_write(fd, body, -1, function(e_write, _)
+        Promise:new(function(resolve)
+            local tmp = vim.fn.tempname()
+            vim.uv.fs_open(tmp, 'w', 438, function(e_open, fd)
+                if e_open then
+                    Fn.schedule_call(opts.on_error, { error = e_open, })
+                else
+                    assert(fd ~= nil)
+                    resolve({ fd = fd, tmp = tmp })
+                end
+            end)
+        end):forward(function(params)
+            return Promise:new(function(resolve)
+                vim.uv.fs_write(params.fd, body, -1, function(e_write, _)
                     if e_write then
                         Fn.schedule_call(opts.on_error, { error = e_write, })
                     else
-                        vim.uv.fs_close(fd, function(_, _) end)
-                        local args = {
-                            url,
-                            '-X',
-                            'POST',
-                            '-d',
-                            '@' .. tmp,
-                        }
-                        local xopts = vim.deepcopy(opts)
-                        xopts.on_error = function(err)
-                            Fn.schedule_call(opts.on_error, err)
-                            vim.uv.fs_unlink(tmp, function(_, _) end)
-                        end
-                        xopts.on_exit = function()
-                            Fn.schedule_call(opts.on_exit)
-                            vim.uv.fs_unlink(tmp, function(_, _) end)
-                        end
-                        spawn_curl(args, opts)
+                        vim.uv.fs_close(params.fd, function(_, _) end)
+                        resolve(params.tmp)
                     end
                 end)
+            end)
+        end):forward(function(tmp)
+            local args = {
+                url,
+                '-X',
+                'POST',
+                '-d',
+                '@' .. tmp,
+            }
+            local xopts = vim.deepcopy(opts)
+            xopts.on_error = function(err)
+                Fn.schedule_call(opts.on_error, err)
+                vim.uv.fs_unlink(tmp, function(_, _) end)
             end
+            xopts.on_exit = function()
+                Fn.schedule_call(opts.on_exit)
+                vim.uv.fs_unlink(tmp, function(_, _) end)
+            end
+            spawn_curl(args, opts)
         end)
     end
 end
