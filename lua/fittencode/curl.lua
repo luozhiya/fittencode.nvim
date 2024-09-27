@@ -84,7 +84,7 @@ local function spawn_curl(args, opts)
             Fn.schedule_call(opts.on_once, output)
         end
     end
-    Fn.schedule_call(opts.on_create, spawn(params, on_once, opts.on_stream, opts.on_error, opts.on_exit))
+    spawn(params, opts.on_create, on_once, opts.on_stream, opts.on_error, opts.on_exit)
 end
 
 local function get(url, opts)
@@ -168,15 +168,11 @@ local function post(url, opts)
                 '@' .. tmp,
             }
             local xopts = vim.deepcopy(opts)
-            xopts.on_error = function(err)
-                Fn.schedule_call(opts.on_error, err)
-                vim.uv.fs_unlink(tmp, function(_, _) end)
-            end
             xopts.on_exit = function()
                 Fn.schedule_call(opts.on_exit)
                 vim.uv.fs_unlink(tmp, function(_, _) end)
             end
-            spawn_curl(args, opts)
+            spawn_curl(args, xopts)
         end)
     end
 end
