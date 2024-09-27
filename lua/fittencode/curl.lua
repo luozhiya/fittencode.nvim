@@ -158,14 +158,14 @@ local function post(url, opts)
                     resolve({ fd = fd, tmp = tmp })
                 end
             end)
-        end):forward(function(params)
+        end):forward(function(fs)
             return Promise:new(function(resolve)
-                vim.uv.fs_write(params.fd, body, -1, function(e_write, _)
+                vim.uv.fs_write(fs.fd, body, -1, function(e_write, _)
                     if e_write then
                         Fn.schedule_call(opts.on_error, { error = e_write, })
                     else
-                        vim.uv.fs_close(params.fd, function(_, _) end)
-                        resolve(params.tmp)
+                        vim.uv.fs_close(fs.fd, function(_, _) end)
+                        resolve(fs.tmp)
                     end
                 end)
             end)
