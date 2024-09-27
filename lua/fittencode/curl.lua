@@ -17,6 +17,7 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     process, pid = vim.uv.spawn(cmd, {
         args = args,
         stdio = { nil, stdout, stderr },
+        verbatim = true,
     }, function(exit_code, exit_signal)
         assert(process)
         process:close()
@@ -68,11 +69,6 @@ local curl = {
 }
 
 local function spawn_curl(args, opts)
-    vim.list_extend(args, curl.default_args)
-    for k, v in pairs(opts.headers or {}) do
-        args[#args + 1] = '-H'
-        args[#args + 1] = k .. ': ' .. v
-    end
     local params = {
         cmd = curl.cmd,
         args = args,
@@ -87,10 +83,25 @@ local function spawn_curl(args, opts)
     spawn(params, opts.on_create, on_once, opts.on_stream, opts.on_error, opts.on_exit)
 end
 
+local function build_args(args, headers)
+    vim.list_extend(args, curl.default_args)
+    for k, v in pairs(headers or {}) do
+        args[#args + 1] = '-H'
+        args[#args + 1] = k .. ': ' .. v
+    end
+    return args
+end
+
+local function add_data_argument(args, data, is_file)
+    args[#args + 1] = '-d'
+    args[#args + 1] = is_file and ('@' .. data) or data
+end
+
 local function get(url, opts)
     local args = {
         url,
     }
+    build_args(args, opts.headers)
     spawn_curl(args, opts)
 end
 
@@ -118,7 +129,6 @@ local function arg_max()
         local sys = tonumber(vim.fn.system('getconf ARG_MAX'))
         max_arg_length = sys or (128 * 1024)
     end
-    max_arg_length = math.max(200, max_arg_length - 2048)
     return max_arg_length
 end
 
@@ -128,14 +138,14 @@ local function post(url, opts)
         Fn.schedule_call(opts.on_error, { error = 'vim.fn.json_encode failed', })
         return
     end
-    if #body <= arg_max() then
-        local args = {
-            url,
-            '-X',
-            'POST',
-            '-d',
-            body,
-        }
+    local args = {
+        url,
+        '-X',
+        'POST',
+    }
+    build_args(args, opts.headers)
+    if #body <= arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
+        add_data_argument(args, body, false)
         spawn_curl(args, opts)
     else
         Promise:new(function(resolve)
@@ -160,13 +170,7 @@ local function post(url, opts)
                 end)
             end)
         end):forward(function(tmp)
-            local args = {
-                url,
-                '-X',
-                'POST',
-                '-d',
-                '@' .. tmp,
-            }
+            add_data_argument(args, tmp, true)
             local xopts = vim.deepcopy(opts)
             xopts.on_exit = function()
                 Fn.schedule_call(opts.on_exit)
