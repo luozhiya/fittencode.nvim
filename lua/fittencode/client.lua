@@ -42,6 +42,7 @@ local ide = '?ide=neovim&v=0.2.0'
 
 ---@class Message
 ---@field source 'Bot'|'User'
+---@field content string
 
 ---@class Header
 
@@ -296,6 +297,36 @@ local function update_conversation(e, id)
     selected_conversation_id = id
 end
 
+local function has_workspace()
+end
+
+-- let c = "default" != Ur.FITTEN_VERSION;
+-- (T.startsWith("@_workspace") || T.startsWith("@workspace") || T.startsWith("@project")) && (s = !!l),
+-- c && T.startsWith("@workspace") || T.startsWith("@_workspace") ? ((T.startsWith("@workspace(") || T.startsWith("@_workspace(")) && "enterprise" == Ur.FITTEN_VERSION ? (s = !0,
+-- sQ = !0,
+-- aQ = !1) : (sQ = !1,
+-- aQ = !0),
+-- iQ = !0,
+-- await Ul(r, e, o, 0, lQ, aQ).then((e => {
+--     console.log(e)
+-- }
+-- )).catch((e => {
+--     console.log(e)
+-- }
+-- ))) : iQ = !1,
+-- window.timeoutId && clearTimeout(window.timeoutId),
+-- window.timeoutId = setTimeout(( () => {
+--     let e = window._panel_state;
+--     if ("chat" === e.type) {
+--         const t = e.conversations.find((t => t.id === e.selectedConversationId));
+--         if (t && 0 === t.content.messages.length)
+--             return
+--     }
+--     window.start_chat()
+-- }
+-- ), 18e6),
+-- console.log("Your preferLanguage: ", window.language);
+
 -- async function fQ(e, t, n, r, o)
 local function chat(e, data, on_stream, on_error)
     -- 1. Check keyring
@@ -305,15 +336,37 @@ local function chat(e, data, on_stream, on_error)
     end
     assert(keyring)
 
+    local function Ul(lQ, aQ)
+        if aQ then
+        end
+    end
+
     -- 2. Check prefix
-    local prefix = {
-        '@_workspace',
-        '@workspace',
-        '@_project',
-        '@project',
-        '@_workspace(',
-        '@workspace(',
-    }
+    local s = true
+    local l = has_workspace()
+    local Q = ''
+    local sQ = false
+    local aQ = false
+    local iQ = false
+    local lQ = ''
+    local T = conversations[selected_conversation_id].content.messages[#(conversations[selected_conversation_id].content.messages)].content
+    local c = Config.fitten.version ~= 'default'
+    if T:match('^workspace') or T:match('^_workspace') or T:match('^project') then
+        s = not not l
+    end
+    if c and T:match('^workspace') or T:match('^_workspace') then
+        if (T:match('^workspace%(') or T:match('^_workspace%(')) and Config.fitten.version == 'enterprise' then
+            sQ = true
+            aQ = false
+        else
+            sQ = false
+            aQ = true
+            iQ = true
+            Ul(lQ, aQ)
+        end
+    else
+        iQ = false
+    end
 
     -- 3. initialPrompt
 
