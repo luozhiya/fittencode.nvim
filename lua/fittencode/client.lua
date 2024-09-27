@@ -166,6 +166,7 @@ local function post(url, headers, body, on_create, on_once, on_stream, on_error,
             on_create = vim.schedule_wrap(function(data)
                 if canceled then return end
                 process = data.process
+                Fn.schedule_call(on_create)
             end),
             on_once = vim.schedule_wrap(function(res)
                 if canceled then return end
@@ -187,6 +188,9 @@ local function post(url, headers, body, on_create, on_once, on_stream, on_error,
             on_error = vim.schedule_wrap(function()
                 if canceled then return end
                 Fn.schedule_call(on_error)
+            end),
+            on_exit = vim.schedule_wrap(function()
+                Fn.schedule_call(on_exit)
             end),
         }
         curl.post(url, opts)
