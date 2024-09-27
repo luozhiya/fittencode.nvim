@@ -83,12 +83,18 @@ local function convert_to_lsp_completion_response(line, character, cursor_before
     return { items = items, isIncomplete = false }
 end
 
+local cancel_request = nil
+
 -- Invoke completion (required).
 -- The `callback` function must always be called.
 ---@param request cmp.SourceCompletionApiParams
 ---@param callback fun(response:lsp.CompletionResponse|nil)
 function source:complete(request, callback)
-    Client.generate_one_stage(Inline.build_prompt_for_completion(), function(completion_data)
+    if cancel_request then
+        cancel_request()
+        cancel_request = nil
+    end
+    cancel_request = Client.generate_one_stage(Inline.build_prompt_for_completion(), function(completion_data)
         local suggestions = Inline.transform_generated_text(completion_data.generated_text)
         if not suggestions then
             callback()

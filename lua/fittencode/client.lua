@@ -155,8 +155,8 @@ local function logout()
     Log.notify_info('Logout successful')
 end
 
-local function post(url, headers, body, on_create, on_once, on_stream, on_error, on_exit)
-    local function request()
+local function request(method, url, headers, body, on_create, on_once, on_stream, on_error, on_exit)
+    local function wrap()
         local canceled = false
         ---@type uv_process_t?
         local process = nil
@@ -170,12 +170,7 @@ local function post(url, headers, body, on_create, on_once, on_stream, on_error,
             end),
             on_once = vim.schedule_wrap(function(res)
                 if canceled then return end
-                local _, completion_data = pcall(vim.fn.json_decode, res)
-                if not _ then
-                    Fn.schedule_call(on_error)
-                else
-                    Fn.schedule_call(on_once, completion_data)
-                end
+                Fn.schedule_call(on_once, res)
             end),
             on_stream = vim.schedule_wrap(function(error, chunk)
                 if canceled then return end
@@ -193,18 +188,15 @@ local function post(url, headers, body, on_create, on_once, on_stream, on_error,
                 Fn.schedule_call(on_exit)
             end),
         }
-        curl.post(url, opts)
+        curl[method](url, opts)
         return function()
-            if not canceled and process then
-                pcall(function()
-                    vim.uv.process_kill(process)
-                end)
+            if not canceled then
+                pcall(function() vim.uv.process_kill(process) end)
                 canceled = true
             end
         end
     end
-
-    return request()
+    return wrap()
 end
 
 local function keyring_check()
@@ -233,7 +225,7 @@ end
 --     "delta_line": 0,
 --     "ex_msg": "1+2)*3"
 -- }
-local function generate_one_stage(prompt, on_success, on_error)
+local function generate_one_stage(prompt, on_once, on_error)
     if not keyring_check() then
         Fn.schedule_call(on_error)
         return
@@ -243,7 +235,7 @@ local function generate_one_stage(prompt, on_success, on_error)
         ['Content-Type'] = 'application/json',
     }
     local url = urls.generate_one_stage .. '/' .. keyring.key .. ide
-    return post(url, headers, vim.fn.json_encode(prompt), nil, on_success, nil, on_error)
+    return request('post', url, headers, prompt, nil, on_once, nil, on_error)
 end
 
 -- local function chat(inputs, on_success, on_error)
@@ -305,7 +297,7 @@ local function update_conversation(e, id)
 end
 
 -- async function fQ(e, t, n, r, o)
-local function chat(e, data, on_success, on_error)
+local function chat(e, data, on_stream, on_error)
     -- 1. Check keyring
     if not keyring_check() then
         Fn.schedule_call(on_error)
@@ -326,6 +318,7 @@ local function chat(e, data, on_success, on_error)
     -- 3. initialPrompt
 
     -- 4. Send Post Request
+    request('post',)
 
     -- 5. Receive Response
 
