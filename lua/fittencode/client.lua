@@ -5,11 +5,15 @@ local Promise = require('fittencode.promise')
 
 local curl = require('fittencode.curl')
 
+local ide = '?ide=neovim&v=0.2.0'
+
 local urls = {
     -- Account
-    register = 'https://codewebchat.fittenlab.cn/?ide=neovim',
+    register = 'https://codewebchat.fittenlab.cn/' .. ide,
     login = '/codeuser/login',
     get_ft_token = '/codeuser/get_ft_token',
+    privacy = '/codeuser/privacy',
+    agreement = '/codeuser/agreement',
     -- Completion
     generate_one_stage = '/codeapi/completion/generate_one_stage',
     -- Chat
@@ -27,19 +31,43 @@ local urls = {
     add_files_and_directories = '/codeapi/rag/add_files_and_directories',
 }
 
-local server_urls = {
-    ['+0800'] = 'https://fc.fittenlab.cn',
+local language_urls = {
+    ['zh'] = {
+        server_url = 'https://fc.fittenlab.cn',
+    },
+    ['en'] = {
+        server_url = 'https://fc.fittenlab.com',
+        privacy = '/codeuser/privacy_en',
+        agreement = '/codeuser/agreement_en',
+    }
 }
 
-setmetatable(server_urls, {
+setmetatable(language_urls, {
     __index = function()
-        return 'https://fc.fittenlab.com'
+        return language_urls['en']
     end
 })
 
-if Config.fitten.server_url == '' then
-    Config.fitten.server_url = server_urls[os.date('%z')]
+local timezone_language = {
+    ['+0000'] = 'en', -- Greenwich Mean Time (UK)
+    ['+0800'] = 'zh', -- China Standard Time
+}
+
+setmetatable(timezone_language, {
+    __index = function()
+        return timezone_language['+0000']
+    end
+})
+
+for k, v in pairs(language_urls[timezone_language[os.date('%z')]]) do
+    if k ~= 'server_url' then
+        urls[k] = v
+    elseif Config.fitten.server_url == '' then
+        Config.fitten.server_url = v
+    end
 end
+
+assert(Config.fitten.server_url ~= '')
 
 for k, v in pairs(urls) do
     if not v:match('^https?://') then
@@ -49,8 +77,6 @@ end
 
 local keyring_store = vim.fn.stdpath('data') .. '/fittencode' .. '/api_key.json'
 local keyring = nil
-
-local ide = '?ide=neovim&v=0.2.0'
 
 ---@alias Model 'Fast' | 'Search'
 
