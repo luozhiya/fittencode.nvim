@@ -27,9 +27,23 @@ local urls = {
     add_files_and_directories = '/codeapi/rag/add_files_and_directories',
 }
 
+local server_urls = {
+    ['+0800'] = 'https://fc.fittenlab.cn',
+}
+
+setmetatable(server_urls, {
+    __index = function()
+        return 'https://fc.fittenlab.com'
+    end
+})
+
+if Config.fitten.server_url == '' then
+    Config.fitten.server_url = server_urls[os.date('%z')]
+end
+
 for k, v in pairs(urls) do
     if not v:match('^https?://') then
-        urls[k] = Config.fitten.api_endpoint .. v
+        urls[k] = Config.fitten.server_url .. v
     end
 end
 

@@ -11,8 +11,13 @@ local defaults = {
         -- * 'default'
         -- * 'enterprise'
         version = 'default',
-        api_endpoint = 'https://fc.fittenlab.cn',
-        api_key = '',
+        -- The server URL for Fitten Code.
+        -- Fitten Code will detect the server URL based on your timezone automatically if it's not set.
+        -- You can also change it to your own server URL if you have a private server.
+        -- Default server URL for different regions:
+        -- * China:         'https://fc.fittenlab.cn'
+        -- * International: 'https://fc.fittenlab.com'
+        server_url = '',
     },
     action = {
         document_code = {
