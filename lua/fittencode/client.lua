@@ -128,8 +128,8 @@ local function login(on_success, on_error)
         return
     end
 
-    local username = vim.fn.input('Username ')
-    local password = vim.fn.inputsecret('Password ')
+    local username = vim.fn.input('Username/Email/Phone(+CountryCode): ')
+    local password = vim.fn.inputsecret('Password: ')
 
     Promise:new(function(resolve, reject)
         curl.post(urls.login, {
