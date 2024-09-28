@@ -174,8 +174,50 @@ local function login(on_success, on_error)
     end)
 end
 
-local function uuid_v4()
+local regex_default = '^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$'
+
+local function validate(uuid)
+    return uuid:match(regex_default) ~= nil
 end
+local validate_default = validate
+
+local byte_to_hex = {}
+for i = 0, 255 do
+    byte_to_hex[#byte_to_hex + 1] = string.sub(string.format('%x', i + 256), 2)
+end
+
+local function stringify(arr)
+    local uuid_parts = {
+        byte_to_hex[arr[1]] .. byte_to_hex[arr[2]] .. byte_to_hex[arr[3]] .. byte_to_hex[arr[4]],
+        byte_to_hex[arr[5]] .. byte_to_hex[arr[6]],
+        byte_to_hex[arr[7]] .. byte_to_hex[arr[8]],
+        byte_to_hex[arr[9]] .. byte_to_hex[arr[10]],
+        byte_to_hex[arr[11]] .. byte_to_hex[arr[12]] .. byte_to_hex[arr[13]] .. byte_to_hex[arr[14]] .. byte_to_hex[arr[15]] .. byte_to_hex[arr[16]]
+    }
+    local uuid = table.concat(uuid_parts, "-")
+    if not validate_default(uuid) then
+        return
+    end
+    return uuid
+end
+local stringify_default = stringify
+
+local function rng(len)
+    math.randomseed(os.time())
+    local arr = {}
+    for _ = 1, len do
+        arr[#arr+1] = math.random(0, 256)
+    end
+    return arr
+end
+
+local function v4()
+    local rnds = rng(16)
+    rnds[6] = rnds[6] & 15 | 64
+    rnds[8] = rnds[8] & 63 | 128
+    return stringify_default(rnds)
+end
+local v4_default = v4
 
 local function set_timeout(timeout, callback)
     local timer = vim.uv.new_timer()
@@ -205,6 +247,12 @@ local function clear_interval(timer)
 end
 
 local start_check_login_timer = nil
+local sources = {
+    'google',
+    'github',
+    'twitter',
+    'microsoft'
+}
 
 local function login3rd(source, on_success, on_error)
     if keyring then
@@ -213,12 +261,6 @@ local function login3rd(source, on_success, on_error)
         return
     end
 
-    local sources = {
-        'google',
-        'github',
-        'twitter',
-        'microsoft'
-    }
     if not source or not sources[source] then
         Log.notify_error('Invalid 3rd-party login source')
         Fn.schedule_call(on_error)
@@ -232,7 +274,12 @@ local function login3rd(source, on_success, on_error)
     local start_check = false;
     clear_interval(start_check_login_timer)
 
-    local client_token = uuid_v4()
+    local client_token = v4_default()
+    if not client_token then
+        Log.notify_error('Failed to generate client token')
+        Fn.schedule_call(on_error)
+        return
+    end
     local login_url = urls.fb_check_login .. '?source=' .. source .. '&client_token=' .. client_token
     start_check = true;
     vim.ui.open(login_url)
