@@ -70,36 +70,12 @@ end
 local keyring_store = vim.fn.stdpath('data') .. '/fittencode' .. '/api_key.json'
 local keyring = nil
 
----@alias Model 'Fast' | 'Search'
-
----@class Message
----@field source 'bot'|'user'
----@field content string
-
----@class Header
-
----@class State
----@field type 'user_can_reply' | 'waiting_for_bot_answer'
----@field response_placeholder string
-
----@class Content
----@field messages Message[]
----@field state State
----@field type 'message_exchange'
-
----@class Conversation
----@field content Content
----@field header Header
----@field id string
----@field inputs string[]
----@field mode 'chat'
-
----@type Conversation[]
-local conversations = {}
-local selected_conversation_id = nil
-
 local function load_last_session()
-    local _, store = pcall(vim.fn.json_decode, vim.fn.readfile(keyring_store))
+    local _, content = pcall(vim.fn.readfile, keyring_store)
+    if not _ then
+        return
+    end
+    local _, store = pcall(vim.fn.json_decode, content)
     if _ and store.key and store.key ~= '' then
         keyring = store
     end
@@ -208,10 +184,38 @@ local function rng(len)
     return arr
 end
 
+local function bit_and(a, b)
+    local result = 0
+    local bit = 1
+    while a > 0 and b > 0 do
+        if a % 2 == 1 and b % 2 == 1 then
+            result = result + bit
+        end
+        a = math.floor(a / 2)
+        b = math.floor(b / 2)
+        bit = bit * 2
+    end
+    return result
+end
+
+local function bit_or(a, b)
+    local result = 0
+    local bit = 1
+    while a > 0 or b > 0 do
+        if a % 2 == 1 or b % 2 == 1 then
+            result = result + bit
+        end
+        a = math.floor(a / 2)
+        b = math.floor(b / 2)
+        bit = bit * 2
+    end
+    return result
+end
+
 local function v4()
     local rnds = rng(16)
-    rnds[6] = rnds[6] & 15 | 64
-    rnds[8] = rnds[8] & 63 | 128
+    rnds[6] = bit_or(bit_and(rnds[6], 15), 64)
+    rnds[8] = bit_or(bit_and(rnds[8], 63), 128)
     return stringify_default(rnds)
 end
 local v4_default = v4
@@ -431,179 +435,13 @@ local function generate_one_stage(prompt, on_once, on_error)
     return request('post', url, headers, prompt, nil, on_once, nil, on_error)
 end
 
-local function random(length)
-    local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    local result = {}
-
-    for i = 1, length do
-        local index = math.random(1, #chars)
-        table.insert(result, chars:sub(index, index))
-    end
-
-    return table.concat(result)
-end
-
-local function update_conversation(e, id)
-    conversations[id] = e
-    selected_conversation_id = id
-end
-
-local function has_workspace()
-end
-
-local function chat(e, data, on_stream, on_error)
-    -- 1. Check keyring
+local function execute_chat(e, data, on_stream, on_error)
     if not keyring_check() then
         Fn.schedule_call(on_error)
         return
     end
     assert(keyring)
 end
-
--- Clicking on the "Start Chat" button
-local function start_chat()
-    local id = random(36).sub(2, 10)
-    local inputs = {
-        '<|system|>',
-        "Reply same language as the user's input.",
-        '<|end|>',
-    }
-    local e = {
-        id = id,
-        content = {
-            type = 'message_exchange',
-            messages = {},
-            state = {
-                type = 'user_can_reply',
-                response_placeholder = 'Ask…'
-            }
-        },
-        reference = {
-            select_text = '',
-            select_range = '',
-        },
-        inputs = inputs,
-    }
-    update_conversation(e, id)
-end
-
--- Clicking on the "Send" button
-local function send_message(data, model, on_stream, on_error)
-    local e = conversations[data.id]
-    if not e then
-        return
-    end
-    local inputs = {
-        '<|user|>',
-        model == 'Search' and '@FCPS ' or '' .. data.message,
-        '<|end|>'
-    }
-    vim.list_extend(e.inputs, inputs)
-    return chat(e, data, on_stream, on_error)
-end
-
--- local function start_chat(user, reference, pro, on_success, on_error)
---     local inputs = {
---         '<|system|>',
---         'Reply same language as the user\'s input.',
---         '<|end|>',
---         '<|user|>',
---         pro and '@FCPS ' or '' .. user,
---         '<|end|>',
---         '<|assistant|>',
---     }
---     if reference then
---         inputs = {
---             '<|system|>',
---             'Reply same language as the user\'s input.',
---             '<|end|>',
---             '<|user|>',
---             'The following code is selected by the user, which may be mentioned in the subsequent conversation:',
---             '```',
---             reference,
---             '```',
---             '<|end|>',
---             '<|assistant|>',
---             'Understand, you can continue to enter your problem.',
---             '<|end|>',
---             '<|user|>',
---             pro and '@FCPS ' or '' .. user,
---             '<|end|>',
---             '<|assistant|>',
---         }
---     end
---     return chat(table.concat(inputs, '\n') .. '\n', on_success, on_error)
--- end
-
--- Fast
--- Fast, and easy to use for daily use.
---
--- <|system|>
--- Reply same language as the user's input.
--- <|end|>
--- <|user|>
--- 1
--- <|end|>
--- <|assistant|>
---
--- local function fast(user, reference, on_success, on_error)
---     return start_chat(user, reference, false, on_success, on_error)
--- end
-
--- Search
--- [Free Public Beta] High accuracy, supports online search, and can solve more challenging problems.
---
--- <|system|>
--- Reply same language as the user's input.
--- <|end|>
--- <|user|>
--- @FCPS 1
--- <|end|>
--- <|assistant|>
--- local function pro_search(user, reference, on_success, on_error)
---     return start_chat(user, reference, true, on_success, on_error)
--- end
-
--- local function explain_code(context, code, on_success, on_error)
---     local inputs = {
---         '<|system|>',
---         'Reply same language as the user\'s input.',
---         '<|end|>',
---         '<|user|>',
---         'Below is the user\'s code context, which may be needed for subsequent inquiries.',
---         '```',
---         context,
---         '```',
---         '<|end|>',
---         '<|assistant|>',
---         'Understood, you can continue to enter your question.',
---         '<|end|>',
---         '<|user|>',
---         'Break down and explain the following code in detail step by step, then summarize the code (emphasize its main function).',
---         '```',
---         code,
---         '```',
---         '<|end|>',
---     }
---     return chat(table.concat(inputs, '\n') .. '\n', on_success, on_error)
--- end
-
--- local function find_bugs(code, on_success, on_error)
---     local inputs = {
---         '<|system|>',
---         'Reply same language as the user\'s input.',
---         '<|end|>',
---         '<|user|>',
---         'Selected Code:',
---         '```',
---         code,
---         '```',
---         'What potential issues could the above code have?',
---         'Only consider defects that would lead to erroneous behavior.',
---         '<|end|>',
---     }
---     return chat(table.concat(inputs, '\n') .. '\n', on_success, on_error)
--- end
 
 return {
     load_last_session = load_last_session,
@@ -613,8 +451,5 @@ return {
     login_providers = login_providers,
     logout = logout,
     generate_one_stage = generate_one_stage,
-    start_chat = start_chat,
-    explain_code = explain_code,
-    find_bugs = find_bugs,
-    send_message = send_message,
+    execute_chat = execute_chat,
 }
