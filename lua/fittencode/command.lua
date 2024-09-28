@@ -1,3 +1,8 @@
+-- login
+--    username password
+-- login3rd google/github/twitter/microsoft
+--
+
 local function execute(input)
 end
 

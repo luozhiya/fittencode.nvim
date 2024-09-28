@@ -10,7 +10,10 @@ local ide = '?ide=neovim&v=0.2.0'
 local urls = {
     -- Account
     register = 'https://codewebchat.fittenlab.cn/' .. ide,
+    register_cvt = 'https://fc.fittentech.com/cvt/register',
     login = '/codeuser/login',
+    fb_check_login = '/codeuser/fb_check_login', -- ?client_token=
+    click_count = '/codeuser/click_count',
     get_ft_token = '/codeuser/get_ft_token',
     privacy = '/codeuser/privacy',
     agreement = '/codeuser/agreement',
@@ -31,8 +34,8 @@ local urls = {
     add_files_and_directories = '/codeapi/rag/add_files_and_directories',
 }
 
-local language_urls = {
-    ['zh'] = {
+local locale_urls = {
+    ['zh-cn'] = {
         server_url = 'https://fc.fittenlab.cn',
     },
     ['en'] = {
@@ -41,32 +44,21 @@ local language_urls = {
         agreement = '/codeuser/agreement_en',
     }
 }
+setmetatable(locale_urls, { __index = function() return locale_urls['en'] end })
 
-setmetatable(language_urls, {
-    __index = function()
-        return language_urls['en']
-    end
-})
-
-local timezone_language = {
-    ['+0000'] = 'en', -- Greenwich Mean Time (UK)
-    ['+0800'] = 'zh', -- China Standard Time
+local timezone = {
+    ['+0000'] = 'en',    -- Greenwich Mean Time (UK)
+    ['+0800'] = 'zh-cn', -- China Standard Time
 }
+setmetatable(timezone, { __index = function() return timezone['+0000'] end })
 
-setmetatable(timezone_language, {
-    __index = function()
-        return timezone_language['+0000']
-    end
-})
-
-for k, v in pairs(language_urls[timezone_language[os.date('%z')]]) do
+for k, v in pairs(locale_urls[timezone[os.date('%z')]]) do
     if k ~= 'server_url' then
         urls[k] = v
     elseif Config.fitten.server_url == '' then
         Config.fitten.server_url = v
     end
 end
-
 assert(Config.fitten.server_url ~= '')
 
 for k, v in pairs(urls) do
@@ -102,10 +94,6 @@ local keyring = nil
 ---@field inputs string[]
 ---@field mode 'chat'
 
--- local fitten_ai_api_key
--- local has_fitten_ai_api_key
--- local surface_prompt_for_fitten_ai_plus
-local type = 'chat'
 ---@type Conversation[]
 local conversations = {}
 local selected_conversation_id = nil
@@ -184,6 +172,126 @@ local function login(on_success, on_error)
     end, function()
         Fn.schedule_call(on_error)
     end)
+end
+
+local function uuid_v4()
+end
+
+local function set_timeout(timeout, callback)
+    local timer = vim.uv.new_timer()
+    assert(timer)
+    timer:start(timeout, 0, function()
+        timer:stop()
+        timer:close()
+        callback()
+    end)
+    return timer
+end
+
+local function set_interval(interval, callback)
+    local timer = vim.uv.new_timer()
+    assert(timer)
+    timer:start(interval, interval, function()
+        callback()
+    end)
+    return timer
+end
+
+local function clear_interval(timer)
+    if timer then
+        timer:stop()
+        timer:close()
+    end
+end
+
+local start_check_login_timer = nil
+
+local function login3rd(source, on_success, on_error)
+    if keyring then
+        Log.notify_info('You are already logged in')
+        Fn.schedule_call(on_success)
+        return
+    end
+
+    local sources = {
+        'google',
+        'github',
+        'twitter',
+        'microsoft'
+    }
+    if not source or not sources[source] then
+        Log.notify_error('Invalid 3rd-party login source')
+        Fn.schedule_call(on_error)
+        return
+    end
+
+    local is_login_fb_running = false;
+    local total_time_limit = 600;
+    local time_delta = 3;
+    local total_time = 0;
+    local start_check = false;
+    clear_interval(start_check_login_timer)
+
+    local client_token = uuid_v4()
+    local login_url = urls.fb_check_login .. '?source=' .. source .. '&client_token=' .. client_token
+    start_check = true;
+    vim.ui.open(login_url)
+
+    local function start_check_login()
+        if is_login_fb_running then
+            return
+        end
+        is_login_fb_running = true
+        local function check_login()
+            if not start_check then
+                return
+            end
+            total_time = total_time + time_delta
+            if total_time > total_time_limit then
+                start_check = false
+                Log.info('Login in timeout.')
+                Fn.schedule_call(on_error)
+            end
+            local check_url = urls.fb_check_login .. '?client_token=' .. client_token
+            Promise:new(function(resolve, reject)
+                curl.get(check_url, {
+                    on_error = vim.schedule_wrap(function() reject() end),
+                    on_once = vim.schedule_wrap(function(fico_res)
+                        local _, fico_data = pcall(vim.fn.json_decode, fico_res)
+                        if not _ or fico_data.token == nil or fico_data.token == '' then
+                            reject()
+                        else
+                            resolve(fico_data)
+                        end
+                    end)
+                })
+            end):forward(function(fico_data)
+                clear_interval(start_check_login_timer)
+                is_login_fb_running = false
+
+                keyring = {
+                    name = '@' .. source,
+                    key = fico_data.token
+                }
+                Log.notify_info('Login successful')
+                vim.fn.writefile(vim.fn.json_encode(keyring), keyring_store)
+                Fn.schedule_call(on_success)
+
+                local type = fico_data.create and 'register_fb' or 'login_fb';
+                local click_count_url = urls.click_count .. '?apikey==' .. fico_data.token .. '&type=' .. type
+                curl.get(click_count_url, {
+                    headers = {
+                        ['Content-Type'] = 'application/json',
+                    },
+                })
+                if fico_data.create then
+                    curl.get(urls.register_cvt)
+                end
+            end)
+        end
+        start_check_login_timer = set_interval(time_delta * 1e3, check_login)
+    end
+    start_check_login()
 end
 
 local function logout()
@@ -278,47 +386,6 @@ local function generate_one_stage(prompt, on_once, on_error)
     local url = urls.generate_one_stage .. '/' .. keyring.key .. ide
     return request('post', url, headers, prompt, nil, on_once, nil, on_error)
 end
-
--- local function chat(inputs, on_success, on_error)
---     if not keyring_check() then
---         Fn.schedule_call(on_error)
---         return
---     end
---     assert(keyring)
-
---     local function stream()
---         local headers = {
---             ['Content-Type'] = 'application/json',
---         }
---         local url = urls.chat .. '?ft_token=' .. keyring.key .. ide
---         local body = {
---             inputs = inputs,
---             ft_token = keyring.key,
---         }
---         local T = ''
---         return post(url, headers, vim.fn.json_encode(body), nil, function(res)
---             local Q = ''
---             T = T .. res
---             local r = T:find('\n')
---             while r do
---                 local e = vim.trim(T:sub(1, r - 1))
---                 T = T:sub(r + 1)
---                 local _, t = pcall(vim.fn.json_decode, e)
---                 if not _ then
---                     Log.error('Error decoding json: {}', e)
---                     return
---                 end
---                 if t.delta and not t.delta:find('heartbeat') then
---                     Q = Q .. t.delta
---                 end
---                 r = T:find('\n')
---             end
---             Fn.schedule_call(on_success, Q)
---         end, on_error)
---     end
-
---     return stream()
--- end
 
 local function random(length)
     local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -498,6 +565,7 @@ return {
     load_last_session = load_last_session,
     register = register,
     login = login,
+    login3rd = login3rd,
     logout = logout,
     generate_one_stage = generate_one_stage,
     start_chat = start_chat,
