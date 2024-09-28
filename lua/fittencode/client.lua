@@ -295,11 +295,11 @@ local function login3rd(source, on_success, on_error)
 end
 
 local function logout()
-    keyring = nil
-    if vim.fn.filereadable(keyring_store) == 0 then
+    if not keyring and vim.fn.filereadable(keyring_store) == 0 then
         Log.notify_info('You are already logged out')
         return
     end
+    keyring = nil
     vim.fn.delete(keyring_store)
     Log.notify_info('Logout successful')
 end
