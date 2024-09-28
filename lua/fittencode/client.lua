@@ -109,15 +109,12 @@ local function register()
     vim.ui.open(urls.register)
 end
 
-local function login(on_success, on_error)
+local function login(username, password, on_success, on_error)
     if keyring then
         Log.notify_info('You are already logged in')
         Fn.schedule_call(on_success)
         return
     end
-
-    local username = vim.fn.input('Username/Email/Phone(+CountryCode): ')
-    local password = vim.fn.inputsecret('Password: ')
 
     Promise:new(function(resolve, reject)
         curl.post(urls.login, {
@@ -194,7 +191,7 @@ local function stringify(arr)
         byte_to_hex[arr[9]] .. byte_to_hex[arr[10]],
         byte_to_hex[arr[11]] .. byte_to_hex[arr[12]] .. byte_to_hex[arr[13]] .. byte_to_hex[arr[14]] .. byte_to_hex[arr[15]] .. byte_to_hex[arr[16]]
     }
-    local uuid = table.concat(uuid_parts, "-")
+    local uuid = table.concat(uuid_parts, '-')
     if not validate_default(uuid) then
         return
     end
@@ -206,7 +203,7 @@ local function rng(len)
     math.randomseed(os.time())
     local arr = {}
     for _ = 1, len do
-        arr[#arr+1] = math.random(0, 256)
+        arr[#arr + 1] = math.random(0, 256)
     end
     return arr
 end
@@ -247,7 +244,7 @@ local function clear_interval(timer)
 end
 
 local start_check_login_timer = nil
-local sources = {
+local login_providers = {
     'google',
     'github',
     'twitter',
@@ -261,7 +258,7 @@ local function login3rd(source, on_success, on_error)
         return
     end
 
-    if not source or not sources[source] then
+    if not source or not login_providers[source] then
         Log.notify_error('Invalid 3rd-party login source')
         Fn.schedule_call(on_error)
         return
@@ -613,6 +610,7 @@ return {
     register = register,
     login = login,
     login3rd = login3rd,
+    login_providers = login_providers,
     logout = logout,
     generate_one_stage = generate_one_stage,
     start_chat = start_chat,

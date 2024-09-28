@@ -1,7 +1,17 @@
--- login
---    username password
--- login3rd google/github/twitter/microsoft
---
+local Client = require('fittencode.client')
+
+local commands = {
+    login = {
+        function()
+            local username = vim.fn.input('Username/Email/Phone(+CountryCode): ')
+            local password = vim.fn.inputsecret('Password: ')
+            Client.login(username, password)
+        end },
+    login3rd = {
+        function(source) Client.login3rd(source) end,
+        Client.login_providers
+    },
+}
 
 local function execute(input)
 end
