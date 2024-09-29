@@ -83,11 +83,24 @@ def add_newline_at_eof(file_path):
     else:
         print(f"No changes in file: {file_path}")
 
+def replace_backtick(file_path):
+    # replace \` with `
+    with open(file_path, "r", encoding="utf-8") as file:
+        content = file.read()
+
+    new_content = re.sub(r"\\`", "`", content)
+    if new_content != content:
+        print(f"Replacing \\` with ` in file: {file_path}")
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write(new_content)
+    else:
+        print(f"No changes in file: {file_path}")
 
 def refine(file_path):
     replace_in_file(file_path)
     trim_trailing_whitespace(file_path)
     add_newline_at_eof(file_path)
+    replace_backtick(file_path)
 
 
 # Run the batch replacement in the current script's directory
