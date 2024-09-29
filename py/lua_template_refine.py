@@ -5,6 +5,9 @@ from pathlib import Path  # Import Path from pathlib module for modern path mani
 # Automatically determine the directory where the script is located
 current_script_dir = Path(__file__).parent
 
+# Modify directory "../lua/fittencode/template/"
+lua_template_dir = current_script_dir.parent.joinpath('lua', 'fittencode', 'template')
+
 # Define the regex pattern to match and the replacement logic
 pattern = re.compile(r'<\|\s*([a-zA-Z0-9_-]+)\s*\|>')
 
@@ -36,4 +39,4 @@ def batch_replace_in_directory(directory):
 
 
 # Run the batch replacement in the current script's directory
-batch_replace_in_directory(current_script_dir)
+batch_replace_in_directory(lua_template_dir)
