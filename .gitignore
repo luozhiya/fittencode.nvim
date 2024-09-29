@@ -1,3 +1,5 @@
 runtime
 nightly
 doc/tags
+py/ft_token
+py/__pycache__
