@@ -49,17 +49,18 @@ def process_response(response):
     return result
 
 
-user = """请严格按以下规则，将选择的md转换为lua table,不需要额外的解释文本，转换结果不要放入markdown代码块中：
-1. 创建一个 table 对应二级标题 Template， 最后要return这个 `local template`。
-2. 新增一个 mata key, 值为：
-    2.1 source, markdown文件名，包含后缀；
-    2.2 code，markdown一级标题；
-    2.3 description，markdown一级标题的正文内容。
-3. 把所有的3级标题，作为 template 的一个 key，写到 template的花括号中，且key的名称按snake_case命名。
-4. 按代码块的分别处理:
-    4.1 对于 configuration key的内容：解析其中的结构转换为 key, 不要加额外的嵌套 table 和list。
-    4.2 对于 `initial_message_prompt` 或者 `response_prompt` 的内容，则：将整个内容转为lua 的`[[ ]]`样式的字符串，逐行拼接，切勿做任何格式化与修改，切勿把`#`、`##`等当成标题来解析。
-规则完毕，最后请注意Key之间要用逗号分隔。
+user = """请遵循以下指令:
+- 不需要额外的解释文本。
+- 将选择的文本转换为 lua table，转换结果不要放入markdown代码块中。
+- 创建唯一的一个 template table 对应二级标题 Template， 最后要return这个 `local template`。
+- 新增一个 mata key, 值为：
+    - source, markdown文件名，包含后缀；
+    - code，markdown一级标题；
+    - description，markdown一级标题的正文内容。
+- 把Template下的所有的3级标题，作为 template 的一个 key，写到 template的花括号中，且key的名称按snake_case命名。
+- 按代码块的分别处理:
+    - 对于 处于 configuration key 中的内容：解析其中的结构转换为 key, 不要加额外的嵌套 table 和list。
+    - 对于 处于 `initial_message_prompt` 或者 `response_prompt` 中的内容，则：将整个内容作为普通字符串转为lua 的`[[ ]]`样式的字符串，逐行拼接，保留原有的换行格式，请不要更改任何部分。
 """
 
 
