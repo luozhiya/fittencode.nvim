@@ -152,31 +152,6 @@ local defaults = {
             ['<A-\\>'] = 'triggering_completion',
         },
     },
-    integration = {
-        completion = {
-            -- Enable source completion.
-            enable = false,
-            -- Completion engines available:
-            -- * 'cmp' > https://github.com/hrsh7th/nvim-cmp
-            -- * 'coc' > https://github.com/neoclide/coc.nvim
-            -- * 'ycm' > https://github.com/ycm-core/YouCompleteMe
-            engine = 'cmp',
-            -- Default trigger characters
-            trigger_chars = {},
-        },
-        telescope = {
-            enable = false,
-        },
-        neotree = {
-            enable = false,
-        },
-        neogit = {
-            enable = false,
-        },
-        vgit = {
-            enable = false,
-        },
-    },
     log = {
         level = vim.log.levels.WARN,
     },
