@@ -1214,7 +1214,7 @@ local fn = {
 ---@return string, string
 local function CompilerRunner(env, source)
     local env_name = '___env_' .. random_name()
-    local code = Compiler:new(env_name, Parser:new(source):parse(source)):compile();
+    local code = Compiler:new(env_name, Parser:new(source):parse()):compile();
     return env_name, code
 end
 
@@ -1242,12 +1242,11 @@ local function CodeRunner(env_name, env, ___fn, code)
     return stdout, stderr
 end
 
-local env = {
-    messages = { { author = 'alice', content = 'hello' }, { author = 'bot', content = 'hi' } },
-    -- messages = { { author = vim.inspect(1), content = vim.inspect(vim) }, { author = 'bot', content = 'hi' } },
-}
-
 local function sample()
+    local env = {
+        messages = { { author = 'alice', content = 'hello' }, { author = 'bot', content = 'hi' } },
+        -- messages = { { author = vim.inspect(1), content = vim.inspect(vim) }, { author = 'bot', content = 'hi' } },
+    }
     local env_name, code = CompilerRunner(env, read_file('source.txt'))
     local stdout, stderr = CodeRunner(env_name, env, fn, code)
     if stderr then
