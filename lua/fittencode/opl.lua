@@ -86,6 +86,10 @@ local TokenType = {
 }
 
 ---@class Location
+---@field start_row number
+---@field start_col number
+---@field end_row number
+---@field end_col number
 local Location = {}
 Location.__index = Location
 
@@ -130,7 +134,7 @@ function Token:new(t, txt, l)
 end
 
 ---@class LexerState
----@field engine Lexer
+---@field source string
 ---@field index number
 ---@field length number
 ---@field state number
@@ -144,11 +148,11 @@ end
 local LexerState = {}
 LexerState.__index = LexerState
 
-function LexerState:new(engine)
+function LexerState:new(source)
     local obj = {
-        engine = engine,                   -- Engine
+        source = source,                   -- Engine
         index = 0,                         -- 当前字符的索引位置
-        length = #engine.source,           -- 模板字符串的长度
+        length = #source,                  -- 模板字符串的长度
         state = LexerStateType.STATE_TEXT, -- 当前 lexer 的状态
         depth = 0,                         -- 当前 Scheme 表达式的嵌套深度
         current_row = 1,                   -- 当前行号
@@ -177,21 +181,21 @@ function y.next(state)
         return
     end
 
-    local len = utf8_length(state.engine.source:byte(state.index + 1))
+    local len = utf8_length(state.source:byte(state.index + 1))
     if len == 0 then
         error('Invalid UTF-8 character at index ' .. tostring(state.index))
     end
 
     state.lexchar_utf8 = {}
     for i = 1, len do
-        state.lexchar_utf8[i] = state.engine.source:byte(state.index + i)
+        state.lexchar_utf8[i] = state.source:byte(state.index + i)
     end
 
     state.lexchar = string.char(state.lexchar_utf8[1])
     state.utf8_length = len
     state.index = state.index + len
 
-    if state.lexchar == 13 and state.engine.source:byte(state.index + 1) == 10 then
+    if state.lexchar == 13 and state.source:byte(state.index + 1) == 10 then
         state.index = state.index + 1
     end
 
@@ -230,7 +234,7 @@ function y.peek_next(state, str)
     if state.index + #str > state.length then
         return false
     end
-    return state.engine.source:sub(state.index + 1, state.index + #str) == str
+    return state.source:sub(state.index + 1, state.index + #str) == str
 end
 
 ---@param state LexerState
@@ -321,8 +325,8 @@ function y.lex_open_expression(state)
     ---@return boolean
     local function valid_inline_scheme_start()
         local pattern = '^{[%s}a-zA-Z#/%(]'
-        local msg = state.engine.source:sub(state.index + 1, state.index + 2)
-        return state.engine.source:sub(state.index + 1, state.index + 2):match(pattern) ~= nil
+        local msg = state.source:sub(state.index + 1, state.index + 2)
+        return state.source:sub(state.index + 1, state.index + 2):match(pattern) ~= nil
     end
 
     if y.peek_next(state, '{!--') then
@@ -351,7 +355,7 @@ function y.lex_open_expression(state)
         assert(state.depth == 1)
         state.state = LexerStateType.STATE_EXPRESSION
     else
-        error(string.format('Open Unexpected token: %s%s', state.lexchar, state.engine.source:sub(state.index + 1, state.index + 10)))
+        error(string.format('Open Unexpected token: %s%s', state.lexchar, state.source:sub(state.index + 1, state.index + 10)))
     end
 
     token.loc = Location.make(state, start_row, start_col)
@@ -449,7 +453,7 @@ function y.lex_inline_scheme_component(state)
                 y.next(state)
             end
         else
-            error('Inline Unexpected token: ' .. state.engine.source:sub(state.index + 1, state.index + 10))
+            error('Inline Unexpected token: ' .. state.source:sub(state.index + 1, state.index + 10))
         end
     end
 
@@ -509,8 +513,7 @@ Lexer.__index = Lexer
 ---@param source string
 function Lexer:new(source)
     local obj = {
-        source = source,
-        state = LexerState:new(self)
+        state = LexerState:new(source)
     }
     setmetatable(obj, Lexer)
     return obj
@@ -529,3 +532,27 @@ end
 function Lexer:lex_peek()
     return y.lex_peek(self.state)
 end
+
+---@param source string
+---@return string
+local function LexerRunner(source)
+    ---@param token Token
+    local function dump_token(token)
+        local loc = token.loc
+        return string.format('%-30s (%-40s) %d:%d-%d:%d', token.type, token.text:gsub('\n', '\\n'), loc.start_row or 0, loc.start_col or 0, loc.end_row or 0, loc.end_col or 0)
+    end
+    local lexer = Lexer:new(source)
+    lexer:init()
+    local token
+    local buffer = {}
+    repeat
+        token = lexer:lex()
+        buffer[#buffer + 1] = dump_token(token)
+    until token.type == 'TOKEN_END'
+    return table.concat(buffer, '\n')
+end
+
+return {
+    Lexer = Lexer,
+    LexerRunner = LexerRunner
+}
