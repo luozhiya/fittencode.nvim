@@ -2,6 +2,21 @@
 -- Part 2 - Parser
 -- Part 3 - Compiler
 
+local function write_file(name, content)
+    local f = io.open(name, "w")
+    assert(f, "Failed to open file: ".. name .. " for writing")
+    f:write(content)
+    f:close()
+end
+
+local function read_file(name)
+    local f = io.open(name, "r")
+    assert(f, "Failed to open file: ".. name .. " for reading")
+    local content = f:read("*all")
+    f:close()
+    return content
+end
+
 local function deepcopy(obj, seen)
     if type(obj) ~= 'table' then return obj end
     if seen and seen[obj] then return seen[obj] end
@@ -535,7 +550,7 @@ end
 
 ---@param source string
 ---@return string
-local function LexerRunner(source)
+local function TokenAnalyzer(source)
     ---@param token Token
     local function dump_token(token)
         local loc = token.loc or {}
@@ -553,7 +568,12 @@ local function LexerRunner(source)
     return table.concat(buffer, '\n')
 end
 
+local function LexerRunner(source, lexer)
+    write_file(lexer, TokenAnalyzer(read_file(source)))
+end
+
 return {
     Lexer = Lexer,
-    LexerRunner = LexerRunner
+    TokenAnalyzer = TokenAnalyzer,
+    LexerRunner = LexerRunner,
 }
