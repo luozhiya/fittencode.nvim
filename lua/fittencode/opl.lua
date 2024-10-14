@@ -1244,7 +1244,7 @@ end
 
 local function sample()
     local env = {
-        messages = { { author = 'alice', content = 'hello' }, { author = 'bot', content = 'hi' } },
+        messages = { { author = 'alice', content = 'hello\n' }, { author = 'bot', content = 'hi\n' } },
         -- messages = { { author = vim.inspect(1), content = vim.inspect(vim) }, { author = 'bot', content = 'hi' } },
     }
     local env_name, code = CompilerRunner(env, read_file('source.txt'))
