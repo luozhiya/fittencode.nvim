@@ -21,6 +21,14 @@ local function read_file(name)
     return content
 end
 
+local function random_name()
+    local name = ''
+    for i = 1, 5 do
+        name = name .. string.char(math.random(97, 122)) -- 生成小写字母
+    end
+    return name
+end
+
 local function deepcopy(obj, seen)
     if type(obj) ~= 'table' then return obj end
     if seen and seen[obj] then return seen[obj] end
@@ -622,7 +630,7 @@ local AstType = {
 ---@field c Ast|nil
 ---@field d Ast|nil
 ---@field parent Ast|nil
----@field value string|number|boolean|nil
+---@field value string|number|nil
 local Ast = {}
 Ast.__index = Ast
 
@@ -821,7 +829,7 @@ function p.block_peek(state, terminators, compare_text)
             reach_token = { type = 'TOKEN_END' }
             break
         end
-        reach_token = state.lexer.lex_peek()
+        reach_token = state.lexer:lex_peek()
         if p.is_terminator(reach_token, terminators, compare_text) then
             break
         end
@@ -902,18 +910,18 @@ local pp = {}
 ---@param depth number
 function pp.indent(os, depth)
     for i = 1, depth do
-        table.insert(os, "\t")
+        table.insert(os, '\t')
     end
 end
 
 ---@param os table<number, string>
 function pp.nl(os)
-    table.insert(os, "\n")
+    table.insert(os, '\n')
 end
 
 ---@param os table<number, string>
 function pp.sp(os)
-    table.insert(os, " ")
+    table.insert(os, ' ')
 end
 
 ---@param os table<number, string>
@@ -930,10 +938,10 @@ end
 ---@param depth number
 ---@param list Ast|nil
 function pp.sblock(os, depth, list)
-    pp.ps(os, "[\n")
+    pp.ps(os, '[\n')
     pp.indent(os, depth + 1)
     while list do
-        assert(list.type == "AST_LIST")
+        assert(list.type == 'AST_LIST')
         pp.snode(os, depth + 1, list.a)
         list = list.b
         if list then
@@ -943,7 +951,7 @@ function pp.sblock(os, depth, list)
     end
     pp.nl(os)
     pp.indent(os, depth)
-    pp.ps(os, "]")
+    pp.ps(os, ']')
 end
 
 ---@param os table<number, string>
@@ -952,7 +960,7 @@ end
 function pp.slist(os, depth, list)
     pp.pc(os, '[')
     while list do
-        assert(list.type == "AST_LIST")
+        assert(list.type == 'AST_LIST')
         pp.snode(os, depth, list.a)
         list = list.b
         if list then
@@ -969,7 +977,7 @@ function pp.snode(os, depth, node)
     if not node then
         return
     end
-    if node.type == "AST_LIST" then
+    if node.type == 'AST_LIST' then
         pp.slist(os, depth, node)
     end
     local afun = pp.snode
@@ -994,7 +1002,7 @@ function pp.snode(os, depth, node)
     elseif node.type == 'STM_TEXT' then
         local v = node.value
         -- replace newline with \n
-        v = v:gsub("\n", "\\n")
+        v = v:gsub('\n', '\\n')
         pp.pc(os, ' ')
         pp.ps(os, v)
     end
@@ -1023,7 +1031,7 @@ function pp.dump_ast(os, ast)
     if not ast then
         return
     end
-    if ast.type == "AST_LIST" then
+    if ast.type == 'AST_LIST' then
         pp.sblock(os, 0, ast)
     else
         pp.snode(os, 0, ast)
@@ -1045,6 +1053,213 @@ local function ParserRunner(source, ast)
     write_file(ast, ASTPretty(read_file(source)))
 end
 
+---@class CompilerImpl
+---@field compile_node function
+---@field compile_list function
+---@field compile function
+local c = {}
+
+---@param lastenv string
+---@param node Ast|nil
+---@return string|number
+function c.compile_node(lastenv, node)
+    if not node then
+        return ''
+    end
+    if node.type == AstType.STM_TEXT then
+        return '___emit([[' .. node.value .. ']])\n'
+    elseif node.type == AstType.STM_EACH then
+        local env = '___env_' .. random_name()
+        local list_name = '___list_' .. random_name()
+        local index_name = '___index_' .. random_name()
+        local element_name = '___element_' .. random_name()
+        local code = {
+            'local ' .. list_name .. ' = ___resolve_var(' .. lastenv .. ', \'' .. node.a.value .. '\')\n',
+            'assert(___fn.is_list(' .. list_name .. '), \"' .. node.a.value .. ' is not a list\")\n',
+            'for ' .. index_name .. ', ' .. element_name .. ' in ipairs(' .. list_name .. ') do\n',
+            'local ' .. env .. ' = {}\n',
+            env .. '.lastenv = ' .. lastenv .. '\n',
+            env .. '.index = ' .. index_name .. ' -1\n',
+            'for k, v in pairs(' .. element_name .. ') do\n',
+            env .. '[k] = v\n',
+            'end\n',
+            c.compile_node(env, node.b) .. '\n',
+            'end\n'
+        }
+        return table.concat(code)
+    elseif node.type == AstType.STM_EMPTY then
+        return ''
+    elseif node.type == AstType.STM_BLOCK then
+        return table.concat(c.compile_list(lastenv, node.a))
+    elseif node.type == AstType.STM_IF then
+        local code = {
+            'if ' .. c.compile_node(lastenv, node.a) .. ' then\n',
+            c.compile_node(lastenv, node.b) .. '\n'
+        }
+        if node.c then
+            code[#code + 1] = 'else\n'
+            code[#code + 1] = c.compile_node(lastenv, node.c) .. '\n'
+        end
+        code[#code + 1] = 'end\n'
+        return table.concat(code)
+    elseif node.type == AstType.STM_SCHEME then
+        return '___emit(' .. c.compile_node(lastenv, node.a) .. ')\n'
+    elseif node.type == AstType.EXP_IDENTIFIER then
+        return '___resolve_var(' .. lastenv .. ', \"' .. node.value .. '\") '
+    elseif node.type == AstType.EXP_NUMBER then
+        return node.value or ''
+    elseif node.type == AstType.EXP_STRING then
+        return '\'' .. node.value .. '\''
+    elseif node.type == AstType.EXP_DATA then
+        return '___resolve_var(' .. lastenv .. ', ' .. node.value .. ')'
+    elseif node.type == AstType.EXP_EQ then
+        return c.compile_node(lastenv, node.a) .. ' == ' .. c.compile_node(lastenv, node.b)
+    elseif node.type == AstType.EXP_NE then
+        return c.compile_node(lastenv, node.a) .. ' ~= ' .. c.compile_node(lastenv, node.b)
+    else
+        return ''
+    end
+end
+
+---@param env string
+---@param list Ast|nil
+---@return table<string, string>
+function c.compile_list(env, list)
+    local code = {}
+    while list do
+        assert(list.type == AstType.AST_LIST)
+        code[#code + 1] = c.compile_node(env, list.a)
+        list = list.b
+    end
+    return code
+end
+
+---@param env string
+---@param list Ast|nil
+---@return string
+function c.compile(env, list)
+    local code = [[
+local function ___generate_code()
+local ___generated_code = {}
+]]
+    code = code .. 'local ' .. env .. ' = _G.' .. env .. '\n'
+    code = code .. 'local ___fn = ' .. env .. '.___fn\n'
+    code = code .. [[
+local ___emit = function(s) ___generated_code[#___generated_code + 1] = s end
+local function ___resolve_var(env, s)
+    local resolved = nil
+    if env[s] then
+        resolved = env[s]
+    elseif env.lastenv then
+        resolved = ___resolve_var(env.lastenv, s)
+    end
+    if type(resolved) == "function" then
+        return resolved()
+    elseif type(resolved) == "string" or type(resolved) == "number" or type(resolved) == "table" then
+        return resolved
+    else
+        return nil
+    end
+end
+]]
+    code = code .. table.concat(c.compile_list(env, list))
+    code = code .. [[
+return table.concat(___generated_code)
+end
+return ___generate_code()
+]]
+    return code
+end
+
+---@class Compiler
+---@field env string
+---@field ast Ast|nil
+---@field compile function
+local Compiler = {}
+Compiler.__index = Compiler
+
+---@param env string
+---@param ast Ast|nil
+---@return Compiler
+function Compiler:new(env, ast)
+    local obj = {
+        env = env,
+        ast = ast
+    }
+    setmetatable(obj, Compiler)
+    return obj
+end
+
+---@return string
+function Compiler:compile()
+    return c.compile(self.env, self.ast)
+end
+
+local fn = {
+    is_list = function(t)
+        if type(t) ~= 'table' then
+            return false
+        end
+        for key, _ in pairs(t) do
+            if type(key) ~= 'number' or key % 1 ~= 0 then
+                return false
+            end
+        end
+        return true
+    end
+}
+
+---@param env table
+---@param source string
+---@return string, string
+local function CompilerRunner(env, source)
+    local env_name = '___env_' .. random_name()
+    local code = Compiler:new(env_name, Parser:new(source):parse(source)):compile();
+    return env_name, code
+end
+
+---@param env_name string
+---@param env table
+---@param ___fn table
+---@param code string
+---@return string|nil, string|nil
+local function CodeRunner(env_name, env, ___fn, code)
+    env['___fn'] = ___fn
+    _G[env_name] = env
+    local stdout
+    local stderr
+    local f, err = load(code, nil, 't', _G)
+    if f then
+        local _, msg = pcall(f)
+        if not _ then
+            stderr = msg
+        else
+            stdout = msg
+        end
+    else
+        stderr = err
+    end
+    return stdout, stderr
+end
+
+local env = {
+    messages = { { author = 'alice', content = 'hello' }, { author = 'bot', content = 'hi' } },
+    -- messages = { { author = vim.inspect(1), content = vim.inspect(vim) }, { author = 'bot', content = 'hi' } },
+}
+
+local function sample()
+    local env_name, code = CompilerRunner(env, read_file('source.txt'))
+    local stdout, stderr = CodeRunner(env_name, env, fn, code)
+    if stderr then
+        print(stderr)
+    else
+        print(stdout)
+    end
+    write_file('generated.lua', code)
+end
+
+sample()
+
 return {
     Lexer = Lexer,
     TokenPretty = TokenPretty,
@@ -1052,4 +1267,7 @@ return {
     Parser = Parser,
     ASTPretty = ASTPretty,
     ParserRunner = ParserRunner,
+    Compiler = Compiler,
+    CompilerRunner = CompilerRunner,
+    CodeRunner = CodeRunner,
 }
