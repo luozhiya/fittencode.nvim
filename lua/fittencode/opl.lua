@@ -2,6 +2,8 @@
 -- Part 2 - Parser
 -- Part 3 - Compiler
 
+---@param name string
+---@param content string
 local function write_file(name, content)
     local f = io.open(name, 'w')
     assert(f, 'Failed to open file: ' .. name .. ' for writing')
@@ -9,6 +11,8 @@ local function write_file(name, content)
     f:close()
 end
 
+---@param name string
+---@return string
 local function read_file(name)
     local f = io.open(name, 'r')
     assert(f, 'Failed to open file: ' .. name .. ' for reading')
@@ -554,7 +558,7 @@ end
 
 ---@param source string
 ---@return string
-local function TokenAnalyzer(source)
+local function TokenPretty(source)
     ---@param token Token
     local function dump_token(token)
         local loc = token.loc or {}
@@ -573,7 +577,7 @@ local function TokenAnalyzer(source)
 end
 
 local function LexerRunner(source, lexer)
-    write_file(lexer, TokenAnalyzer(read_file(source)))
+    write_file(lexer, TokenPretty(read_file(source)))
 end
 
 ---@class ParserState
@@ -868,9 +872,14 @@ function p.script_multiterminators(state, terminators, compare_text)
     end
 end
 
+---@class Parser
+---@field state ParserState
+---@field parse function
 local Parser = {}
 Parser.__index = Parser
 
+---@param source string
+---@return Parser
 function Parser:new(source)
     local obj = {
         state = ParserState:new(source)
@@ -879,15 +888,168 @@ function Parser:new(source)
     return obj
 end
 
+---@return Ast|nil
 function Parser:parse()
     p.next(self.state)
     local ast = p.script_multiterminators(self.state)
     return ast
 end
 
+---@class ParserPretty
+local pp = {}
+
+---@param os table<number, string>
+---@param depth number
+function pp.indent(os, depth)
+    for i = 1, depth do
+        table.insert(os, "\t")
+    end
+end
+
+---@param os table<number, string>
+function pp.nl(os)
+    table.insert(os, "\n")
+end
+
+---@param os table<number, string>
+function pp.sp(os)
+    table.insert(os, " ")
+end
+
+---@param os table<number, string>
+function pp.pc(os, c)
+    table.insert(os, tostring(c))
+end
+
+---@param os table<number, string>
+function pp.ps(os, s)
+    table.insert(os, s)
+end
+
+---@param os table<number, string>
+---@param depth number
+---@param list Ast|nil
+function pp.sblock(os, depth, list)
+    pp.ps(os, "[\n")
+    pp.indent(os, depth + 1)
+    while list do
+        assert(list.type == "AST_LIST")
+        pp.snode(os, depth + 1, list.a)
+        list = list.b
+        if list then
+            pp.nl(os)
+            pp.indent(os, depth + 1)
+        end
+    end
+    pp.nl(os)
+    pp.indent(os, depth)
+    pp.ps(os, "]")
+end
+
+---@param os table<number, string>
+---@param depth number
+---@param list Ast|nil
+function pp.slist(os, depth, list)
+    pp.pc(os, '[')
+    while list do
+        assert(list.type == "AST_LIST")
+        pp.snode(os, depth, list.a)
+        list = list.b
+        if list then
+            pp.pc(os, ' ')
+        end
+    end
+    pp.pc(os, ']')
+end
+
+---@param os table<number, string>
+---@param depth number
+---@param node Ast|nil
+function pp.snode(os, depth, node)
+    if not node then
+        return
+    end
+    if node.type == "AST_LIST" then
+        pp.slist(os, depth, node)
+    end
+    local afun = pp.snode
+    local bfun = pp.snode
+    local cfun = pp.snode
+    local dfun = pp.snode
+
+    pp.pc(os, '(')
+    pp.ps(os, node.type)
+    if node.type == 'EXP_IDENTIFIER' then
+        pp.pc(os, ' ')
+        pp.ps(os, node.value)
+    elseif node.type == 'EXP_NUMBER' or node.type == 'EXP_STRING' then
+        pp.pc(os, ' ')
+        pp.ps(os, node.value)
+    elseif node.type == 'EXP_DATA' then
+        pp.pc(os, ' ')
+        pp.pc(os, '@')
+        pp.ps(os, node.value)
+    elseif node.type == 'STM_BLOCK' then
+        afun = pp.sblock
+    elseif node.type == 'STM_TEXT' then
+        local v = node.value
+        -- replace newline with \n
+        v = v:gsub("\n", "\\n")
+        pp.pc(os, ' ')
+        pp.ps(os, v)
+    end
+    if node.a then
+        pp.pc(os, ' ')
+        afun(os, depth, node.a)
+    end
+    if node.b then
+        pp.pc(os, ' ')
+        bfun(os, depth, node.b)
+    end
+    if node.c then
+        pp.pc(os, ' ')
+        cfun(os, depth, node.c)
+    end
+    if node.d then
+        pp.pc(os, ' ')
+        dfun(os, depth, node.d)
+    end
+    pp.pc(os, ')')
+end
+
+---@param os table<number, string>
+---@param ast Ast|nil
+function pp.dump_ast(os, ast)
+    if not ast then
+        return
+    end
+    if ast.type == "AST_LIST" then
+        pp.sblock(os, 0, ast)
+    else
+        pp.snode(os, 0, ast)
+    end
+    pp.nl(os)
+end
+
+---@param source string
+---@return string
+local function ASTPretty(source)
+    local os = {}
+    pp.dump_ast(os, Parser:new(source):parse())
+    return table.concat(os)
+end
+
+---@param source string
+---@param ast string
+local function ParserRunner(source, ast)
+    write_file(ast, ASTPretty(read_file(source)))
+end
+
 return {
     Lexer = Lexer,
-    TokenAnalyzer = TokenAnalyzer,
+    TokenPretty = TokenPretty,
     LexerRunner = LexerRunner,
     Parser = Parser,
+    ASTPretty = ASTPretty,
+    ParserRunner = ParserRunner,
 }
