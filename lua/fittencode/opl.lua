@@ -538,8 +538,9 @@ end
 local function LexerRunner(source)
     ---@param token Token
     local function dump_token(token)
-        local loc = token.loc
-        return string.format('%-30s (%-40s) %d:%d-%d:%d', token.type, token.text:gsub('\n', '\\n'), loc.start_row or 0, loc.start_col or 0, loc.end_row or 0, loc.end_col or 0)
+        local loc = token.loc or {}
+        local text = (token.text or '')
+        return string.format('%-30s (%-40s) [%3d] %d:%d-%d:%d', token.type, text:gsub('\n', '\\n'), #text, loc.start_row or 0, loc.start_col or 0, loc.end_row or 0, loc.end_col or 0)
     end
     local lexer = Lexer:new(source)
     lexer:init()
