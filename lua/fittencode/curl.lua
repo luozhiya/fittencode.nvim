@@ -126,24 +126,29 @@ local function arg_max()
     if is_windows() then
         max_arg_length = 32767
     else
-        local sys = tonumber(vim.fn.system('getconf ARG_MAX'))
+        local _, sys = pcall(tonumber, vim.fn.system('getconf ARG_MAX'))
         max_arg_length = sys or (128 * 1024)
     end
     return max_arg_length
 end
 
 local function post(url, opts)
-    local _, body = pcall(vim.fn.json_encode, opts.body)
-    if not _ then
-        Fn.schedule_call(opts.on_error, { error = 'vim.fn.json_encode failed', })
-        return
-    end
     local args = {
         url,
         '-X',
         'POST',
     }
     build_args(args, opts.headers)
+    if type(opts.body) == 'string' and vim.fn.filereadable(opts.body) == 1 then
+        add_data_argument(args, opts.body, true)
+        spawn_curl(args, opts)
+        return
+    end
+    local _, body = pcall(vim.fn.json_encode, opts.body)
+    if not _ then
+        Fn.schedule_call(opts.on_error, { error = 'vim.fn.json_encode failed', })
+        return
+    end
     if #body <= arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
         add_data_argument(args, body, false)
         spawn_curl(args, opts)
