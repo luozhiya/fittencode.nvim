@@ -3,16 +3,16 @@
 -- Part 3 - Compiler
 
 local function write_file(name, content)
-    local f = io.open(name, "w")
-    assert(f, "Failed to open file: ".. name .. " for writing")
+    local f = io.open(name, 'w')
+    assert(f, 'Failed to open file: ' .. name .. ' for writing')
     f:write(content)
     f:close()
 end
 
 local function read_file(name)
-    local f = io.open(name, "r")
-    assert(f, "Failed to open file: ".. name .. " for reading")
-    local content = f:read("*all")
+    local f = io.open(name, 'r')
+    assert(f, 'Failed to open file: ' .. name .. ' for reading')
+    local content = f:read('*all')
     f:close()
     return content
 end
@@ -522,10 +522,14 @@ end
 ---@class Lexer
 ---@field source string
 ---@field state LexerState
+---@field init function
+---@field lex function
+---@field lex_peek function
 local Lexer = {}
 Lexer.__index = Lexer
 
 ---@param source string
+---@return Lexer
 function Lexer:new(source)
     local obj = {
         state = LexerState:new(source)
@@ -572,8 +576,318 @@ local function LexerRunner(source, lexer)
     write_file(lexer, TokenAnalyzer(read_file(source)))
 end
 
+---@class ParserState
+---@field lexer Lexer
+---@field lookahead Token
+local ParserState = {}
+ParserState.__index = ParserState
+
+---@param source string
+---@return ParserState
+function ParserState:new(source)
+    local obj = {
+        lexer = Lexer:new(source),
+        lookahead = nil
+    }
+    obj.lexer:init()
+    setmetatable(obj, self)
+    return obj
+end
+
+local AstType = {
+    AST_LIST = 'AST_LIST',
+    EXP_IDENTIFIER = 'EXP_IDENTIFIER',
+    EXP_NUMBER = 'EXP_NUMBER',
+    EXP_STRING = 'EXP_STRING',
+    EXP_DATA = 'EXP_DATA',
+    EXP_EQ = 'EXP_EQ',
+    EXP_NE = 'EXP_NE',
+    STM_BLOCK = 'STM_BLOCK',
+    STM_EMPTY = 'STM_EMPTY',
+    STM_IF = 'STM_IF',
+    STM_EACH = 'STM_EACH',
+    STM_TEXT = 'STM_TEXT',
+    STM_SCHEME = 'STM_SCHEME',
+}
+
+---@class Ast
+---@field type string
+---@field row number
+---@field a Ast|nil
+---@field b Ast|nil
+---@field c Ast|nil
+---@field d Ast|nil
+---@field parent Ast|nil
+---@field value string|number|boolean|nil
+local Ast = {}
+Ast.__index = Ast
+
+---@param type string
+---@param row number
+---@param a Ast|nil
+---@param b Ast|nil
+---@param c Ast|nil
+---@param d Ast|nil
+---@return Ast
+function Ast:new(type, row, a, b, c, d)
+    local obj = {
+        type = type,
+        row = row,
+        a = a,
+        b = b,
+        c = c,
+        d = d,
+        parent = nil,
+        value = nil,
+    }
+    setmetatable(obj, self)
+    return obj
+end
+
+---@class ParserImpl
+---@field next function
+---@field accept function
+---@field expect function
+local p = {}
+
+---@param state ParserState
+function p.next(state)
+    state.lookahead = state.lexer:lex()
+end
+
+---@param state ParserState
+---@param type string
+---@return boolean
+function p.accept(state, type)
+    if state.lookahead.type == type then
+        p.next(state)
+        return true
+    end
+    return false
+end
+
+---@param state ParserState
+---@param type string
+function p.expect(state, type)
+    if not p.accept(state, type) then
+        error(string.format('Unexpected token: %s (expected: %s)', state.lookahead.type, type))
+    end
+end
+
+---@param state ParserState
+function p.ignore_single_newline(state)
+    if state.lookahead.type == 'TOKEN_TEXT' and state.lookahead.text == '\n' then
+        p.next(state)
+    end
+end
+
+---@param state ParserState
+---@return Ast|nil
+function p.statement(state)
+    local stm = nil
+
+    if state.lookahead.type == 'TOKEN_TEXT' then
+        if state.lookahead.text == '' then
+            stm = Ast:new(AstType.STM_EMPTY, state.lookahead.loc.start_row)
+        else
+            stm = Ast:new(AstType.STM_TEXT, state.lookahead.loc.start_row)
+            stm.value = state.lookahead.text
+        end
+        p.next(state)
+    elseif state.lookahead.type == 'TOKEN_OPEN' then
+        p.next(state)
+        if state.lookahead.type == 'TOKEN_IDENTIFIER' then
+            -- 处理条件语句或循环
+            if state.lookahead.text == '#if' then
+                -- 处理 #if 语句
+                local a = nil
+                local b = nil
+                local c = nil
+                p.expect(state, 'TOKEN_IDENTIFIER') -- 读取 #if
+                a = p.statement(state)              -- 读取条件表达式
+                p.expect(state, 'TOKEN_CLOSE')
+                p.ignore_single_newline(state)
+                local bp = p.block_peek(state, { { 'TOKEN_IDENTIFIER', 'else' }, { 'TOKEN_IDENTIFIER', '/if' } }, true)
+                b = bp[1]
+                p.expect(state, 'TOKEN_OPEN')       -- 读取 {{
+                p.expect(state, 'TOKEN_IDENTIFIER') -- 读取 `else` or `/if`
+                p.expect(state, 'TOKEN_CLOSE')      -- 读取 }}
+                p.ignore_single_newline(state)
+                if bp[2].text == 'else' then
+                    bp = p.block_peek(state, { { 'TOKEN_IDENTIFIER', '/if' } }, true)
+                    c = bp[1]
+                    p.expect(state, 'TOKEN_OPEN')       -- 读取 {{
+                    p.expect(state, 'TOKEN_IDENTIFIER') -- 读取 /if
+                    p.expect(state, 'TOKEN_CLOSE')      -- 读取 }}
+                    p.ignore_single_newline(state)
+                end
+                stm = Ast:new(AstType.STM_IF, state.lookahead.loc.start_row, a, b, c)
+            elseif state.lookahead.text == '#each' then
+                -- 处理 #each 语句
+                local a = nil
+                local b = nil
+                p.expect(state, 'TOKEN_IDENTIFIER') -- 读取 #each
+                a = Ast:new(AstType.EXP_IDENTIFIER, 0)
+                a.value = state.lookahead.text
+                p.expect(state, 'TOKEN_IDENTIFIER') -- messages?
+                p.expect(state, 'TOKEN_CLOSE')      -- 读取 }}
+                p.ignore_single_newline(state)
+                local bp = p.block_peek(state, { { 'TOKEN_IDENTIFIER', '/each' } }, true)
+                b = bp[1]
+                p.expect(state, 'TOKEN_OPEN')       -- 读取 {{
+                p.expect(state, 'TOKEN_IDENTIFIER') -- 读取 /each
+                p.expect(state, 'TOKEN_CLOSE')      -- 读取 }}
+                p.ignore_single_newline(state)
+                stm = Ast:new(AstType.STM_EACH, state.lookahead.loc.start_row, a, b)
+            else
+                local a = Ast:new(AstType.EXP_IDENTIFIER, 0)
+                a.value = state.lookahead.text
+                stm = Ast:new(AstType.STM_SCHEME, state.lookahead.loc.start_row, a)
+                p.expect(state, 'TOKEN_IDENTIFIER') -- 读取识别符
+                p.expect(state, 'TOKEN_CLOSE')      -- 读取 }}
+                p.ignore_single_newline(state)
+            end
+        end
+    elseif state.lookahead.type == 'TOKEN_IDENTIFIER' then
+        stm = Ast:new(AstType.EXP_IDENTIFIER, 0)
+        stm.value = state.lookahead.text
+        p.next(state)
+    elseif state.lookahead.type == 'TOKEN_STRING' then
+        stm = Ast:new(AstType.EXP_STRING, 0)
+        stm.value = state.lookahead.text
+        p.next(state)
+    elseif state.lookahead.type == 'TOKEN_NUMBER' then
+        stm = Ast:new(AstType.EXP_NUMBER, 0)
+        stm.value = state.lookahead.text
+        p.next(state)
+    elseif state.lookahead.type == 'TOKEN_LPAREN' then
+        p.next(state)
+        if state.lookahead.type == 'TOKEN_IDENTIFIER' then
+            local op = state.lookahead.text
+            if op == 'eq' or op == 'neq' then
+                local a = nil
+                local b = nil
+                p.next(state)
+                if state.lookahead.type == 'TOKEN_DATA' then
+                    p.next(state)
+                end
+                a = p.statement(state)
+                b = p.statement(state)
+                if op == 'eq' then
+                    stm = Ast:new(AstType.EXP_EQ, 0, a, b)
+                else
+                    stm = Ast:new(AstType.EXP_NE, 0, a, b)
+                end
+            end
+        end
+        p.expect(state, 'TOKEN_RPAREN')
+    end
+
+    return stm
+end
+
+---@param token Token
+---@param terminators table
+---@param compare_text boolean|nil
+---@return boolean
+function p.is_terminator(token, terminators, compare_text)
+    compare_text = compare_text or false
+    for _, term in ipairs(terminators) do
+        if token.type == term[1] and (compare_text and token.text == term[2] or not compare_text) then
+            return true
+        end
+    end
+    return false
+end
+
+---@param state ParserState
+---@param terminators table
+---@param compare_text boolean
+---@return table<Ast, Token>
+function p.block_peek(state, terminators, compare_text)
+    local head = nil
+
+    ---@type Ast
+    local tail = nil
+
+    local reach_token = { type = 'TOKEN_END' }
+
+    while true do
+        if state.lookahead.type == 'TOKEN_END' then
+            reach_token = { type = 'TOKEN_END' }
+            break
+        end
+        reach_token = state.lexer.lex_peek()
+        if p.is_terminator(reach_token, terminators, compare_text) then
+            break
+        end
+        local node = Ast:new(AstType.AST_LIST, 0, p.statement(state))
+        if not head then
+            head = node
+            tail = node
+        else
+            node.parent = tail
+            tail.b = node
+            tail = node
+        end
+    end
+    local stm = Ast:new(AstType.STM_BLOCK, 0, head)
+    return { stm, reach_token }
+end
+
+---@param state ParserState
+---@param terminators table|nil
+---@param compare_text boolean|nil
+---@return Ast|nil, Token
+function p.script_multiterminators(state, terminators, compare_text)
+    terminators = terminators or {}
+    table.insert(terminators, { 'TOKEN_END', '' })
+    if p.is_terminator(state.lookahead, terminators, compare_text) then
+        return nil, state.lookahead
+    end
+
+    ---@type Ast
+    local head = nil
+    ---@type Ast
+    local tail = nil
+
+    while true do
+        local node = Ast:new(AstType.AST_LIST, 0, p.statement(state))
+        if not head then
+            head = node
+            tail = node
+        else
+            node.parent = tail
+            tail.b = node
+            tail = node
+        end
+
+        if p.is_terminator(state.lookahead, terminators, compare_text) then
+            return head, state.lookahead
+        end
+    end
+end
+
+local Parser = {}
+Parser.__index = Parser
+
+function Parser:new(source)
+    local obj = {
+        state = ParserState:new(source)
+    }
+    setmetatable(obj, Parser)
+    return obj
+end
+
+function Parser:parse()
+    p.next(self.state)
+    local ast = p.script_multiterminators(self.state)
+    return ast
+end
+
 return {
     Lexer = Lexer,
     TokenAnalyzer = TokenAnalyzer,
     LexerRunner = LexerRunner,
+    Parser = Parser,
 }
