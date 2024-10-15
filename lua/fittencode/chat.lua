@@ -311,6 +311,22 @@ local function register_extension_template(e)
 end
 
 local function load_workspace_templates()
+    -- root
+    -- ".fittencode/template/**/*.rdt.md"
+    local root = vim.fn.getcwd()
+    local template_dir = root .. '/.fittencode/template'
+    local entries = fs_all_entries(template_dir, {})
+    for _, entry in ipairs(entries) do
+        if entry.fs_type == 'file' and entry.name:globmatch('*.rdt.md') then
+            local template = parse_markdown_template_file(entry.path)
+            if template and template.configuration.id then
+                assert(template.configuration.id, 'Template must have an ID')
+                model.templates[template.configuration.id] = template
+            else
+                Log.error('Failed to load workspace template: {}', entry.path)
+            end
+        end
+    end
 end
 
 load_builtin_templates()
