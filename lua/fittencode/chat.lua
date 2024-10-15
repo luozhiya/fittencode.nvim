@@ -1,6 +1,7 @@
 local Config = require('fittencode.config')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
+local OPL = require('fittencode.opl')
 
 ---@alias Model 'Fast' | 'Search'
 
@@ -34,7 +35,9 @@ local Log = require('fittencode.log')
 ---@field conversations Conversation[]
 ---@field selected_conversation_id string|nil
 ---@field templates table<string, fittencode.chat.template>
-local model
+local model = {
+    templates = {},
+}
 
 local function random(length)
     local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -104,31 +107,16 @@ local function fs_all_entries(path, prename)
     if not fs then return res end
     local name, fs_type = vim.uv.fs_scandir_next(fs)
     while name do
-        table.insert(res, { fs_type = fs_type, prename = prename, name = name, path = path .. '/' .. name })
+        res[#res+1] = { fs_type = fs_type, prename = prename, name = name, path = path .. '/' .. name }
         if fs_type == 'directory' then
             local prename_next = vim.deepcopy(prename)
             prename_next[#prename_next + 1] = name
-            res = vim.tbl_deep_extend('force', res, fs_all_entries(path .. '/' .. name, prename_next))
+            local new = fs_all_entries(path .. '/' .. name, prename_next)
+            vim.list_extend(res, new)
         end
         name, fs_type = vim.uv.fs_scandir_next(fs)
     end
     return res
-end
-
-local function load_builtin_templates_lua()
-    local path = debug.getinfo(1, 'S').source:sub(2):gsub('chat.lua', 'template'):gsub('\\', '/')
-    local entries = fs_all_entries(path, {})
-    for _, entry in ipairs(entries) do
-        if entry.fs_type == 'file' then
-            local module = 'fittencode.template.' .. table.concat(entry.prename, '.') .. '.' .. entry.name:gsub('%.lua$', ''):gsub('/', '.')
-            local _, template = pcall(require, module)
-            if not _ then
-                Log.error('Failed to load builtin template: {}', module)
-            else
-                model.templates[template.configuration.id] = template
-            end
-        end
-    end
 end
 
 local function get_text_for_range(buffer, range)
@@ -187,27 +175,21 @@ local function parse_markdown_template_file(path)
     end
 end
 
-local function parse_markdown_template_buffer(path)
-    local buf = vim.api.nvim_create_buf(false, true)      -- false = not a scratch buffer, true = unlisted (invisible)
+local function parse_markdown_template_file(path)
+    local buf = vim.api.nvim_create_buf(false, true) -- false = not a scratch buffer, true = unlisted (invisible)
 
-    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe') -- Automatically wipe the buffer from Neovim's memory after use
+    -- Automatically wipe the buffer from Neovim's memory after use
+    vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf, })
     local success, err = pcall(vim.api.nvim_buf_call, buf, function()
-        -- Use Vim command 'edit' to load the file into the buffer
         vim.cmd('silent edit ' .. path)
     end)
 
-    -- Verify if file was successfully opened
     if not success then
-        vim.api.nvim_buf_delete(buf, { force = true }) -- Delete buffer if opening fails
+        vim.api.nvim_buf_delete(buf, { force = true })
         return nil, err
     end
 
-    -- local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-    -- local content = table.concat(lines, '\n')
-    -- print(content)
-
     local parser = vim.treesitter.get_parser(buf, 'markdown')
-
     local query_string = [[
 ; Query for Markdown structure
 
@@ -239,16 +221,8 @@ local function parse_markdown_template_buffer(path)
 
     local filename = vim.fn.fnamemodify(path, ':t')
 
-    local template = {
-        meta = {
-            source = filename,
-            code = '',
-            description = '',
-        },
-        configuration = {},
-        initial_message_prompt = nil,
-        response_prompt = nil,
-    }
+    local meta = nil
+    local configuration = nil
 
     local in_template_section = false
     local sub_template_section = ''
@@ -259,9 +233,11 @@ local function parse_markdown_template_buffer(path)
         local _, lines = get_text_for_range(buf, range)
         local text = table.concat(lines, '\n')
         if capture_name == 'header.h1.content' then
-            template.meta.code = text
+            meta = meta or {}
+            meta.code = text
         elseif capture_name == 'text.content' then
-            template.meta.description = text
+            meta = meta or {}
+            meta.description = text
         elseif capture_name == 'header.h2.content' then
             if text == 'Template' then
                 in_template_section = true
@@ -279,46 +255,69 @@ local function parse_markdown_template_buffer(path)
                 sub_template_section = 'response_prompt'
             end
         elseif capture_name == 'code.content' then
+            configuration = configuration or {}
             if sub_template_section == 'configuration' then
                 local _, decoded = pcall(vim.fn.json_decode, text)
                 if decoded then
-                    template.configuration = decoded
+                    configuration = vim.tbl_deep_extend('force', configuration, decoded)
                 else
                     -- Error: Invalid JSON in configuration section
                     return nil
                 end
             elseif sub_template_section == 'initial_message_prompt' then
-                template.initial_message_prompt = text
+                configuration = vim.tbl_deep_extend('force', configuration, { initialMessage = { template = text, } })
             elseif sub_template_section == 'response_prompt' then
-                template.response_prompt = text
+                configuration = vim.tbl_deep_extend('force', configuration, { response = { template = text, } })
             end
         end
     end
 
     vim.api.nvim_buf_delete(buf, { force = true })
 
-    return template
+    if meta and configuration then
+        return {
+            meta = vim.tbl_deep_extend('force', meta, { source = filename, }),
+            configuration = configuration,
+        }
+    end
 end
 
 local function load_builtin_templates()
-    -- markdown templates localte in {current_dir}/../../template
+    -- Markdown templates localte in {current_dir}/../../template
     local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('chat.lua', '')
-    local template_dir = current_dir:gsub('/lua$', '') .. '/template'
+    local template_dir = current_dir:gsub('/lua$', '') .. '/../../template'
     local entries = fs_all_entries(template_dir, {})
     for _, entry in ipairs(entries) do
         if entry.fs_type == 'file' then
-            local template = parse_markdown_template(entry.path)
-            if template then
+            local template = parse_markdown_template_file(entry.path)
+            if template and template.configuration.id then
+                assert(template.configuration.id, 'Template must have an ID')
                 model.templates[template.configuration.id] = template
+            else
+                Log.error('Failed to load builtin template: {}', entry.path)
             end
         end
     end
 end
 
--- load_builtin_templates()
+local function load_extension_templates()
+    for _, e in ipairs(model.extension_templates) do
+        -- local template = parse_markdown_template_buffer(e)
+    end
+end
 
-local template = parse_markdown_template_buffer('E:\\DataCenter\\onWorking\\fittencode.nvim\\template\\chat\\chat-en.rdt.md')
-print(vim.inspect(template))
+local function register_extension_template(e)
+    model.extension_templates = model.extension_templates or {}
+end
+
+local function load_workspace_templates()
+end
+
+load_builtin_templates()
+
+-- local template = parse_markdown_template_buffer('E:\\DataCenter\\onWorking\\fittencode.nvim\\template\\chat\\chat-en.rdt.md')
+-- print(vim.inspect(template))
+-- Log.debug(vim.inspect(template))
 
 local function register_template(id, template)
     model.templates[id] = template

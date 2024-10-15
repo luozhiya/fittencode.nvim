@@ -5,8 +5,7 @@ local M = {}
 function M.setup(opts)
     require('fittencode.config').setup(opts)
     require('fittencode.client').load_last_session()
-    -- require('fittencode.chat')
-    require('fittencode.vm')
+    require('fittencode.chat')
 end
 
 return setmetatable(M, {

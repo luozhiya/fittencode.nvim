@@ -1257,7 +1257,7 @@ local function sample()
     write_file('generated.lua', code)
 end
 
-sample()
+-- sample()
 
 return {
     Lexer = Lexer,
