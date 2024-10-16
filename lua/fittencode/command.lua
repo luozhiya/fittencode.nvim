@@ -1,5 +1,8 @@
 local Client = require('fittencode.client')
 
+-- reload_templates
+-- delete_all_chats
+
 local commands = {
     login = {
         function()

@@ -264,13 +264,13 @@ local function parse_markdown_template(e)
     return template
 end
 
-local function load_builtin_templates()
+local function reload_builtin_templates()
     -- Builtin Markdown templates localte in `{current_dir}/../../template`
     local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('chat.lua', '')
     local template_dir = current_dir:gsub('/lua$', '') .. '/../../template'
     local entries = fs_all_entries(template_dir, {})
     for _, entry in ipairs(entries) do
-        if entry.fs_type == 'file' then
+        if entry.fs_type == 'file' and entry.name:match('.+%.rdt%.md$') then
             local e = parse_markdown_template(entry.path)
             if e and e.template.id then
                 assert(e.template.id, 'Template must have an ID')
@@ -290,28 +290,40 @@ local function load_builtin_templates()
     Log.debug('model.conversation_types: {}', model.conversation_types)
 end
 
-local function load_extension_templates()
+local function reload_extension_templates()
     for _, e in ipairs(model.extension_templates) do
         -- local template = parse_markdown_template_buffer(e)
     end
 end
 
-local function register_extension_template(e)
+local function register_extension_template(id, e)
     model.extension_templates = model.extension_templates or {}
+    model.extension_templates[id] = e
 end
 
-local function load_workspace_templates()
+local function unregister_extension_template(id)
+    model.extension_templates[id] = nil
+end
+
+local function reload_workspace_templates()
     -- root
     -- ".fittencode/template/**/*.rdt.md"
     local root = vim.fn.getcwd()
     local template_dir = root .. '/.fittencode/template'
     local entries = fs_all_entries(template_dir, {})
     for _, entry in ipairs(entries) do
-        if entry.fs_type == 'file' and entry.name:globmatch('*.rdt.md') then
-            local template = parse_markdown_template(entry.path)
-            if template and template.configuration.id then
-                assert(template.configuration.id, 'Template must have an ID')
-                model.templates[template.configuration.id] = template
+        if entry.fs_type == 'file' and entry.name:match('.+%.rdt%.md$') then
+            local e = parse_markdown_template(entry.path)
+            if e and e.template.id then
+                assert(e.template.id, 'Template must have an ID')
+                e = vim.tbl_deep_extend('force', e, {
+                    id = e.template.id,
+                    label = e.template.label,
+                    description = e.template.description,
+                    source = 'workspace',
+                    tags = {},
+                })
+                model.conversation_types[e.id] = e
             else
                 Log.error('Failed to load workspace template: {}', entry.path)
             end
@@ -319,17 +331,24 @@ local function load_workspace_templates()
     end
 end
 
-load_builtin_templates()
+reload_builtin_templates()
+
+local function reload_conversation_types()
+    reload_builtin_templates()
+    reload_extension_templates()
+    reload_workspace_templates()
+end
 
 local function register_template(id, template)
-    model.templates[id] = template
+    register_extension_template(id, template)
 end
 
 local function unregister_template(id)
-    model.templates[id] = nil
+    unregister_extension_template(id)
 end
 
 return {
     register_template = register_template,
     unregister_template = unregister_template,
+    reload_conversation_types = reload_conversation_types,
 }
