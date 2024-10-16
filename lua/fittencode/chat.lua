@@ -107,7 +107,7 @@ local function fs_all_entries(path, prename)
     if not fs then return res end
     local name, fs_type = vim.uv.fs_scandir_next(fs)
     while name do
-        res[#res+1] = { fs_type = fs_type, prename = prename, name = name, path = path .. '/' .. name }
+        res[#res + 1] = { fs_type = fs_type, prename = prename, name = name, path = path .. '/' .. name }
         if fs_type == 'directory' then
             local prename_next = vim.deepcopy(prename)
             prename_next[#prename_next + 1] = name
@@ -132,20 +132,7 @@ local function get_text_for_range(buffer, range)
     return { start_row, 0, end_row, end_col }, lines
 end
 
-local function parse_markdown_template_file(path)
-    local buf = vim.api.nvim_create_buf(false, true) -- false = not a scratch buffer, true = unlisted (invisible)
-
-    -- Automatically wipe the buffer from Neovim's memory after use
-    vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf, })
-    local success, err = pcall(vim.api.nvim_buf_call, buf, function()
-        vim.cmd('silent edit ' .. path)
-    end)
-
-    if not success then
-        vim.api.nvim_buf_delete(buf, { force = true })
-        return nil, err
-    end
-
+local function parse_markdown_template_buf(buf)
     local parser = vim.treesitter.get_parser(buf, 'markdown')
     local query_string = [[
 ; Query for Markdown structure
@@ -175,8 +162,6 @@ local function parse_markdown_template_file(path)
     local query = vim.treesitter.query.parse('markdown', query_string)
     local parsed_tree = parser:parse()[1]
     local root = parsed_tree:root()
-
-    local filename = vim.fn.fnamemodify(path, ':t')
 
     local meta = nil
     local configuration = nil
@@ -228,15 +213,40 @@ local function parse_markdown_template_file(path)
             end
         end
     end
-
-    vim.api.nvim_buf_delete(buf, { force = true })
-
     if meta and configuration then
         return {
-            meta = vim.tbl_deep_extend('force', meta, { source = filename, }),
+            meta = meta,
             configuration = configuration,
         }
     end
+end
+
+local function parse_markdown_template(e)
+    local buf = vim.api.nvim_create_buf(false, true) -- false = not a scratch buffer, true = unlisted (invisible)
+
+    -- Automatically wipe the buffer from Neovim's memory after use
+    local source = ''
+    vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf, })
+    local success, err = pcall(vim.api.nvim_buf_call, buf, function()
+        if vim.fn.filereadable(e) == 1 then
+            vim.cmd('silent edit ' .. e)
+            source = vim.fn.fnamemodify(e, ':t')
+        else
+            vim.api.nvim_buf_set_lines(buf, 0, -1, false, e)
+        end
+    end)
+
+    if not success then
+        vim.api.nvim_buf_delete(buf, { force = true })
+        return nil, err
+    end
+
+    local template = parse_markdown_template_buf(buf)
+    if template then
+        template = vim.tbl_deep_extend('force', template, { meta = { source = source } })
+    end
+    vim.api.nvim_buf_delete(buf, { force = true })
+    return template
 end
 
 local function load_builtin_templates()
@@ -246,7 +256,7 @@ local function load_builtin_templates()
     local entries = fs_all_entries(template_dir, {})
     for _, entry in ipairs(entries) do
         if entry.fs_type == 'file' then
-            local template = parse_markdown_template_file(entry.path)
+            local template = parse_markdown_template(entry.path)
             if template and template.configuration.id then
                 assert(template.configuration.id, 'Template must have an ID')
                 model.templates[template.configuration.id] = template
@@ -275,7 +285,7 @@ local function load_workspace_templates()
     local entries = fs_all_entries(template_dir, {})
     for _, entry in ipairs(entries) do
         if entry.fs_type == 'file' and entry.name:globmatch('*.rdt.md') then
-            local template = parse_markdown_template_file(entry.path)
+            local template = parse_markdown_template(entry.path)
             if template and template.configuration.id then
                 assert(template.configuration.id, 'Template must have an ID')
                 model.templates[template.configuration.id] = template
