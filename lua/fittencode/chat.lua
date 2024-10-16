@@ -3,30 +3,15 @@ local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local OPL = require('fittencode.opl')
 
----@alias Model 'Fast' | 'Search'
+---@alias AIModel 'Fast' | 'Search'
 
 ---@class Message
 ---@field source 'bot'|'user'
 ---@field content string
 
----@class Header
-
----@class State
+---@class fittencode.chat.State
 ---@field type 'user_can_reply' | 'waiting_for_bot_answer'
 ---@field response_placeholder string
-
----@class Content
----@field messages Message[]
----@field state State
----@field type 'message_exchange'
-
----@class Conversation
----@field content Content
----@field header Header
----@field id string
----@field inputs string[]
----@field mode 'chat'
----@field favorite boolean
 
 ---@class fittencode.chat.Template
 
@@ -45,13 +30,40 @@ local OPL = require('fittencode.opl')
 ---@field template fittencode.chat.Template
 
 ---@class fittencode.chat.model
----@field conversations Conversation[]
+---@field conversations fittencode.chat.Conversation[]
 ---@field selected_conversation_id string|nil
 ---@field conversation_types table<string, fittencode.chat.ConversationType>
+---@field basic_chat_template_id string
 local model = {
     conversation_types = {},
     extension_templates = {},
 }
+
+---@class fittencode.chat.View
+---@field chat_window any
+local view = {
+}
+
+---@class fittencode.chat.Message
+---@field author string
+---@field content string
+
+---@class fittencode.chat.Conversation
+---@field abort_before_answer boolean
+---@field isfavorited boolean
+---@field mode "chat"
+---@field id string
+---@field messages fittencode.chat.Message[]
+---@field init_variables table
+---@field chat_rag table
+---@field template fittencode.chat.Template
+---@field project_path_name string
+---@field state fittencode.chat.State
+---@field regenerate_enable boolean
+---@field creation_timestamp string
+---@field variables table
+local Conversation = {}
+Conversation.__index = Conversation
 
 local function random(length)
     local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -70,49 +82,87 @@ local function update_conversation(e, id)
     model.selected_conversation_id = id
 end
 
-local function has_workspace()
+local function get_conversation_by_id(id)
+    return model.conversations[id]
+end
+
+local function resolve_variables_internal(variables, tm)
+end
+
+local function resolve_variables(variables, tm)
+    local n = {
+        messages = tm.messages,
+    }
+    for _, v in ipairs(variables) do
+        if v.time == tm.time then
+            if n[v.name] == nil then
+                local s = resolve_variables_internal(v, { messages = tm.messages })
+                n[v.name] = s
+            else
+                Log.error('Variable {} is already defined', v.name)
+            end
+        end
+    end
+    return n
+end
+
+local function create_conversation(template_id)
+    local e = get_conversation_by_id(template_id)
+    if not e then
+        return
+    end
+    local s = resolve_variables(e.variables, {
+        time = 'conversation-start'
+    })
 end
 
 -- Clicking on the "Start Chat" button
 local function start_chat()
     local id = random(36).sub(2, 10)
-    local inputs = {
-        '<|system|>',
-        "Reply same language as the user's input.",
-        '<|end|>',
+    create_conversation(model.basic_chat_template_id)
+end
+
+local function remove_special_token(t)
+    return string.gsub(t, '<|(%w{%d,10})|>', '<| %1 |>')
+end
+
+function Conversation:add_user_message(message)
+    self.messages[#self.messages + 1] = {
+        author = 'user',
+        content = message,
     }
-    local e = {
-        id = id,
-        content = {
-            type = 'message_exchange',
-            messages = {},
-            state = {
-                type = 'user_can_reply',
-                response_placeholder = 'Ask…'
-            }
-        },
-        reference = {
-            select_text = '',
-            select_range = '',
-        },
-        inputs = inputs,
-    }
-    update_conversation(e, id)
+    self.state.type = 'waiting_for_bot_answer'
+end
+
+function Conversation:answer(message)
+    self:add_user_message(remove_special_token(message))
 end
 
 -- Clicking on the "Send" button
-local function send_message(data, model, on_stream, on_error)
-    local e = conversations[data.id]
+-- Or pressing Enter in the input field
+local function send_message(data)
+    local e = model.conversations[data.id]
     if not e then
         return
     end
-    local inputs = {
-        '<|user|>',
-        model == 'Search' and '@FCPS ' or '' .. data.message,
-        '<|end|>'
-    }
-    vim.list_extend(e.inputs, inputs)
-    return chat(e, data, on_stream, on_error)
+    e:answer(data.message)
+end
+
+local function show_chat_window()
+    if not model.selected_conversation_id then
+        start_chat()
+    end
+    view.chat_window:show()
+end
+
+-- Right clicking on a code block
+local function explain_code()
+    show_chat_window()
+end
+
+-- Clicking on the "Chat" button
+local function show_chat()
+    show_chat_window()
 end
 
 local function fs_all_entries(path, prename)
@@ -281,6 +331,7 @@ local function reload_builtin_templates()
                     description = e.template.description,
                     source = 'builtin',
                     tags = {},
+                    variables = e.template.variables or {},
                 })
                 model.conversation_types[e.id] = e
             else
@@ -301,6 +352,7 @@ local function reload_extension_templates()
                 description = e.template.description,
                 source = 'extension',
                 tags = {},
+                variables = e.template.variables or {},
             })
             model.conversation_types[e.id] = e
         else
@@ -334,6 +386,7 @@ local function reload_workspace_templates()
                     description = e.template.description,
                     source = 'workspace',
                     tags = {},
+                    variables = e.template.variables or {},
                 })
                 model.conversation_types[e.id] = e
             else
