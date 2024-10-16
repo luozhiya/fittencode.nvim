@@ -230,15 +230,17 @@ local function parse_markdown_template(e)
     local success, err = pcall(vim.api.nvim_buf_call, buf, function()
         if vim.fn.filereadable(e) == 1 then
             vim.cmd('silent edit ' .. e)
-            source = vim.fn.fnamemodify(e, ':t')
+            -- vim.fn.fnamemodify(e, ':t')
+            source = e
         else
             vim.api.nvim_buf_set_lines(buf, 0, -1, false, e)
+            source = '[BUFFER]'
         end
     end)
 
     if not success then
         vim.api.nvim_buf_delete(buf, { force = true })
-        return nil, err
+        return nil
     end
 
     local template = parse_markdown_template_buf(buf)
