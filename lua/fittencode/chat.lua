@@ -86,7 +86,57 @@ local function get_conversation_by_id(id)
     return model.conversations[id]
 end
 
-local function resolve_variables_internal(variables, tm)
+local function resolve_variables_internal(v, tm)
+    local type = v.type
+    local function get_value(r, n, i, t, e)
+        local switch = {
+            ['context'] = function()
+                return { name = n and n.document and n.document.file_name, language = n and n.document and n.document.language_id, content = i }
+            end,
+            ['constant'] = function()
+                return t.value
+            end,
+            ['message'] = function()
+                return e and e[t.index] and e[t.index][t.property]
+            end,
+            ['selected-text'] = function()
+                return hse.get_selected_text()
+            end,
+            ['selected-location-text'] = function()
+                return fse.get_selected_location_text()
+            end,
+            ['filename'] = function()
+                return lse.get_filename()
+            end,
+            ['language'] = function()
+                return cse.get_language()
+            end,
+            ['comment-snippet'] = function()
+                return use.get_comment_snippet()
+            end,
+            ['unit-test-framework'] = function()
+                local s = pse.get_unit_test_framework()
+                return s == 'not specified' and '' or s
+            end,
+            ['selected-text-with-diagnostics'] = function()
+                return dse.get_selected_text_with_diagnostics({ diagnostic_severities = t.severities })
+            end,
+            ['error_message'] = function()
+                return ul.get_diagnose_info()
+            end,
+            ['error_location'] = function()
+                return ul.get_error_location()
+            end,
+            ['title-selected-text'] = function()
+                return ese.get_title_selected_text()
+            end,
+            ['terminal-text'] = function()
+                return cse.get_terminal_text()
+            end
+        }
+        return switch[r]
+    end
+    return get_value(type)
 end
 
 local function resolve_variables(variables, tm)
