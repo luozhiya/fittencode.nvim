@@ -28,15 +28,28 @@ local OPL = require('fittencode.opl')
 ---@field mode 'chat'
 ---@field favorite boolean
 
----@class fittencode.chat.template
+---@class fittencode.chat.Template
+
+---@class fittencode.chat.ConversationMeta
 ---@field id string
+---@field description string
+---@field source string
+
+---@class fittencode.chat.ConversationType
+---@field id string
+---@field description string
+---@field label string
+---@field source string
+---@field tags string[]
+---@field meta fittencode.chat.ConversationMeta
+---@field template fittencode.chat.Template
 
 ---@class fittencode.chat.model
 ---@field conversations Conversation[]
 ---@field selected_conversation_id string|nil
----@field templates table<string, fittencode.chat.template>
+---@field conversation_types table<string, fittencode.chat.ConversationType>
 local model = {
-    templates = {},
+    conversation_types = {},
 }
 
 local function random(length)
@@ -163,8 +176,8 @@ local function parse_markdown_template_buf(buf)
     local parsed_tree = parser:parse()[1]
     local root = parsed_tree:root()
 
-    local meta = nil
-    local configuration = nil
+    local meta
+    local template
 
     local in_template_section = false
     local sub_template_section = ''
@@ -197,26 +210,26 @@ local function parse_markdown_template_buf(buf)
                 sub_template_section = 'response_prompt'
             end
         elseif capture_name == 'code.content' then
-            configuration = configuration or {}
+            template = template or {}
             if sub_template_section == 'configuration' then
                 local _, decoded = pcall(vim.fn.json_decode, text)
                 if decoded then
-                    configuration = vim.tbl_deep_extend('force', configuration, decoded)
+                    template = vim.tbl_deep_extend('force', template, decoded)
                 else
                     -- Error: Invalid JSON in configuration section
                     return nil
                 end
             elseif sub_template_section == 'initial_message_prompt' then
-                configuration = vim.tbl_deep_extend('force', configuration, { initialMessage = { template = text, } })
+                template = vim.tbl_deep_extend('force', template, { initialMessage = { template = text, } })
             elseif sub_template_section == 'response_prompt' then
-                configuration = vim.tbl_deep_extend('force', configuration, { response = { template = text, } })
+                template = vim.tbl_deep_extend('force', template, { response = { template = text, } })
             end
         end
     end
-    if meta and configuration then
+    if meta and template then
         return {
             meta = meta,
-            configuration = configuration,
+            template = template,
         }
     end
 end
@@ -252,21 +265,29 @@ local function parse_markdown_template(e)
 end
 
 local function load_builtin_templates()
-    -- Markdown templates localte in {current_dir}/../../template
+    -- Builtin Markdown templates localte in `{current_dir}/../../template`
     local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('chat.lua', '')
     local template_dir = current_dir:gsub('/lua$', '') .. '/../../template'
     local entries = fs_all_entries(template_dir, {})
     for _, entry in ipairs(entries) do
         if entry.fs_type == 'file' then
-            local template = parse_markdown_template(entry.path)
-            if template and template.configuration.id then
-                assert(template.configuration.id, 'Template must have an ID')
-                model.templates[template.configuration.id] = template
+            local e = parse_markdown_template(entry.path)
+            if e and e.template.id then
+                assert(e.template.id, 'Template must have an ID')
+                e = vim.tbl_deep_extend('force', e, {
+                    id = e.template.id,
+                    label = e.template.label,
+                    description = e.template.description,
+                    source = 'builtin',
+                    tags = {},
+                })
+                model.conversation_types[e.id] = e
             else
                 Log.error('Failed to load builtin template: {}', entry.path)
             end
         end
     end
+    Log.debug('model.conversation_types: {}', model.conversation_types)
 end
 
 local function load_extension_templates()
