@@ -133,49 +133,6 @@ local function get_text_for_range(buffer, range)
 end
 
 local function parse_markdown_template_file(path)
-    local f = io.open(path, 'r')
-    if not f then
-        return nil
-    end
-    local content = f:read('*all')
-    f:close()
-    local parser = vim.treesitter.get_string_parser(content, 'markdown')
-    local parsed_tree = parser:parse()[1]
-    local root = parsed_tree:root()
-    local template = {
-        meta = {
-            source = '',
-            code = '',
-            description = '',
-        },
-        configuration = {},
-        initial_message_prompt = nil,
-        response_prompt = nil,
-    }
-
-    local query_string = [[
-(atx_heading
-  [
-    (atx_h1_marker)
-    (atx_h2_marker)
-    (atx_h3_marker)
-    (atx_h4_marker)
-    (atx_h5_marker)
-    (atx_h6_marker)
-  ] @level
-  heading_content: (_) @name) @symbol
-]]
-    local query = vim.treesitter.query.parse('markdown', query_string)
-
-    for id, node, _ in query:iter_captures(root, 0, 0, -1) do
-        local capture_name = query.captures[id]
-        print(vim.inspect({ get_text_for_range({ node:range() }) }))
-        -- local text = vim.treesitter.query.get_node_text(node, content)
-        -- print(string.format('Capture: %s, Text: %s', capture_name, text))
-    end
-end
-
-local function parse_markdown_template_file(path)
     local buf = vim.api.nvim_create_buf(false, true) -- false = not a scratch buffer, true = unlisted (invisible)
 
     -- Automatically wipe the buffer from Neovim's memory after use
@@ -330,10 +287,6 @@ local function load_workspace_templates()
 end
 
 load_builtin_templates()
-
--- local template = parse_markdown_template_buffer('E:\\DataCenter\\onWorking\\fittencode.nvim\\template\\chat\\chat-en.rdt.md')
--- print(vim.inspect(template))
--- Log.debug(vim.inspect(template))
 
 local function register_template(id, template)
     model.templates[id] = template
