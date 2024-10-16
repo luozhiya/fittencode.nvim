@@ -50,6 +50,7 @@ local OPL = require('fittencode.opl')
 ---@field conversation_types table<string, fittencode.chat.ConversationType>
 local model = {
     conversation_types = {},
+    extension_templates = {},
 }
 
 local function random(length)
@@ -287,17 +288,28 @@ local function reload_builtin_templates()
             end
         end
     end
-    Log.debug('model.conversation_types: {}', model.conversation_types)
 end
 
 local function reload_extension_templates()
-    for _, e in ipairs(model.extension_templates) do
-        -- local template = parse_markdown_template_buffer(e)
+    for k, v in pairs(model.extension_templates) do
+        local e = parse_markdown_template(v)
+        if e and e.template.id then
+            assert(e.template.id, 'Template must have an ID')
+            e = vim.tbl_deep_extend('force', e, {
+                id = e.template.id,
+                label = e.template.label,
+                description = e.template.description,
+                source = 'extension',
+                tags = {},
+            })
+            model.conversation_types[e.id] = e
+        else
+            Log.error('Failed to load extension template: {}', v)
+        end
     end
 end
 
 local function register_extension_template(id, e)
-    model.extension_templates = model.extension_templates or {}
     model.extension_templates[id] = e
 end
 
