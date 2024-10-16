@@ -121,10 +121,10 @@ local function resolve_variables_internal(v, tm)
             ['selected-text-with-diagnostics'] = function()
                 return dse.get_selected_text_with_diagnostics({ diagnostic_severities = t.severities })
             end,
-            ['error_message'] = function()
+            ['errorMessage'] = function()
                 return ul.get_diagnose_info()
             end,
-            ['error_location'] = function()
+            ['errorLocation'] = function()
                 return ul.get_error_location()
             end,
             ['title-selected-text'] = function()
