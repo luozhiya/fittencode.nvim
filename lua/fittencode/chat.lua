@@ -2,6 +2,7 @@ local Config = require('fittencode.config')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local OPL = require('fittencode.opl')
+local View = require('fittencode.view')
 
 ---@alias AIModel 'Fast' | 'Search'
 
@@ -42,6 +43,54 @@ local model = {
 ---@class fittencode.chat.View
 ---@field chat_window any
 local view = {
+    get_ft_language = function()
+        local ft = View.get_ft_language()
+        -- Mapping vim filetype to vscode language-id ?
+        return ft == '' and 'plaintext' or ft
+    end,
+    get_selected_text = function()
+        -- Get the selected text from the editor before creating window
+        return View.get_selected().text
+    end,
+    -- BB.getSelectedLocationText = Nie
+    get_selected_location_text = function()
+        local name = View.get_filename()
+        local location = View.get_selected().location
+        return name .. ' ' .. location.row .. ':' .. location.col
+    end,
+    get_filename = function() View.get_filename() end,
+    -- xa.getSelectedTextWithDiagnostics = Uie
+    get_selected_text_with_diagnostics = function(opts)
+        -- 1. Get selected text with lsp diagnostic info
+        -- 2. Format
+    end,
+    -- Ks.getDiagnoseInfo = Xie;
+    get_diagnose_info = function()
+        local error_code = ''
+        local error_line = ''
+        local surrounding_code = ''
+        local error_message = ''
+        local msg = [[The error code is:
+\`\`\`
+${i}
+\`\`\`
+The error line is:
+\`\`\`
+${s}
+\`\`\`
+The surrounding code is:
+\`\`\`
+${A}
+\`\`\`
+The error message is: ${n}]]
+        msg:gsub('%$i', error_code)
+            :gsub('%$s', error_line)
+            :gsub('%$A', surrounding_code)
+            :gsub('%$n', error_message)
+        return msg
+    end,
+    get_error_location = function() View.get_error_location() end,
+    get_title_selected_text = function() View.get_title_selected_text() end,
 }
 
 ---@class fittencode.chat.Message
@@ -86,12 +135,28 @@ local function get_conversation_by_id(id)
     return model.conversations[id]
 end
 
+-- ka.getCommentSnippet = fie
+local function get_comment_snippet()
+    return Config.snippet.comment or ''
+end
+
+-- Fa.getUnitTestFramework = Jie
+local function get_unit_test_framework()
+    local tf = {}
+    tf['c'] = 'C/C++'
+    tf['cpp'] = tf['c']
+    tf['java'] = 'Java'
+    tf['python'] = 'Python'
+    tf['javascript'] = 'JavaScript/TypeScript'
+    tf['typescript'] = tf['javascript']
+    return Config.unit_test_framework[tf[view.get_ft_language()]] or ''
+end
+
 local function resolve_variables_internal(v, tm)
-    local type = v.type
-    local function get_value(r, n, i, t, e)
+    local function get_value(t, e)
         local switch = {
             ['context'] = function()
-                return { name = n and n.document and n.document.file_name, language = n and n.document and n.document.language_id, content = i }
+                return { name = view.get_filename(), language = view.get_ft_language(), content = view.get_selected_text() }
             end,
             ['constant'] = function()
                 return t.value
@@ -100,43 +165,44 @@ local function resolve_variables_internal(v, tm)
                 return e and e[t.index] and e[t.index][t.property]
             end,
             ['selected-text'] = function()
-                return hse.get_selected_text()
+                return view.get_selected_text()
             end,
             ['selected-location-text'] = function()
-                return fse.get_selected_location_text()
+                return view.get_selected_location_text()
             end,
             ['filename'] = function()
-                return lse.get_filename()
+                return view.get_filename()
             end,
             ['language'] = function()
-                return cse.get_language()
+                return view.get_ft_language()
             end,
             ['comment-snippet'] = function()
-                return use.get_comment_snippet()
+                return get_comment_snippet()
             end,
             ['unit-test-framework'] = function()
-                local s = pse.get_unit_test_framework()
-                return s == 'not specified' and '' or s
+                local s = get_unit_test_framework()
+                return s == 'Not specified' and '' or s
             end,
             ['selected-text-with-diagnostics'] = function()
-                return dse.get_selected_text_with_diagnostics({ diagnostic_severities = t.severities })
+                return view.get_selected_text_with_diagnostics({ diagnostic_severities = t.severities })
             end,
             ['errorMessage'] = function()
-                return ul.get_diagnose_info()
+                return view.get_diagnose_info()
             end,
             ['errorLocation'] = function()
-                return ul.get_error_location()
+                return view.get_error_location()
             end,
             ['title-selected-text'] = function()
-                return ese.get_title_selected_text()
+                return view.get_title_selected_text()
             end,
             ['terminal-text'] = function()
-                return cse.get_terminal_text()
+                Log.error('Not implemented for terminal-text')
+                return ''
             end
         }
-        return switch[r]
+        return switch[t.type]
     end
-    return get_value(type)
+    return get_value(type, tm)
 end
 
 local function resolve_variables(variables, tm)
