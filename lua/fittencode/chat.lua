@@ -40,9 +40,18 @@ local model = {
     extension_templates = {},
 }
 
----@class fittencode.chat.View
----@field chat_window any
-local view = {
+-- Create when user show
+local chatcontainer = {
+    panel = nil,
+    float = nil,
+}
+
+function chatcontainer.create()
+    chatcontainer.panel = View.ChatPanel:new()
+    chatcontainer.float = View.ChatFloat:new()
+end
+
+local editor = {
     get_ft_language = function()
         local ft = View.get_ft_language()
         -- Mapping vim filetype to vscode language-id ?
@@ -149,14 +158,14 @@ local function get_unit_test_framework()
     tf['python'] = 'Python'
     tf['javascript'] = 'JavaScript/TypeScript'
     tf['typescript'] = tf['javascript']
-    return Config.unit_test_framework[tf[view.get_ft_language()]] or ''
+    return Config.unit_test_framework[tf[editor.get_ft_language()]] or ''
 end
 
 local function resolve_variables_internal(v, tm)
     local function get_value(t, e)
         local switch = {
             ['context'] = function()
-                return { name = view.get_filename(), language = view.get_ft_language(), content = view.get_selected_text() }
+                return { name = editor.get_filename(), language = editor.get_ft_language(), content = editor.get_selected_text() }
             end,
             ['constant'] = function()
                 return t.value
@@ -165,16 +174,16 @@ local function resolve_variables_internal(v, tm)
                 return e and e[t.index] and e[t.index][t.property]
             end,
             ['selected-text'] = function()
-                return view.get_selected_text()
+                return editor.get_selected_text()
             end,
             ['selected-location-text'] = function()
-                return view.get_selected_location_text()
+                return editor.get_selected_location_text()
             end,
             ['filename'] = function()
-                return view.get_filename()
+                return editor.get_filename()
             end,
             ['language'] = function()
-                return view.get_ft_language()
+                return editor.get_ft_language()
             end,
             ['comment-snippet'] = function()
                 return get_comment_snippet()
@@ -184,16 +193,16 @@ local function resolve_variables_internal(v, tm)
                 return s == 'Not specified' and '' or s
             end,
             ['selected-text-with-diagnostics'] = function()
-                return view.get_selected_text_with_diagnostics({ diagnostic_severities = t.severities })
+                return editor.get_selected_text_with_diagnostics({ diagnostic_severities = t.severities })
             end,
             ['errorMessage'] = function()
-                return view.get_diagnose_info()
+                return editor.get_diagnose_info()
             end,
             ['errorLocation'] = function()
-                return view.get_error_location()
+                return editor.get_error_location()
             end,
             ['title-selected-text'] = function()
-                return view.get_title_selected_text()
+                return editor.get_title_selected_text()
             end,
             ['terminal-text'] = function()
                 Log.error('Not implemented for terminal-text')
@@ -268,7 +277,7 @@ local function show_chat_window()
     if not model.selected_conversation_id then
         start_chat()
     end
-    view.chat_window:show()
+    editor.chat_window:show()
 end
 
 -- Right clicking on a code block
