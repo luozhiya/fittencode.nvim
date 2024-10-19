@@ -25,7 +25,15 @@ local function debounce(func, delay)
     end
 end
 
+---@param s string
+---@param prefix string
+---@return boolean
+local function startwith(s, prefix)
+    return string.sub(s, 1, string.len(prefix)) == prefix
+end
+
 return {
     debounce = debounce,
-    schedule_call = schedule_call
+    schedule_call = schedule_call,
+    startwith = startwith
 }

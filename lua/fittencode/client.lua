@@ -5,11 +5,26 @@ local Promise = require('fittencode.promise')
 
 local curl = require('fittencode.curl')
 
-local ide = '?ide=neovim&v=0.2.0'
+local ide = 'neovim'
+local version = '0.2.0'
+local platform_info = nil
+
+local function get_platform_info_as_url_params()
+    if not platform_info then
+        platform_info = table.concat({
+            'ide=' .. ide,
+            'ide_v=' .. vim.version(),
+            'os=' .. vim.uv.os_uname().sysname,
+            'os_v=' .. vim.uv.os_uname().release,
+            'v=' .. version,
+        }, '&')
+    end
+    return platform_info
+end
 
 local urls = {
     -- Account
-    register = 'https://codewebchat.fittenlab.cn/' .. ide,
+    register = 'https://codewebchat.fittenlab.cn/?' .. get_platform_info_as_url_params(),
     register_cvt = 'https://fc.fittentech.com/cvt/register',
     login = '/codeuser/login',
     fb_check_login = '/codeuser/fb_check_login', -- ?client_token=
@@ -431,16 +446,39 @@ local function generate_one_stage(prompt, on_once, on_error)
     local headers = {
         ['Content-Type'] = 'application/json',
     }
-    local url = urls.generate_one_stage .. '/' .. keyring.key .. ide
+    local url = urls.generate_one_stage .. '/' .. keyring.key .. '？' .. get_platform_info_as_url_params()
     return request('post', url, headers, prompt, nil, on_once, nil, on_error)
 end
 
-local function execute_chat(e, data, on_stream, on_error)
+local function chat(prompt, on_once, on_stream, on_error)
     if not keyring_check() then
         Fn.schedule_call(on_error)
         return
     end
     assert(keyring)
+    local headers = {
+        ['Content-Type'] = 'application/json',
+    }
+    local url = urls.chat .. '/?ft_token=' .. keyring.key .. '&' .. get_platform_info_as_url_params()
+    return request('post', url, headers, prompt, nil, on_once, on_stream, on_error)
+end
+
+local function chat_heartbeat(prompt, on_once, on_stream, on_error)
+    local on_once_hb = function(output)
+        local data = {}
+        for _, line in ipairs(output) do
+            local _, delta = pcall(vim.fn.json_decode, line)
+            if not _ then
+                -- ignore invalid json
+            else
+                if not Fn.startwith(delta, 'heartbeat') then
+                    data[#data + 1] = delta
+                end
+            end
+        end
+        on_once(table.concat(data))
+    end
+    return chat(prompt, on_once_hb, on_stream, on_error)
 end
 
 return {
@@ -451,5 +489,5 @@ return {
     login_providers = login_providers,
     logout = logout,
     generate_one_stage = generate_one_stage,
-    execute_chat = execute_chat,
+    chat = chat,
 }

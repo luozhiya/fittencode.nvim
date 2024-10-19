@@ -5,8 +5,8 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     local cmd = params.cmd
     local args = params.args
 
-    local output = ''
-    local error = ''
+    local output = {}
+    local error = {}
     local process = nil
     local pid = nil
 
@@ -43,13 +43,13 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     local function on_stdout(err, chunk)
         Fn.schedule_call(on_stream, { error = err, chunk = chunk })
         if not err and chunk then
-            output = output .. chunk
+            output[#output+1] = chunk
         end
     end
 
     local function on_stderr(err, chunk)
         if not err and chunk then
-            error = error .. chunk
+            error[#error+1] = chunk
         end
     end
 

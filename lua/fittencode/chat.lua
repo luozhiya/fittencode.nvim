@@ -3,6 +3,7 @@ local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local OPL = require('fittencode.opl')
 local View = require('fittencode.view')
+local Fn = require('fittencode.fn')
 
 ---@alias AIModel 'Fast' | 'Search'
 
@@ -81,21 +82,17 @@ local editor = {
         local error_message = ''
         local msg = [[The error code is:
 \`\`\`
-${i}
+]] .. error_code .. [[
 \`\`\`
 The error line is:
 \`\`\`
-${s}
+]] .. error_line .. [[
 \`\`\`
 The surrounding code is:
 \`\`\`
-${A}
+]] .. surrounding_code .. [[
 \`\`\`
-The error message is: ${n}]]
-        msg:gsub('%$i', error_code)
-            :gsub('%$s', error_line)
-            :gsub('%$A', surrounding_code)
-            :gsub('%$n', error_message)
+The error message is: ]] .. error_message
         return msg
     end,
     get_error_location = function() View.get_error_location() end,
@@ -260,7 +257,17 @@ function Conversation:add_user_message(message)
 end
 
 function Conversation:answer(message)
+    message = message or ''
     self:add_user_message(remove_special_token(message))
+    self:execute_chat({
+        workspace = Fn.startwith(message, '@workspace'),
+        _workspace = Fn.startwith(message, '@_workspace'),
+        enterprise_workspace = (Fn.startwith(message, '@_workspace(') or Fn.startwith(message, '@workspace(')) and Config.fitten.version == 'enterprise',
+        message = message,
+    })
+end
+
+function Conversation:execute_chat(data)
 end
 
 -- Clicking on the "Send" button
