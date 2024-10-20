@@ -5,7 +5,7 @@ local M = {}
 
 ---@class fittencode.Config
 local defaults = {
-    fitten = {
+    server = {
         ---@type fittencode.Version
         -- Avaiable options:
         -- * 'default'

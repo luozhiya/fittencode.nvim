@@ -267,7 +267,21 @@ function Conversation:answer(message)
     })
 end
 
-function Conversation:execute_chat(data)
+function Conversation:execute_chat(opts)
+    if Config.fitten.version == 'default' then
+        opts.workspace = false
+    end
+    if opts._workspace then
+        opts.workspace = true
+    end
+    local chat_api = Client.chat
+    if opts.workspace then
+        if not opts.enterprise_workspace then
+            chat_api = Client.rag_chat
+            -- async
+            self.chat_rag.send_user_update_file()
+        end
+    end
 end
 
 -- Clicking on the "Send" button
@@ -528,7 +542,7 @@ local function reload_workspace_templates()
     end
 end
 
-reload_builtin_templates()
+-- reload_builtin_templates()
 
 local function reload_conversation_types()
     reload_builtin_templates()
@@ -543,6 +557,8 @@ end
 local function unregister_template(id)
     unregister_extension_template(id)
 end
+
+Client.statistic_logs()
 
 return {
     register_template = register_template,

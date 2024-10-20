@@ -24,7 +24,7 @@ end
 
 local urls = {
     -- Account
-    register = 'https://codewebchat.fittenlab.cn/?' .. get_platform_info_as_url_params(),
+    register = 'https://codewebchat.fittenlab.cn',
     register_cvt = 'https://fc.fittentech.com/cvt/register',
     login = '/codeuser/login',
     fb_check_login = '/codeuser/fb_check_login', -- ?client_token=
@@ -32,11 +32,12 @@ local urls = {
     get_ft_token = '/codeuser/get_ft_token',
     privacy = '/codeuser/privacy',
     agreement = '/codeuser/agreement',
+    statistic_log = '/codeuser/statistic_log',
     -- Completion
     generate_one_stage = '/codeapi/completion/generate_one_stage',
-    -- Chat
-    chat = '/codeapi/chat',       -- ?ft_token=
-    pro_search = '/codeapi/chat', -- /check_invite_code?code=
+    -- Chat (Fast/Search @FCPS)
+    chat = '/codeapi/chat', -- ?ft_token=
+    -- RAG
     rag_chat = '/codeapi/rag/chat',
     knowledge_base_info = '/codeapi/rag/knowledgeBaseInfo',
     delete_knowledge_base = '/codeapi/rag/deleteKnowledgeBase',
@@ -70,15 +71,15 @@ setmetatable(timezone, { __index = function() return timezone['+0000'] end })
 for k, v in pairs(locale_urls[timezone[os.date('%z')]]) do
     if k ~= 'server_url' then
         urls[k] = v
-    elseif Config.fitten.server_url == '' then
-        Config.fitten.server_url = v
+    elseif Config.server.server_url == '' then
+        Config.server.server_url = v
     end
 end
-assert(Config.fitten.server_url ~= '')
+assert(Config.server.server_url ~= '')
 
 for k, v in pairs(urls) do
     if not v:match('^https?://') then
-        urls[k] = Config.fitten.server_url .. v
+        urls[k] = Config.server.server_url .. v
     end
 end
 
@@ -97,7 +98,7 @@ local function load_last_session()
 end
 
 local function register()
-    vim.ui.open(urls.register)
+    vim.ui.open(urls.register .. '/?' .. get_platform_info_as_url_params())
 end
 
 local function login(username, password, on_success, on_error)
@@ -481,6 +482,66 @@ local function chat_heartbeat(prompt, on_once, on_stream, on_error)
     return chat(prompt, on_once_hb, on_stream, on_error)
 end
 
+local function rag_chat(prompt, on_once, on_stream, on_error)
+    if not keyring_check() then
+        Fn.schedule_call(on_error)
+        return
+    end
+    assert(keyring)
+    local headers = {
+        ['Content-Type'] = 'application/json',
+    }
+    local url = urls.rag_chat .. '/?ft_token=' .. keyring.key .. '&' .. get_platform_info_as_url_params()
+    return request('post', url, headers, prompt, nil, on_once, on_stream, on_error)
+end
+
+local function statistic_logs(on_error)
+    if not keyring_check() then
+        Fn.schedule_call(on_error)
+        return
+    end    
+    assert(keyring)
+    local function _scriptnames()
+        local _, scritpnames = pcall(vim.api.nvim_exec2, 'scritpnames', { output = true })
+        if not _ then
+            return {}
+        end
+        local plugins = {}
+        for _, line in ipairs(scritpnames) do
+            local path = line:match('%d+: (.+)')
+            local name = path:match('([^/]+)$')
+            if path and not path:match('nvim/runtime/') and not path:match('init.lua') then
+                table.insert(plugins, { id = name, version = '' })
+            end
+        end
+        return plugins
+    end
+    local function _lazy()
+        local _, lazy = pcall(require, 'lazy')
+        if not _ then
+            return {}
+        end
+        local plugins = {}
+        for _, plugin in ipairs(lazy.plugins()) do
+            table.insert(plugins, { id = plugin.name, version = '' })
+        end
+        return plugins
+    end
+    local n = {
+        ft_token = keyring,
+        tracker_type = 'extension_install_list',
+        tracker_event_type = _lazy(),
+        tracker_time = os.time(),
+    }
+    local info = vim.fn.json_encode(n)
+
+    local headers = {
+        ['Content-Type'] = 'application/json',
+    }
+    local url = urls.statistic_log .. '/?' .. info
+    return request('get', url, headers, nil, nil, nil, nil, on_error)
+end
+
 return {
     load_last_session = load_last_session,
     register = register,
@@ -490,4 +551,6 @@ return {
     logout = logout,
     generate_one_stage = generate_one_stage,
     chat = chat,
+    rag_chat = rag_chat,
+    statistic_logs = statistic_logs,
 }
