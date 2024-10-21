@@ -517,6 +517,22 @@ local function statistic_logs(on_error)
     return request('get', url, headers, nil, nil, nil, nil, on_error)
 end
 
+local function rag_save_file_and_directory_names(body, on_once, on_stream, on_error)
+    if not keyring_check() then
+        Fn.schedule_call(on_error)
+        return
+    end
+    assert(keyring)
+    local headers = {
+        ['Content-Type'] = 'application/json',
+    }
+    body = vim.tbl_deep_extend('force', body, {
+        ft_token = keyring.key,
+    })
+    local url = server_url() .. preset_urls.save_file_and_directory_names .. '/?ft_token=' .. keyring.key .. '&' .. get_platform_info_as_url_params()
+    return request('post', url, headers, body, nil, on_once, on_stream, on_error)
+end
+
 return {
     load_last_session = load_last_session,
     register = register,
@@ -528,4 +544,5 @@ return {
     chat = chat,
     rag_chat = rag_chat,
     statistic_logs = statistic_logs,
+    rag_save_file_and_directory_names = rag_save_file_and_directory_names,
 }

@@ -11,13 +11,14 @@
 ---@field id string
 ---@field messages fittencode.chat.Message[]
 ---@field init_variables table
----@field chat_rag table
+---@field chat_rag fittencode.chat.Rag
 ---@field template fittencode.chat.Template
 ---@field project_path_name string
 ---@field state fittencode.chat.State
 ---@field regenerate_enable boolean
 ---@field creation_timestamp string
 ---@field variables table
+---@field update_partial_bot_message function
 
 ---@alias AIModel 'Fast' | 'Search'
 
@@ -52,4 +53,5 @@
 ---@field basic_chat_template_id string
 
 ---@class fittencode.chat.Rag
+---@field conversation fittencode.chat.Conversation
 ---@field send_user_update_file function

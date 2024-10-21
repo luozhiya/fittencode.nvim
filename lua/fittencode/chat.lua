@@ -16,16 +16,84 @@ local model = {
 local Rag = {}
 Rag.__index = Rag
 
-function Rag:new()
+function Rag:new(conversation)
     local o = setmetatable({}, Rag)
+    o.conversation = conversation
     return o
 end
 
 function Rag:send_user_update_file()
+    -- 1. Initalize
     local ignore_files = {}
-    local step = 1
-    local total = 6
+    local _forward = function()
+        local step = 1
+        return function()
+            if step > 6 then
+                return ''
+            end
+            local ss = {
+                '正在分析项目结构',
+                '正在构建项目结构',
+                '正在更新数据',
+            }
+            local v =  ('[分析中 %s/6] '):format(step) .. ss[step]
+            step = step + 1
+            return v
+        end
+    end
+    local forward_state = _forward()
+    local on_success = function() end
+    local on_error = function() end
+    self.conversation:update_partial_bot_message({content = forward_state()}, on_success, on_error)
 
+    -- 2. Get file and directory names and hash
+    local file_and_directory_names = {}
+    local file_content = {}
+    local file_hash = {}
+
+    local project_path_name = ''
+    local worksapce = vim.fn.getcwd()
+    local entries = Fn.fs_all_entries(worksapce, {})
+    for _, entry in ipairs(entries) do
+    end
+    self.conversation:update_partial_bot_message({content = forward_state()}, on_success, on_error)
+
+    -- 3. Save to server
+    Client.rag_save_file_and_directory_names({
+        inputs = "",
+        meta_datas = {
+            file_dir_names = vim.fn.json_encode(file_and_directory_names),
+            file_hash = vim.fn.json_encode(file_hash),
+        }
+    })
+
+    self.conversation:update_partial_bot_message({content = forward_state()}, on_success, on_error)
+
+    -- 4. Compress files
+    -- copy worksapce files to temp dir
+    -- compress temp dir
+    -- send compressed file to server
+    local paths = {}
+    Client.rag_add_files_and_directories({
+        inputs = "",
+        meta_datas = {
+            file_name = project_path_name .. '.zip',
+            file_paths = vim.fn.json_encode(paths),
+        }
+    })
+
+    if #paths == 0 then
+        return
+    end
+
+    -- 5. Update project
+    -- Read response from server
+    -- Update partial bot message
+    Client.rag_update_project({
+        meta_datas = {
+            project_id = project_path_name
+        }
+    })
 end
 
 -- Create when user show
@@ -249,7 +317,7 @@ function Conversation:execute_chat(opts)
         if not opts.enterprise_workspace then
             chat_api = Client.rag_chat
             -- async
-            self.chat_rag.send_user_update_file()
+            self.chat_rag:send_user_update_file()
         end
     end
 end
@@ -279,24 +347,6 @@ end
 -- Clicking on the "Chat" button
 local function show_chat()
     show_chat_window()
-end
-
-local function fs_all_entries(path, prename)
-    local fs = vim.uv.fs_scandir(path)
-    local res = {}
-    if not fs then return res end
-    local name, fs_type = vim.uv.fs_scandir_next(fs)
-    while name do
-        res[#res + 1] = { fs_type = fs_type, prename = prename, name = name, path = path .. '/' .. name }
-        if fs_type == 'directory' then
-            local prename_next = vim.deepcopy(prename)
-            prename_next[#prename_next + 1] = name
-            local new = fs_all_entries(path .. '/' .. name, prename_next)
-            vim.list_extend(res, new)
-        end
-        name, fs_type = vim.uv.fs_scandir_next(fs)
-    end
-    return res
 end
 
 local function get_text_for_range(buffer, range)
@@ -435,7 +485,7 @@ local function reload_builtin_templates()
     -- Builtin Markdown templates localte in `{current_dir}/../../template`
     local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('chat.lua', '')
     local template_dir = current_dir:gsub('/lua$', '') .. '/../../template'
-    local entries = fs_all_entries(template_dir, {})
+    local entries = Fn.fs_all_entries(template_dir, {})
     for _, entry in ipairs(entries) do
         if entry.fs_type == 'file' and entry.name:match('.+%.rdt%.md$') then
             local e = parse_markdown_template(entry.path)
@@ -490,7 +540,7 @@ local function reload_workspace_templates()
     -- ".fittencode/template/**/*.rdt.md"
     local root = vim.fn.getcwd()
     local template_dir = root .. '/.fittencode/template'
-    local entries = fs_all_entries(template_dir, {})
+    local entries = Fn.fs_all_entries(template_dir, {})
     for _, entry in ipairs(entries) do
         if entry.fs_type == 'file' and entry.name:match('.+%.rdt%.md$') then
             local e = parse_markdown_template(entry.path)
