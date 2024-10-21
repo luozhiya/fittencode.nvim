@@ -22,7 +22,7 @@ local function get_platform_info_as_url_params()
     return platform_info
 end
 
-local urls = {
+local preset_urls = {
     -- Account
     register = 'https://codewebchat.fittenlab.cn',
     register_cvt = 'https://fc.fittentech.com/cvt/register',
@@ -73,7 +73,7 @@ local function load_last_session()
 end
 
 local function register()
-    vim.ui.open(urls.register .. '/?' .. get_platform_info_as_url_params())
+    vim.ui.open(preset_urls.register .. '/?' .. get_platform_info_as_url_params())
 end
 
 local function login(username, password, on_success, on_error)
@@ -84,7 +84,7 @@ local function login(username, password, on_success, on_error)
     end
 
     Promise:new(function(resolve, reject)
-        curl.post(urls.login, {
+        curl.post(server_url() .. preset_urls.login, {
             headers = {
                 ['Content-Type'] = 'application/json',
             },
@@ -106,7 +106,7 @@ local function login(username, password, on_success, on_error)
         })
     end):forward(function(token)
         return Promise:new(function(resolve, reject)
-            curl.get(urls.get_ft_token, {
+            curl.get(server_url() .. preset_urls.get_ft_token, {
                 headers = {
                     ['Authorization'] = 'Bearer ' .. token,
                 },
@@ -272,7 +272,7 @@ local function login3rd(source, on_success, on_error)
         Fn.schedule_call(on_error)
         return
     end
-    local login_url = urls.fb_check_login .. '?source=' .. source .. '&client_token=' .. client_token
+    local login_url = server_url() .. preset_urls.fb_check_login .. '?source=' .. source .. '&client_token=' .. client_token
     start_check = true;
     vim.ui.open(login_url)
 
@@ -291,7 +291,7 @@ local function login3rd(source, on_success, on_error)
                 Log.info('Login in timeout.')
                 Fn.schedule_call(on_error)
             end
-            local check_url = urls.fb_check_login .. '?client_token=' .. client_token
+            local check_url = server_url() .. preset_urls.fb_check_login .. '?client_token=' .. client_token
             Promise:new(function(resolve, reject)
                 curl.get(check_url, {
                     on_error = vim.schedule_wrap(function() reject() end),
@@ -317,14 +317,14 @@ local function login3rd(source, on_success, on_error)
                 Fn.schedule_call(on_success)
 
                 local type = fico_data.create and 'register_fb' or 'login_fb';
-                local click_count_url = urls.click_count .. '?apikey==' .. fico_data.token .. '&type=' .. type
+                local click_count_url = server_url() .. preset_urls.click_count .. '?apikey==' .. fico_data.token .. '&type=' .. type
                 curl.get(click_count_url, {
                     headers = {
                         ['Content-Type'] = 'application/json',
                     },
                 })
                 if fico_data.create then
-                    curl.get(urls.register_cvt)
+                    curl.get(preset_urls.register_cvt)
                 end
             end)
         end
@@ -422,7 +422,7 @@ local function generate_one_stage(prompt, on_once, on_error)
     local headers = {
         ['Content-Type'] = 'application/json',
     }
-    local url = urls.generate_one_stage .. '/' .. keyring.key .. '？' .. get_platform_info_as_url_params()
+    local url = server_url() .. preset_urls.generate_one_stage .. '/' .. keyring.key .. '？' .. get_platform_info_as_url_params()
     return request('post', url, headers, prompt, nil, on_once, nil, on_error)
 end
 
@@ -435,7 +435,7 @@ local function chat(prompt, on_once, on_stream, on_error)
     local headers = {
         ['Content-Type'] = 'application/json',
     }
-    local url = urls.chat .. '/?ft_token=' .. keyring.key .. '&' .. get_platform_info_as_url_params()
+    local url = server_url() .. preset_urls.chat .. '/?ft_token=' .. keyring.key .. '&' .. get_platform_info_as_url_params()
     return request('post', url, headers, prompt, nil, on_once, on_stream, on_error)
 end
 
@@ -466,7 +466,7 @@ local function rag_chat(prompt, on_once, on_stream, on_error)
     local headers = {
         ['Content-Type'] = 'application/json',
     }
-    local url = urls.rag_chat .. '/?ft_token=' .. keyring.key .. '&' .. get_platform_info_as_url_params()
+    local url = server_url() .. preset_urls.rag_chat .. '/?ft_token=' .. keyring.key .. '&' .. get_platform_info_as_url_params()
     return request('post', url, headers, prompt, nil, on_once, on_stream, on_error)
 end
 
@@ -513,7 +513,7 @@ local function statistic_logs(on_error)
     local headers = {
         ['Content-Type'] = 'application/json',
     }
-    local url = urls.statistic_log .. '/?' .. info
+    local url = server_url() .. preset_urls.statistic_log .. '/?' .. info
     return request('get', url, headers, nil, nil, nil, nil, on_error)
 end
 
