@@ -4,42 +4,29 @@ local Log = require('fittencode.log')
 local OPL = require('fittencode.opl')
 local View = require('fittencode.view')
 local Fn = require('fittencode.fn')
+local Promise = require('fittencode.promise')
 
----@alias AIModel 'Fast' | 'Search'
-
----@class Message
----@field source 'bot'|'user'
----@field content string
-
----@class fittencode.chat.State
----@field type 'user_can_reply' | 'waiting_for_bot_answer'
----@field response_placeholder string
-
----@class fittencode.chat.Template
-
----@class fittencode.chat.ConversationMeta
----@field id string
----@field description string
----@field source string
-
----@class fittencode.chat.ConversationType
----@field id string
----@field description string
----@field label string
----@field source string
----@field tags string[]
----@field meta fittencode.chat.ConversationMeta
----@field template fittencode.chat.Template
-
----@class fittencode.chat.model
----@field conversations fittencode.chat.Conversation[]
----@field selected_conversation_id string|nil
----@field conversation_types table<string, fittencode.chat.ConversationType>
----@field basic_chat_template_id string
+---@class fittencode.chat.Model
 local model = {
     conversation_types = {},
     extension_templates = {},
 }
+
+---@class fittencode.chat.Rag
+local Rag = {}
+Rag.__index = Rag
+
+function Rag:new()
+    local o = setmetatable({}, Rag)
+    return o
+end
+
+function Rag:send_user_update_file()
+    local ignore_files = {}
+    local step = 1
+    local total = 6
+
+end
 
 -- Create when user show
 local chatcontainer = {
@@ -99,24 +86,7 @@ The error message is: ]] .. error_message
     get_title_selected_text = function() View.get_title_selected_text() end,
 }
 
----@class fittencode.chat.Message
----@field author string
----@field content string
-
 ---@class fittencode.chat.Conversation
----@field abort_before_answer boolean
----@field isfavorited boolean
----@field mode "chat"
----@field id string
----@field messages fittencode.chat.Message[]
----@field init_variables table
----@field chat_rag table
----@field template fittencode.chat.Template
----@field project_path_name string
----@field state fittencode.chat.State
----@field regenerate_enable boolean
----@field creation_timestamp string
----@field variables table
 local Conversation = {}
 Conversation.__index = Conversation
 
@@ -542,8 +512,6 @@ local function reload_workspace_templates()
     end
 end
 
--- reload_builtin_templates()
-
 local function reload_conversation_types()
     reload_builtin_templates()
     reload_extension_templates()
@@ -557,8 +525,6 @@ end
 local function unregister_template(id)
     unregister_extension_template(id)
 end
-
-Client.statistic_logs()
 
 return {
     register_template = register_template,
