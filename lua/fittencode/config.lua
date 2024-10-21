@@ -1,8 +1,6 @@
 ---@class fittencode.Config
 local M = {}
 
----@alias fittencode.Version 'default' | 'enterprise'
-
 ---@class fittencode.Config
 local defaults = {
     server = {
@@ -12,11 +10,8 @@ local defaults = {
         -- * 'enterprise'
         version = 'default',
         -- The server URL for Fitten Code.
-        -- Fitten Code will detect the server URL based on your timezone automatically if it's not set.
         -- You can also change it to your own server URL if you have a private server.
-        -- Default server URL for different regions:
-        -- * China:         'https://fc.fittenlab.cn'
-        -- * International: 'https://fc.fittenlab.com'
+        -- Default server URL: 'https://fc.fittenlab.cn'
         server_url = '',
     },
     action = {

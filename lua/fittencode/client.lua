@@ -50,37 +50,12 @@ local urls = {
     add_files_and_directories = '/codeapi/rag/add_files_and_directories',
 }
 
-local locale_urls = {
-    ['zh-cn'] = {
-        server_url = 'https://fc.fittenlab.cn',
-    },
-    ['en'] = {
-        server_url = 'https://fc.fittenlab.com',
-        privacy = '/codeuser/privacy_en',
-        agreement = '/codeuser/agreement_en',
-    }
-}
-setmetatable(locale_urls, { __index = function() return locale_urls['en'] end })
-
-local timezone = {
-    ['+0000'] = 'en',    -- Greenwich Mean Time (UK)
-    ['+0800'] = 'zh-cn', -- China Standard Time
-}
-setmetatable(timezone, { __index = function() return timezone['+0000'] end })
-
-for k, v in pairs(locale_urls[timezone[os.date('%z')]]) do
-    if k ~= 'server_url' then
-        urls[k] = v
-    elseif Config.server.server_url == '' then
-        Config.server.server_url = v
+local function server_url()
+    local url = Config.server.server_url
+    if not url or url == '' then
+        url = 'https://fc.fittenlab.cn'
     end
-end
-assert(Config.server.server_url ~= '')
-
-for k, v in pairs(urls) do
-    if not v:match('^https?://') then
-        urls[k] = Config.server.server_url .. v
-    end
+    return url
 end
 
 local keyring_store = vim.fn.stdpath('data') .. '/fittencode' .. '/api_key.json'
@@ -499,7 +474,7 @@ local function statistic_logs(on_error)
     if not keyring_check() then
         Fn.schedule_call(on_error)
         return
-    end    
+    end
     assert(keyring)
     local function _scriptnames()
         local _, scritpnames = pcall(vim.api.nvim_exec2, 'scritpnames', { output = true })

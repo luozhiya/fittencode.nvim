@@ -1,0 +1,1 @@
+---@alias fittencode.Version 'default' | 'enterprise'
