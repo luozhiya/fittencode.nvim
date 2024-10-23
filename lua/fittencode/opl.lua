@@ -566,7 +566,7 @@ end
 
 ---@param source string
 ---@return string
-local function TokenPretty(source)
+local function PrettyToken(source)
     ---@param token Token
     local function dump_token(token)
         local loc = token.loc or {}
@@ -585,7 +585,7 @@ local function TokenPretty(source)
 end
 
 local function LexerRunner(source, lexer)
-    write_file(lexer, TokenPretty(read_file(source)))
+    write_file(lexer, PrettyToken(read_file(source)))
 end
 
 ---@class ParserState
@@ -1041,7 +1041,7 @@ end
 
 ---@param source string
 ---@return string
-local function ASTPretty(source)
+local function PrettyAST(source)
     local os = {}
     pp.dump_ast(os, Parser:new(source):parse())
     return table.concat(os)
@@ -1050,7 +1050,7 @@ end
 ---@param source string
 ---@param ast string
 local function ParserRunner(source, ast)
-    write_file(ast, ASTPretty(read_file(source)))
+    write_file(ast, PrettyAST(read_file(source)))
 end
 
 ---@class CompilerImpl
@@ -1220,10 +1220,14 @@ end
 
 ---@param env_name string
 ---@param env table
----@param ___fn table
+---@param ___fn table|nil
 ---@param code string
 ---@return string|nil, string|nil
 local function CodeRunner(env_name, env, ___fn, code)
+    ___fn = ___fn or {}
+    for k, v in pairs(fn) do
+        ___fn[k] = v
+    end
     env['___fn'] = ___fn
     _G[env_name] = env
     local stdout
@@ -1248,7 +1252,7 @@ local function sample()
         -- messages = { { author = vim.inspect(1), content = vim.inspect(vim) }, { author = 'bot', content = 'hi' } },
     }
     local env_name, code = CompilerRunner(env, read_file('source.txt'))
-    local stdout, stderr = CodeRunner(env_name, env, fn, code)
+    local stdout, stderr = CodeRunner(env_name, env, nil, code)
     if stderr then
         print(stderr)
     else
@@ -1261,12 +1265,12 @@ end
 
 return {
     Lexer = Lexer,
-    TokenPretty = TokenPretty,
     LexerRunner = LexerRunner,
     Parser = Parser,
-    ASTPretty = ASTPretty,
     ParserRunner = ParserRunner,
     Compiler = Compiler,
     CompilerRunner = CompilerRunner,
     CodeRunner = CodeRunner,
+    PrettyToken = PrettyToken,
+    PrettyAST = PrettyAST,
 }
