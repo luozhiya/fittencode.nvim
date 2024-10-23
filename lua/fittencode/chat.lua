@@ -12,6 +12,36 @@ local model = {
     extension_templates = {},
 }
 
+---@class fittencode.chat.ChatAgent
+local ChatAgent = {}
+ChatAgent.__index = ChatAgent
+
+function ChatAgent:new()
+    local o = setmetatable({
+        run_cnt = 0,
+    }, ChatAgent)
+    return o
+end
+
+function ChatAgent:update_state(e)
+end
+
+function ChatAgent:rerun()
+    self._task = "rerun"
+end
+
+function ChatAgent:stop()
+    self._task = "stop"
+end
+
+function ChatAgent:on_chat_start()
+end
+
+function ChatAgent:on_chat_message()
+end
+
+function ChatAgent:on_chat_end()
+end
 ---@class fittencode.chat.Rag
 local Rag = {}
 Rag.__index = Rag
