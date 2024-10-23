@@ -1231,18 +1231,26 @@ local function CodeRunner(env_name, env, ___fn, code)
     env['___fn'] = ___fn
     _G[env_name] = env
     local stdout
+    ---@type string|nil
     local stderr
-    local f, err = load(code, nil, 't', _G)
-    if f then
-        local _, msg = pcall(f)
-        if not _ then
-            stderr = msg
-        else
-            stdout = msg
-        end
+    local _, ld, lderr = pcall(load, code, nil, 't', _G)
+    if not _ then
+        -- error object.
+        ---@diagnostic disable-next-line: cast-local-type
+        stderr = ld
     else
-        stderr = err
+        if ld then
+            local _, msg = pcall(ld)
+            if not _ then
+                stderr = msg
+            else
+                stdout = msg
+            end
+        else
+            stderr = lderr
+        end
     end
+    ---@diagnostic disable-next-line: return-type-mismatch
     return stdout, stderr
 end
 
