@@ -12,7 +12,7 @@ local commands = {
         end },
     login3rd = {
         function(source) Client.login3rd(source) end,
-        Client.login_providers
+        complete = Client.login_providers
     },
 }
 
