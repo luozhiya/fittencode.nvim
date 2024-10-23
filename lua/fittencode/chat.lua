@@ -42,6 +42,37 @@ end
 
 function ChatAgent:on_chat_end()
 end
+
+---@class fittencode.chat.ProjectAgent
+---@diagnostic disable-next-line: assign-type-mismatch
+local ProjectAgent = ChatAgent:new()
+ProjectAgent.__index = ProjectAgent
+
+function ProjectAgent:new(default_version, correct_version)
+    local o = setmetatable({
+        file_content = {},
+        chunk_contents = {},
+        chunk_paths = {},
+        file_and_directory_names = {},
+        workspace_ref_str = '',
+        default_version = default_version,
+        correct_version = correct_version,
+    })
+    return o
+end
+
+function ProjectAgent:on_chat_start()
+    if not self.correct_version then
+        return
+    end
+end
+
+function ProjectAgent:on_chat_message()
+end
+
+function ProjectAgent:on_chat_end()
+end
+
 ---@class fittencode.chat.Rag
 local Rag = {}
 Rag.__index = Rag
@@ -335,6 +366,38 @@ function Conversation:answer(message)
     })
 end
 
+function Conversation:resolve_variables_at_message_time()
+    return resolve_variables(self.template.variables, {
+        time = 'message',
+        messages = self.messages,
+    })
+end
+
+function Conversation:evaluate_template(template, variables)
+    if variables == nil then
+        variables = self:resolve_variables_at_message_time()
+    end
+    if self.temporary_editor_content then
+        variables.temporaryEditorContent = self.temporary_editor_content
+    end
+    local env = vim.tbl_deep_extend('force', {}, self.init_variables)
+    env = vim.tbl_deep_extend('force', env, self.variables)
+    local function sample()
+        -- local env = {
+        --     messages = { { author = 'alice', content = 'hello\n' }, { author = 'bot', content = 'hi\n' } },
+        --     -- messages = { { author = vim.inspect(1), content = vim.inspect(vim) }, { author = 'bot', content = 'hi' } },
+        -- }
+        local env_name, code = OPL.CompilerRunner(env, template)
+        local stdout, stderr = OPL.CodeRunner(env_name, env, nil, code)
+        if stderr then
+            Log.error('Error evaluating template: {}', stderr)
+        else
+            return stdout
+        end
+    end
+    return sample()
+end
+
 function Conversation:execute_chat(opts)
     if Config.fitten.version == 'default' then
         opts.workspace = false
@@ -349,6 +412,16 @@ function Conversation:execute_chat(opts)
             -- async
             self.chat_rag:send_user_update_file()
         end
+    else
+        ---@type fittencode.chat.Template.InitialMessage | fittencode.chat.Template.Response | nil
+        local template = self.template.response
+        if self.messages[1] == nil then
+            template = self.template.initialMessage
+        end
+        assert(template)
+        local variables = self:resolve_variables_at_message_time()
+        local retrieval_augmentation = template.retrievalAugmentation
+        local evaluated = self:evaluate_template(template.template, variables)
     end
 end
 
@@ -535,6 +608,7 @@ local function reload_builtin_templates()
             end
         end
     end
+    Log.debug('model.conversation_types : {}', model.conversation_types)
 end
 
 local function reload_extension_templates()
@@ -591,6 +665,8 @@ local function reload_workspace_templates()
         end
     end
 end
+
+reload_builtin_templates()
 
 local function reload_conversation_types()
     reload_builtin_templates()
