@@ -666,7 +666,7 @@ local function reload_workspace_templates()
     end
 end
 
-reload_builtin_templates()
+-- reload_builtin_templates()
 
 local function reload_conversation_types()
     reload_builtin_templates()
