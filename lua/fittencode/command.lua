@@ -32,6 +32,8 @@ local commands = {
 }
 
 local function execute(input)
+    Log.debug('Executing command: {} ', input)
+    -- commands[input.fargs[1]].execute(input.fargs[2])
 end
 
 local function complete(arg_lead, cmd_line, cursor_pos)
@@ -39,12 +41,10 @@ local function complete(arg_lead, cmd_line, cursor_pos)
     if cmd_line:sub(-1) == ' ' then
         eles[#eles + 1] = ''
     end
-    -- 1: FittenCode
     table.remove(eles, 1)
-    -- action or nil
     local prefix = table.remove(eles, 1) or ''
     if #eles > 0 then
-        if commands[prefix] and commands[prefix].complete then
+        if commands[prefix] and commands[prefix].complete and #eles < 2 then
             local next = table.remove(eles, 1) or ''
             return vim.tbl_filter(function(key)
                 return key:find(next, 1, true) == 1
