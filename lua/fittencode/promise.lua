@@ -51,7 +51,8 @@ function Promise:new(executor)
             end, obj.promise_reactions[PromiseState.REJECTED])
         end
     end
-    vim.schedule_wrap(function() executor(resolve, reject) end)
+    executor(resolve, reject)
+    -- vim.schedule_wrap(function() executor(resolve, reject) end)
     self.__index = self
     return setmetatable(obj, self)
 end

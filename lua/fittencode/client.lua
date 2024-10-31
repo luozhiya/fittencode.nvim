@@ -83,6 +83,8 @@ local function login(username, password, on_success, on_error)
         return
     end
 
+    Log.debug('login with username: {}', username)
+
     Promise:new(function(resolve, reject)
         curl.post(server_url() .. preset_urls.login, {
             headers = {
@@ -131,7 +133,7 @@ local function login(username, password, on_success, on_error)
             key = fico_token,
         }
         Log.notify_info('Login successful')
-        vim.fn.writefile(vim.fn.json_encode(keyring), keyring_store)
+        vim.fn.writefile({vim.fn.json_encode(keyring)}, keyring_store)
         Fn.schedule_call(on_success)
     end, function()
         Fn.schedule_call(on_error)
@@ -313,7 +315,7 @@ local function login3rd(source, on_success, on_error)
                     key = fico_data.token
                 }
                 Log.notify_info('Login successful')
-                vim.fn.writefile(vim.fn.json_encode(keyring), keyring_store)
+                vim.fn.writefile({vim.fn.json_encode(keyring)}, keyring_store)
                 Fn.schedule_call(on_success)
 
                 local type = fico_data.create and 'register_fb' or 'login_fb';

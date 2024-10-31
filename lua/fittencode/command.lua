@@ -14,6 +14,11 @@ local commands = {
         execute = function(source) Client.login3rd(source) end,
         complete = Client.login_providers
     },
+    logout = {
+        execute = function()
+            Client.logout()
+        end
+    },
     start_chat = {
         execute = function()
             Chat.start_chat()
@@ -32,8 +37,11 @@ local commands = {
 }
 
 local function execute(input)
-    Log.debug('Executing command: {} ', input)
-    -- commands[input.fargs[1]].execute(input.fargs[2])
+    if not commands[input.fargs[1]] then
+        Log.error('Command not found: {}', input.fargs[1])
+        return
+    end
+    commands[input.fargs[1]].execute(input.fargs[2])
 end
 
 local function complete(arg_lead, cmd_line, cursor_pos)

@@ -73,7 +73,8 @@ local function spawn_curl(args, opts)
         cmd = curl.cmd,
         args = args,
     }
-    local on_once = function(exit_code, output, error)
+    local on_once = function(res)
+        local exit_code, output, error = res.exit_code, res.output, res.error
         if exit_code ~= curl.exit_code_success then
             Fn.schedule_call(opts.on_error, { exit_code = exit_code, error = error, })
         else
@@ -87,7 +88,7 @@ local function build_args(args, headers)
     vim.list_extend(args, curl.default_args)
     for k, v in pairs(headers or {}) do
         args[#args + 1] = '-H'
-        args[#args + 1] = k .. ': ' .. v
+        args[#args + 1] = '"' .. k .. ': ' .. v .. '"'
     end
     return args
 end
