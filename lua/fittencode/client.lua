@@ -381,7 +381,7 @@ local function request(method, url, headers, body, on_create, on_once, on_stream
         curl[method](url, opts)
         return function()
             if not canceled then
-                pcall(function() vim.uv.process_kill(process) end)
+                pcall(function() assert(process) vim.uv.process_kill(process) end)
                 canceled = true
             end
         end
