@@ -3,6 +3,8 @@ local Chat = require('fittencode.chat')
 local Log = require('fittencode.log')
 
 local commands = {
+    -- Account
+    register = { execute = function() Client.register() end },
     login = {
         execute = function()
             local username = vim.fn.input('Username/Email/Phone(+CountryCode): ')
@@ -14,26 +16,28 @@ local commands = {
         execute = function(source) Client.login3rd(source) end,
         complete = Client.login_providers
     },
-    logout = {
-        execute = function()
-            Client.logout()
-        end
-    },
-    start_chat = {
-        execute = function()
-            Chat.start_chat()
-        end
-    },
-    reload_templates = {
-        execute = function()
-            Chat.reload_templates()
-        end
-    },
-    delete_all_chats = {
-        execute = function()
-            Chat.delete_all_chats()
-        end
-    },
+    logout = { execute = function() Client.logout() end },
+    -- Chat
+    start_chat = { execute = function() Chat.start_chat() end },
+    reload_templates = { execute = function() Chat.reload_templates() end },
+    delete_all_chats = { execute = function() Chat.delete_all_chats() end },
+    edit_code = { execute = function() Chat.edit_code() end },
+    explain_code = { execute = function() Chat.explain_code() end },
+    find_bugs = { execute = function() Chat.find_bugs() end },
+    document_code = { execute = function() Chat.document_code() end },
+    generate_unit_test = { execute = function() Chat.generate_unit_test() end },
+    generate_code = { execute = function() Chat.generate_code() end },
+    optimize_code = { execute = function() Chat.optimize_code() end },
+    history = { execute = function() Chat.history() end },
+    favorites = { execute = function() Chat.favorites() end },
+    delete_conversation = { execute = function() Chat.delete_conversation() end },
+    delete_all_conversations = { execute = function() Chat.delete_all_conversations() end },
+    export_conversation = { execute = function() Chat.export_conversation() end },
+    share_conversation = { execute = function() Chat.share_conversation() end },
+    regenerate_response = { execute = function() Chat.regenerate_response() end },
+    -- Help
+    ask_question = { execute = function() Client.question() end },
+    user_guide = { execute = function() Client.guide() end },
 }
 
 local function execute(input)

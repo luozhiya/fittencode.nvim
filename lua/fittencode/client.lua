@@ -33,6 +33,8 @@ local preset_urls = {
     privacy = '/codeuser/privacy',
     agreement = '/codeuser/agreement',
     statistic_log = '/codeuser/statistic_log',
+    question = 'https://code.fittentech.com/assets/images/blog/QR.jpg',
+    guide = 'https://code.fittentech.com/tutor_vim_zh',
     -- Completion
     generate_one_stage = '/codeapi/completion/generate_one_stage',
     -- Chat (Fast/Search @FCPS)
@@ -48,6 +50,10 @@ local preset_urls = {
     update_project = '/codeapi/rag/update_project', -- ?ft_token=
     save_file_and_directory_names = '/codeapi/rag/save_file_and_directory_names',
     add_files_and_directories = '/codeapi/rag/add_files_and_directories',
+}
+
+local en_preset_urls = {
+    guide = 'https://code.fittentech.com/tutor_vim_en',
 }
 
 local function server_url()
@@ -74,6 +80,14 @@ end
 
 local function register()
     vim.ui.open(preset_urls.register .. '/?' .. get_platform_info_as_url_params())
+end
+
+local function guide()
+    vim.ui.open(preset_urls.guide)
+end
+
+local function question()
+    vim.ui.open(preset_urls.question)
 end
 
 local function login(username, password, on_success, on_error)
@@ -547,4 +561,6 @@ return {
     rag_chat = rag_chat,
     statistic_logs = statistic_logs,
     rag_save_file_and_directory_names = rag_save_file_and_directory_names,
+    question = question,
+    guide = guide,
 }
