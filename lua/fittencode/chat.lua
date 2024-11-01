@@ -86,21 +86,19 @@ end
 function Rag:send_user_update_file()
     -- 1. Initalize
     local ignore_files = {}
+    local step = 1
     local _forward = function()
-        local step = 1
-        return function()
-            if step > 6 then
-                return ''
-            end
-            local ss = {
-                '正在分析项目结构',
-                '正在构建项目结构',
-                '正在更新数据',
-            }
-            local v =  ('[分析中 %s/6] '):format(step) .. ss[step]
-            step = step + 1
-            return v
+        if step > 6 then
+            return ''
         end
+        local ss = {
+            '正在分析项目结构',
+            '正在构建项目结构',
+            '正在更新数据',
+        }
+        local v =  ('[分析中 %s/6] '):format(step) .. ss[step]
+        step = step + 1
+        return v
     end
     local forward_state = _forward()
     local on_success = function() end
@@ -157,15 +155,56 @@ function Rag:send_user_update_file()
     })
 end
 
--- Create when user show
-local chatcontainer = {
-    panel = nil,
-    float = nil,
+local view_proxy = {
+    -- only have one window and one buffer
+    view = nil,
+    layout = 'panel', -- or 'float'
 }
 
-function chatcontainer.create()
-    chatcontainer.panel = View.ChatPanel:new()
-    chatcontainer.float = View.ChatFloat:new()
+function view_proxy.create_view(layout)
+    if view_proxy.view then
+        return
+    end
+    view_proxy.view = View.create_chat_view(view_proxy.layout)
+    view_proxy.view:register_callbacks({
+        on_welcome = function()
+        end,
+        on_did_receive_message = function(message)
+            send_message(message)
+        end,
+        on_start_chat = function()
+        end,
+        on_edit_code = function()
+        end,
+        on_history = function()
+        end,
+        on_generate_code = function()
+        end,
+        on_ask_question = function()
+        end,
+        on_user_guide = function()
+        end,
+        on_delete_all_conversations = function()
+        end,
+        on_logout = function()
+        end,
+    })
+end
+
+function view_proxy.hide_view()
+    view_proxy.view:hide()
+end
+
+function view_proxy.show_view()
+    view_proxy.view:show()
+end
+
+function view_proxy.update_partial_message(id, message)
+    view_proxy.view:update_partial_message(id, message)
+end
+
+function view_proxy.update_message(id, message)
+    view_proxy.view:update_message(id, message)
 end
 
 local editor = {
@@ -338,8 +377,11 @@ local function create_conversation(template_id)
 end
 
 -- Clicking on the "Start Chat" button
+-- Create chat window
+-- Show the chat window
 local function start_chat()
     local id = random(36).sub(2, 10)
+    chatcontainer.create()
     create_conversation(model.basic_chat_template_id)
 end
 

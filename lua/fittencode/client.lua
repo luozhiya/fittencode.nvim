@@ -52,8 +52,10 @@ local preset_urls = {
     add_files_and_directories = '/codeapi/rag/add_files_and_directories',
 }
 
-local en_preset_urls = {
-    guide = 'https://code.fittentech.com/tutor_vim_en',
+local lang_preset_urls = {
+    ['en'] = {
+        guide = 'https://code.fittentech.com/tutor_vim_en',
+    }
 }
 
 local function server_url()
