@@ -23,19 +23,14 @@ local levels = vim.deepcopy(vim.log.levels)
 local log_path = vim.fn.stdpath('log') .. '/fittencode' .. '/fittencode.log'
 local max_size = 2 * 1024 * 1024 -- 2MB
 
-local names = {
-    TRACE = 'TRACE',
-    DEBUG = 'DEBUG',
-    INFO = 'INFO',
-    WARN = 'WARN',
-    ERROR = 'ERROR',
-    OFF = 'OFF',
-}
-
 local preface = true
 
+local names = { 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR' }
+
+---@param level number
+---@return string
 local function level_name(level)
-    return names[level] or '----'
+    return names[level + 1] or '----'
 end
 
 local function neovim_version()
