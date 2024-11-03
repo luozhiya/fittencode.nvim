@@ -207,6 +207,10 @@ function view_proxy.update_message(id, message)
     view_proxy.view:update_message(id, message)
 end
 
+function view_proxy.show_conversation(id)
+    view_proxy.view:show_conversation(id)
+end
+
 local editor = {
     get_ft_language = function()
         local ft = View.get_ft_language()
