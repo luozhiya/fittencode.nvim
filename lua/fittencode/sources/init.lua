@@ -11,6 +11,9 @@ local builtins = {
   ['cmp'] = function()
     require('fittencode.sources.cmp').setup()
   end,
+  ['blink'] = function()
+    require('fittencode.sources.blink').setup()
+  end,
 }
 
 function M.is_available()

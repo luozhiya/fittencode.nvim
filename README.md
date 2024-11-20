@@ -198,6 +198,8 @@ use {
   source_completion = {
     -- Enable source completion.
     enable = true,
+    -- engine support nvim-cmp and blink.cmp
+    engine = "cmp" -- "cmp" | "blink"
     -- trigger characters for source completion.
     -- Available options:
     -- * A  list of characters like {'a', 'b', 'c', ...}
@@ -230,10 +232,14 @@ vim.opt.updatetime = 200
 
 ### `source` mode
 
+Now we can use `fittencode.nvim` as a `source` for `nvim-cmp` or `blink.cmp`
+
 ```lua
 require('fittencode').setup({
   completion_mode ='source',
 })
+
+-- cmp config
 require('cmp').setup({
   sources = { name = 'fittencode', group_index = 1 },
   mapping = {
@@ -241,12 +247,37 @@ require('cmp').setup({
     ['<c-y>'] = cmp.mapping.confirm({ behavior = cmp.ConfirmBehavior.Insert, select = false }),
   }
 })
+
+-- blink config
+{
+	"saghen/blink.cmp",
+  -- add fittencode.nvim to dependencies
+	dependencies = {
+		{ "luozhiya/fittencode.nvim" },
+	},
+	opts = {
+  -- add fittencode to sources
+		sources = {
+			completion = {
+				enabled_providers = { "lsp", "path", "snippets", "buffer", "fittencode" },
+			},
+
+    -- set custom providers with fittencode
+			providers = {
+				fittencode = {
+					name = "fittencode",
+					module = "fittencode.sources.blink",
+				},
+			},
+		},
+},
 ```
 
 ### Highlighting & Icon
+
 FittenCode's cmp source now has a builtin highlight group CmpItemKindFittencode. To add an icon to FittenCode for lspkind, simply add FittenCode to your lspkind symbol map.
 
-``` lua
+```lua
 -- lspkind.lua
 local lspkind = require("lspkind")
 lspkind.init({
@@ -258,7 +289,9 @@ lspkind.init({
 vim.api.nvim_set_hl(0, "CmpItemKindFittenCode", {fg ="#6CC644"})
 
 ```
+
 Alternatively, you can add FittemCode to the lspkind symbol_map within the cmp format function.
+
 ```lua
 -- cmp.lua
 cmp.setup {
