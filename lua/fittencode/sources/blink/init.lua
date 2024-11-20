@@ -3,7 +3,7 @@ local Config = require('fittencode.config')
 local Engine = require('fittencode.engines.inline')
 local Log = require('fittencode.log')
 local Sources = require('fittencode.sources')
---@Class blink.cmp.Source
+-- @Class blink.cmp.Source
 local blink = {}
 
 -- Use `get_word` so that the word is the same as in `core.confirm`
@@ -12,7 +12,6 @@ local blink = {}
 ---@param suggestions string[]
 ---@return lsp.CompletionResponse?
 local function convert_to_lsp_completion_response(line, character, suggestions)
-  -- cursor_before_line = cursor_before_line or ''
   local LABEL_LIMIT = 80
   local text = character .. table.concat(suggestions, '\n')
   local first = character .. suggestions[1]
@@ -48,13 +47,13 @@ function blink:get_completions(context, callback)
     end
     local line = context.line
     local character = line:sub(context.bounds.start_col, context.bounds.end_col)
-    local info = {
-      triggerCharacter = context.trigger.character,
-      line = line,
-      character = character,
-      -- reason = request.option.reason,
-    }
-    Log.debug('Source(blink) request: {}', info)
+    -- local info = {
+    --   triggerCharacter = context.trigger.character,
+    --   line = line,
+    --   character = character,
+    --   -- reason = request.option.reason,
+    -- }
+    -- Log.debug('Source(blink) request: {}', info)
     local response = convert_to_lsp_completion_response(line, character, suggestions)
     -- Log.debug('LSP CompletionResponse: {}', response)
     callback(response)
@@ -67,7 +66,7 @@ end
 --- Resolve ---
 
 function blink:resolve(item, callback)
-  Log.debug('Source(blink) item: {}', item)
+  -- Log.debug('Source(blink) item: {}', item)
 
   local resolved_item = vim.deepcopy(item)
   resolved_item.detail = item.insertText
@@ -75,7 +74,7 @@ function blink:resolve(item, callback)
     kind = 'markdown',
     value = item.description,
   }
-  Log.debug('Source(blink) resolved: {}', resolved_item)
+  -- Log.debug('Source(blink) resolved: {}', resolved_item)
   callback(resolved_item)
 end
 
