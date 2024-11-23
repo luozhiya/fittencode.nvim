@@ -1,4 +1,4 @@
-*fittencode.nvim.txt*       For Neovim >= 0.8.0      Last change: 2024 July 28
+*fittencode.nvim.txt*     For Neovim >= 0.8.0    Last change: 2024 November 23
 
 ==============================================================================
 Table of Contents                          *fittencode.nvim-table-of-contents*
@@ -221,6 +221,8 @@ DEFAULTS ~
       source_completion = {
         -- Enable source completion.
         enable = true,
+        -- engine support nvim-cmp and blink.cmp
+        engine = "cmp" -- "cmp" | "blink"
         -- trigger characters for source completion.
         -- Available options:
         -- * A  list of characters like {'a', 'b', 'c', ...}
@@ -255,10 +257,14 @@ Set `updatetime` to a lower value to improve performance:
 
 SOURCE MODE ~
 
+Now we can use `fittencode.nvim` as a `source` for `nvim-cmp` or `blink.cmp`
+
 >lua
     require('fittencode').setup({
       completion_mode ='source',
     })
+    
+    -- cmp config
     require('cmp').setup({
       sources = { name = 'fittencode', group_index = 1 },
       mapping = {
@@ -266,6 +272,30 @@ SOURCE MODE ~
         ['<c-y>'] = cmp.mapping.confirm({ behavior = cmp.ConfirmBehavior.Insert, select = false }),
       }
     })
+    
+    -- blink config
+    {
+        "saghen/blink.cmp",
+      -- add fittencode.nvim to dependencies
+        dependencies = {
+            { "luozhiya/fittencode.nvim" },
+        },
+        opts = {
+      -- add fittencode to sources
+            sources = {
+                completion = {
+                    enabled_providers = { "lsp", "path", "snippets", "buffer", "fittencode" },
+                },
+    
+        -- set custom providers with fittencode
+                providers = {
+                    fittencode = {
+                        name = "fittencode",
+                        module = "fittencode.sources.blink",
+                    },
+                },
+            },
+    },
 <
 
 
