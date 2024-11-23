@@ -56,7 +56,7 @@ local M = {}
 
 ---@class FittenCodeSourceCompletionOptions
 ---@field enable boolean
----@field engine 'cmp' | 'coc' | 'ycm' | 'omni'
+---@field engine 'cmp' | 'coc' | 'ycm' | 'omni' | 'blink'
 ---@field trigger_chars string[]
 
 ---@class FittenCodeRestOptions
@@ -105,7 +105,7 @@ local defaults = {
       -- * Buffer without file extension
       -- * Buffer no filetype detected
       identify_buffer = true,
-    }
+    },
   },
   disable_specific_inline_completion = {
     -- Disable auto-completion for some specific file suffixes by entering them below
@@ -180,7 +180,7 @@ local defaults = {
       -- <= 1: percentage of the screen size
       -- >  1: number of lines/columns
       size = { width = 0.8, height = 0.8 },
-    }
+    },
   },
   -- Enable/Disable the default keymaps.
   use_default_keymaps = true,
@@ -202,7 +202,7 @@ local defaults = {
       ['C'] = 'copy_all_conversations',
       ['d'] = 'delete_conversation',
       ['D'] = 'delete_all_conversations',
-    }
+    },
   },
   -- Setting for source completion.
   ---@class SourceCompletionOptions
