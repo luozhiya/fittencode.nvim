@@ -1,5 +1,15 @@
 local Fn = require('fittencode.fn')
+local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
+
+local function sysname()
+    return vim.uv.os_uname().sysname:lower()
+end
+
+---@return boolean
+local function is_windows()
+    return sysname():find('windows') ~= nil
+end
 
 local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     local cmd = params.cmd
@@ -43,13 +53,13 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     local function on_stdout(err, chunk)
         Fn.schedule_call(on_stream, { error = err, chunk = chunk })
         if not err and chunk then
-            output[#output+1] = chunk
+            output[#output + 1] = chunk
         end
     end
 
     local function on_stderr(err, chunk)
         if not err and chunk then
-            error[#error+1] = chunk
+            error[#error + 1] = chunk
         end
     end
 
@@ -88,7 +98,11 @@ local function build_args(args, headers)
     vim.list_extend(args, curl.default_args)
     for k, v in pairs(headers or {}) do
         args[#args + 1] = '-H'
-        args[#args + 1] = '"' .. k .. ': ' .. v .. '"'
+        if is_windows() then
+            args[#args + 1] = '"' .. k .. ': ' .. v .. '"'
+        else
+            args[#args + 1] = k .. ': ' .. v
+        end
     end
     return args
 end
@@ -104,15 +118,6 @@ local function get(url, opts)
     }
     build_args(args, opts.headers)
     spawn_curl(args, opts)
-end
-
-local function sysname()
-    return vim.uv.os_uname().sysname:lower()
-end
-
----@return boolean
-local function is_windows()
-    return sysname():find('windows') ~= nil
 end
 
 -- libuv command line length limit

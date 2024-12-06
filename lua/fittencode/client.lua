@@ -107,10 +107,10 @@ local function login(username, password, on_success, on_error)
             headers = {
                 ['Content-Type'] = 'application/json',
             },
-            body = vim.fn.json_encode({
+            body = {
                 username = username,
                 password = password,
-            }),
+            },
             on_error = vim.schedule_wrap(function()
                 reject()
             end),
