@@ -475,82 +475,6 @@ local function chat_heartbeat(prompt, on_once, on_stream, on_error)
     return chat(prompt, on_once_hb, on_stream, on_error)
 end
 
-local function rag_chat(prompt, on_once, on_stream, on_error)
-    if not keyring_check() then
-        Fn.schedule_call(on_error)
-        return
-    end
-    assert(keyring)
-    local headers = {
-        ['Content-Type'] = 'application/json',
-    }
-    local url = server_url() .. preset_urls.rag_chat .. '/?ft_token=' .. keyring.key .. '&' .. get_platform_info_as_url_params()
-    return request('post', url, headers, prompt, nil, on_once, on_stream, on_error)
-end
-
-local function statistic_logs(on_error)
-    if not keyring_check() then
-        Fn.schedule_call(on_error)
-        return
-    end
-    assert(keyring)
-    local function _scriptnames()
-        local _, scritpnames = pcall(vim.api.nvim_exec2, 'scritpnames', { output = true })
-        if not _ then
-            return {}
-        end
-        local plugins = {}
-        for _, line in ipairs(scritpnames) do
-            local path = line:match('%d+: (.+)')
-            local name = path:match('([^/]+)$')
-            if path and not path:match('nvim/runtime/') and not path:match('init.lua') then
-                table.insert(plugins, { id = name, version = '' })
-            end
-        end
-        return plugins
-    end
-    local function _lazy()
-        local _, lazy = pcall(require, 'lazy')
-        if not _ then
-            return {}
-        end
-        local plugins = {}
-        for _, plugin in ipairs(lazy.plugins()) do
-            table.insert(plugins, { id = plugin.name, version = '' })
-        end
-        return plugins
-    end
-    local n = {
-        ft_token = keyring,
-        tracker_type = 'extension_install_list',
-        tracker_event_type = _lazy(),
-        tracker_time = os.time(),
-    }
-    local info = vim.fn.json_encode(n)
-
-    local headers = {
-        ['Content-Type'] = 'application/json',
-    }
-    local url = server_url() .. preset_urls.statistic_log .. '/?' .. info
-    return request('get', url, headers, nil, nil, nil, nil, on_error)
-end
-
-local function rag_save_file_and_directory_names(body, on_once, on_stream, on_error)
-    if not keyring_check() then
-        Fn.schedule_call(on_error)
-        return
-    end
-    assert(keyring)
-    local headers = {
-        ['Content-Type'] = 'application/json',
-    }
-    body = vim.tbl_deep_extend('force', body, {
-        ft_token = keyring.key,
-    })
-    local url = server_url() .. preset_urls.save_file_and_directory_names .. '/?ft_token=' .. keyring.key .. '&' .. get_platform_info_as_url_params()
-    return request('post', url, headers, body, nil, on_once, on_stream, on_error)
-end
-
 return {
     load_last_session = load_last_session,
     register = register,
@@ -560,9 +484,6 @@ return {
     logout = logout,
     generate_one_stage = generate_one_stage,
     chat = chat,
-    rag_chat = rag_chat,
-    statistic_logs = statistic_logs,
-    rag_save_file_and_directory_names = rag_save_file_and_directory_names,
     question = question,
     guide = guide,
 }
