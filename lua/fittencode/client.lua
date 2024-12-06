@@ -27,6 +27,7 @@ local preset_urls = {
     register = 'https://codewebchat.fittenlab.cn',
     register_cvt = 'https://fc.fittentech.com/cvt/register',
     login = '/codeuser/login',
+    fb_sign_in = '/codeuser/fb_sign_in', -- ?client_token=
     fb_check_login = '/codeuser/fb_check_login', -- ?client_token=
     click_count = '/codeuser/click_count',
     get_ft_token = '/codeuser/get_ft_token',
@@ -156,10 +157,9 @@ local function login(username, password, on_success, on_error)
     end)
 end
 
-local regex_default = '^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$'
-
 local function validate(uuid)
-    return uuid:match(regex_default) ~= nil
+    local pattern = "%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x"
+    return uuid:match(pattern) ~= nil
 end
 local validate_default = validate
 
@@ -256,6 +256,14 @@ local function clear_interval(timer)
     end
 end
 
+local function _encode_uri_char(char)
+    return string.format('%%%0X', string.byte(char))
+end
+
+local function encode_uri(uri)
+    return (string.gsub(uri, "[^%a%d%-_%.!~%*'%(%);/%?:@&=%+%$,#]", _encode_uri_char))
+end
+
 local start_check_login_timer = nil
 local login_providers = {
     'google',
@@ -271,7 +279,7 @@ local function login3rd(source, on_success, on_error)
         return
     end
 
-    if not source or not login_providers[source] then
+    if not source or vim.tbl_contains(login_providers, source) == false then
         Log.notify_error('Invalid 3rd-party login source')
         Fn.schedule_call(on_error)
         return
@@ -290,7 +298,7 @@ local function login3rd(source, on_success, on_error)
         Fn.schedule_call(on_error)
         return
     end
-    local login_url = server_url() .. preset_urls.fb_check_login .. '?source=' .. source .. '&client_token=' .. client_token
+    local login_url = server_url() .. preset_urls.fb_sign_in .. '?source=' .. source .. '&client_token=' .. client_token
     start_check = true;
     vim.ui.open(login_url)
 
