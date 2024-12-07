@@ -286,11 +286,12 @@ local function login3rd(source, on_success, on_error)
     end
 
     local is_login_fb_running = false;
+    clear_interval(start_check_login_timer)
+
     local total_time_limit = 600;
     local time_delta = 3;
     local total_time = 0;
     local start_check = false;
-    clear_interval(start_check_login_timer)
 
     local client_token = v4_default()
     if not client_token then
