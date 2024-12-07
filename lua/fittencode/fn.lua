@@ -9,6 +9,9 @@ end
 
 local function debounce(func, delay)
     local timer = nil
+    if not delay or tonumber(delay) <= 0 then
+        return func
+    end
     return function(...)
         local args = { ... }
         if timer then
