@@ -27,7 +27,7 @@ local preset_urls = {
     register = 'https://codewebchat.fittenlab.cn',
     register_cvt = 'https://fc.fittentech.com/cvt/register',
     login = '/codeuser/login',
-    fb_sign_in = '/codeuser/fb_sign_in', -- ?client_token=
+    fb_sign_in = '/codeuser/fb_sign_in',         -- ?client_token=
     fb_check_login = '/codeuser/fb_check_login', -- ?client_token=
     click_count = '/codeuser/click_count',
     get_ft_token = '/codeuser/get_ft_token',
@@ -150,7 +150,7 @@ local function login(username, password, on_success, on_error)
             key = fico_token,
         }
         Log.notify_info('Login successful')
-        vim.fn.writefile({vim.fn.json_encode(keyring)}, keyring_store)
+        vim.fn.writefile({ vim.fn.json_encode(keyring) }, keyring_store)
         Fn.schedule_call(on_success)
     end, function()
         Fn.schedule_call(on_error)
@@ -158,7 +158,7 @@ local function login(username, password, on_success, on_error)
 end
 
 local function validate(uuid)
-    local pattern = "%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x"
+    local pattern = '%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x'
     return uuid:match(pattern) ~= nil
 end
 local validate_default = validate
@@ -340,7 +340,7 @@ local function login3rd(source, on_success, on_error)
                     key = fico_data.token
                 }
                 Log.notify_info('Login successful')
-                vim.fn.writefile({vim.fn.json_encode(keyring)}, keyring_store)
+                vim.fn.writefile({ vim.fn.json_encode(keyring) }, keyring_store)
                 Fn.schedule_call(on_success)
 
                 local type = fico_data.create and 'register_fb' or 'login_fb';
@@ -406,7 +406,10 @@ local function request(method, url, headers, body, on_create, on_once, on_stream
         curl[method](url, opts)
         return function()
             if not canceled then
-                pcall(function() assert(process) vim.uv.process_kill(process) end)
+                pcall(function()
+                    assert(process)
+                    vim.uv.process_kill(process)
+                end)
                 canceled = true
             end
         end

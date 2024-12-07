@@ -312,8 +312,7 @@ function Conversation:execute_chat(opts)
     if opts.workspace then
         if not opts.enterprise_workspace then
             chat_api = Client.rag_chat
-            -- async
-            self.chat_rag:send_user_update_file()
+            Log.error('RAG chat is not implemented yet')
         end
     else
         ---@type fittencode.chat.Template.InitialMessage | fittencode.chat.Template.Response | nil
