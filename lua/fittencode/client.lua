@@ -24,7 +24,7 @@ end
 
 local preset_urls = {
     -- Account
-    register = 'https://codewebchat.fittenlab.cn',
+    register = 'https://fc.fittentech.com/',
     register_cvt = 'https://fc.fittentech.com/cvt/register',
     login = '/codeuser/login',
     fb_sign_in = '/codeuser/fb_sign_in',         -- ?client_token=
