@@ -13,20 +13,35 @@ end
 
 ---@class fittencode.view.ChatWindow
 ---@field messages_exchange number|nil
----@field reference number|nil
 ---@field user_input number|nil
+---@field reference number|nil
 
 ---@class fittencode.view.ChatBuffer
----@field conversation table<string, number>|nil
----@field welcome
----@field reference number|nil
+---@field conversations table<string, number>|nil
 ---@field user_input number|nil
+---@field reference number|nil
+
+---@class fittencode.view.ChatEvent
+---@field on_input function|nil
 
 local ChatView = {
     ---@class fittencode.view.ChatWindow
-    win = nil,
+    win = {
+        messages_exchange = nil,
+        user_input = nil,
+        reference = nil,
+    },
     ---@class fittencode.view.ChatBuffer
-    buffer = nil,
+    buffer = {
+        conversations = {},
+        user_input = nil,
+        reference = nil,
+    },
+    ---@class fittencode.view.ChatEvent
+    event = {
+        on_input = nil,
+    },
+    current_conversation = 'welcome',
 }
 
 function ChatView:new(opts)
@@ -36,14 +51,18 @@ function ChatView:new(opts)
 end
 
 function ChatView:_create_buffer()
-    self.buffer.messages_exchange = vim.api.nvim_create_buf(false, true)
+    self.buffer.conversations['welcome'] = vim.api.nvim_create_buf(false, true)
     self.buffer.user_input = vim.api.nvim_create_buf(false, true)
     self.buffer.reference = vim.api.nvim_create_buf(false, true)
 end
 
+function ChatView:_current_buffer()
+    return self.buffer.conversations[self.current_conversation]
+end
+
 function ChatView:_create_win(opts)
     if opts.mode == 'panel' then
-        self.win.messages_exchange = vim.api.nvim_open_win(self.buffer.messages_exchange, true, {
+        self.win.messages_exchange = vim.api.nvim_open_win(self:_current_buffer(), true, {
             vertical = true,
             split = 'left',
             width = 60,
@@ -60,7 +79,7 @@ function ChatView:_create_win(opts)
             col = 5,
         })
     elseif opts.mode == 'float' then
-        self.win.messages_exchange = vim.api.nvim_open_win(self.buffer.messages_exchange, true, {
+        self.win.messages_exchange = vim.api.nvim_open_win(self:_current_buffer(), true, {
             relative = 'editor',
             width = 60,
             height = 15,
@@ -88,19 +107,33 @@ function ChatView:_destroy_win()
     end
 end
 
+function ChatView:_destroy_buffer()
+    for _, buffer in pairs(self.buffer) do
+        if type(buffer) == 'number' and vim.api.nvim_buf_is_valid(buffer) then
+            vim.api.nvim_buf_delete(buffer, {})
+        elseif type(buffer) == 'table' then
+            for _, buf in pairs(buffer) do
+                if vim.api.nvim_buf_is_valid(buf) then
+                    vim.api.nvim_buf_delete(buf, {})
+                end
+            end
+        end
+    end
+end
+
 function ChatView:create()
     self:_create_buffer()
     vim.api.nvim_create_autocmd('fittencode.UserInputReady', {
         buffer = self.buffer.user_input,
         callback = function()
             local input_text = vim.api.nvim_buf_get_lines(self.buffer.user_input, 0, -1, false)[1]
-            Fn.schedule_call(self.on_input, input_text)
+            Fn.schedule_call(self.event.on_input, input_text)
         end
     })
 end
 
 function ChatView:show()
-    if self.buffer.messages_exchange and self.buffer.user_input then
+    if self:_current_buffer() and self.buffer.user_input then
         self:_create_win()
     else
         self:create()
@@ -108,31 +141,32 @@ function ChatView:show()
 end
 
 function ChatView:hide()
-    vim.api.nvim_win_close(self.win.messages_exchange, true)
-    self.win.messages_exchange = nil
-    vim.api.nvim_win_close(self.win.user_input, true)
-    self.win.user_input = nil
+    self:_destroy_win()
 end
 
-function ChatView:set_on_input(callback)
-    self.on_input = callback
+function ChatView:set_event_handler(handlers)
+    if type(handlers) == 'table' then
+        self.event.on_input = handlers.on_input
+    end
 end
 
 function ChatView:destroy()
-    vim.api.nvim_win_close(self.win.messages_exchange, true)
-    vim.api.nvim_win_close(self.win.user_input, true)
-    vim.api.nvim_buf_delete(self.buffer.messages_exchange, {})
-    vim.api.nvim_buf_delete(self.buffer.user_input, {})
+    self:_destroy_win()
+    self:_destroy_buffer()
 end
 
 function ChatView:append_message(text)
-    local lines = vim.api.nvim_buf_get_lines(self.buffer.messages_exchange, 0, -1, false)
+    assert(self.current_conversation ~= 'welcome')
+    if not self:_current_buffer() or not vim.api.nvim_buf_is_valid(self:_current_buffer()) then
+        return
+    end
+    local lines = vim.api.nvim_buf_get_lines(self:_current_buffer(), 0, -1, false)
     table.insert(lines, text)
-    vim.api.nvim_buf_set_lines(self.buffer.messages_exchange, 0, -1, false, lines)
+    vim.api.nvim_buf_set_lines(self:_current_buffer(), 0, -1, false, lines)
 end
 
 function ChatView:clear_messages()
-    vim.api.nvim_buf_set_lines(self.buffer.messages_exchange, 0, -1, false, {})
+    vim.api.nvim_buf_set_lines(self:_current_buffer(), 0, -1, false, {})
 end
 
 function ChatView:enable_user_input(enable)
