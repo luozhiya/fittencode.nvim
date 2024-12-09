@@ -56,9 +56,25 @@ local function fs_all_entries(path, prename)
     return res
 end
 
+local timezone_language = {
+    ['+0000'] = 'en',    -- Greenwich Mean Time (UK)
+    ['+0800'] = 'zh-cn', -- China Standard Time
+}
+
+setmetatable(timezone_language, {
+    __index = function()
+        return timezone_language['+0000']
+    end
+})
+
+local function language()
+    return timezone_language[os.date('%z')]
+end
+
 return {
     debounce = debounce,
     schedule_call = schedule_call,
     startwith = startwith,
-    fs_all_entries = fs_all_entries
+    fs_all_entries = fs_all_entries,
+    language = language,
 }

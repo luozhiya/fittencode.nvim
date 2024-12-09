@@ -10,24 +10,19 @@ local Promise = require('fittencode.promise')
 local model = {
     conversation_types = {},
     extension_templates = {},
+    basic_chat_template_id = 'chat-' .. Fn.language(),
 }
 
-local view_proxy = {
-    -- only have one window and one buffer
-    view = nil,
-    layout = 'panel', -- or 'float'
-}
+---@class fittencode.view.ChatView
+local _view = nil
 
-function view_proxy.create_view(layout)
-    if view_proxy.view then
-        return
+local function view()
+    if _view then
+        return _view
     end
-    view_proxy.view = View.create_chat_view(view_proxy.layout)
-    view_proxy.view:register_callbacks({
-        on_welcome = function()
-        end,
-        on_did_receive_message = function(message)
-            send_message(message)
+    _view = View.ChatView:new()
+    _view:register_event_handlers({
+        on_input = function(text)
         end,
         on_start_chat = function()
         end,
@@ -46,26 +41,7 @@ function view_proxy.create_view(layout)
         on_logout = function()
         end,
     })
-end
-
-function view_proxy.hide_view()
-    view_proxy.view:hide()
-end
-
-function view_proxy.show_view()
-    view_proxy.view:show()
-end
-
-function view_proxy.update_partial_message(id, message)
-    view_proxy.view:update_partial_message(id, message)
-end
-
-function view_proxy.update_message(id, message)
-    view_proxy.view:update_message(id, message)
-end
-
-function view_proxy.show_conversation(id)
-    view_proxy.view:show_conversation(id)
+    return _view
 end
 
 local editor = {
@@ -118,6 +94,20 @@ The error message is: ]] .. error_message
 ---@class fittencode.chat.Conversation
 local Conversation = {}
 Conversation.__index = Conversation
+
+function Conversation:new()
+    local o = {}
+    setmetatable(o, Conversation)
+    o.messages = {}
+    o.state = {
+        type = 'waiting_for_user_input',
+    }
+    o.template = nil
+    o.variables = {}
+    o.init_variables = {}
+    o.temporary_editor_content = nil
+    return o
+end
 
 local function random(length)
     local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -237,13 +227,13 @@ local function create_conversation(template_id)
     })
 end
 
--- Clicking on the "Start Chat" button
--- Create chat window
--- Show the chat window
 local function start_chat()
     local id = random(36).sub(2, 10)
-    chatcontainer.create()
     create_conversation(model.basic_chat_template_id)
+    -- model.selected_conversation_id = id
+    -- model.conversations[id] = Conversation:new()
+    -- view():create_conversation(id, true)
+    view():show_conversation('welcome')
 end
 
 local function remove_special_token(t)
@@ -588,4 +578,5 @@ return {
     register_template = register_template,
     unregister_template = unregister_template,
     reload_conversation_types = reload_conversation_types,
+    start_chat = start_chat,
 }
