@@ -13,6 +13,140 @@ local model = {
     basic_chat_template_id = 'chat-' .. Fn.language(),
 }
 
+---@class fittencode.chat.ChatModel
+local ChatModel = {}
+ChatModel.__index = ChatModel
+
+function ChatModel:new()
+    local instance = {
+        conversations = {}
+    }
+    setmetatable(instance, ChatModel)
+    return instance
+end
+
+function ChatModel:add_and_select_conversation(e)
+    if #self.conversations > 0 then
+        local r = self.conversations[#self.conversations]
+        if r and #r.messages == 0 then
+            table.remove(self.conversations)
+        end
+    end
+    while #self.conversations > 100 do
+        table.remove(self.conversations, 1)
+    end
+    table.insert(self.conversations, e)
+    self.selected_conversation_id = e.id
+end
+
+function ChatModel:get_conversation_by_id(e)
+    for _, r in ipairs(self.conversations) do
+        if r.id == e then
+            return r
+        end
+    end
+    return nil
+end
+
+function ChatModel:delete_conversation(e)
+    for i = #self.conversations, 1, -1 do
+        if self.conversations[i].id == e then
+            table.remove(self.conversations, i)
+        end
+    end
+end
+
+function ChatModel:delete_all_conversations()
+    for i = #self.conversations, 1, -1 do
+        if not self.conversations[i].is_favorited then
+            table.remove(self.conversations, i)
+        end
+    end
+    self.selected_conversation_id = ''
+end
+
+function ChatModel:change_favorited(e)
+    for _, n in ipairs(self.conversations) do
+        if n.id == e then
+            n:set_is_favorited()
+            break
+        end
+    end
+end
+
+---@class fittencode.chat.ChatController
+local ChatController = {}
+ChatController.__index = ChatController
+
+function ChatController:new(params)
+    local obj = setmetatable({}, ChatController)
+    obj.chat_panel = params.chat_panel
+    obj.chat_model = params.chat_model
+    obj.ai = params.ai
+    obj.get_conversation_type = params.get_conversation_type
+    obj.diff_editor_manager = params.diff_editor_manager
+    obj.basic_chat_template_id = params.basic_chat_template_id
+    obj.generate_conversation_id = function() return string.sub(tostring(math.random()), 3, 11) end
+    return obj
+end
+
+function ChatController:update_chat_panel()
+    self.chat_panel:update(self.chat_model)
+end
+
+function ChatController:add_and_show_conversation(conversation, show)
+    self.chat_model:add_and_select_conversation(conversation)
+    local is_visible = self.chat_panel.is_visible -- 假设 is_visible 是正确的属性
+    if show then self:show_chat_panel() end
+    if not is_visible then
+        local delay = (os.getenv('OS') == 'Windows') and 100 or 300
+        os.execute('sleep ' .. delay / 1000) -- 模拟 setTimeout
+    end
+    self:update_chat_panel()
+    return conversation
+end
+
+function ChatController:show_chat_panel()
+    -- 模拟执行命令
+    -- ls.commands.executeCommand("fittencode.chat.focus")
+end
+
+function ChatController:reload_chat_breaker()
+    if self.timeout_id then
+        self.timeout_id = nil                   -- clearTimeout 模拟
+    end
+    self.timeout_id = os.execute('sleep 18000') -- 5 小时
+end
+
+function ChatController:receive_panel_message(message)
+    local parsed_message, err = hoe.webview_api.outgoing_message_schema:parse(message)
+    if not parsed_message then return end
+    local msg_type = parsed_message.type
+    self:reload_chat_breaker()
+    if msg_type == 'ping' then
+        self:update_chat_panel()
+    elseif msg_type == 'enter_fitten_ai_api_key' then
+        local api_key = parsed_message.data.apikey
+        -- 执行命令
+    elseif msg_type == 'click_collapsed_conversation' then
+        self.chat_model.selected_conversation_id = parsed_message.data.id
+        self.chat_panel.show_history = false
+        self:update_chat_panel()
+    elseif msg_type == 'send_message' then
+        local conversation = self.chat_model:get_conversation_by_id(parsed_message.data.id)
+        if conversation then
+            conversation:answer(parsed_message.data.message)
+        end
+        -- 处理其他情况同样...
+    else
+        error('unsupported type: ' .. msg_type)
+    end
+end
+
+function ChatController:create_conversation(template_id, show, mode)
+    -- 实现 create_conversation 逻辑
+end
+
 ---@class fittencode.view.ChatView
 local _view = nil
 

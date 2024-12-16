@@ -91,3 +91,21 @@
 ---@class fittencode.chat.Template.Constraint
 ---@field min number -- 最小值
 ---@field type string -- 类型
+
+---@class fittencode.chat.ChatModel
+---@field add_and_select_conversation function
+---@field get_conversation_by_id function
+---@field delete_conversation function
+---@field delete_all_conversations function
+---@field change_favorited function
+---@field conversations table<string, fittencode.chat.Conversation>
+---@field selected_conversation_id string
+
+---@class fittencode.chat.ChatController
+---@field chat_panel fittencode.view.ChatPanel
+---@field chat_model fittencode.chat.ChatModel
+---@field ai fittencode.chat.AI
+---@field get_conversation_type function
+---@field diff_editor_manager fittencode.diff.DiffEditorManager
+---@field basic_chat_template_id string
+---@field generate_conversation_id function
