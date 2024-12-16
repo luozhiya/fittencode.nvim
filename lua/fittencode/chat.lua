@@ -227,6 +227,19 @@ local function create_conversation(template_id)
     })
 end
 
+local function add_and_select_conversation(e)
+    if #model.conversations > 0 then
+        if #(model.conversations[#model.conversations].messages) then
+            table.remove(model.conversations)
+        end
+    end
+    if #model.conversations > 100 then
+        table.remove(model.conversations, 1)
+    end
+    model.conversations[#model.conversations + 1] = e
+    model.selected_conversation_id = e.id
+end
+
 local function start_chat()
     local id = random(36).sub(2, 10)
     create_conversation(model.basic_chat_template_id)
