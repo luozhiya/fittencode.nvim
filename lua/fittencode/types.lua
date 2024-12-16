@@ -44,12 +44,6 @@
 ---@field meta fittencode.chat.ConversationMeta
 ---@field template fittencode.chat.Template
 
----@class fittencode.chat.Model
----@field conversations fittencode.chat.Conversation[]
----@field selected_conversation_id string|nil
----@field conversation_types table<string, fittencode.chat.ConversationType>
----@field basic_chat_template_id string
-
 ---@class fittencode.chat.Template
 ---@field description string -- 诊断错误和警告的描述
 ---@field engineVersion number -- 引擎版本
@@ -109,3 +103,17 @@
 ---@field diff_editor_manager fittencode.diff.DiffEditorManager
 ---@field basic_chat_template_id string
 ---@field generate_conversation_id function
+
+---@class fittencode.chat.ConversationTypeProvider
+---@field extension_uri string
+---@field extension_templates table<string, string>
+---@field conversation_types table<string, fittencode.chat.ConversationType>
+---@field basic_chat_template_id string
+---@field generate_conversation_id function
+---@field get_conversation_type function
+---@field get_conversation_types function
+---@field register_extension_template function
+---@field load_conversation_types function
+---@field load_built_in_templates function
+---@field load_extension_templates function
+---@field load_workspace_templates function

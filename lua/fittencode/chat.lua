@@ -6,12 +6,8 @@ local View = require('fittencode.view')
 local Fn = require('fittencode.fn')
 local Promise = require('fittencode.promise')
 
----@class fittencode.chat.Model
-local model = {
-    conversation_types = {},
-    extension_templates = {},
-    basic_chat_template_id = 'chat-' .. Fn.language(),
-}
+---@type fittencode.chat.ChatModel
+local model = nil
 
 ---@class fittencode.chat.ChatModel
 local ChatModel = {}
@@ -145,6 +141,89 @@ end
 
 function ChatController:create_conversation(template_id, show, mode)
     -- 实现 create_conversation 逻辑
+end
+
+---@class fittencode.chat.ConversationTypeProvider
+local ConversationTypesProvider = {}
+ConversationTypesProvider.__index = ConversationTypesProvider
+
+function ConversationTypesProvider:new(params)
+    local instance = {
+        extension_templates = {},
+        conversation_types = {},
+        extension_uri = params.extensionUri
+    }
+    setmetatable(instance, ConversationTypesProvider)
+    return instance
+end
+
+function ConversationTypesProvider:get_conversation_type(e)
+    return self.conversation_types[e]
+end
+
+function ConversationTypesProvider:get_conversation_types()
+    return self.conversation_types
+end
+
+function ConversationTypesProvider:register_extension_template(params)
+    table.insert(self.extension_templates, params.template)
+end
+
+function ConversationTypesProvider:load_conversation_types()
+    self.conversation_types = {}
+    self:load_built_in_templates()
+    self:load_extension_templates()
+    self:load_workspace_templates()
+end
+
+function ConversationTypesProvider:load_built_in_templates()
+    local e = {
+        self:load_builtin_template("chat", "chat-en.rdt.md"),
+        self:load_builtin_template("chat", "chat-zh-cn.rdt.md"),
+        --... 省略部分模板加载
+        self:load_builtin_template("task", "terminal-fix-en.rdt.md")
+    }
+    for _, r in ipairs(e) do
+        self.conversation_types[r.id] = r
+    end
+end
+
+function ConversationTypesProvider:load_builtin_template(...)
+    local r = z_.Uri.joinPath(self.extension_uri, "template", ...)
+    local n = AUe.loadConversationFromFile(r)
+    if n.type == "error" then
+        error("Failed to load chat template '" .. r .. "': " .. n.error)
+    end
+    return _N.ConversationType({ template = n.template, source = "built-in" })
+end
+
+function ConversationTypesProvider:load_extension_templates()
+    for _, e in ipairs(self.extension_templates) do
+        local ok, r = pcall(function() return l_.parsefittencodeTemplate(e) end)
+        if not ok or r.type == "error" then
+            z_.window.showErrorMessage("Could not load extension template")
+            goto continue
+        end
+        local n = r.template
+        self.conversation_types[n.id] = _N.ConversationType({ template = n, source = "extension" })
+        ::continue::
+    end
+end
+
+function ConversationTypesProvider:load_workspace_templates()
+    local e = u_.loadfittencodeTemplatesFromWorkspace()
+    for _, r in ipairs(e) do
+        if r.type == "error" then
+            z_.window.showErrorMessage("Error loading conversation template from " .. r.file.path .. ": " .. r.error)
+            goto continue
+        end
+        if r.template.isEnabled == false then
+            goto continue
+        end
+        local n = _N.ConversationType({ template = r.template, source = "local-workspace" })
+        self.conversation_types[n.id] = n
+        ::continue::
+    end
 end
 
 ---@class fittencode.view.ChatView
@@ -705,8 +784,6 @@ local function reload_workspace_templates()
     end
 end
 
--- reload_builtin_templates()
-
 local function reload_conversation_types()
     reload_builtin_templates()
     reload_extension_templates()
@@ -721,7 +798,15 @@ local function unregister_template(id)
     unregister_extension_template(id)
 end
 
+-- Active
+local function setup()
+    if not model then
+        model = ChatModel:new()
+    end
+end
+
 return {
+    setup = setup,
     register_template = register_template,
     unregister_template = unregister_template,
     reload_conversation_types = reload_conversation_types,
