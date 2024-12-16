@@ -6,9 +6,6 @@ local View = require('fittencode.view')
 local Fn = require('fittencode.fn')
 local Promise = require('fittencode.promise')
 
----@type fittencode.chat.ChatModel
-local model = nil
-
 ---@class fittencode.chat.ChatModel
 local ChatModel = {}
 ChatModel.__index = ChatModel
@@ -76,58 +73,68 @@ ChatController.__index = ChatController
 
 function ChatController:new(params)
     local obj = setmetatable({}, ChatController)
-    obj.chat_panel = params.chat_panel
+    obj.chat_view = params.chat_view
     obj.chat_model = params.chat_model
     obj.ai = params.ai
-    obj.get_conversation_type = params.get_conversation_type
     obj.diff_editor_manager = params.diff_editor_manager
     obj.basic_chat_template_id = params.basic_chat_template_id
-    obj.generate_conversation_id = function() return string.sub(tostring(math.random()), 3, 11) end
+    obj.conversation_types_provider = params.conversation_types_provider
     return obj
 end
 
-function ChatController:update_chat_panel()
-    self.chat_panel:update(self.chat_model)
+function ChatController:generate_conversation_id()
+    local function random(length)
+        local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        local result = {}
+
+        for i = 1, length do
+            local index = math.random(1, #chars)
+            table.insert(result, chars:sub(index, index))
+        end
+
+        return table.concat(result)
+    end
+    return random(36).sub(2, 10)
+end
+
+function ChatController:update_chat_view()
+    self.chat_view:update(self.chat_model)
 end
 
 function ChatController:add_and_show_conversation(conversation, show)
     self.chat_model:add_and_select_conversation(conversation)
-    local is_visible = self.chat_panel.is_visible -- 假设 is_visible 是正确的属性
-    if show then self:show_chat_panel() end
+    local is_visible = self.chat_view.is_visible
+    if show then self:show_chat_view() end
     if not is_visible then
-        local delay = (os.getenv('OS') == 'Windows') and 100 or 300
-        os.execute('sleep ' .. delay / 1000) -- 模拟 setTimeout
     end
-    self:update_chat_panel()
+    self:update_chat_view()
     return conversation
 end
 
-function ChatController:show_chat_panel()
-    -- 模拟执行命令
-    -- ls.commands.executeCommand("fittencode.chat.focus")
+function ChatController:show_chat_view()
 end
 
 function ChatController:reload_chat_breaker()
     if self.timeout_id then
-        self.timeout_id = nil                   -- clearTimeout 模拟
+        self.timeout_id = nil
     end
-    self.timeout_id = os.execute('sleep 18000') -- 5 小时
+    self.timeout_id = os.execute('sleep 18000')
 end
 
-function ChatController:receive_panel_message(message)
+function ChatController:receive_view_message(message)
     local parsed_message, err = hoe.webview_api.outgoing_message_schema:parse(message)
     if not parsed_message then return end
     local msg_type = parsed_message.type
     self:reload_chat_breaker()
     if msg_type == 'ping' then
-        self:update_chat_panel()
+        self:update_chat_view()
     elseif msg_type == 'enter_fitten_ai_api_key' then
         local api_key = parsed_message.data.apikey
         -- 执行命令
     elseif msg_type == 'click_collapsed_conversation' then
         self.chat_model.selected_conversation_id = parsed_message.data.id
-        self.chat_panel.show_history = false
-        self:update_chat_panel()
+        self.chat_view.show_history = false
+        self:update_chat_view()
     elseif msg_type == 'send_message' then
         local conversation = self.chat_model:get_conversation_by_id(parsed_message.data.id)
         if conversation then
@@ -140,450 +147,63 @@ function ChatController:receive_panel_message(message)
 end
 
 function ChatController:create_conversation(template_id, show, mode)
-    -- 实现 create_conversation 逻辑
 end
 
----@class fittencode.chat.ConversationTypeProvider
-local ConversationTypesProvider = {}
-ConversationTypesProvider.__index = ConversationTypesProvider
-
-function ConversationTypesProvider:new(params)
-    local instance = {
-        extension_templates = {},
-        conversation_types = {},
-        extension_uri = params.extensionUri
-    }
-    setmetatable(instance, ConversationTypesProvider)
-    return instance
+function ChatController:get_conversation_type(e)
+    return self.conversation_types_provider:get_conversation_type(e)
 end
 
-function ConversationTypesProvider:get_conversation_type(e)
-    return self.conversation_types[e]
-end
+local TemplateResolver = {}
 
-function ConversationTypesProvider:get_conversation_types()
-    return self.conversation_types
-end
+function TemplateResolver.load_template_from_directory(path)
+    local conversation_types = {}
+    local error = nil
 
-function ConversationTypesProvider:register_extension_template(params)
-    table.insert(self.extension_templates, params.template)
-end
-
-function ConversationTypesProvider:load_conversation_types()
-    self.conversation_types = {}
-    self:load_built_in_templates()
-    self:load_extension_templates()
-    self:load_workspace_templates()
-end
-
-function ConversationTypesProvider:load_built_in_templates()
-    local e = {
-        self:load_builtin_template("chat", "chat-en.rdt.md"),
-        self:load_builtin_template("chat", "chat-zh-cn.rdt.md"),
-        --... 省略部分模板加载
-        self:load_builtin_template("task", "terminal-fix-en.rdt.md")
-    }
-    for _, r in ipairs(e) do
-        self.conversation_types[r.id] = r
-    end
-end
-
-function ConversationTypesProvider:load_builtin_template(...)
-    local r = z_.Uri.joinPath(self.extension_uri, "template", ...)
-    local n = AUe.loadConversationFromFile(r)
-    if n.type == "error" then
-        error("Failed to load chat template '" .. r .. "': " .. n.error)
-    end
-    return _N.ConversationType({ template = n.template, source = "built-in" })
-end
-
-function ConversationTypesProvider:load_extension_templates()
-    for _, e in ipairs(self.extension_templates) do
-        local ok, r = pcall(function() return l_.parsefittencodeTemplate(e) end)
-        if not ok or r.type == "error" then
-            z_.window.showErrorMessage("Could not load extension template")
-            goto continue
-        end
-        local n = r.template
-        self.conversation_types[n.id] = _N.ConversationType({ template = n, source = "extension" })
-        ::continue::
-    end
-end
-
-function ConversationTypesProvider:load_workspace_templates()
-    local e = u_.loadfittencodeTemplatesFromWorkspace()
-    for _, r in ipairs(e) do
-        if r.type == "error" then
-            z_.window.showErrorMessage("Error loading conversation template from " .. r.file.path .. ": " .. r.error)
-            goto continue
-        end
-        if r.template.isEnabled == false then
-            goto continue
-        end
-        local n = _N.ConversationType({ template = r.template, source = "local-workspace" })
-        self.conversation_types[n.id] = n
-        ::continue::
-    end
-end
-
----@class fittencode.view.ChatView
-local _view = nil
-
-local function view()
-    if _view then
-        return _view
-    end
-    _view = View.ChatView:new()
-    _view:register_event_handlers({
-        on_input = function(text)
-        end,
-        on_start_chat = function()
-        end,
-        on_edit_code = function()
-        end,
-        on_history = function()
-        end,
-        on_generate_code = function()
-        end,
-        on_ask_question = function()
-        end,
-        on_user_guide = function()
-        end,
-        on_delete_all_conversations = function()
-        end,
-        on_logout = function()
-        end,
-    })
-    return _view
-end
-
-local editor = {
-    get_ft_language = function()
-        local ft = View.get_ft_language()
-        -- Mapping vim filetype to vscode language-id ?
-        return ft == '' and 'plaintext' or ft
-    end,
-    get_selected_text = function()
-        -- Get the selected text from the editor before creating window
-        return View.get_selected().text
-    end,
-    -- BB.getSelectedLocationText = Nie
-    get_selected_location_text = function()
-        local name = View.get_filename()
-        local location = View.get_selected().location
-        return name .. ' ' .. location.row .. ':' .. location.col
-    end,
-    get_filename = function() View.get_filename() end,
-    -- xa.getSelectedTextWithDiagnostics = Uie
-    get_selected_text_with_diagnostics = function(opts)
-        -- 1. Get selected text with lsp diagnostic info
-        -- 2. Format
-    end,
-    -- Ks.getDiagnoseInfo = Xie;
-    get_diagnose_info = function()
-        local error_code = ''
-        local error_line = ''
-        local surrounding_code = ''
-        local error_message = ''
-        local msg = [[The error code is:
-\`\`\`
-]] .. error_code .. [[
-\`\`\`
-The error line is:
-\`\`\`
-]] .. error_line .. [[
-\`\`\`
-The surrounding code is:
-\`\`\`
-]] .. surrounding_code .. [[
-\`\`\`
-The error message is: ]] .. error_message
-        return msg
-    end,
-    get_error_location = function() View.get_error_location() end,
-    get_title_selected_text = function() View.get_title_selected_text() end,
-}
-
----@class fittencode.chat.Conversation
-local Conversation = {}
-Conversation.__index = Conversation
-
-function Conversation:new()
-    local o = {}
-    setmetatable(o, Conversation)
-    o.messages = {}
-    o.state = {
-        type = 'waiting_for_user_input',
-    }
-    o.template = nil
-    o.variables = {}
-    o.init_variables = {}
-    o.temporary_editor_content = nil
-    return o
-end
-
-local function random(length)
-    local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    local result = {}
-
-    for i = 1, length do
-        local index = math.random(1, #chars)
-        table.insert(result, chars:sub(index, index))
-    end
-
-    return table.concat(result)
-end
-
-local function update_conversation(e, id)
-    model.conversations[id] = e
-    model.selected_conversation_id = id
-end
-
-local function get_conversation_by_id(id)
-    return model.conversations[id]
-end
-
--- ka.getCommentSnippet = fie
-local function get_comment_snippet()
-    return Config.snippet.comment or ''
-end
-
--- Fa.getUnitTestFramework = Jie
-local function get_unit_test_framework()
-    local tf = {}
-    tf['c'] = 'C/C++'
-    tf['cpp'] = tf['c']
-    tf['java'] = 'Java'
-    tf['python'] = 'Python'
-    tf['javascript'] = 'JavaScript/TypeScript'
-    tf['typescript'] = tf['javascript']
-    return Config.unit_test_framework[tf[editor.get_ft_language()]] or ''
-end
-
-local function resolve_variables_internal(v, tm)
-    local function get_value(t, e)
-        local switch = {
-            ['context'] = function()
-                return { name = editor.get_filename(), language = editor.get_ft_language(), content = editor.get_selected_text() }
-            end,
-            ['constant'] = function()
-                return t.value
-            end,
-            ['message'] = function()
-                return e and e[t.index] and e[t.index][t.property]
-            end,
-            ['selected-text'] = function()
-                return editor.get_selected_text()
-            end,
-            ['selected-location-text'] = function()
-                return editor.get_selected_location_text()
-            end,
-            ['filename'] = function()
-                return editor.get_filename()
-            end,
-            ['language'] = function()
-                return editor.get_ft_language()
-            end,
-            ['comment-snippet'] = function()
-                return get_comment_snippet()
-            end,
-            ['unit-test-framework'] = function()
-                local s = get_unit_test_framework()
-                return s == 'Not specified' and '' or s
-            end,
-            ['selected-text-with-diagnostics'] = function()
-                return editor.get_selected_text_with_diagnostics({ diagnostic_severities = t.severities })
-            end,
-            ['errorMessage'] = function()
-                return editor.get_diagnose_info()
-            end,
-            ['errorLocation'] = function()
-                return editor.get_error_location()
-            end,
-            ['title-selected-text'] = function()
-                return editor.get_title_selected_text()
-            end,
-            ['terminal-text'] = function()
-                Log.error('Not implemented for terminal-text')
-                return ''
-            end
-        }
-        return switch[t.type]
-    end
-    return get_value(type, tm)
-end
-
-local function resolve_variables(variables, tm)
-    local n = {
-        messages = tm.messages,
-    }
-    for _, v in ipairs(variables) do
-        if v.time == tm.time then
-            if n[v.name] == nil then
-                local s = resolve_variables_internal(v, { messages = tm.messages })
-                n[v.name] = s
+    local entries = Fn.fs_all_entries(path, {})
+    for _, entry in ipairs(entries) do
+        if entry.fs_type == 'file' and entry.name:match('.+%.rdt%.md$') then
+            local e = TemplateResolver.parse_markdown_template(entry.path)
+            if e and e.template.id then
+                assert(e.template.id, 'Template must have an ID')
+                e = vim.tbl_deep_extend('force', e, {
+                    id = e.template.id,
+                    label = e.template.label,
+                    description = e.template.description,
+                    source = 'builtin',
+                    tags = {},
+                    variables = e.template.variables or {},
+                })
+                conversation_types[e.id] = e
             else
-                Log.error('Variable {} is already defined', v.name)
+                error = 'Failed to load builtin template: ' .. entry.path
             end
         end
     end
-    return n
+    return conversation_types, error
 end
 
-local function create_conversation(template_id)
-    local e = get_conversation_by_id(template_id)
-    if not e then
-        return
-    end
-    local s = resolve_variables(e.variables, {
-        time = 'conversation-start'
-    })
-end
-
-local function add_and_select_conversation(e)
-    if #model.conversations > 0 then
-        if #(model.conversations[#model.conversations].messages) then
-            table.remove(model.conversations)
-        end
-    end
-    if #model.conversations > 100 then
-        table.remove(model.conversations, 1)
-    end
-    model.conversations[#model.conversations + 1] = e
-    model.selected_conversation_id = e.id
-end
-
-local function start_chat()
-    local id = random(36).sub(2, 10)
-    create_conversation(model.basic_chat_template_id)
-    -- model.selected_conversation_id = id
-    -- model.conversations[id] = Conversation:new()
-    -- view():create_conversation(id, true)
-    view():show_conversation('welcome')
-end
-
-local function remove_special_token(t)
-    return string.gsub(t, '<|(%w{%d,10})|>', '<| %1 |>')
-end
-
-function Conversation:add_user_message(message)
-    self.messages[#self.messages + 1] = {
-        author = 'user',
-        content = message,
-    }
-    self.state.type = 'waiting_for_bot_answer'
-end
-
-function Conversation:answer(message)
-    message = message or ''
-    self:add_user_message(remove_special_token(message))
-    self:execute_chat({
-        workspace = Fn.startwith(message, '@workspace'),
-        _workspace = Fn.startwith(message, '@_workspace'),
-        enterprise_workspace = (Fn.startwith(message, '@_workspace(') or Fn.startwith(message, '@workspace(')) and Config.fitten.version == 'enterprise',
-        message = message,
-    })
-end
-
-function Conversation:resolve_variables_at_message_time()
-    return resolve_variables(self.template.variables, {
-        time = 'message',
-        messages = self.messages,
-    })
-end
-
-function Conversation:evaluate_template(template, variables)
-    if variables == nil then
-        variables = self:resolve_variables_at_message_time()
-    end
-    if self.temporary_editor_content then
-        variables.temporaryEditorContent = self.temporary_editor_content
-    end
-    local env = vim.tbl_deep_extend('force', {}, self.init_variables)
-    env = vim.tbl_deep_extend('force', env, self.variables)
-    local function sample()
-        -- local env = {
-        --     messages = { { author = 'alice', content = 'hello\n' }, { author = 'bot', content = 'hi\n' } },
-        --     -- messages = { { author = vim.inspect(1), content = vim.inspect(vim) }, { author = 'bot', content = 'hi' } },
-        -- }
-        local env_name, code = OPL.CompilerRunner(env, template)
-        local stdout, stderr = OPL.CodeRunner(env_name, env, nil, code)
-        if stderr then
-            Log.error('Error evaluating template: {}', stderr)
-        else
-            return stdout
-        end
-    end
-    return sample()
-end
-
-function Conversation:execute_chat(opts)
-    if Config.fitten.version == 'default' then
-        opts.workspace = false
-    end
-    if opts._workspace then
-        opts.workspace = true
-    end
-    local chat_api = Client.chat
-    if opts.workspace then
-        if not opts.enterprise_workspace then
-            chat_api = Client.rag_chat
-            Log.error('RAG chat is not implemented yet')
-        end
+function TemplateResolver.load_template_from_file(path)
+    local conversation_types = {}
+    local error = nil
+    local e = TemplateResolver.parse_markdown_template(path)
+    if e and e.template.id then
+        assert(e.template.id, 'Template must have an ID')
+        e = vim.tbl_deep_extend('force', e, {
+            id = e.template.id,
+            label = e.template.label,
+            description = e.template.description,
+            source = 'builtin',
+            tags = {},
+            variables = e.template.variables or {},
+        })
+        conversation_types[e.id] = e
     else
-        ---@type fittencode.chat.Template.InitialMessage | fittencode.chat.Template.Response | nil
-        local template = self.template.response
-        if self.messages[1] == nil then
-            template = self.template.initialMessage
-        end
-        assert(template)
-        local variables = self:resolve_variables_at_message_time()
-        local retrieval_augmentation = template.retrievalAugmentation
-        local evaluated = self:evaluate_template(template.template, variables)
+        error = 'Failed to load builtin template: ' .. path
     end
+    return conversation_types, error
 end
 
--- Clicking on the "Send" button
--- Or pressing Enter in the input field
-local function send_message(data)
-    local e = model.conversations[data.id]
-    if not e then
-        return
-    end
-    e:answer(data.message)
-end
-
-local function show_chat_window()
-    if not model.selected_conversation_id then
-        start_chat()
-    end
-    editor.chat_window:show()
-end
-
--- Right clicking on a code block
-local function explain_code()
-    show_chat_window()
-end
-
--- Clicking on the "Chat" button
-local function show_chat()
-    show_chat_window()
-end
-
-local function get_text_for_range(buffer, range)
-    local start_row, start_col, end_row, end_col = range[1], range[2], range[3], range[4]
-
-    if end_col == 0 then
-        end_row = end_row - 1
-        end_col = -1
-    end
-
-    local lines = vim.api.nvim_buf_get_text(buffer, start_row, start_col, end_row, end_col, {})
-
-    return { start_row, 0, end_row, end_col }, lines
-end
-
-local function parse_markdown_template_buf(buf)
+function TemplateResolver.parse_markdown_template_buf(buf)
     local parser = vim.treesitter.get_parser(buf, 'markdown')
     local query_string = [[
 ; Query for Markdown structure
@@ -611,6 +231,7 @@ local function parse_markdown_template_buf(buf)
   (inline) @text.content) ; Captures simple text
     ]]
     local query = vim.treesitter.query.parse('markdown', query_string)
+    assert(parser)
     local parsed_tree = parser:parse()[1]
     local root = parsed_tree:root()
 
@@ -619,6 +240,16 @@ local function parse_markdown_template_buf(buf)
 
     local in_template_section = false
     local sub_template_section = ''
+
+    local function get_text_for_range(buffer, range)
+        local start_row, start_col, end_row, end_col = range[1], range[2], range[3], range[4]
+        if end_col == 0 then
+            end_row = end_row - 1
+            end_col = -1
+        end
+        local lines = vim.api.nvim_buf_get_text(buffer, start_row, start_col, end_row, end_col, {})
+        return { start_row, 0, end_row, end_col }, lines
+    end
 
     for id, node, _ in query:iter_captures(root, 0, 0, -1) do
         local capture_name = query.captures[id]
@@ -672,7 +303,7 @@ local function parse_markdown_template_buf(buf)
     end
 end
 
-local function parse_markdown_template(e)
+function TemplateResolver.parse_markdown_template(e)
     local buf = vim.api.nvim_create_buf(false, true) -- false = not a scratch buffer, true = unlisted (invisible)
 
     -- Automatically wipe the buffer from Neovim's memory after use
@@ -694,7 +325,7 @@ local function parse_markdown_template(e)
         return nil
     end
 
-    local template = parse_markdown_template_buf(buf)
+    local template = TemplateResolver.parse_markdown_template_buf(buf)
     if template then
         template = vim.tbl_deep_extend('force', template, { meta = { source = source } })
     end
@@ -702,113 +333,161 @@ local function parse_markdown_template(e)
     return template
 end
 
-local function reload_builtin_templates()
-    -- Builtin Markdown templates localte in `{current_dir}/../../template`
-    local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('chat.lua', '')
-    local template_dir = current_dir:gsub('/lua$', '') .. '/../../template'
-    local entries = Fn.fs_all_entries(template_dir, {})
-    for _, entry in ipairs(entries) do
-        if entry.fs_type == 'file' and entry.name:match('.+%.rdt%.md$') then
-            local e = parse_markdown_template(entry.path)
-            if e and e.template.id then
-                assert(e.template.id, 'Template must have an ID')
-                e = vim.tbl_deep_extend('force', e, {
-                    id = e.template.id,
-                    label = e.template.label,
-                    description = e.template.description,
-                    source = 'builtin',
-                    tags = {},
-                    variables = e.template.variables or {},
-                })
-                model.conversation_types[e.id] = e
-            else
-                Log.error('Failed to load builtin template: {}', entry.path)
-            end
-        end
-    end
-    Log.debug('model.conversation_types : {}', model.conversation_types)
+---@class fittencode.chat.ConversationType
+local ConversationType = {}
+ConversationType.__index = ConversationType
+
+function ConversationType:new(params)
+    local instance = {
+        template = params.template,
+        source = params.source,
+    }
+    setmetatable(instance, ConversationType)
+    return instance
 end
 
-local function reload_extension_templates()
-    for k, v in pairs(model.extension_templates) do
-        local e = parse_markdown_template(v)
-        if e and e.template.id then
-            assert(e.template.id, 'Template must have an ID')
-            e = vim.tbl_deep_extend('force', e, {
-                id = e.template.id,
-                label = e.template.label,
-                description = e.template.description,
-                source = 'extension',
-                tags = {},
-                variables = e.template.variables or {},
-            })
-            model.conversation_types[e.id] = e
+---@class fittencode.chat.ConversationTypeProvider
+local ConversationTypesProvider = {}
+ConversationTypesProvider.__index = ConversationTypesProvider
+
+function ConversationTypesProvider:new(params)
+    local instance = {
+        extension_templates = {},
+        conversation_types = {},
+        extension_uri = params.extensionUri
+    }
+    setmetatable(instance, ConversationTypesProvider)
+    return instance
+end
+
+function ConversationTypesProvider:get_conversation_type(e)
+    return self.conversation_types[e]
+end
+
+function ConversationTypesProvider:get_conversation_types()
+    return self.conversation_types
+end
+
+function ConversationTypesProvider:register_extension_template(params)
+    table.insert(self.extension_templates, params.template)
+end
+
+function ConversationTypesProvider:load_conversation_types()
+    self.conversation_types = {}
+    self:load_builtin_templates()
+    self:load_extension_templates()
+    self:load_workspace_templates()
+end
+
+function ConversationTypesProvider:load_builtin_templates()
+    local e = {}
+    local t = {
+        chat = {
+            "chat-en.rdt.md",
+            "chat-zh-cn.rdt.md"
+        },
+        task = {
+            "diagnose-errors.rdt.md",
+            "document-code-en.rdt.md",
+            "edit-code-en.rdt.md",
+            "explain-code-en.rdt.md",
+            "explain-code-w-context.rdt.md",
+            "find-bugs-en.rdt.md",
+            "generate-code-en.rdt.md",
+            "generate-unit-test-en.rdt.md",
+            "improve-readability.rdt.md",
+            "document-code-zh-cn.rdt.md",
+            "edit-code-zh-cn.rdt.md",
+            "explain-code-zh-cn.rdt.md",
+            "find-bugs-zh-cn.rdt.md",
+            "generate-code-zh-cn.rdt.md",
+            "generate-unit-test-zh-cn.rdt.md",
+            "diagnose-errors-en.rdt.md",
+            "diagnose-errors-zh-cn.rdt.md",
+            "title-chat-en.rdt.md",
+            "title-chat-zh-cn.rdt.md",
+            "optimize-code-en.rdt.md",
+            "optimize-code-zh-cn.rdt.md",
+            "terminal-fix-zh-cn.rdt.md",
+            "terminal-fix-en.rdt.md"
+        }
+    }
+    for _, r in ipairs(t) do
+        for _, n in ipairs(r) do
+            e[n] = self:load_builtin_template(r, n)
+        end
+    end
+    for _, r in ipairs(e) do
+        self.conversation_types[r.id] = r
+    end
+end
+
+function ConversationTypesProvider:load_builtin_template(type, filename)
+    local r = self.extension_uri .. 'template' .. '/' .. type .. '/' .. filename
+    local t, e = TemplateResolver.load_template_from_file(r)
+    if e then
+        Log.error("Failed to load chat template '" .. r .. "': " .. e)
+        return nil
+    end
+    return ConversationType:new({ template = t, source = 'built-in' })
+end
+
+function ConversationTypesProvider:load_extension_templates()
+    for _, e in ipairs(self.extension_templates) do
+        local ok, r = pcall(function() return TemplateResolver.parsefittencode_template(e) end)
+        if not ok then
+            Log.error('Could not load extension template')
         else
-            Log.error('Failed to load extension template: {}', v)
+            self.conversation_types[r.id] = ConversationType:new({ template = r, source = 'extension' })
         end
     end
 end
 
-local function register_extension_template(id, e)
-    model.extension_templates[id] = e
-end
-
-local function unregister_extension_template(id)
-    model.extension_templates[id] = nil
-end
-
-local function reload_workspace_templates()
-    -- root
-    -- ".fittencode/template/**/*.rdt.md"
-    local root = vim.fn.getcwd()
-    local template_dir = root .. '/.fittencode/template'
-    local entries = Fn.fs_all_entries(template_dir, {})
-    for _, entry in ipairs(entries) do
-        if entry.fs_type == 'file' and entry.name:match('.+%.rdt%.md$') then
-            local e = parse_markdown_template(entry.path)
-            if e and e.template.id then
-                assert(e.template.id, 'Template must have an ID')
-                e = vim.tbl_deep_extend('force', e, {
-                    id = e.template.id,
-                    label = e.template.label,
-                    description = e.template.description,
-                    source = 'workspace',
-                    tags = {},
-                    variables = e.template.variables or {},
-                })
-                model.conversation_types[e.id] = e
-            else
-                Log.error('Failed to load workspace template: {}', entry.path)
-            end
+function ConversationTypesProvider:load_workspace_templates()
+    local e = TemplateResolver.loadfittencode_templates_from_workspace()
+    for _, r in ipairs(e) do
+        if not r or r.isEnabled == false then
+            Log.error('Could not load conversation template from ' .. r.file.path .. ': ' .. r.error)
+        else
+            self.conversation_types[r.id] = ConversationType:new({ template = r, source = 'local-workspace' })
         end
     end
 end
 
-local function reload_conversation_types()
-    reload_builtin_templates()
-    reload_extension_templates()
-    reload_workspace_templates()
-end
+---@type fittencode.chat.ChatController
+local chat_controller = nil
 
-local function register_template(id, template)
-    register_extension_template(id, template)
-end
-
-local function unregister_template(id)
-    unregister_extension_template(id)
+local function display_preference()
+    local dp = Config.language_preference.display_preference
+    if not dp or #dp == 0 or dp == 'auto' then
+        return Fn.language()
+    end
+    return dp
 end
 
 -- Active
 local function setup()
-    if not model then
-        model = ChatModel:new()
-    end
+    local chat_model = ChatModel:new()
+    local chat_view = View.new(chat_model)
+    local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('chat.lua', '')
+    local extension_uri = current_dir:gsub('/lua$', '') .. '/../../'
+    local conversation_types_provider = ConversationTypesProvider:new({ extension_uri = extension_uri })
+    conversation_types_provider:load_conversation_types()
+    chat_controller = ChatController:new({
+        chat_view = chat_view,
+        chat_model = chat_model,
+        conversation_types_provider = conversation_types_provider,
+        basic_chat_template_id = 'chat-' .. display_preference()
+    })
+    chat_view:register_message_receiver(chat_controller.receive_view_message)
+    chat_view:update(chat_model)
+end
+
+local function reload_templates()
+    chat_controller.conversation_types_provider:load_conversation_types()
 end
 
 return {
     setup = setup,
-    register_template = register_template,
-    unregister_template = unregister_template,
-    reload_conversation_types = reload_conversation_types,
-    start_chat = start_chat,
+    reload_templates = reload_templates,
 }

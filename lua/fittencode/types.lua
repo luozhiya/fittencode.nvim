@@ -6,7 +6,7 @@
 
 ---@class fittencode.chat.Conversation
 ---@field abort_before_answer boolean
----@field isfavorited boolean
+---@field is_favorited boolean
 ---@field mode "chat"
 ---@field id string
 ---@field messages fittencode.chat.Message[]
@@ -19,6 +19,7 @@
 ---@field variables table
 ---@field temporary_editor_content table
 ---@field update_partial_bot_message function
+---@field set_is_favorited function
 
 ---@alias AIModel 'Fast' | 'Search'
 
@@ -54,6 +55,7 @@
 ---@field response fittencode.chat.Template.Response -- 响应格式
 ---@field tags string[] -- 标签数组
 ---@field variables fittencode.chat.Template.Variable[] -- 变量数组
+---@field isEnabled boolean -- 是否启用
 
 ---@class fittencode.chat.Template.Header
 ---@field icon fittencode.chat.Template.Icon -- 图标
@@ -92,17 +94,24 @@
 ---@field delete_conversation function
 ---@field delete_all_conversations function
 ---@field change_favorited function
----@field conversations table<string, fittencode.chat.Conversation>
+---@field conversations table<fittencode.chat.Conversation>
 ---@field selected_conversation_id string
 
 ---@class fittencode.chat.ChatController
----@field chat_panel fittencode.view.ChatPanel
+---@field chat_view fittencode.view.ChatView
 ---@field chat_model fittencode.chat.ChatModel
 ---@field ai fittencode.chat.AI
 ---@field get_conversation_type function
 ---@field diff_editor_manager fittencode.diff.DiffEditorManager
 ---@field basic_chat_template_id string
 ---@field generate_conversation_id function
+---@field receive_view_message function
+---@field update_chat_view function
+---@field show_chat_view function
+---@field add_and_show_conversation function
+---@field reload_chat_breaker function
+---@field create_conversation function
+---@field conversation_types_provider fittencode.chat.ConversationTypeProvider
 
 ---@class fittencode.chat.ConversationTypeProvider
 ---@field extension_uri string
@@ -114,6 +123,6 @@
 ---@field get_conversation_types function
 ---@field register_extension_template function
 ---@field load_conversation_types function
----@field load_built_in_templates function
+---@field load_builtin_templates function
 ---@field load_extension_templates function
 ---@field load_workspace_templates function

@@ -43,6 +43,8 @@ end
 ---@field set_messages function
 ---@field clear_messages function
 ---@field enable_user_input function
+---@field update function
+---@field is_visible boolean
 
 ---@class fittencode.view.ChatView
 local ChatView = {

@@ -57,7 +57,7 @@ local function fs_all_entries(path, prename)
 end
 
 local timezone_language = {
-    ['+0000'] = 'en',    -- Greenwich Mean Time (UK)
+    ['+0000'] = 'en',    -- Greenwich Mean Time
     ['+0800'] = 'zh-cn', -- China Standard Time
 }
 
