@@ -121,3 +121,8 @@
 ---@field load_builtin_templates function
 ---@field load_extension_templates function
 ---@field load_workspace_templates function
+
+---@class fittencode.chat.TemplateResolver
+---@field load_from_buffer function
+---@field load_from_file function
+---@field load_from_directory function

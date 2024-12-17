@@ -154,10 +154,6 @@ function ChatController:get_conversation_type(e)
 end
 
 ---@class fittencode.chat.TemplateResolver
----@field load_from_buffer function
----@field load_from_file function
----@field load_from_directory function
-
 local TemplateResolver = {}
 
 function TemplateResolver.load_from_buffer(buf)
@@ -287,6 +283,11 @@ function TemplateResolver.load_from_directory(dir)
     return templates
 end
 
+local Editor = {}
+
+function Editor.get_workspace_path()
+end
+
 ---@class fittencode.chat.ConversationType
 local ConversationType = {}
 ConversationType.__index = ConversationType
@@ -398,7 +399,7 @@ function ConversationTypesProvider:load_extension_templates()
 end
 
 function ConversationTypesProvider:load_workspace_templates()
-    local e = TemplateResolver.load_from_directory()
+    local e = TemplateResolver.load_from_directory(Editor.get_workspace_path())
     for _, r in ipairs(e) do
         if not r or r.isEnabled == false then
             Log.error('Could not load conversation template from ' .. r.file.path .. ': ' .. r.error)
