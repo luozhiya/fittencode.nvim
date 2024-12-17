@@ -2,6 +2,7 @@ local Config = require('fittencode.config')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
+local Translate = require('fittencode.translate')
 
 local curl = require('fittencode.curl')
 
@@ -70,6 +71,26 @@ end
 local keyring_store = vim.fn.stdpath('data') .. '/fittencode' .. '/api_key.json'
 local keyring = nil
 
+local function has_fitten_ai_api_key()
+    if not keyring then
+        return false
+    end
+    return keyring.key ~= nil and keyring.key ~= ''
+end
+
+local function notify_login()
+    Log.notify_error(Translate('[Fitten Code] Please login first.'))
+end
+
+local function get_ft_token()
+    if not has_fitten_ai_api_key() then
+        notify_login()
+        return
+    end
+    ---@diagnostic disable-next-line: need-check-nil, undefined-field
+    return keyring.key
+end
+
 local function load_last_session()
     local _, content = pcall(vim.fn.readfile, keyring_store)
     if not _ then
@@ -94,8 +115,8 @@ local function question()
 end
 
 local function login(username, password, on_success, on_error)
-    if keyring then
-        Log.notify_info('You are already logged in')
+    if has_fitten_ai_api_key() then
+        Log.notify_info(Translate('[Fitten Code] You are already logged in'))
         Fn.schedule_call(on_success)
         return
     end
@@ -149,7 +170,7 @@ local function login(username, password, on_success, on_error)
             name = username,
             key = fico_token,
         }
-        Log.notify_info('Login successful')
+        Log.notify_info(Translate('[Fitten Code] Login successful'))
         vim.fn.writefile({ vim.fn.json_encode(keyring) }, keyring_store)
         Fn.schedule_call(on_success)
     end, function()
@@ -273,14 +294,14 @@ local login_providers = {
 }
 
 local function login3rd(source, on_success, on_error)
-    if keyring then
-        Log.notify_info('You are already logged in')
+    if has_fitten_ai_api_key() then
+        Log.notify_info(Translate('[Fitten Code] You are already logged in'))
         Fn.schedule_call(on_success)
         return
     end
 
     if not source or vim.tbl_contains(login_providers, source) == false then
-        Log.notify_error('Invalid 3rd-party login source')
+        Log.notify_error(Translate('[Fitten Code] Invalid 3rd-party login source'))
         Fn.schedule_call(on_error)
         return
     end
@@ -295,7 +316,7 @@ local function login3rd(source, on_success, on_error)
 
     local client_token = v4_default()
     if not client_token then
-        Log.notify_error('Failed to generate client token')
+        Log.error('Failed to generate client token')
         Fn.schedule_call(on_error)
         return
     end
@@ -339,7 +360,7 @@ local function login3rd(source, on_success, on_error)
                     name = '@' .. source,
                     key = fico_data.token
                 }
-                Log.notify_info('Login successful')
+                Log.notify_info(Translate('[Fitten Code] Login successful'))
                 vim.fn.writefile({ vim.fn.json_encode(keyring) }, keyring_store)
                 Fn.schedule_call(on_success)
 
@@ -361,13 +382,13 @@ local function login3rd(source, on_success, on_error)
 end
 
 local function logout()
-    if not keyring and vim.fn.filereadable(keyring_store) == 0 then
-        Log.notify_info('You are already logged out')
+    if not has_fitten_ai_api_key() and vim.fn.filereadable(keyring_store) == 0 then
+        Log.notify_info(Translate('[Fitten Code] You are already logged out'))
         return
     end
     keyring = nil
     vim.fn.delete(keyring_store)
-    Log.notify_info('Logout successful')
+    Log.notify_info(Translate('[Fitten Code] Logout successful'))
 end
 
 local function request(method, url, headers, body, on_create, on_once, on_stream, on_error, on_exit)
@@ -417,14 +438,6 @@ local function request(method, url, headers, body, on_create, on_once, on_stream
     return wrap()
 end
 
-local function keyring_check()
-    if not keyring then
-        Log.notify_error('You are not logged in, please try `FittenCode login` first')
-        return false
-    end
-    return true
-end
-
 -- Example of `completion_data`:
 -- Response Example 1
 -- {
@@ -444,7 +457,7 @@ end
 --     "ex_msg": "1+2)*3"
 -- }
 local function generate_one_stage(prompt, on_once, on_error)
-    if not keyring_check() then
+    if not has_fitten_ai_api_key() then
         Fn.schedule_call(on_error)
         return
     end
@@ -457,7 +470,7 @@ local function generate_one_stage(prompt, on_once, on_error)
 end
 
 local function chat(prompt, on_once, on_stream, on_error)
-    if not keyring_check() then
+    if not has_fitten_ai_api_key() then
         Fn.schedule_call(on_error)
         return
     end
@@ -488,6 +501,8 @@ local function chat_heartbeat(prompt, on_once, on_stream, on_error)
 end
 
 return {
+    has_fitten_ai_api_key = has_fitten_ai_api_key,
+    get_ft_token = get_ft_token,
     load_last_session = load_last_session,
     register = register,
     login = login,

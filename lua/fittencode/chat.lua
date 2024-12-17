@@ -383,33 +383,33 @@ function ConversationTypesProvider:load_builtin_templates()
     local e = {}
     local t = {
         chat = {
-            "chat-en.rdt.md",
-            "chat-zh-cn.rdt.md"
+            'chat-en.rdt.md',
+            'chat-zh-cn.rdt.md'
         },
         task = {
-            "diagnose-errors.rdt.md",
-            "document-code-en.rdt.md",
-            "edit-code-en.rdt.md",
-            "explain-code-en.rdt.md",
-            "explain-code-w-context.rdt.md",
-            "find-bugs-en.rdt.md",
-            "generate-code-en.rdt.md",
-            "generate-unit-test-en.rdt.md",
-            "improve-readability.rdt.md",
-            "document-code-zh-cn.rdt.md",
-            "edit-code-zh-cn.rdt.md",
-            "explain-code-zh-cn.rdt.md",
-            "find-bugs-zh-cn.rdt.md",
-            "generate-code-zh-cn.rdt.md",
-            "generate-unit-test-zh-cn.rdt.md",
-            "diagnose-errors-en.rdt.md",
-            "diagnose-errors-zh-cn.rdt.md",
-            "title-chat-en.rdt.md",
-            "title-chat-zh-cn.rdt.md",
-            "optimize-code-en.rdt.md",
-            "optimize-code-zh-cn.rdt.md",
-            "terminal-fix-zh-cn.rdt.md",
-            "terminal-fix-en.rdt.md"
+            'diagnose-errors.rdt.md',
+            'document-code-en.rdt.md',
+            'edit-code-en.rdt.md',
+            'explain-code-en.rdt.md',
+            'explain-code-w-context.rdt.md',
+            'find-bugs-en.rdt.md',
+            'generate-code-en.rdt.md',
+            'generate-unit-test-en.rdt.md',
+            'improve-readability.rdt.md',
+            'document-code-zh-cn.rdt.md',
+            'edit-code-zh-cn.rdt.md',
+            'explain-code-zh-cn.rdt.md',
+            'find-bugs-zh-cn.rdt.md',
+            'generate-code-zh-cn.rdt.md',
+            'generate-unit-test-zh-cn.rdt.md',
+            'diagnose-errors-en.rdt.md',
+            'diagnose-errors-zh-cn.rdt.md',
+            'title-chat-en.rdt.md',
+            'title-chat-zh-cn.rdt.md',
+            'optimize-code-en.rdt.md',
+            'optimize-code-zh-cn.rdt.md',
+            'terminal-fix-zh-cn.rdt.md',
+            'terminal-fix-en.rdt.md'
         }
     }
     for _, r in ipairs(t) do
@@ -457,16 +457,8 @@ end
 ---@type fittencode.chat.ChatController
 local chat_controller = nil
 
-local function display_preference()
-    local dp = Config.language_preference.display_preference
-    if not dp or #dp == 0 or dp == 'auto' then
-        return Fn.language()
-    end
-    return dp
-end
-
 -- Active
-local function setup()
+local function active()
     local chat_model = ChatModel:new()
     local chat_view = View.new(chat_model)
     local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('chat.lua', '')
@@ -477,7 +469,7 @@ local function setup()
         chat_view = chat_view,
         chat_model = chat_model,
         conversation_types_provider = conversation_types_provider,
-        basic_chat_template_id = 'chat-' .. display_preference()
+        basic_chat_template_id = 'chat-' .. Fn.display_preference()
     })
     chat_view:register_message_receiver(chat_controller.receive_view_message)
     chat_view:update(chat_model)
@@ -488,6 +480,6 @@ local function reload_templates()
 end
 
 return {
-    setup = setup,
+    active = active,
     reload_templates = reload_templates,
 }

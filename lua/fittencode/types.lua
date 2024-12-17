@@ -46,23 +46,25 @@
 ---@field template fittencode.chat.Template
 
 ---@class fittencode.chat.Template
----@field description string -- 诊断错误和警告的描述
----@field engineVersion number -- 引擎版本
----@field header fittencode.chat.Template.Header -- 头部信息
 ---@field id string -- 唯一标识
----@field initialMessage fittencode.chat.Template.InitialMessage -- 初始消息
+---@field engineVersion number -- 引擎版本
 ---@field label string -- 标签
----@field response fittencode.chat.Template.Response -- 响应格式
+---@field description string -- 诊断错误和警告的描述
 ---@field tags string[] -- 标签数组
----@field variables fittencode.chat.Template.Variable[] -- 变量数组
+---@field header fittencode.chat.Template.Header -- 头部信息
+---@field chatInterface 'message-exchange' | 'instruction-refinement'
 ---@field isEnabled boolean -- 是否启用
+---@field variables fittencode.chat.Template.Variable[] -- 变量数组
+---@field initialMessage fittencode.chat.Template.InitialMessage -- 初始消息
+---@field response fittencode.chat.Template.Response -- 响应格式
 
 ---@class fittencode.chat.Template.Header
----@field icon fittencode.chat.Template.Icon -- 图标
 ---@field title string -- 标题
+---@field icon fittencode.chat.Template.Icon -- 图标
+---@field useFirstMessageAsTitle boolean -- 是否使用第一条消息作为标题
 
 ---@class fittencode.chat.Template.Icon
----@field type string -- 图标类型
+---@field type string -- 图标类型 'codicon'
 ---@field value string -- 图标值
 
 ---@class fittencode.chat.Template.InitialMessage
@@ -72,10 +74,13 @@
 ---@field retrievalAugmentation any -- 检索增强 用于描述在数据检索过程中添加的额外信息或功能，以提高检索的效率和准确性
 
 ---@class fittencode.chat.Template.Response
+---@field placeholder string -- 占位符
+---@field retrievalAugmentation any -- 检索增强 用于描述在数据检索过程中添加的额外信息或功能，以提高检索的效率和准确性
 ---@field maxTokens number -- 最大令牌数
 ---@field stop string[] -- 停止标记
 ---@field template string -- 响应模板
----@field retrievalAugmentation any -- 检索增强 用于描述在数据检索过程中添加的额外信息或功能，以提高检索的效率和准确性
+---@field temperature number
+---@field completionHandler any
 
 ---@class fittencode.chat.Template.Variable
 ---@field constraints fittencode.chat.Template.Constraint[] -- 约束条件

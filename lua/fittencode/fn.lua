@@ -1,3 +1,5 @@
+local Config = require('fittencode.config')
+
 local function schedule_call(fx, ...)
     if fx then
         local args = { ... }
@@ -71,10 +73,43 @@ local function language()
     return timezone_language[os.date('%z')]
 end
 
+local function expand_braces(msg, ...)
+    ---@type string
+    msg = msg or ''
+    local args = { ... }
+    for i, arg in ipairs(args) do
+        if type(arg) == 'integer' then
+            msg = msg:gsub('{}', '%%d', 1)
+        elseif type(arg) == 'number' then
+            msg = msg:gsub('{}', '%%.2f', 1)
+        elseif type(arg) == 'string' then
+            msg = msg:gsub('{}', '%%s', 1)
+        else
+            msg = msg:gsub('{}', '%%s', 1)
+            args[i] = vim.inspect(arg)
+        end
+    end
+    local ok, vfmt = pcall(string.format, msg, unpack(args))
+    if ok then
+        return vfmt
+    end
+    return msg
+end
+
+local function display_preference()
+    local dp = Config.language_preference.display_preference
+    if not dp or #dp == 0 or dp == 'auto' then
+        return language()
+    end
+    return dp
+end
+
 return {
     debounce = debounce,
     schedule_call = schedule_call,
     startwith = startwith,
     fs_all_entries = fs_all_entries,
     language = language,
+    display_preference = display_preference,
+    expand_braces = expand_braces
 }

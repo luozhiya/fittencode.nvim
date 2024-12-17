@@ -1,4 +1,5 @@
 local Config = require('fittencode.config')
+local Fn = require('fittencode.fn')
 
 local M = {}
 
@@ -81,21 +82,6 @@ local function write_preface(f)
     f:write(edge)
 end
 
-local function expand_braces(msg, ...)
-    msg = msg or ''
-    local count = 0
-    msg, count = msg:gsub('{}', '%%s')
-    if count == 0 and select('#', ...) == 0 then
-        return msg
-    end
-    local args = vim.tbl_map(vim.inspect, { ... })
-    for i = #args + 1, count do
-        args[i] = vim.inspect(nil)
-    end
-    msg = string.format(msg, unpack(args))
-    return msg
-end
-
 local function log(level, msg, ...)
     if level >= Config.log.level and Config.log.level ~= levels.OFF then
         if preface then
@@ -104,7 +90,7 @@ local function log(level, msg, ...)
                 vim.fn.delete(log_path)
             end
         end
-        msg = expand_braces(msg, ...)
+        msg = Fn.expand_braces(msg, ...)
         local ms = string.format('%03d', math.floor((vim.uv.hrtime() / 1e6) % 1000))
         local timestamp = os.date('%Y-%m-%d %H:%M:%S') .. '.' .. ms
         local tag = string.format('[%-5s %s] ', level_name(level), timestamp)
@@ -117,7 +103,7 @@ local function log(level, msg, ...)
 end
 
 local function notify(level, msg, ...)
-    msg = expand_braces(msg, ...)
+    msg = Fn.expand_braces(msg, ...)
     vim.schedule(function()
         vim.notify(msg, level, { title = 'FittenCode' })
     end)
