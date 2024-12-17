@@ -37,12 +37,8 @@
 ---@field source string
 
 ---@class fittencode.chat.ConversationType
----@field id string
----@field description string
----@field label string
----@field source string
----@field tags string[]
 ---@field meta fittencode.chat.ConversationMeta
+---@field source 'built-in' | 'extension' | 'local-workspace'
 ---@field template fittencode.chat.Template
 
 ---@class fittencode.chat.Template

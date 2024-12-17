@@ -155,33 +155,6 @@ end
 
 local TemplateResolver = {}
 
-function TemplateResolver.load_template_from_directory(path)
-    local conversation_types = {}
-    local error = nil
-
-    local entries = Fn.fs_all_entries(path, {})
-    for _, entry in ipairs(entries) do
-        if entry.fs_type == 'file' and entry.name:match('.+%.rdt%.md$') then
-            local e = TemplateResolver.parse_markdown_template(entry.path)
-            if e and e.template.id then
-                assert(e.template.id, 'Template must have an ID')
-                e = vim.tbl_deep_extend('force', e, {
-                    id = e.template.id,
-                    label = e.template.label,
-                    description = e.template.description,
-                    source = 'builtin',
-                    tags = {},
-                    variables = e.template.variables or {},
-                })
-                conversation_types[e.id] = e
-            else
-                error = 'Failed to load builtin template: ' .. entry.path
-            end
-        end
-    end
-    return conversation_types, error
-end
-
 function TemplateResolver.load_template_from_file(path)
     local conversation_types = {}
     local error = nil
@@ -189,8 +162,6 @@ function TemplateResolver.load_template_from_file(path)
     if e and e.template.id then
         assert(e.template.id, 'Template must have an ID')
         e = vim.tbl_deep_extend('force', e, {
-            id = e.template.id,
-            label = e.template.label,
             description = e.template.description,
             source = 'builtin',
             tags = {},
@@ -339,8 +310,9 @@ ConversationType.__index = ConversationType
 
 function ConversationType:new(params)
     local instance = {
-        template = params.template,
+        meta = params.meta,
         source = params.source,
+        template = params.template,
     }
     setmetatable(instance, ConversationType)
     return instance
