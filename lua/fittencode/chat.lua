@@ -156,22 +156,7 @@ end
 local TemplateResolver = {}
 
 function TemplateResolver.load_template_from_file(path)
-    local conversation_types = {}
-    local error = nil
-    local e = TemplateResolver.parse_markdown_template(path)
-    if e and e.template.id then
-        assert(e.template.id, 'Template must have an ID')
-        e = vim.tbl_deep_extend('force', e, {
-            description = e.template.description,
-            source = 'builtin',
-            tags = {},
-            variables = e.template.variables or {},
-        })
-        conversation_types[e.id] = e
-    else
-        error = 'Failed to load builtin template: ' .. path
-    end
-    return conversation_types, error
+    return TemplateResolver.parse_markdown_template(path)
 end
 
 function TemplateResolver.parse_markdown_template_buf(buf)
@@ -206,9 +191,7 @@ function TemplateResolver.parse_markdown_template_buf(buf)
     local parsed_tree = parser:parse()[1]
     local root = parsed_tree:root()
 
-    local meta
     local template
-
     local in_template_section = false
     local sub_template_section = ''
 
@@ -228,11 +211,7 @@ function TemplateResolver.parse_markdown_template_buf(buf)
         local _, lines = get_text_for_range(buf, range)
         local text = table.concat(lines, '\n')
         if capture_name == 'header.h1.content' then
-            meta = meta or {}
-            meta.code = text
         elseif capture_name == 'text.content' then
-            meta = meta or {}
-            meta.description = text
         elseif capture_name == 'header.h2.content' then
             if text == 'Template' then
                 in_template_section = true
@@ -240,7 +219,7 @@ function TemplateResolver.parse_markdown_template_buf(buf)
         elseif capture_name == 'header.h3.content' then
             if not in_template_section then
                 -- Error: Template section not found
-                return nil
+                return
             end
             if text == 'Configuration' then
                 sub_template_section = 'configuration'
@@ -257,7 +236,7 @@ function TemplateResolver.parse_markdown_template_buf(buf)
                     template = vim.tbl_deep_extend('force', template, decoded)
                 else
                     -- Error: Invalid JSON in configuration section
-                    return nil
+                    return
                 end
             elseif sub_template_section == 'initial_message_prompt' then
                 template = vim.tbl_deep_extend('force', template, { initialMessage = { template = text, } })
@@ -266,40 +245,27 @@ function TemplateResolver.parse_markdown_template_buf(buf)
             end
         end
     end
-    if meta and template then
-        return {
-            meta = meta,
-            template = template,
-        }
-    end
+    return template
 end
 
 function TemplateResolver.parse_markdown_template(e)
     local buf = vim.api.nvim_create_buf(false, true) -- false = not a scratch buffer, true = unlisted (invisible)
 
-    -- Automatically wipe the buffer from Neovim's memory after use
-    local source = ''
     vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf, })
     local success, err = pcall(vim.api.nvim_buf_call, buf, function()
         if vim.fn.filereadable(e) == 1 then
             vim.cmd('silent edit ' .. e)
             -- vim.fn.fnamemodify(e, ':t')
-            source = e
         else
             vim.api.nvim_buf_set_lines(buf, 0, -1, false, e)
-            source = '[BUFFER]'
         end
     end)
-
     if not success then
         vim.api.nvim_buf_delete(buf, { force = true })
-        return nil
+        return
     end
 
     local template = TemplateResolver.parse_markdown_template_buf(buf)
-    if template then
-        template = vim.tbl_deep_extend('force', template, { meta = { source = source } })
-    end
     vim.api.nvim_buf_delete(buf, { force = true })
     return template
 end
@@ -396,10 +362,9 @@ end
 
 function ConversationTypesProvider:load_builtin_template(type, filename)
     local r = self.extension_uri .. 'template' .. '/' .. type .. '/' .. filename
-    local t, e = TemplateResolver.load_template_from_file(r)
-    if e then
-        Log.error("Failed to load chat template '" .. r .. "': " .. e)
-        return nil
+    local t = TemplateResolver.load_template_from_file(r)
+    if not t then
+        return
     end
     return ConversationType:new({ template = t, source = 'built-in' })
 end

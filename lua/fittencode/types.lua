@@ -31,13 +31,7 @@
 ---@field type 'user_can_reply' | 'waiting_for_bot_answer'
 ---@field response_placeholder string
 
----@class fittencode.chat.ConversationMeta
----@field id string
----@field description string
----@field source string
-
 ---@class fittencode.chat.ConversationType
----@field meta fittencode.chat.ConversationMeta
 ---@field source 'built-in' | 'extension' | 'local-workspace'
 ---@field template fittencode.chat.Template
 
