@@ -73,7 +73,7 @@ local function language()
     return timezone_language[os.date('%z')]
 end
 
-local function expand_braces(msg, ...)
+local function format(msg, ...)
     ---@type string
     msg = msg or ''
     local args = { ... }
@@ -111,5 +111,5 @@ return {
     fs_all_entries = fs_all_entries,
     language = language,
     display_preference = display_preference,
-    expand_braces = expand_braces
+    format = format
 }

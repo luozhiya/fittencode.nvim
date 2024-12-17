@@ -53,7 +53,7 @@ local function translate(key, ...)
     if Fn.startwith(lang, 'zh') then
         v = translations[key] or key
     end
-    return Fn.expand_braces(v, { ... })
+    return Fn.format(v, ...)
 end
 
 return translate

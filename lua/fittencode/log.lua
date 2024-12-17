@@ -90,7 +90,7 @@ local function log(level, msg, ...)
                 vim.fn.delete(log_path)
             end
         end
-        msg = Fn.expand_braces(msg, ...)
+        msg = Fn.format(msg, ...)
         local ms = string.format('%03d', math.floor((vim.uv.hrtime() / 1e6) % 1000))
         local timestamp = os.date('%Y-%m-%d %H:%M:%S') .. '.' .. ms
         local tag = string.format('[%-5s %s] ', level_name(level), timestamp)
@@ -103,7 +103,7 @@ local function log(level, msg, ...)
 end
 
 local function notify(level, msg, ...)
-    msg = Fn.expand_braces(msg, ...)
+    msg = Fn.format(msg, ...)
     vim.schedule(function()
         vim.notify(msg, level, { title = 'FittenCode' })
     end)
