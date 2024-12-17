@@ -155,11 +155,7 @@ end
 
 local TemplateResolver = {}
 
-function TemplateResolver.load_template_from_file(path)
-    return TemplateResolver.parse_markdown_template(path)
-end
-
-function TemplateResolver.parse_markdown_template_buf(buf)
+function TemplateResolver.load_from_buffer(buf)
     local parser = vim.treesitter.get_parser(buf, 'markdown')
     local query_string = [[
 ; Query for Markdown structure
@@ -248,7 +244,7 @@ function TemplateResolver.parse_markdown_template_buf(buf)
     return template
 end
 
-function TemplateResolver.parse_markdown_template(e)
+function TemplateResolver.load_from_file(e)
     local buf = vim.api.nvim_create_buf(false, true) -- false = not a scratch buffer, true = unlisted (invisible)
 
     vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf, })
@@ -362,7 +358,7 @@ end
 
 function ConversationTypesProvider:load_builtin_template(type, filename)
     local r = self.extension_uri .. 'template' .. '/' .. type .. '/' .. filename
-    local t = TemplateResolver.load_template_from_file(r)
+    local t = TemplateResolver.load_from_file(r)
     if not t then
         return
     end
