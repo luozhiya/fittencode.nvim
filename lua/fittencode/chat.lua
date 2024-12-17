@@ -153,6 +153,11 @@ function ChatController:get_conversation_type(e)
     return self.conversation_types_provider:get_conversation_type(e)
 end
 
+---@class fittencode.chat.TemplateResolver
+---@field load_from_buffer function
+---@field load_from_file function
+---@field load_from_directory function
+
 local TemplateResolver = {}
 
 function TemplateResolver.load_from_buffer(buf)
@@ -261,9 +266,25 @@ function TemplateResolver.load_from_file(e)
         return
     end
 
-    local template = TemplateResolver.parse_markdown_template_buf(buf)
+    local template = TemplateResolver.load_from_buffer(buf)
     vim.api.nvim_buf_delete(buf, { force = true })
     return template
+end
+
+function TemplateResolver.load_from_directory(dir)
+    local templates = {}
+    local entries = Fn.fs_all_entries(dir, {})
+    for _, entry in ipairs(entries) do
+        if entry.fs_type == 'file' and entry.name:match('.+%.rdt%.md$') then
+            local e = TemplateResolver.load_from_file(entry.path)
+            if e and e.id then
+                templates[e.id] = e
+            else
+                Log.error('Could not load conversation template from ' .. entry.path)
+            end
+        end
+    end
+    return templates
 end
 
 ---@class fittencode.chat.ConversationType
@@ -367,7 +388,7 @@ end
 
 function ConversationTypesProvider:load_extension_templates()
     for _, e in ipairs(self.extension_templates) do
-        local ok, r = pcall(function() return TemplateResolver.parsefittencode_template(e) end)
+        local ok, r = pcall(function() return TemplateResolver.load_from_file(e) end)
         if not ok then
             Log.error('Could not load extension template')
         else
@@ -377,7 +398,7 @@ function ConversationTypesProvider:load_extension_templates()
 end
 
 function ConversationTypesProvider:load_workspace_templates()
-    local e = TemplateResolver.loadfittencode_templates_from_workspace()
+    local e = TemplateResolver.load_from_directory()
     for _, r in ipairs(e) do
         if not r or r.isEnabled == false then
             Log.error('Could not load conversation template from ' .. r.file.path .. ': ' .. r.error)
