@@ -115,10 +115,6 @@ function ChatController:show_chat_view()
 end
 
 function ChatController:reload_chat_breaker()
-    if self.timeout_id then
-        self.timeout_id = nil
-    end
-    self.timeout_id = os.execute('sleep 18000')
 end
 
 function ChatController:receive_view_message(message)
@@ -246,7 +242,7 @@ function TemplateResolver.load_from_buffer(buf)
 end
 
 function TemplateResolver.load_from_file(e)
-    local buf = vim.api.nvim_create_buf(false, true) -- false = not a scratch buffer, true = unlisted (invisible)
+    local buf = vim.api.nvim_create_buf(false, true)
 
     vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf, })
     local success, err = pcall(vim.api.nvim_buf_call, buf, function()
@@ -275,8 +271,6 @@ function TemplateResolver.load_from_directory(dir)
             local e = TemplateResolver.load_from_file(entry.path)
             if e and e.id then
                 templates[e.id] = e
-            else
-                Log.error('Could not load conversation template from ' .. entry.path)
             end
         end
     end
@@ -294,7 +288,6 @@ ConversationType.__index = ConversationType
 
 function ConversationType:new(params)
     local instance = {
-        meta = params.meta,
         source = params.source,
         template = params.template,
     }
@@ -381,19 +374,16 @@ end
 function ConversationTypesProvider:load_builtin_template(type, filename)
     local r = self.extension_uri .. 'template' .. '/' .. type .. '/' .. filename
     local t = TemplateResolver.load_from_file(r)
-    if not t then
-        return
+    if t then
+        return ConversationType:new({ template = t, source = 'built-in' })
     end
-    return ConversationType:new({ template = t, source = 'built-in' })
 end
 
 function ConversationTypesProvider:load_extension_templates()
     for _, e in ipairs(self.extension_templates) do
-        local ok, r = pcall(function() return TemplateResolver.load_from_file(e) end)
-        if not ok then
-            Log.error('Could not load extension template')
-        else
-            self.conversation_types[r.id] = ConversationType:new({ template = r, source = 'extension' })
+        local t = TemplateResolver.load_from_file(e)
+        if t then
+            return ConversationType:new({ template = t, source = 'extension' })
         end
     end
 end
@@ -401,9 +391,7 @@ end
 function ConversationTypesProvider:load_workspace_templates()
     local e = TemplateResolver.load_from_directory(Editor.get_workspace_path())
     for _, r in ipairs(e) do
-        if not r or r.isEnabled == false then
-            Log.error('Could not load conversation template from ' .. r.file.path .. ': ' .. r.error)
-        else
+        if r and r.isEnabled then
             self.conversation_types[r.id] = ConversationType:new({ template = r, source = 'local-workspace' })
         end
     end
