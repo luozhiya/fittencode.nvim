@@ -5,7 +5,6 @@
 ---@field content string
 
 ---@class fittencode.chat.Reference
----@
 
 ---@class fittencode.chat.Conversation
 ---@field abort_before_answer boolean
@@ -105,6 +104,35 @@
 ---@field change_favorited function
 ---@field conversations table<fittencode.chat.Conversation>
 ---@field selected_conversation_id string
+---@field tracker fittencode.chat.Tracker
+---@field tracker_options fittencode.chat.TrackerOptions
+
+---@class fittencode.chat.Tracker
+---@field ft_token string
+---@field has_lsp boolean
+---@field enabled boolean
+---@field chosen string
+---@field use_project_completion boolean
+---@field uri string
+---@field accept_cnt number
+---@field insert_without_paste_cnt number
+---@field insert_cnt number
+---@field delete_cnt number
+---@field completion_times number
+---@field completion_total_time number
+---@field insert_with_completion_without_paste_cnt number
+---@field insert_with_completion_cnt number
+
+---@class fittencode.chat.TrackerOptions
+---@field requestUrl string
+---@field extra fittencode.chat.TrackerOptionsExtra
+
+---@class fittencode.chat.TrackerOptionsExtra
+---@field ft_token string
+---@field tracker_type string
+---@field tracker_event_type string
+
+---@class fittencode.chat.CompletionStatistics
 
 ---@class fittencode.chat.ChatController
 ---@field chat_view fittencode.view.ChatView

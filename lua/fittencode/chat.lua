@@ -535,7 +535,7 @@ end
 ---@param e fittencode.chat.ChatModel
 ---@param selected_state boolean
 function State.get_state_from_model(e, selected_state)
-    selected_state = selected_state or true
+    selected_state = selected_state == nil and true or selected_state
     local n = {}
 
     for _, a in pairs(e.conversations) do
@@ -543,8 +543,8 @@ function State.get_state_from_model(e, selected_state)
         if selected_state then
             if a.id == e.selected_conversation_id then
                 A.reference = {
-                    selectText = a:get_select_text(),
-                    selectRange = a:get_select_range()
+                    selectText = editor.get_selected_text(),
+                    selectRange = editor.get_selected_range()
                 }
             else
                 if A.content.type == 'messageExchange' then
@@ -565,9 +565,9 @@ function State.get_state_from_model(e, selected_state)
         hasFittenAIApiKey = Client.has_fitten_ai_api_key(),
         surfacePromptForFittenAIPlus = Config.fittencode.fittenAI.surfacePromptForPlus,
         serverURL = Client.server_url(),
-        showHistory = e.show_history,
+        showHistory = false,    -- TODO: Save state of history
         fittenAIApiKey = Client.get_ft_token(),
-        openUserCenter = e.open_user_center,
+        openUserCenter = false, -- TODO: Save state of user center
         tracker = e.tracker,
         trackerOptions = e.tracker_options
     }
