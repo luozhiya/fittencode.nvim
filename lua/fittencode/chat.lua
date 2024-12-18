@@ -98,7 +98,7 @@ function ChatController:generate_conversation_id()
 end
 
 function ChatController:update_chat_view()
-    self.chat_view:update(self.chat_model)
+    self.chat_view:update()
 end
 
 function ChatController:add_and_show_conversation(conversation, show)
@@ -111,38 +111,82 @@ function ChatController:add_and_show_conversation(conversation, show)
     return conversation
 end
 
+function ChatController:is_chat_view_visible()
+    return self.chat_view.is_visible
+end
+
 function ChatController:show_chat_view()
+    self:update_chat_view()
+    self.chat_view:show()
+end
+
+function ChatController:hide_chat_view()
+    self:update_chat_view()
+    self.chat_view:hide()
 end
 
 function ChatController:reload_chat_breaker()
 end
 
-function ChatController:receive_view_message(message)
-    local parsed_message, err = hoe.webview_api.outgoing_message_schema:parse(message)
+function ChatController:receive_view_message(parsed_message)
     if not parsed_message then return end
     local msg_type = parsed_message.type
-    self:reload_chat_breaker()
     if msg_type == 'ping' then
         self:update_chat_view()
     elseif msg_type == 'enter_fitten_ai_api_key' then
-        local api_key = parsed_message.data.apikey
-        -- 执行命令
     elseif msg_type == 'click_collapsed_conversation' then
-        self.chat_model.selected_conversation_id = parsed_message.data.id
-        self.chat_view.show_history = false
-        self:update_chat_view()
     elseif msg_type == 'send_message' then
         local conversation = self.chat_model:get_conversation_by_id(parsed_message.data.id)
         if conversation then
             conversation:answer(parsed_message.data.message)
         end
-        -- 处理其他情况同样...
+    elseif msg_type == 'start_chat' then
+        self:create_conversation(self.basic_chat_template_id)
     else
-        error('unsupported type: ' .. msg_type)
+        Log.error('Unsupported type: ' .. msg_type)
     end
 end
 
-function ChatController:create_conversation(template_id, show, mode)
+function ChatController:create_conversation(e, show, mode)
+    r = r or true
+    n = n or 'chat'
+
+    local success, result = pcall(function()
+        local i = self:get_conversation_type(e)
+        if not i then Log.error('No conversation type found for ' .. e) end
+
+        local s = Runtime.resolve_variables(i.variables, { time = 'conversation-start' })
+        local o = i:create_conversation({
+            conversationId = generateConversationId(),
+            ai = ai,
+            updateChatPanel = updateChatPanel,
+            diffEditorManager = diffEditorManager,
+            initVariables = s,
+            logger = logger
+        })
+
+        if o.type == 'unavailable' then
+            if o.display == 'info' then
+                ls.window.showInformationMessage(o.message)
+            elseif o.display == 'error' then
+                ls.window.showErrorMessage(o.message)
+            else
+                ls.window.showErrorMessage('Required input unavailable')
+            end
+            return
+        end
+
+        o.conversation.mode = n
+        self:add_and_show_conversation(o.conversation, r)
+
+        if o.shouldImmediatelyAnswer then
+            o.conversation.answer()
+        end
+    end)
+
+    if not success then
+        print(result)
+    end
 end
 
 function ChatController:get_conversation_type(e)
@@ -277,10 +321,54 @@ function TemplateResolver.load_from_directory(dir)
     return templates
 end
 
-local Editor = {}
-
-function Editor.get_workspace_path()
-end
+local editor = {
+    get_ft_language = function()
+        local ft = View.get_ft_language()
+        -- Mapping vim filetype to vscode language-id ?
+        return ft == '' and 'plaintext' or ft
+    end,
+    get_workspace_path = function()
+    end,
+    get_selected_text = function()
+        -- Get the selected text from the editor before creating window
+        return View.get_selected().text
+    end,
+    -- BB.getSelectedLocationText = Nie
+    get_selected_location_text = function()
+        local name = View.get_filename()
+        local location = View.get_selected().location
+        return name .. ' ' .. location.row .. ':' .. location.col
+    end,
+    get_filename = function() View.get_filename() end,
+    -- xa.getSelectedTextWithDiagnostics = Uie
+    get_selected_text_with_diagnostics = function(opts)
+        -- 1. Get selected text with lsp diagnostic info
+        -- 2. Format
+    end,
+    -- Ks.getDiagnoseInfo = Xie;
+    get_diagnose_info = function()
+        local error_code = ''
+        local error_line = ''
+        local surrounding_code = ''
+        local error_message = ''
+        local msg = [[The error code is:
+\`\`\`
+]] .. error_code .. [[
+\`\`\`
+The error line is:
+\`\`\`
+]] .. error_line .. [[
+\`\`\`
+The surrounding code is:
+\`\`\`
+]] .. surrounding_code .. [[
+\`\`\`
+The error message is: ]] .. error_message
+        return msg
+    end,
+    get_error_location = function() View.get_error_location() end,
+    get_title_selected_text = function() View.get_title_selected_text() end,
+}
 
 ---@class fittencode.chat.ConversationType
 local ConversationType = {}
@@ -400,22 +488,455 @@ end
 ---@type fittencode.chat.ChatController
 local chat_controller = nil
 
+local State = {}
+
+function State.load()
+    local cs = Client.load_code_state()
+    cs = cs or {}
+    cs.hasFittenAIApiKey = Client.has_fitten_ai_api_key()
+    cs.fittenAIApiKey = Client.get_ft_token()
+    cs.showHistory = false
+    cs.showKnowledgeBase = false
+    cs.selectedConversationId = nil
+    cs.serverURL = Client.server_url()
+    cs.type = 'chat'
+    cs.openUserCenter = false
+    cs.tracker = {}
+    cs.trackerOptions = {}
+    return cs
+end
+
+function State.convert_to_conversations(state, template, update_chat_view)
+    local conversations = {}
+    for _, s in pairs(state.conversations) do
+        local c = Conversation:new({
+            id = s.id,
+            template = template,
+            creation_timestamp = s.timestamp,
+            is_favorited = s.isFavorited,
+            mode = s.mode,
+            state = s.content.state,
+            reference = s.content.reference,
+            error = s.content.error,
+            update_chat_view = update_chat_view,
+        })
+        if s.header.isTitleMessage then
+            c.messages[#c.messages + 1] = {
+                author = 'user',
+                content = s.header.title,
+            }
+        end
+        vim.list_extend(c.messages, s.content.messages)
+        conversations[#conversations + 1] = c
+    end
+    return conversations
+end
+
+---@param e fittencode.chat.ChatModel
+---@param selected_state boolean
+function State.get_state_from_model(e, selected_state)
+    selected_state = selected_state or true
+    local n = {}
+
+    for _, a in pairs(e.conversations) do
+        local A = a:to_state_conversation()
+        if selected_state then
+            if a.id == e.selected_conversation_id then
+                A.reference = {
+                    selectText = a:get_select_text(),
+                    selectRange = a:get_select_range()
+                }
+            else
+                if A.content.type == 'messageExchange' then
+                    A.content.messages = {}
+                    if #A.header.title > 100 then
+                        A.header.title = A.header.title:sub(1, 100) .. '...'
+                    end
+                end
+            end
+        end
+        table.insert(n, A)
+    end
+
+    return {
+        type = 'chat',
+        selectedConversationId = e.selected_conversation_id,
+        conversations = n,
+        hasFittenAIApiKey = Client.has_fitten_ai_api_key(),
+        surfacePromptForFittenAIPlus = Config.fittencode.fittenAI.surfacePromptForPlus,
+        serverURL = Client.server_url(),
+        showHistory = e.show_history,
+        fittenAIApiKey = Client.get_ft_token(),
+        openUserCenter = e.open_user_center,
+        tracker = e.tracker,
+        trackerOptions = e.tracker_options
+    }
+end
+
+function State.store(model)
+    local cs = State.get_state_from_model(model, true)
+    Client.save_code_state(cs)
+end
+
+local VM = {}
+
+function VM.run(env, template)
+    local function sample()
+        local env_name, code = OPL.CompilerRunner(env, template)
+        local stdout, stderr = OPL.CodeRunner(env_name, env, nil, code)
+        if stderr then
+            Log.error('Error evaluating template: {}', stderr)
+        else
+            return stdout
+        end
+    end
+    return sample()
+end
+
+local function get_comment_snippet()
+    return Config.snippet.comment or ''
+end
+
+local function get_unit_test_framework()
+    local tf = {}
+    tf['c'] = 'C/C++'
+    tf['cpp'] = tf['c']
+    tf['java'] = 'Java'
+    tf['python'] = 'Python'
+    tf['javascript'] = 'JavaScript/TypeScript'
+    tf['typescript'] = tf['javascript']
+    return Config.unit_test_framework[tf[editor.get_ft_language()]] or ''
+end
+
+local Runtime = {}
+
+function Runtime.resolve_variables_internal(v, tm)
+    local function get_value(t, e)
+        local switch = {
+            ['context'] = function()
+                return { name = editor.get_filename(), language = editor.get_ft_language(), content = editor.get_selected_text() }
+            end,
+            ['constant'] = function()
+                return t.value
+            end,
+            ['message'] = function()
+                return e and e[t.index] and e[t.index][t.property]
+            end,
+            ['selected-text'] = function()
+                return editor.get_selected_text()
+            end,
+            ['selected-location-text'] = function()
+                return editor.get_selected_location_text()
+            end,
+            ['filename'] = function()
+                return editor.get_filename()
+            end,
+            ['language'] = function()
+                return editor.get_ft_language()
+            end,
+            ['comment-snippet'] = function()
+                return get_comment_snippet()
+            end,
+            ['unit-test-framework'] = function()
+                local s = get_unit_test_framework()
+                return s == 'Not specified' and '' or s
+            end,
+            ['selected-text-with-diagnostics'] = function()
+                return editor.get_selected_text_with_diagnostics({ diagnostic_severities = t.severities })
+            end,
+            ['errorMessage'] = function()
+                return editor.get_diagnose_info()
+            end,
+            ['errorLocation'] = function()
+                return editor.get_error_location()
+            end,
+            ['title-selected-text'] = function()
+                return editor.get_title_selected_text()
+            end,
+            ['terminal-text'] = function()
+                Log.error('Not implemented for terminal-text')
+                return ''
+            end
+        }
+        return switch[t.type]
+    end
+    return get_value(type, tm)
+end
+
+function Runtime.resolve_variables(variables, tm)
+    local n = {
+        messages = tm.messages,
+    }
+    for _, v in ipairs(variables) do
+        if v.time == tm.time then
+            if n[v.name] == nil then
+                local s = Runtime.resolve_variables_internal(v, { messages = tm.messages })
+                n[v.name] = s
+            else
+                Log.error('Variable {} is already defined', v.name)
+            end
+        end
+    end
+    return n
+end
+
+---@class fittencode.chat.Conversation
+local Conversation = {}
+Conversation.__index = Conversation
+
+function Conversation:new(params)
+    local instance = {
+        update_chat_view = params.update_chat_view,
+    }
+    setmetatable(instance, Conversation)
+    return instance
+end
+
+function Conversation:to_state_conversation()
+    local chat_interface = self.template.chatInterface or 'message-exchange'
+
+    local conversation = {
+        id = self.id,
+        reference = { selectText = '', selectRange = '' },
+        header = {
+            title = self:get_title(),
+            isTitleMessage = self:is_title_message(),
+            codicon = self:get_codicon()
+        },
+        content = {},
+        timestamp = self.creation_timestamp,
+        isFavorited = self.is_favorited,
+        mode = self.mode
+    }
+
+    if chat_interface == 'message-exchange' then
+        conversation.content.type = 'messageExchange'
+        conversation.content.messages = self:is_title_message() and Fn.slice(self.messages, 2) or self.messages
+        conversation.content.state = self.state
+        conversation.content.reference = self.reference
+        conversation.content.error = self.error
+    else
+        conversation.content.type = 'instructionRefinement'
+        conversation.content.instruction = ''
+        conversation.content.state = self:refinement_instruction_state()
+        conversation.content.error = self.error
+    end
+
+    return conversation
+end
+
+function Conversation:get_select_text()
+end
+
+function Conversation:set_is_favorited()
+    self.is_favorited = not self.is_favorited
+end
+
+function Conversation:get_title()
+    local e = self.template.header
+    local r = self.messages[1] and self.messages[1].content or nil
+    if e.useFirstMessageAsTitle == true and r ~= nil then
+        return r
+    else
+        local ok, result = pcall(function() return self:evaluate_template(e.title) end)
+        if ok then
+            return result
+        end
+    end
+    return e.title
+end
+
+function Conversation:is_title_message()
+    return self.template.header.useFirstMessageAsTitle == true and self.messages[1] ~= nil
+end
+
+function Conversation:get_codicon()
+    return self.template.header.icon.value
+end
+
+function Conversation:insert_prompt_into_editor()
+end
+
+function Conversation:export_markdown()
+    local md = self:get_markdown_export()
+    if md then
+        local e = View.open_text_document({
+            language = 'markdown',
+            content = md
+        })
+        View.show_text_document(e)
+    end
+end
+
+function Conversation:get_markdown_export()
+    local markdown = {}
+    for _, message in ipairs(self.messages) do
+        local author = message.author
+        local content = message.content
+        if author == 'bot' then
+            table.insert(markdown, '# Answer')
+        else
+            table.insert(markdown, '# Question')
+        end
+        table.insert(markdown, content)
+    end
+    return table.concat(markdown, '\n\n')
+end
+
+function Conversation:resolve_variables_at_message_time()
+    return Runtime.resolve_variables(self.template.variables, {
+        time = 'message',
+        messages = self.messages,
+    })
+end
+
+function Conversation:evaluate_template(template, variables)
+    if variables == nil then
+        variables = self:resolve_variables_at_message_time()
+    end
+    if self.temporary_editor_content then
+        variables.temporaryEditorContent = self.temporary_editor_content
+    end
+    local env = vim.tbl_deep_extend('force', {}, self.init_variables, self.variables)
+    return VM.run(env, template)
+end
+
+---@param content string?
+function Conversation:answer(content)
+    if not content or content == '' then
+        return
+    end
+    content = Fn.remove_special_token(content)
+    self:add_user_message(content)
+    self:execute_chat({
+        workspace = Fn.startwith(content, '@workspace'),
+        _workspace = Fn.startwith(content, '@_workspace'),
+        enterprise_workspace = (Fn.startwith(content, '@_workspace(') or Fn.startwith(content, '@workspace(')) and Config.fitten.version == 'enterprise',
+        content = content,
+    })
+end
+
+function Conversation:add_user_message(content, bot_action)
+    self.messages[#self.messages + 1] = {
+        author = 'user',
+        content = content,
+    }
+    self.state = {
+        type = 'waiting_for_bot_answer',
+        bot_action = bot_action,
+    }
+end
+
+function Conversation:execute_chat(opts)
+    if Config.fitten.version == 'default' then
+        opts.workspace = false
+    end
+    if opts._workspace then
+        opts.workspace = true
+    end
+    local chat_api = Client.chat
+    if opts.workspace then
+        if not opts.enterprise_workspace then
+            chat_api = Client.rag_chat
+            Log.error('RAG chat is not implemented yet')
+        end
+    else
+        ---@type fittencode.chat.Template.InitialMessage | fittencode.chat.Template.Response | nil
+        local ir = self.template.response
+        if self.messages[1] == nil then
+            ir = self.template.initialMessage
+        end
+        assert(ir)
+        local variables = self:resolve_variables_at_message_time()
+        local retrieval_augmentation = ir.retrievalAugmentation
+        local evaluated = self:evaluate_template(ir.template, variables)
+        self.request_handle = Client.chat({
+            inputs = evaluated,
+            ft_token = Client.get_ft_token(),
+            meta_datas = {
+                project_id = '',
+            }
+        }, nil, function(response)
+            self:handle_partial_completion(response)
+        end, function(error) end)
+    end
+end
+
+---@param content string
+function Conversation:handle_partial_completion(content)
+    local n = { type = 'message' }
+    local i = n.type
+    local s = vim.trim(content)
+
+    if i == 'update-temporary-editor' then
+        Log.error('Not implemented for update-temporary-editor')
+    elseif i == 'active-editor-diff' then
+        Log.error('Not implemented for active-editor-diff')
+    elseif i == 'message' then
+        self:update_partial_bot_message({ content = s })
+    else
+        Log.error('Unsupported property: ' .. i)
+    end
+end
+
+function Conversation:update_partial_bot_message(content)
+    self.state = {
+        type = 'bot_answer_streaming',
+        partial_answer = content
+    }
+    self.update_chat_view()
+end
+
+function Conversation:is_busying()
+    return self.request_handle and self.request_handle.is_active()
+end
+
 -- Active
 local function active()
     local chat_model = ChatModel:new()
-    local chat_view = View.new(chat_model)
+    local chat_view = View.ChatView:new(chat_model)
     local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('chat.lua', '')
     local extension_uri = current_dir:gsub('/lua$', '') .. '/../../'
     local conversation_types_provider = ConversationTypesProvider:new({ extension_uri = extension_uri })
     conversation_types_provider:load_conversation_types()
+    local basic_chat_template_id = 'chat-' .. Fn.display_preference()
+    local conversation_type = conversation_types_provider:get_conversation_type(basic_chat_template_id)
+    if not conversation_type then
+        Log.error('Failed to load basic chat template')
+        return
+    end
     chat_controller = ChatController:new({
         chat_view = chat_view,
         chat_model = chat_model,
         conversation_types_provider = conversation_types_provider,
-        basic_chat_template_id = 'chat-' .. Fn.display_preference()
+        basic_chat_template_id = basic_chat_template_id
     })
+    local conversations = State.convert_to_conversations(State.load(), conversation_type.template, chat_controller.update_chat_view)
+    vim.list_extend(chat_model.conversations, conversations)
     chat_view:register_message_receiver(chat_controller.receive_view_message)
-    chat_view:update(chat_model)
+    chat_view:update()
+end
+
+local function show_chat()
+    if chat_controller:is_chat_view_visible() then
+        return
+    end
+    chat_controller:show_chat_view()
+end
+
+local function hide_chat()
+    if not chat_controller:is_chat_view_visible() then
+        return
+    end
+    chat_controller:hide_chat_view()
+end
+
+local function toggle_chat()
+    if chat_controller:is_chat_view_visible() then
+        chat_controller:hide_chat_view()
+    else
+        chat_controller:show_chat_view()
+    end
 end
 
 local function reload_templates()
@@ -425,4 +946,7 @@ end
 return {
     active = active,
     reload_templates = reload_templates,
+    show_chat = show_chat,
+    hide_chat = hide_chat,
+    toggle_chat = toggle_chat,
 }

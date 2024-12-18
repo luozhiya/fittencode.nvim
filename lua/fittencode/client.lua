@@ -102,6 +102,25 @@ local function load_last_session()
     end
 end
 
+local code_state_store = vim.fn.stdpath('data') .. '/fittencode' .. '/fitten_code_state.json'
+
+---@return string?
+local function load_code_state()
+    local _, content = pcall(vim.fn.readfile, code_state_store)
+    if not _ then
+        return
+    end
+    local _, code_state = pcall(vim.fn.json_decode, content)
+    if _ and code_state then
+        return code_state
+    end
+end
+
+local function save_code_state(state)
+    local content = vim.fn.json_encode(state)
+    vim.fn.writefile({ content }, code_state_store)
+end
+
 local function register()
     vim.ui.open(preset_urls.register .. '/?' .. get_platform_info_as_url_params())
 end
@@ -391,6 +410,11 @@ local function logout()
     Log.notify_info(Translate('[Fitten Code] Logout successful'))
 end
 
+---@class RequestHandle
+---@field cancel function
+---@field is_active function
+
+---@return RequestHandle?
 local function request(method, url, headers, body, on_create, on_once, on_stream, on_error, on_exit)
     local function wrap()
         local canceled = false
@@ -425,15 +449,21 @@ local function request(method, url, headers, body, on_create, on_once, on_stream
             end),
         }
         curl[method](url, opts)
-        return function()
-            if not canceled then
-                pcall(function()
-                    assert(process)
-                    vim.uv.process_kill(process)
-                end)
-                canceled = true
+        return {
+            cancel = function()
+                if not canceled then
+                    pcall(function()
+                        assert(process)
+                        vim.uv.process_kill(process)
+                    end)
+                    canceled = true
+                end
+            end,
+            is_active = function()
+                assert(process)
+                return vim.uv.is_active(process)
             end
-        end
+        }
     end
     return wrap()
 end
@@ -504,6 +534,9 @@ return {
     has_fitten_ai_api_key = has_fitten_ai_api_key,
     get_ft_token = get_ft_token,
     load_last_session = load_last_session,
+    load_code_state = load_code_state,
+    save_code_state = save_code_state,
+    server_url = server_url,
     register = register,
     login = login,
     login3rd = login3rd,

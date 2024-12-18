@@ -104,6 +104,18 @@ local function display_preference()
     return dp
 end
 
+local function slice(t, start)
+    local result = {}
+    for i = start, #t do
+        table.insert(result, t[i])
+    end
+    return result
+end
+
+local function remove_special_token(t)
+    return string.gsub(t, '<|(%w{%d,10})|>', '<| %1 |>')
+end
+
 return {
     debounce = debounce,
     schedule_call = schedule_call,
@@ -111,5 +123,7 @@ return {
     fs_all_entries = fs_all_entries,
     language = language,
     display_preference = display_preference,
-    format = format
+    format = format,
+    slice = slice,
+    remove_special_token = remove_special_token,
 }

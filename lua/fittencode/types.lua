@@ -4,6 +4,9 @@
 ---@field author string
 ---@field content string
 
+---@class fittencode.chat.Reference
+---@
+
 ---@class fittencode.chat.Conversation
 ---@field abort_before_answer boolean
 ---@field is_favorited boolean
@@ -17,9 +20,17 @@
 ---@field regenerate_enable boolean
 ---@field creation_timestamp string
 ---@field variables table
----@field temporary_editor_content table
+---@field temporary_editor_content string
 ---@field update_partial_bot_message function
 ---@field set_is_favorited function
+---@field reference fittencode.chat.Reference
+---@field error string
+---@field set_error function
+---@field dismiss_error function
+---@field get_title function
+---@field evaluate_template function
+---@field request_handle RequestHandle?
+---@field update_chat_view function?
 
 ---@alias AIModel 'Fast' | 'Search'
 
@@ -28,12 +39,15 @@
 ---@field content string
 
 ---@class fittencode.chat.State
----@field type 'user_can_reply' | 'waiting_for_bot_answer'
----@field response_placeholder string
+---@field type 'user_can_reply' | 'waiting_for_bot_answer' | 'bot_answer_streaming'
+---@field response_placeholder? string
+---@field bot_action? string
+---@field partial_answer? string
 
 ---@class fittencode.chat.ConversationType
 ---@field source 'built-in' | 'extension' | 'local-workspace'
 ---@field template fittencode.chat.Template
+---@field create_conversation function
 
 ---@class fittencode.chat.Template
 ---@field id string -- 唯一标识

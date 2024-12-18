@@ -70,8 +70,10 @@ local ChatView = {
     current_conversation = nil,
 }
 
-function ChatView:new()
-    local obj = {}
+function ChatView:new(model)
+    local obj = {
+        model = model,
+    }
     setmetatable(obj, ChatView)
     obj:_create_buffer()
     return obj
