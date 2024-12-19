@@ -488,9 +488,9 @@ end
 ---@type fittencode.chat.ChatController
 local chat_controller = nil
 
-local State = {}
+local PersistenceStateManager = {}
 
-function State.load()
+function PersistenceStateManager.load()
     local cs = Client.load_code_state()
     cs = cs or {}
     cs.hasFittenAIApiKey = Client.has_fitten_ai_api_key()
@@ -506,7 +506,7 @@ function State.load()
     return cs
 end
 
-function State.convert_to_conversations(state, template, update_chat_view)
+function PersistenceStateManager.convert_to_conversations(state, template, update_chat_view)
     local conversations = {}
     for _, s in pairs(state.conversations) do
         local c = Conversation:new({
@@ -532,16 +532,51 @@ function State.convert_to_conversations(state, template, update_chat_view)
     return conversations
 end
 
----@param e fittencode.chat.ChatModel
+---@return fittencode.chat.StateConversation
+function PersistenceStateManager.convert_to_state_conversation(conv)
+    local chat_interface = conv.template.chatInterface or 'message-exchange'
+
+    local sc = {
+        id = conv.id,
+        reference = { selectText = '', selectRange = '' },
+        header = {
+            title = conv:get_title(),
+            isTitleMessage = conv:is_title_message(),
+            codicon = conv:get_codicon()
+        },
+        content = {},
+        timestamp = conv.creation_timestamp,
+        isFavorited = conv.is_favorited,
+        mode = conv.mode
+    }
+
+    if chat_interface == 'message-exchange' then
+        sc.content.type = 'messageExchange'
+        sc.content.messages = conv:is_title_message() and Fn.slice(conv.messages, 2) or conv.messages
+        sc.content.state = conv.state
+        sc.content.reference = conv.reference
+        sc.content.error = conv.error
+    else
+        sc.content.type = 'instructionRefinement'
+        sc.content.instruction = ''
+        sc.content.state = conv:refinement_instruction_state()
+        sc.content.error = conv.error
+    end
+
+    return sc
+end
+
+---@param model fittencode.chat.ChatModel
 ---@param selected_state boolean
-function State.get_state_from_model(e, selected_state)
+---@return fittencode.chat.PersistenceState
+function PersistenceStateManager.get_state_from_model(model, selected_state)
     selected_state = selected_state == nil and true or selected_state
     local n = {}
 
-    for _, a in pairs(e.conversations) do
-        local A = a:to_state_conversation()
+    for _, a in pairs(model.conversations) do
+        local A = PersistenceStateManager.convert_to_state_conversation(a)
         if selected_state then
-            if a.id == e.selected_conversation_id then
+            if a.id == model.selected_conversation_id then
                 A.reference = {
                     selectText = editor.get_selected_text(),
                     selectRange = editor.get_selected_range()
@@ -560,7 +595,7 @@ function State.get_state_from_model(e, selected_state)
 
     return {
         type = 'chat',
-        selectedConversationId = e.selected_conversation_id,
+        selectedConversationId = model.selected_conversation_id,
         conversations = n,
         hasFittenAIApiKey = Client.has_fitten_ai_api_key(),
         surfacePromptForFittenAIPlus = Config.fittencode.fittenAI.surfacePromptForPlus,
@@ -568,13 +603,13 @@ function State.get_state_from_model(e, selected_state)
         showHistory = false,    -- TODO: Save state of history
         fittenAIApiKey = Client.get_ft_token(),
         openUserCenter = false, -- TODO: Save state of user center
-        tracker = e.tracker,
-        trackerOptions = e.tracker_options
+        tracker = model.tracker,
+        trackerOptions = model.tracker_options
     }
 end
 
-function State.store(model)
-    local cs = State.get_state_from_model(model, true)
+function PersistenceStateManager.store(model)
+    local cs = PersistenceStateManager.get_state_from_model(model, true)
     Client.save_code_state(cs)
 end
 
@@ -690,39 +725,6 @@ function Conversation:new(params)
     }
     setmetatable(instance, Conversation)
     return instance
-end
-
-function Conversation:to_state_conversation()
-    local chat_interface = self.template.chatInterface or 'message-exchange'
-
-    local conversation = {
-        id = self.id,
-        reference = { selectText = '', selectRange = '' },
-        header = {
-            title = self:get_title(),
-            isTitleMessage = self:is_title_message(),
-            codicon = self:get_codicon()
-        },
-        content = {},
-        timestamp = self.creation_timestamp,
-        isFavorited = self.is_favorited,
-        mode = self.mode
-    }
-
-    if chat_interface == 'message-exchange' then
-        conversation.content.type = 'messageExchange'
-        conversation.content.messages = self:is_title_message() and Fn.slice(self.messages, 2) or self.messages
-        conversation.content.state = self.state
-        conversation.content.reference = self.reference
-        conversation.content.error = self.error
-    else
-        conversation.content.type = 'instructionRefinement'
-        conversation.content.instruction = ''
-        conversation.content.state = self:refinement_instruction_state()
-        conversation.content.error = self.error
-    end
-
-    return conversation
 end
 
 function Conversation:get_select_text()
@@ -911,7 +913,7 @@ local function active()
         conversation_types_provider = conversation_types_provider,
         basic_chat_template_id = basic_chat_template_id
     })
-    local conversations = State.convert_to_conversations(State.load(), conversation_type.template, chat_controller.update_chat_view)
+    local conversations = PersistenceStateManager.convert_to_conversations(PersistenceStateManager.load(), conversation_type.template, chat_controller.update_chat_view)
     vim.list_extend(chat_model.conversations, conversations)
     chat_view:register_message_receiver(chat_controller.receive_view_message)
     chat_view:update()

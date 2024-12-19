@@ -31,6 +31,33 @@
 ---@field request_handle RequestHandle?
 ---@field update_chat_view function?
 
+---@class fittencode.chat.StateConversation.Header
+---@field title string
+---@field isTitleMessage boolean
+---@field codicon string
+
+---@class fittencode.chat.StateConversation
+---@field id string
+---@field reference table
+---@field header fittencode.chat.StateConversation.Header
+---@field content fittencode.chat.Conversation
+---@field timestamp string
+---@field isFavorited boolean
+---@field mode string
+
+---@class fittencode.chat.PersistenceState
+---@field type string
+---@field selectedConversationId string
+---@field conversations table<fittencode.chat.StateConversation>
+---@field hasFittenAIApiKey boolean
+---@field surfacePromptForFittenAIPlus boolean
+---@field serverURL string
+---@field showHistory boolean
+---@field fittenAIApiKey string
+---@field openUserCenter boolean
+---@field tracker fittencode.chat.Tracker
+---@field trackerOptions fittencode.chat.Tracker.Options
+
 ---@alias AIModel 'Fast' | 'Search'
 
 ---@class Message
@@ -105,7 +132,7 @@
 ---@field conversations table<fittencode.chat.Conversation>
 ---@field selected_conversation_id string
 ---@field tracker fittencode.chat.Tracker
----@field tracker_options fittencode.chat.TrackerOptions
+---@field tracker_options fittencode.chat.Tracker.Options
 
 ---@class fittencode.chat.Tracker
 ---@field ft_token string
@@ -123,16 +150,25 @@
 ---@field insert_with_completion_without_paste_cnt number
 ---@field insert_with_completion_cnt number
 
----@class fittencode.chat.TrackerOptions
+---@class fittencode.chat.Tracker.Options
 ---@field requestUrl string
----@field extra fittencode.chat.TrackerOptionsExtra
+---@field extra fittencode.chat.Tracker.Options.Extra
 
----@class fittencode.chat.TrackerOptionsExtra
+---@class fittencode.chat.Tracker.Options.Extra
 ---@field ft_token string
 ---@field tracker_type string
 ---@field tracker_event_type string
 
 ---@class fittencode.chat.CompletionStatistics
+---@field update_ft_token function
+---@field check_accept function
+---@field send_one_status function
+---@field update_completion_time function
+---@field send_status function
+---@field get_current_date function
+---@field completion_status_dict table
+---@field statistic_dict table
+---@field ft_token string
 
 ---@class fittencode.chat.ChatController
 ---@field chat_view fittencode.view.ChatView
