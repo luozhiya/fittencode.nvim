@@ -1,3 +1,6 @@
+local OPL = require('fittencode.opl')
+local Log = require('fittencode.log')
+
 local VM = {}
 
 function VM.run(env, template)
@@ -12,3 +15,5 @@ function VM.run(env, template)
     end
     return sample()
 end
+
+return VM

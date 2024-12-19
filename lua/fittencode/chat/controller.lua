@@ -1,5 +1,6 @@
 local Config = require('fittencode.config')
 local Log = require('fittencode.log')
+local Runtime = require('fittencode.chat.runtime')
 
 ---@class fittencode.chat.ChatController
 local ChatController = {}
@@ -59,9 +60,6 @@ function ChatController:hide_chat_view()
     self.chat_view:hide()
 end
 
-function ChatController:reload_chat_breaker()
-end
-
 function ChatController:receive_view_message(parsed_message)
     if not parsed_message then return end
     local msg_type = parsed_message.type
@@ -96,7 +94,6 @@ function ChatController:create_conversation(e, show, mode)
             updateChatPanel = updateChatPanel,
             diffEditorManager = diffEditorManager,
             initVariables = s,
-            logger = logger
         })
 
         if o.type == 'unavailable' then
@@ -126,3 +123,5 @@ end
 function ChatController:get_conversation_type(e)
     return self.conversation_types_provider:get_conversation_type(e)
 end
+
+return ChatController

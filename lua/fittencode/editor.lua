@@ -31,7 +31,7 @@ function Editor.get_selected_location_text()
     return name .. ' ' .. location.row .. ':' .. location.col
 end
 
-function Editor.get_selected_text_with_diagnostics()
+function Editor.get_selected_text_with_diagnostics(opts)
     -- 1. Get selected text with lsp diagnostic info
     -- 2. Format
 end

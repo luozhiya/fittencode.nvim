@@ -1,3 +1,7 @@
+local TemplateResolver = require('fittencode.chat.template_resolver')
+local ConversationType = require('fittencode.chat.conversation_type')
+local Editor = require('fittencode.editor')
+
 ---@class fittencode.chat.ConversationTypeProvider
 local ConversationTypesProvider = {}
 ConversationTypesProvider.__index = ConversationTypesProvider
@@ -92,10 +96,12 @@ function ConversationTypesProvider:load_extension_templates()
 end
 
 function ConversationTypesProvider:load_workspace_templates()
-    local e = TemplateResolver.load_from_directory(editor.get_workspace_path())
+    local e = TemplateResolver.load_from_directory(Editor.get_workspace_path())
     for _, r in ipairs(e) do
         if r and r.isEnabled then
             self.conversation_types[r.id] = ConversationType:new({ template = r, source = 'local-workspace' })
         end
     end
 end
+
+return ConversationTypesProvider

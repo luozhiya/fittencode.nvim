@@ -1,3 +1,7 @@
+local Config = require('fittencode.config')
+local editor = require('fittencode.editor')
+local Log = require('fittencode.log')
+
 local Runtime = {}
 
 local function get_comment_snippet()
@@ -84,3 +88,5 @@ function Runtime.resolve_variables(variables, tm)
     end
     return n
 end
+
+return Runtime

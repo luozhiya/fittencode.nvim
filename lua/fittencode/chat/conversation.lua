@@ -1,3 +1,11 @@
+local Editor = require('fittencode.editor')
+local Log = require('fittencode.log')
+local Fn = require('fittencode.fn')
+local Config = require('fittencode.config')
+local Client = require('fittencode.chat.client')
+local Runtime = require('fittencode.chat.runtime')
+local VM = require('fittencode.chat.vm')
+
 ---@class fittencode.chat.Conversation
 local Conversation = {}
 Conversation.__index = Conversation
@@ -45,11 +53,11 @@ end
 function Conversation:export_markdown()
     local md = self:get_markdown_export()
     if md then
-        local e = View.open_text_document({
+        local e = Editor.open_text_document({
             language = 'markdown',
             content = md
         })
-        View.show_text_document(e)
+        Editor.show_text_document(e)
     end
 end
 
@@ -175,3 +183,5 @@ end
 function Conversation:is_busying()
     return self.request_handle and self.request_handle.is_active()
 end
+
+return Conversation

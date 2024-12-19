@@ -1,3 +1,5 @@
+local Fn = require('fittencode.fn')
+
 ---@class fittencode.chat.TemplateResolver
 local TemplateResolver = {}
 
@@ -125,3 +127,5 @@ function TemplateResolver.load_from_directory(dir)
     end
     return templates
 end
+
+return TemplateResolver
