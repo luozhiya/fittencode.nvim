@@ -119,7 +119,6 @@ for level, name in pairs(names) do
     M['notify_' .. name:lower()] = function(...) notify(levels[name], ...) end
 end
 
--- remove log_path
 if vim.fn.filereadable(log_path) then
     vim.fn.delete(log_path)
 end

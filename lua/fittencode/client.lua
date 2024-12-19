@@ -4,7 +4,7 @@ local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
 local Translate = require('fittencode.translate')
 
-local curl = require('fittencode.curl')
+local HTTP = require('fittencode.http')
 
 local ide = 'neovim'
 local version = '0.2.0'
@@ -143,7 +143,7 @@ local function login(username, password, on_success, on_error)
     Log.debug('login with username: {}', username)
 
     Promise:new(function(resolve, reject)
-        curl.post(server_url() .. preset_urls.login, {
+        HTTP.post(server_url() .. preset_urls.login, {
             headers = {
                 ['Content-Type'] = 'application/json',
             },
@@ -165,7 +165,7 @@ local function login(username, password, on_success, on_error)
         })
     end):forward(function(token)
         return Promise:new(function(resolve, reject)
-            curl.get(server_url() .. preset_urls.get_ft_token, {
+            HTTP.get(server_url() .. preset_urls.get_ft_token, {
                 headers = {
                     ['Authorization'] = 'Bearer ' .. token,
                 },
@@ -360,7 +360,7 @@ local function login3rd(source, on_success, on_error)
             end
             local check_url = server_url() .. preset_urls.fb_check_login .. '?client_token=' .. client_token
             Promise:new(function(resolve, reject)
-                curl.get(check_url, {
+                HTTP.get(check_url, {
                     on_error = vim.schedule_wrap(function() reject() end),
                     on_once = vim.schedule_wrap(function(fico_res)
                         local _, fico_data = pcall(vim.fn.json_decode, fico_res)
@@ -385,13 +385,13 @@ local function login3rd(source, on_success, on_error)
 
                 local type = fico_data.create and 'register_fb' or 'login_fb';
                 local click_count_url = server_url() .. preset_urls.click_count .. '?apikey==' .. fico_data.token .. '&type=' .. type
-                curl.get(click_count_url, {
+                HTTP.get(click_count_url, {
                     headers = {
                         ['Content-Type'] = 'application/json',
                     },
                 })
                 if fico_data.create then
-                    curl.get(preset_urls.register_cvt)
+                    HTTP.get(preset_urls.register_cvt)
                 end
             end)
         end
@@ -448,7 +448,7 @@ local function request(method, url, headers, body, on_create, on_once, on_stream
                 Fn.schedule_call(on_exit)
             end),
         }
-        curl[method](url, opts)
+        HTTP[method](url, opts)
         return {
             cancel = function()
                 if not canceled then
