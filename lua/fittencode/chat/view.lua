@@ -24,7 +24,6 @@ local Fn = require('fittencode.fn')
 ---@field buffer fittencode.view.ChatBuffer
 ---@field buffer_initialized boolean
 ---@field event fittencode.view.ChatEvent
----@field current_conversation string|nil
 ---@field create_conversation function
 ---@field delete_conversation function
 ---@field show_conversation function
@@ -34,6 +33,21 @@ local Fn = require('fittencode.fn')
 ---@field enable_user_input function
 ---@field update function
 ---@field is_visible boolean
+---@field model fittencode.chat.ChatModel?
+
+local welcome_message = [[
+
+欢迎使用 Fitten Code - CHAT
+
+打开您正在编写的代码文件，输入任意代码即可使用自动补全功能。
+
+按下 TAB 接受所有补全建议。
+按下 Ctrl+⬇️ 接受一行补全建议。
+按下 Ctrl+➡️ 接受一个单词的补全建议。
+
+Fitten Code 现支持本地私有化，代码不上云，网络无延迟，功能更丰富！
+
+]]
 
 ---@class fittencode.view.ChatView
 local ChatView = {
@@ -56,16 +70,20 @@ local ChatView = {
     event = {
         on_input = nil,
     },
-    current_conversation = nil,
+    model = nil,
 }
+ChatView.__index = ChatView
 
-function ChatView:new(model)
+function ChatView:new(opts)
     local obj = {
-        model = model,
+        model = opts.model,
     }
     setmetatable(obj, ChatView)
-    obj:_create_buffer()
     return obj
+end
+
+function ChatView:init()
+    self:_create_buffer()
 end
 
 function ChatView:_create_buffer()
@@ -73,11 +91,19 @@ function ChatView:_create_buffer()
     self.buffer.user_input = vim.api.nvim_create_buf(false, true)
     self.buffer.reference = vim.api.nvim_create_buf(false, true)
 
+    vim.api.nvim_buf_set_lines(self.buffer.welcome, 0, -1, false, { welcome_message })
+
     vim.api.nvim_create_autocmd('fittencode.UserInputReady', {
         buffer = self.buffer.user_input,
         callback = function()
             local input_text = vim.api.nvim_buf_get_lines(self.buffer.user_input, 0, -1, false)[1]
-            Fn.schedule_call(self.event.on_input, input_text)
+            self:send_message({
+                type = 'send_message',
+                data = {
+                    id = '',
+                    message = input_text
+                }
+            })
         end
     })
 
@@ -150,6 +176,27 @@ function ChatView:_destroy_buffer()
     end
 end
 
+function ChatView:selected_conversation_id()
+    return self.model.selected_conversation_id
+end
+
+function ChatView:update()
+    assert(self.model)
+    assert(self.buffer_initialized)
+    local selected_conversation_id = self:selected_conversation_id()
+    if not selected_conversation_id then
+        return
+    end
+    if not self.buffer.conversations[selected_conversation_id] then
+        self:create_conversation(selected_conversation_id)
+    end
+    if self.model:is_empty(selected_conversation_id) then
+        self:show_welcome()
+    else
+        self:show_conversation(selected_conversation_id)
+    end
+end
+
 function ChatView:show(opts)
     assert(self.buffer_initialized)
     if self.last_win_mode and self.last_win_mode ~= opts.mode then
@@ -162,10 +209,14 @@ function ChatView:hide()
     self:_destroy_win()
 end
 
-function ChatView:register_event_handlers(handlers)
-    if type(handlers) == 'table' then
-        self.event.on_input = handlers.on_input
+function ChatView:send_message(msg)
+    if type(msg) == 'table' then
+        Fn.schedule_call(self.receive_view_message, msg)
     end
+end
+
+function ChatView:register_message_receiver(receive_view_message)
+    self.receive_view_message = receive_view_message
 end
 
 function ChatView:destroy()
@@ -205,7 +256,6 @@ function ChatView:show_conversation(id)
     if not self.buffer.conversations[id] then
         return
     end
-    self.current_conversation = id
     vim.api.nvim_win_set_buf(self.win.messages_exchange, self:_buffer(id))
 end
 

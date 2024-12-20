@@ -1,4 +1,4 @@
-local ChatController = require('fittencode.chat.chat_controller')
+local ChatController = require('fittencode.chat.controller')
 local ChatModel = require('fittencode.chat.model')
 local ConversationTypesProvider = require('fittencode.chat.conversation_types_provider')
 local Fn = require('fittencode.chat.fn')
@@ -11,7 +11,10 @@ local chat_controller = nil
 -- Active
 local function active()
     local chat_model = ChatModel:new()
-    local chat_view = View:new(chat_model)
+    local chat_view = View:new({
+        model = chat_model,
+    })
+    chat_view:init()
     local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('chat.lua', '')
     local extension_uri = current_dir:gsub('/lua$', '') .. '/../../'
     local conversation_types_provider = ConversationTypesProvider:new({ extension_uri = extension_uri })
@@ -28,7 +31,9 @@ local function active()
         conversation_types_provider = conversation_types_provider,
         basic_chat_template_id = basic_chat_template_id
     })
-    chat_view:register_message_receiver(chat_controller.receive_view_message)
+    chat_view:register_message_receiver(function(message)
+        chat_controller:receive_view_message(message)
+    end)
     chat_view:update()
 end
 

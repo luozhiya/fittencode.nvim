@@ -26,17 +26,17 @@ function Conversation:set_is_favorited()
 end
 
 function Conversation:get_title()
-    local e = self.template.header
-    local r = self.messages[1] and self.messages[1].content or nil
-    if e.useFirstMessageAsTitle == true and r ~= nil then
-        return r
+    local header = self.template.header
+    local message = self.messages[1] and self.messages[1].content or nil
+    if header.useFirstMessageAsTitle == true and message ~= nil then
+        return message
     else
-        local ok, result = pcall(function() return self:evaluate_template(e.title) end)
+        local ok, result = pcall(function() return self:evaluate_template(header.title) end)
         if ok then
             return result
         end
     end
-    return e.title
+    return header.title
 end
 
 function Conversation:is_title_message()
