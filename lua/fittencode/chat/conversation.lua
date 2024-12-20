@@ -184,4 +184,8 @@ function Conversation:is_busying()
     return self.request_handle and self.request_handle.is_active()
 end
 
+function Conversation:is_empty()
+    return #self.messages == 0
+end
+
 return Conversation

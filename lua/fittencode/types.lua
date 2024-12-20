@@ -133,6 +133,7 @@
 ---@field selected_conversation_id string
 ---@field tracker fittencode.chat.Tracker
 ---@field tracker_options fittencode.chat.Tracker.Options
+---@field fcps boolean
 
 ---@class fittencode.chat.Tracker
 ---@field ft_token string

@@ -59,4 +59,10 @@ function ChatModel:change_favorited(e)
     end
 end
 
+function ChatModel:is_empty(id)
+    local conversation = self:get_conversation_by_id(id)
+    if not conversation then return true end
+    return conversation:is_empty()
+end
+
 return ChatModel
