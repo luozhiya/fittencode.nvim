@@ -41,17 +41,17 @@ end
 ---@return fittencode.chat.Conversation
 function ChatController:add_and_show_conversation(conversation, show)
     self.chat_model:add_and_select_conversation(conversation)
-    local is_visible = self.chat_view.is_visible
-    if not is_visible then
+    if show then
+        self:show_chat_view()
+    else
+        self:update_chat_view()
     end
-    if show then self:show_chat_view() end
-    self:update_chat_view()
     return conversation
 end
 
 ---@return boolean
 function ChatController:is_chat_view_visible()
-    return self.chat_view.is_visible
+    return self.chat_view.is_visible()
 end
 
 function ChatController:show_chat_view()
@@ -70,8 +70,6 @@ function ChatController:receive_view_message(msg)
     local ty = msg.type
     if ty == 'ping' then
         self:update_chat_view()
-    elseif ty == 'enter_fitten_ai_api_key' then
-    elseif ty == 'click_collapsed_conversation' then
     elseif ty == 'send_message' then
         local conversation = self.chat_model:get_conversation_by_id(msg.data.id)
         if conversation then

@@ -102,25 +102,6 @@ local function load_last_session()
     end
 end
 
-local code_state_store = vim.fn.stdpath('data') .. '/fittencode' .. '/fitten_code_state.json'
-
----@return string?
-local function load_code_state()
-    local _, content = pcall(vim.fn.readfile, code_state_store)
-    if not _ then
-        return
-    end
-    local _, code_state = pcall(vim.fn.json_decode, content)
-    if _ and code_state then
-        return code_state
-    end
-end
-
-local function save_code_state(state)
-    local content = vim.fn.json_encode(state)
-    vim.fn.writefile({ content }, code_state_store)
-end
-
 local function register()
     vim.ui.open(preset_urls.register .. '/?' .. get_platform_info_as_url_params())
 end
