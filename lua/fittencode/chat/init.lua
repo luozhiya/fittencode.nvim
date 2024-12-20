@@ -1,4 +1,9 @@
+local ChatController = require('fittencode.chat.chat_controller')
 local ChatModel = require('fittencode.chat.model')
+local ConversationTypesProvider = require('fittencode.chat.conversation_types_provider')
+local Fn = require('fittencode.chat.fn')
+local Log = require('fittencode.chat.log')
+local View = require('fittencode.chat.view')
 
 ---@type fittencode.chat.ChatController
 local chat_controller = nil
@@ -6,7 +11,7 @@ local chat_controller = nil
 -- Active
 local function active()
     local chat_model = ChatModel:new()
-    local chat_view = View.ChatView:new(chat_model)
+    local chat_view = View:new(chat_model)
     local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('chat.lua', '')
     local extension_uri = current_dir:gsub('/lua$', '') .. '/../../'
     local conversation_types_provider = ConversationTypesProvider:new({ extension_uri = extension_uri })
@@ -23,8 +28,6 @@ local function active()
         conversation_types_provider = conversation_types_provider,
         basic_chat_template_id = basic_chat_template_id
     })
-    local conversations = PersistenceStateManager.convert_to_conversations(PersistenceStateManager.load(), conversation_type.template, chat_controller.update_chat_view)
-    vim.list_extend(chat_model.conversations, conversations)
     chat_view:register_message_receiver(chat_controller.receive_view_message)
     chat_view:update()
 end

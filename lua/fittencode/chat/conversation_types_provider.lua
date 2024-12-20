@@ -6,26 +6,31 @@ local Editor = require('fittencode.editor')
 local ConversationTypesProvider = {}
 ConversationTypesProvider.__index = ConversationTypesProvider
 
-function ConversationTypesProvider:new(params)
-    local instance = {
+---@return fittencode.chat.ConversationTypeProvider
+function ConversationTypesProvider:new(opts)
+    local obj = {
         extension_templates = {},
         conversation_types = {},
-        extension_uri = params.extensionUri
+        extension_uri = opts.extensionUri
     }
-    setmetatable(instance, ConversationTypesProvider)
-    return instance
+    setmetatable(obj, ConversationTypesProvider)
+    return obj
 end
 
-function ConversationTypesProvider:get_conversation_type(e)
-    return self.conversation_types[e]
+---@param id string
+---@return fittencode.chat.ConversationType
+function ConversationTypesProvider:get_conversation_type(id)
+    return self.conversation_types[id]
 end
 
+---@return table<string, fittencode.chat.ConversationType>
 function ConversationTypesProvider:get_conversation_types()
     return self.conversation_types
 end
 
-function ConversationTypesProvider:register_extension_template(params)
-    table.insert(self.extension_templates, params.template)
+---@param opts table
+function ConversationTypesProvider:register_extension_template(opts)
+    table.insert(self.extension_templates, opts.template)
 end
 
 function ConversationTypesProvider:load_conversation_types()
@@ -36,8 +41,7 @@ function ConversationTypesProvider:load_conversation_types()
 end
 
 function ConversationTypesProvider:load_builtin_templates()
-    local e = {}
-    local t = {
+    local list = {
         chat = {
             'chat-en.rdt.md',
             'chat-zh-cn.rdt.md'
@@ -68,18 +72,21 @@ function ConversationTypesProvider:load_builtin_templates()
             'title-chat-zh-cn.rdt.md',
         }
     }
-    for _, r in ipairs(t) do
-        for _, n in ipairs(r) do
-            e[n] = self:load_builtin_template(r, n)
+    for k, v in pairs(list) do
+        for _, file in ipairs(v) do
+            local ct = self:load_builtin_template(k, file)
+            if ct then
+                self.conversation_types[ct.template.id] = ct
+            end
         end
-    end
-    for _, r in ipairs(e) do
-        self.conversation_types[r.id] = r
     end
 end
 
-function ConversationTypesProvider:load_builtin_template(type, filename)
-    local r = self.extension_uri .. 'template' .. '/' .. type .. '/' .. filename
+---@param type string
+---@param file string
+---@return fittencode.chat.ConversationType?
+function ConversationTypesProvider:load_builtin_template(type, file)
+    local r = self.extension_uri .. 'template' .. '/' .. type .. '/' .. file
     local t = TemplateResolver.load_from_file(r)
     if t then
         return ConversationType:new({ template = t, source = 'built-in' })
@@ -90,7 +97,7 @@ function ConversationTypesProvider:load_extension_templates()
     for _, e in ipairs(self.extension_templates) do
         local t = TemplateResolver.load_from_file(e)
         if t then
-            return ConversationType:new({ template = t, source = 'extension' })
+            self.conversation_types[t.id] = ConversationType:new({ template = t, source = 'extension' })
         end
     end
 end

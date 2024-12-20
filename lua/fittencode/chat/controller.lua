@@ -6,17 +6,17 @@ local Runtime = require('fittencode.chat.runtime')
 local ChatController = {}
 ChatController.__index = ChatController
 
-function ChatController:new(params)
+---@return fittencode.chat.ChatController
+function ChatController:new(opts)
     local obj = setmetatable({}, ChatController)
-    obj.chat_view = params.chat_view
-    obj.chat_model = params.chat_model
-    obj.ai = params.ai
-    obj.diff_editor_manager = params.diff_editor_manager
-    obj.basic_chat_template_id = params.basic_chat_template_id
-    obj.conversation_types_provider = params.conversation_types_provider
+    obj.chat_view = opts.chat_view
+    obj.chat_model = opts.chat_model
+    obj.basic_chat_template_id = opts.basic_chat_template_id
+    obj.conversation_types_provider = opts.conversation_types_provider
     return obj
 end
 
+---@return string
 function ChatController:generate_conversation_id()
     local function random(length)
         local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -36,16 +36,20 @@ function ChatController:update_chat_view()
     self.chat_view:update()
 end
 
+---@param conversation fittencode.chat.Conversation
+---@param show boolean
+---@return fittencode.chat.Conversation
 function ChatController:add_and_show_conversation(conversation, show)
     self.chat_model:add_and_select_conversation(conversation)
     local is_visible = self.chat_view.is_visible
-    if show then self:show_chat_view() end
     if not is_visible then
     end
+    if show then self:show_chat_view() end
     self:update_chat_view()
     return conversation
 end
 
+---@return boolean
 function ChatController:is_chat_view_visible()
     return self.chat_view.is_visible
 end
@@ -60,68 +64,66 @@ function ChatController:hide_chat_view()
     self.chat_view:hide()
 end
 
-function ChatController:receive_view_message(parsed_message)
-    if not parsed_message then return end
-    local msg_type = parsed_message.type
-    if msg_type == 'ping' then
+---@param msg table
+function ChatController:receive_view_message(msg)
+    if not msg then return end
+    local ty = msg.type
+    if ty == 'ping' then
         self:update_chat_view()
-    elseif msg_type == 'enter_fitten_ai_api_key' then
-    elseif msg_type == 'click_collapsed_conversation' then
-    elseif msg_type == 'send_message' then
-        local conversation = self.chat_model:get_conversation_by_id(parsed_message.data.id)
+    elseif ty == 'enter_fitten_ai_api_key' then
+    elseif ty == 'click_collapsed_conversation' then
+    elseif ty == 'send_message' then
+        local conversation = self.chat_model:get_conversation_by_id(msg.data.id)
         if conversation then
-            conversation:answer(parsed_message.data.message)
+            conversation:answer(msg.data.message)
         end
-    elseif msg_type == 'start_chat' then
+    elseif ty == 'start_chat' then
         self:create_conversation(self.basic_chat_template_id)
     else
-        Log.error('Unsupported type: ' .. msg_type)
+        Log.error('Unsupported type: ' .. ty)
     end
 end
 
-function ChatController:create_conversation(e, show, mode)
-    r = r or true
-    n = n or 'chat'
+---@param template_id string
+---@param show boolean
+---@param mode string
+function ChatController:create_conversation(template_id, show, mode)
+    show = show or true
+    mode = mode or 'chat'
 
-    local success, result = pcall(function()
-        local i = self:get_conversation_type(e)
-        if not i then Log.error('No conversation type found for ' .. e) end
+    local conv_ty = self:get_conversation_type(template_id)
+    if not conv_ty then Log.error('No conversation type found for {}', template_id) end
 
-        local s = Runtime.resolve_variables(i.variables, { time = 'conversation-start' })
-        local o = i:create_conversation({
-            conversationId = generateConversationId(),
-            ai = ai,
-            updateChatPanel = updateChatPanel,
-            diffEditorManager = diffEditorManager,
-            initVariables = s,
-        })
+    local variables = Runtime.resolve_variables(conv_ty.variables, { time = 'conversation-start' })
+    local conv = conv_ty:create_conversation({
+        conversation_id = self:generate_conversation_id(),
+        init_variables = variables,
+        update_chat_view = function() self:update_chat_view() end,
+    })
 
-        if o.type == 'unavailable' then
-            if o.display == 'info' then
-                ls.window.showInformationMessage(o.message)
-            elseif o.display == 'error' then
-                ls.window.showErrorMessage(o.message)
-            else
-                ls.window.showErrorMessage('Required input unavailable')
-            end
-            return
+    if conv.type == 'unavailable' then
+        if conv.display == 'info' then
+            Log.notify_info(conv.message)
+        elseif conv.display == 'error' then
+            Log.notify_error(conv.message)
+        else
+            Log.notify_error('Required input unavailable')
         end
+        return
+    end
 
-        o.conversation.mode = n
-        self:add_and_show_conversation(o.conversation, r)
+    conv.conversation.mode = mode
+    self:add_and_show_conversation(conv.conversation, show)
 
-        if o.shouldImmediatelyAnswer then
-            o.conversation.answer()
-        end
-    end)
-
-    if not success then
-        print(result)
+    if conv.should_immediately_answer then
+        conv.conversation.answer()
     end
 end
 
-function ChatController:get_conversation_type(e)
-    return self.conversation_types_provider:get_conversation_type(e)
+---@param template_id string
+---@return fittencode.chat.ConversationType
+function ChatController:get_conversation_type(template_id)
+    return self.conversation_types_provider:get_conversation_type(template_id)
 end
 
 return ChatController
