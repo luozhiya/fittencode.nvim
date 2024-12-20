@@ -43,7 +43,9 @@ local translations = {
     ['No Git repository found.'] = '没有找到 Git 仓库。',
     ['No modification information found in the temporary.'] = '没有发现暂存中的修改。',
     ['Enable completions for files with the extensions of {}'] = '启用对 .{} 文件的自动补全',
-    ['Disable completions for files with the extensions of {}'] = '关闭对 .{} 文件的自动补全'
+    ['Disable completions for files with the extensions of {}'] = '关闭对 .{} 文件的自动补全',
+    ['Username/Email/Phone(+CountryCode): '] = '用户名/邮箱/电话号码(+国家编码)：',
+    ['Password: '] = '密码：',
 }
 
 local function translate(key, ...)

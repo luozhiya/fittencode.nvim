@@ -1,14 +1,15 @@
 local Client = require('fittencode.client')
 local Chat = require('fittencode.chat')
 local Log = require('fittencode.log')
+local Translate = require('fittencode.translate')
 
 local commands = {
     -- Account
     register = { execute = function() Client.register() end },
     login = {
         execute = function()
-            local username = vim.fn.input('Username/Email/Phone(+CountryCode): ')
-            local password = vim.fn.inputsecret('Password: ')
+            local username = vim.fn.input(Translate('Username/Email/Phone(+CountryCode): '))
+            local password = vim.fn.inputsecret(Translate('Password: '))
             Client.login(username, password)
         end
     },

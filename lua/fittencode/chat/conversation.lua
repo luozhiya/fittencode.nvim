@@ -10,12 +10,14 @@ local VM = require('fittencode.chat.vm')
 local Conversation = {}
 Conversation.__index = Conversation
 
-function Conversation:new(params)
-    local instance = {
-        update_chat_view = params.update_chat_view,
+---@param opts table
+---@return fittencode.chat.Conversation
+function Conversation:new(opts)
+    local obj = {
+        update_chat_view = opts.update_chat_view,
     }
-    setmetatable(instance, Conversation)
-    return instance
+    setmetatable(obj, Conversation)
+    return obj
 end
 
 function Conversation:get_select_text()
@@ -25,6 +27,7 @@ function Conversation:set_is_favorited()
     self.is_favorited = not self.is_favorited
 end
 
+---@return string
 function Conversation:get_title()
     local header = self.template.header
     local message = self.messages[1] and self.messages[1].content or nil
@@ -39,10 +42,12 @@ function Conversation:get_title()
     return header.title
 end
 
+---@return boolean
 function Conversation:is_title_message()
     return self.template.header.useFirstMessageAsTitle == true and self.messages[1] ~= nil
 end
 
+---@return string
 function Conversation:get_codicon()
     return self.template.header.icon.value
 end
@@ -61,6 +66,7 @@ function Conversation:export_markdown()
     end
 end
 
+---@return string
 function Conversation:get_markdown_export()
     local markdown = {}
     for _, message in ipairs(self.messages) do
@@ -76,6 +82,7 @@ function Conversation:get_markdown_export()
     return table.concat(markdown, '\n\n')
 end
 
+---@return table
 function Conversation:resolve_variables_at_message_time()
     return Runtime.resolve_variables(self.template.variables, {
         time = 'message',
@@ -83,6 +90,9 @@ function Conversation:resolve_variables_at_message_time()
     })
 end
 
+---@param template string
+---@param variables table?
+---@return string?
 function Conversation:evaluate_template(template, variables)
     if variables == nil then
         variables = self:resolve_variables_at_message_time()
@@ -109,6 +119,8 @@ function Conversation:answer(content)
     })
 end
 
+---@param content string
+---@param bot_action string?
 function Conversation:add_user_message(content, bot_action)
     self.messages[#self.messages + 1] = {
         author = 'user',
@@ -120,6 +132,7 @@ function Conversation:add_user_message(content, bot_action)
     }
 end
 
+---@param opts table
 function Conversation:execute_chat(opts)
     if Config.fitten.version == 'default' then
         opts.workspace = false
@@ -172,6 +185,7 @@ function Conversation:handle_partial_completion(content)
     end
 end
 
+---@param content string
 function Conversation:update_partial_bot_message(content)
     self.state = {
         type = 'bot_answer_streaming',
@@ -180,10 +194,12 @@ function Conversation:update_partial_bot_message(content)
     self.update_chat_view()
 end
 
+---@return boolean
 function Conversation:is_busying()
-    return self.request_handle and self.request_handle.is_active()
+    return self.request_handle and self.request_handle.is_active() or false
 end
 
+---@return boolean
 function Conversation:is_empty()
     return #self.messages == 0
 end
