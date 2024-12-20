@@ -200,17 +200,17 @@ end
 function ChatView:update()
     assert(self.model)
     assert(self.buffer_initialized)
-    local selected_conversation_id = self:selected_conversation_id()
-    if not selected_conversation_id then
+    local id = self:selected_conversation_id()
+    if not id then
         return
     end
-    if not self.buffer.conversations[selected_conversation_id] then
-        self:create_conversation(selected_conversation_id)
+    if not self.buffer.conversations[id] then
+        self:create_conversation(id)
     end
-    if self.model:is_empty(selected_conversation_id) then
+    if self.model:is_empty(id) then
         self:show_welcome()
     else
-        self:show_conversation(selected_conversation_id)
+        self:show_conversation(id)
     end
 end
 
