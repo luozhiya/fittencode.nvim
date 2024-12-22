@@ -23,7 +23,7 @@ function ConversationType:create_conversation(opts)
         conversation = Conversation:new({
             id = opts.conversation_id,
             init_variables = opts.init_variables,
-            update_chat_view = opts.update_chat_view,
+            update_view = opts.update_view,
         }),
         should_immediately_answer = self.template.initialMessage ~= nil
     }

@@ -2,14 +2,16 @@
 local ChatModel = {}
 ChatModel.__index = ChatModel
 
+---@return fittencode.chat.ChatModel
 function ChatModel:new()
-    local instance = {
+    local obj = {
         conversations = {}
     }
-    setmetatable(instance, ChatModel)
-    return instance
+    setmetatable(obj, ChatModel)
+    return obj
 end
 
+---@param e fittencode.chat.Conversation
 function ChatModel:add_and_select_conversation(e)
     if #self.conversations > 0 then
         local r = self.conversations[#self.conversations]
@@ -24,18 +26,21 @@ function ChatModel:add_and_select_conversation(e)
     self.selected_conversation_id = e.id
 end
 
-function ChatModel:get_conversation_by_id(e)
+---@param id string
+---@return fittencode.chat.Conversation?
+function ChatModel:get_conversation_by_id(id)
     for _, r in ipairs(self.conversations) do
-        if r.id == e then
+        if r.id == id then
             return r
         end
     end
     return nil
 end
 
-function ChatModel:delete_conversation(e)
+---@param id string
+function ChatModel:delete_conversation(id)
     for i = #self.conversations, 1, -1 do
-        if self.conversations[i].id == e then
+        if self.conversations[i].id == id then
             table.remove(self.conversations, i)
         end
     end
@@ -50,19 +55,28 @@ function ChatModel:delete_all_conversations()
     self.selected_conversation_id = ''
 end
 
-function ChatModel:change_favorited(e)
+---@param id string
+function ChatModel:change_favorited(id)
     for _, n in ipairs(self.conversations) do
-        if n.id == e then
+        if n.id == id then
             n:set_is_favorited()
             break
         end
     end
 end
 
+---@param id string
+---@return boolean
 function ChatModel:is_empty(id)
     local conversation = self:get_conversation_by_id(id)
     if not conversation then return true end
     return conversation:is_empty()
+end
+
+function ChatModel:user_can_reply(id)
+    local conversation = self:get_conversation_by_id(id)
+    if not conversation then return false end
+    return conversation:user_can_reply()
 end
 
 return ChatModel

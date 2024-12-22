@@ -1,41 +1,8 @@
 local Fn = require('fittencode.fn')
+local Client = require('fittencode.client')
 
----@class fittencode.view.ChatWindow
----@field messages_exchange number|nil
----@field user_input number|nil
----@field reference number|nil
-
----@class fittencode.view.ChatConversation
----@field id string
----@field buffer number
----@field show_welcome boolean|nil
-
----@class fittencode.view.ChatBuffer
----@field conversations table<string, fittencode.view.ChatConversation>|nil
----@field user_input number|nil
----@field reference number|nil
-
----@class fittencode.view.ChatEvent
----@field on_input function|nil
-
----@class fittencode.view.ChatView
----@field win fittencode.view.ChatWindow
----@field last_win_mode string|nil
----@field buffer fittencode.view.ChatBuffer
----@field buffer_initialized boolean
----@field event fittencode.view.ChatEvent
----@field create_conversation function
----@field delete_conversation function
----@field show_conversation function
----@field append_message function
----@field set_messages function
----@field clear_messages function
----@field enable_user_input function
----@field update function
----@field is_visible boolean
----@field model fittencode.chat.ChatModel?
-
-local welcome_message = [[
+local welcome_message = {
+    ['zh-cn'] = [[
 
 欢迎使用 Fitten Code - CHAT
 
@@ -47,18 +14,32 @@ local welcome_message = [[
 
 Fitten Code 现支持本地私有化，代码不上云，网络无延迟，功能更丰富！
 
-]]
+]],
+    ['en'] = [[
 
----@class fittencode.view.ChatView
+Welcome to Fitten Code - CHAT
+
+Open the code file you are working on, and type any code to use the autocomplete feature.
+Press TAB to accept all completion suggestions.
+Press Ctrl+⬇️ to accept one line of completion suggestion.
+Press Ctrl+➡️ to accept one word of completion suggestion.
+
+Experience the high-efficiency code auto-completion now!
+
+]]
+}
+setmetatable(welcome_message, { __index = function() return welcome_message['en'] end })
+
+---@class fittencode.chat.view.ChatView
 local ChatView = {
-    ---@class fittencode.view.ChatWindow
+    ---@class fittencode.chat.view.ChatWindow
     win = {
         messages_exchange = nil,
         user_input = nil,
         reference = nil,
     },
     last_win_mode = nil,
-    ---@class fittencode.view.ChatBuffer
+    ---@class fittencode.chat.view.ChatBuffer
     buffer = {
         conversations = {},
         welcome = nil,
@@ -66,33 +47,28 @@ local ChatView = {
         reference = nil,
     },
     buffer_initialized = false,
-    ---@class fittencode.view.ChatEvent
+    ---@class fittencode.chat.view.ChatEvent
     event = {
         on_input = nil,
     },
-    model = nil,
 }
 ChatView.__index = ChatView
 
+---@return fittencode.chat.view.ChatView
 function ChatView:new(opts)
     local obj = {
-        model = opts.model,
     }
     setmetatable(obj, ChatView)
     return obj
 end
 
 function ChatView:init()
-    self:_create_buffer()
-end
-
-function ChatView:_create_buffer()
     self.buffer.welcome = vim.api.nvim_create_buf(false, true)
     self.buffer.user_input = vim.api.nvim_create_buf(false, true)
     self.buffer.reference = vim.api.nvim_create_buf(false, true)
 
     vim.api.nvim_buf_call(self.buffer.welcome, function()
-        vim.api.nvim_buf_set_lines(self.buffer.welcome, 0, -1, false, { welcome_message })
+        vim.api.nvim_buf_set_lines(self.buffer.welcome, 0, -1, false, { welcome_message[Fn.display_preference()] })
         vim.api.nvim_set_option_value('modifiable', false, { buf = self.buffer.welcome })
         vim.api.nvim_set_option_value('readonly', true, { buf = self.buffer.welcome })
     end)
@@ -116,7 +92,7 @@ function ChatView:_create_buffer()
                 self:send_message({
                     type = 'send_message',
                     data = {
-                        id = '',
+                        id = self:selected_conversation_id(),
                         message = input_text
                     }
                 })
@@ -193,25 +169,73 @@ function ChatView:_destroy_buffer()
     end
 end
 
-function ChatView:selected_conversation_id()
-    return self.model.selected_conversation_id
-end
-
-function ChatView:update()
-    assert(self.model)
+function ChatView:update(state)
     assert(self.buffer_initialized)
-    local id = self:selected_conversation_id()
+    local id = state.selectedConversationId
     if not id then
+        self:send_message({
+            type = 'start_chat'
+        })
         return
     end
     if not self.buffer.conversations[id] then
         self:create_conversation(id)
     end
-    if self.model:is_empty(id) then
+    local conv = state.conversations[id]
+    assert(conv)
+
+    if conv:is_empty() then
         self:show_welcome()
+        self:enable_user_input(true)
     else
+        self:render_conversation(conv, id)
         self:show_conversation(id)
+        self:enable_user_input(conv:user_can_reply(id))
     end
+    self:render_reference(conv)
+end
+
+function ChatView:render_reference(conv)
+    if not vim.api.nvim_buf_is_valid(self.buffer.reference) then
+        return
+    end
+    local range = conv.reference.selectRange
+    local title = string.format('%s %d:%d', range.filename, range.start_row, range.end_row)
+end
+
+function ChatView:render_conversation(conv, id)
+    if not self.buffer.conversations[id] then
+        return
+    end
+    local buf = self:_buffer(id)
+    local user = Client.get_user_id()
+    local bot = 'Fitten Code'
+
+    local content = conv.content
+    local lines = {}
+
+    local messages = content.messages
+    for i, message in ipairs(messages) do
+        local text = message.text
+        local author = message.author
+
+        if author == 'user' then
+            lines[#lines + 1] = string.format('# %s', user)
+            lines[#lines + 1] = text
+        elseif author == 'bot' then
+            lines[#lines + 1] = string.format('# %s', bot)
+            lines[#lines + 1] = text
+        end
+    end
+
+    if content.state == 'bot_answer_streaming' then
+        lines[#lines + 1] = string.format('# %s', bot)
+        lines[#lines + 1] = content.partial_answer
+    end
+
+    vim.api.nvim_buf_call(self:_buffer(id), function()
+        vim.api.nvim_buf_set_lines(self:_buffer(id), 0, -1, false, lines)
+    end)
 end
 
 function ChatView:show(opts)
@@ -241,49 +265,20 @@ function ChatView:destroy()
     self:_destroy_buffer()
 end
 
-function ChatView:append_message(id, text)
-    if not self:_buffer(id) or not vim.api.nvim_buf_is_valid(self:_buffer(id)) then
-        return
-    end
-    vim.api.nvim_buf_call(self:_buffer(id), function()
-        -- append text to buffer
-    end)
-end
-
-function ChatView:set_messages(id, text)
-    if not self:_buffer(id) or not vim.api.nvim_buf_is_valid(self:_buffer(id)) then
-        return
-    end
-    vim.api.nvim_buf_call(self:_buffer(id), function()
-        vim.api.nvim_buf_set_lines(self:_buffer(id), 0, -1, false, { text })
-    end)
-end
-
-function ChatView:clear_messages(id)
-    vim.api.nvim_buf_call(self:_buffer(id), function()
-        vim.api.nvim_buf_set_lines(self:_buffer(id), 0, -1, false, {})
-    end)
-end
-
 function ChatView:enable_user_input(enable)
     vim.api.nvim_buf_call(self.buffer.user_input, function()
         vim.api.nvim_set_option_value('modifiable', enable, { buf = self.buffer.user_input })
     end)
 end
 
-function ChatView:is_empty_buffer(id)
-    if not self.buffer.conversations[id] then
-        return true
-    end
-    local lines = vim.api.nvim_buf_get_lines(self:_buffer(id), 0, -1, false)
-    return #lines == 0
-end
-
 function ChatView:show_conversation(id)
     if not self.buffer.conversations[id] then
         return
     end
-    vim.api.nvim_win_set_buf(self.win.messages_exchange, self:_buffer(id))
+    local current = vim.api.nvim_win_get_buf(self.win.messages_exchange)
+    if current ~= self:_buffer(id) then
+        vim.api.nvim_win_set_buf(self.win.messages_exchange, self:_buffer(id))
+    end
 end
 
 function ChatView:show_welcome()
@@ -314,6 +309,10 @@ end
 
 function ChatView:set_fcps(enable)
     self.model.fcps = enable
+end
+
+function ChatView:is_visible()
+    return self.win.messages_exchange and vim.api.nvim_win_is_valid(self.win.messages_exchange)
 end
 
 return ChatView

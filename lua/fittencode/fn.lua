@@ -58,19 +58,19 @@ local function fs_all_entries(path, prename)
     return res
 end
 
-local timezone_language = {
+local tzlangs = {
     ['+0000'] = 'en',    -- Greenwich Mean Time
     ['+0800'] = 'zh-cn', -- China Standard Time
 }
 
-setmetatable(timezone_language, {
+setmetatable(tzlangs, {
     __index = function()
-        return timezone_language['+0000']
+        return tzlangs['+0000']
     end
 })
 
-local function language()
-    return timezone_language[os.date('%z')]
+local function timezone_language()
+    return tzlangs[os.date('%z')]
 end
 
 local function format(msg, ...)
@@ -99,7 +99,7 @@ end
 local function display_preference()
     local dp = Config.language_preference.display_preference
     if not dp or #dp == 0 or dp == 'auto' then
-        return language()
+        return timezone_language()
     end
     return dp
 end
@@ -121,7 +121,7 @@ return {
     schedule_call = schedule_call,
     startwith = startwith,
     fs_all_entries = fs_all_entries,
-    language = language,
+    timezone_language = timezone_language,
     display_preference = display_preference,
     format = format,
     slice = slice,

@@ -14,7 +14,7 @@ Conversation.__index = Conversation
 ---@return fittencode.chat.Conversation
 function Conversation:new(opts)
     local obj = {
-        update_chat_view = opts.update_chat_view,
+        update_view = opts.update_view,
     }
     setmetatable(obj, Conversation)
     return obj
@@ -191,7 +191,7 @@ function Conversation:update_partial_bot_message(content)
         type = 'bot_answer_streaming',
         partial_answer = content
     }
-    self.update_chat_view()
+    self.update_view()
 end
 
 ---@return boolean
@@ -202,6 +202,10 @@ end
 ---@return boolean
 function Conversation:is_empty()
     return #self.messages == 0
+end
+
+function Conversation:user_can_reply()
+    return self.state.type == 'user_can_reply'
 end
 
 return Conversation

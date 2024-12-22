@@ -32,8 +32,22 @@ function ChatController:generate_conversation_id()
     return random(36).sub(2, 10)
 end
 
-function ChatController:update_chat_view()
-    self.chat_view:update()
+function ChatController:update_view()
+    local state = self:make_state()
+    self.chat_view:update(state)
+end
+
+function ChatController:show_view()
+    self.chat_view:show()
+end
+
+function ChatController:hide_view()
+    self.chat_view:hide()
+end
+
+---@return boolean
+function ChatController:view_visible()
+    return self.chat_view.is_visible()
 end
 
 ---@param conversation fittencode.chat.Conversation
@@ -41,27 +55,11 @@ end
 ---@return fittencode.chat.Conversation
 function ChatController:add_and_show_conversation(conversation, show)
     self.chat_model:add_and_select_conversation(conversation)
+    self:update_view()
     if show then
-        self:show_chat_view()
-    else
-        self:update_chat_view()
+        self:show_view()
     end
     return conversation
-end
-
----@return boolean
-function ChatController:is_chat_view_visible()
-    return self.chat_view.is_visible()
-end
-
-function ChatController:show_chat_view()
-    self:update_chat_view()
-    self.chat_view:show()
-end
-
-function ChatController:hide_chat_view()
-    self:update_chat_view()
-    self.chat_view:hide()
 end
 
 ---@param msg table
@@ -69,11 +67,13 @@ function ChatController:receive_view_message(msg)
     if not msg then return end
     local ty = msg.type
     if ty == 'ping' then
-        self:update_chat_view()
+        self:update_view()
     elseif ty == 'send_message' then
-        local conversation = self.chat_model:get_conversation_by_id(msg.data.id)
-        if conversation then
-            conversation:answer(msg.data.message)
+        assert(msg.data.id == self.chat_model.selected_conversation_id)
+        ---@type fittencode.chat.Conversation
+        local conv = self.chat_model:get_conversation_by_id(msg.data.id)
+        if conv then
+            conv:answer(msg.data.message)
         end
     elseif ty == 'start_chat' then
         self:create_conversation(self.basic_chat_template_id)
@@ -96,7 +96,7 @@ function ChatController:create_conversation(template_id, show, mode)
     local conv = conv_ty:create_conversation({
         conversation_id = self:generate_conversation_id(),
         init_variables = variables,
-        update_chat_view = function() self:update_chat_view() end,
+        update_view = function() self:update_view() end,
     })
 
     if conv.type == 'unavailable' then
@@ -122,6 +122,30 @@ end
 ---@return fittencode.chat.ConversationType
 function ChatController:get_conversation_type(template_id)
     return self.conversation_types_provider:get_conversation_type(template_id)
+end
+
+function ChatController:get_conversations_brief()
+    local result = {}
+    for _, conv in pairs(self.chat_model.conversations) do
+        local brief = {
+            id = conv.id,
+            name = conv.name,
+        }
+        table.insert(result, brief)
+    end
+    return result
+end
+
+function ChatController:list_conversations()
+
+end
+
+function ChatController:show_conversation(id)
+    local conv = self.chat_model:get_conversation_by_id(id)
+    if conv then
+        self.chat_model.selected_conversation_id = id
+        self:show_view()
+    end
 end
 
 return ChatController

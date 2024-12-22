@@ -19,6 +19,9 @@ local commands = {
     },
     logout = { execute = function() Client.logout() end },
     -- Chat
+    show_chat = { execute = function() Chat.show_chat() end },
+    hide_chat = { execute = function() Chat.hide_chat() end },
+    toggle_chat = { execute = function() Chat.toggle_chat() end },
     start_chat = { execute = function() Chat.start_chat() end },
     reload_templates = { execute = function() Chat.reload_templates() end },
     delete_all_chats = { execute = function() Chat.delete_all_chats() end },
@@ -36,6 +39,7 @@ local commands = {
     export_conversation = { execute = function() Chat.export_conversation() end },
     share_conversation = { execute = function() Chat.share_conversation() end },
     regenerate_response = { execute = function() Chat.regenerate_response() end },
+    list_conversations = { execute = function() Chat.list_conversations() end },
     -- Help
     ask_question = { execute = function() Client.question() end },
     user_guide = { execute = function() Client.guide() end },

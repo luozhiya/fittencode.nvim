@@ -37,6 +37,7 @@ local preset_urls = {
     statistic_log = '/codeuser/statistic_log',
     question = 'https://code.fittentech.com/assets/images/blog/QR.jpg',
     guide = 'https://code.fittentech.com/tutor_vim_zh',
+    playground = 'https://code.fittentech.com/playground_zh',
     -- Completion
     generate_one_stage = '/codeapi/completion/generate_one_stage',
     -- Chat (Fast/Search @FCPS)
@@ -57,8 +58,17 @@ local preset_urls = {
 local lang_preset_urls = {
     ['en'] = {
         guide = 'https://code.fittentech.com/tutor_vim_en',
+        playground = 'https://code.fittentech.com/playground',
     }
 }
+
+local function merge_urls()
+    local tz = lang_preset_urls[Fn.timezone_language()]
+    for k, v in pairs(tz or {}) do
+        preset_urls[k] = v
+    end
+end
+merge_urls()
 
 local function server_url()
     local url = Config.server.server_url
@@ -89,6 +99,15 @@ local function get_ft_token()
     end
     ---@diagnostic disable-next-line: need-check-nil, undefined-field
     return keyring.key
+end
+
+local function get_user_id()
+    if not has_fitten_ai_api_key() then
+        notify_login()
+        return
+    end
+    ---@diagnostic disable-next-line: need-check-nil, undefined-field
+    return keyring.name
 end
 
 local function load_last_session()
@@ -514,9 +533,8 @@ end
 return {
     has_fitten_ai_api_key = has_fitten_ai_api_key,
     get_ft_token = get_ft_token,
+    get_user_id = get_user_id,
     load_last_session = load_last_session,
-    load_code_state = load_code_state,
-    save_code_state = save_code_state,
     server_url = server_url,
     register = register,
     login = login,

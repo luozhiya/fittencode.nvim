@@ -34,28 +34,27 @@ local function active()
     chat_view:register_message_receiver(function(message)
         chat_controller:receive_view_message(message)
     end)
-    chat_view:update()
 end
 
 local function show_chat()
-    if chat_controller:is_chat_view_visible() then
+    if chat_controller:view_visible() then
         return
     end
-    chat_controller:show_chat_view()
+    chat_controller:show_view()
 end
 
 local function hide_chat()
-    if not chat_controller:is_chat_view_visible() then
+    if not chat_controller:view_visible() then
         return
     end
-    chat_controller:hide_chat_view()
+    chat_controller:hide_view()
 end
 
 local function toggle_chat()
-    if chat_controller:is_chat_view_visible() then
-        chat_controller:hide_chat_view()
+    if chat_controller:view_visible() then
+        chat_controller:hide_view()
     else
-        chat_controller:show_chat_view()
+        chat_controller:show_view()
     end
 end
 
