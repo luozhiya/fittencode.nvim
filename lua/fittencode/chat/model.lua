@@ -1,8 +1,8 @@
----@class fittencode.chat.ChatModel
+---@class fittencode.Chat.ChatModel
 local ChatModel = {}
 ChatModel.__index = ChatModel
 
----@return fittencode.chat.ChatModel
+---@return fittencode.Chat.ChatModel
 function ChatModel:new()
     local obj = {
         conversations = {}
@@ -11,7 +11,7 @@ function ChatModel:new()
     return obj
 end
 
----@param e fittencode.chat.Conversation
+---@param e fittencode.Chat.Conversation
 function ChatModel:add_and_select_conversation(e)
     if #self.conversations > 0 then
         local r = self.conversations[#self.conversations]
@@ -27,7 +27,7 @@ function ChatModel:add_and_select_conversation(e)
 end
 
 ---@param id string
----@return fittencode.chat.Conversation?
+---@return fittencode.Chat.Conversation?
 function ChatModel:get_conversation_by_id(id)
     for _, r in ipairs(self.conversations) do
         if r.id == id then

@@ -1,5 +1,5 @@
 local Client = require('fittencode.client')
-local Chat = require('fittencode.chat')
+local Chat = require('fittencode.Chat')
 local Log = require('fittencode.log')
 local Translate = require('fittencode.translate')
 

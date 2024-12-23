@@ -1,12 +1,13 @@
 local Config = require('fittencode.config')
 local Log = require('fittencode.log')
-local Runtime = require('fittencode.chat.runtime')
+local Runtime = require('fittencode.Chat.runtime')
+local State = require('fittencode.state')
 
----@class fittencode.chat.ChatController
+---@class fittencode.Chat.ChatController
 local ChatController = {}
 ChatController.__index = ChatController
 
----@return fittencode.chat.ChatController
+---@return fittencode.Chat.ChatController
 function ChatController:new(opts)
     local obj = setmetatable({}, ChatController)
     obj.chat_view = opts.chat_view
@@ -33,7 +34,7 @@ function ChatController:generate_conversation_id()
 end
 
 function ChatController:update_view()
-    local state = self:make_state()
+    local state = State.get_state_from_model(self.chat_model)
     self.chat_view:update(state)
 end
 
@@ -45,14 +46,13 @@ function ChatController:hide_view()
     self.chat_view:hide()
 end
 
----@return boolean
 function ChatController:view_visible()
-    return self.chat_view.is_visible()
+    return self.chat_view:is_visible()
 end
 
----@param conversation fittencode.chat.Conversation
+---@param conversation fittencode.Chat.Conversation
 ---@param show boolean
----@return fittencode.chat.Conversation
+---@return fittencode.Chat.Conversation
 function ChatController:add_and_show_conversation(conversation, show)
     self.chat_model:add_and_select_conversation(conversation)
     self:update_view()
@@ -70,7 +70,7 @@ function ChatController:receive_view_message(msg)
         self:update_view()
     elseif ty == 'send_message' then
         assert(msg.data.id == self.chat_model.selected_conversation_id)
-        ---@type fittencode.chat.Conversation
+        ---@type fittencode.Chat.Conversation
         local conv = self.chat_model:get_conversation_by_id(msg.data.id)
         if conv then
             conv:answer(msg.data.message)
@@ -89,37 +89,37 @@ function ChatController:create_conversation(template_id, show, mode)
     show = show or true
     mode = mode or 'chat'
 
-    local conv_ty = self:get_conversation_type(template_id)
-    if not conv_ty then Log.error('No conversation type found for {}', template_id) end
+    local conversation_ty = self:get_conversation_type(template_id)
+    if not conversation_ty then Log.error('No conversation type found for {}', template_id) end
 
-    local variables = Runtime.resolve_variables(conv_ty.variables, { time = 'conversation-start' })
-    local conv = conv_ty:create_conversation({
+    local variables = Runtime.resolve_variables(conversation_ty.variables, { time = 'conversation-start' })
+    local created_conversation = conversation_ty:create_conversation({
         conversation_id = self:generate_conversation_id(),
         init_variables = variables,
         update_view = function() self:update_view() end,
     })
 
-    if conv.type == 'unavailable' then
-        if conv.display == 'info' then
-            Log.notify_info(conv.message)
-        elseif conv.display == 'error' then
-            Log.notify_error(conv.message)
+    if created_conversation.type == 'unavailable' then
+        if created_conversation.display == 'info' then
+            Log.notify_info(created_conversation.message)
+        elseif created_conversation.display == 'error' then
+            Log.notify_error(created_conversation.message)
         else
             Log.notify_error('Required input unavailable')
         end
         return
     end
 
-    conv.conversation.mode = mode
-    self:add_and_show_conversation(conv.conversation, show)
+    created_conversation.conversation.mode = mode
+    self:add_and_show_conversation(created_conversation.conversation, show)
 
-    if conv.should_immediately_answer then
-        conv.conversation.answer()
+    if created_conversation.should_immediately_answer then
+        created_conversation.conversation.answer()
     end
 end
 
 ---@param template_id string
----@return fittencode.chat.ConversationType
+---@return fittencode.Chat.ConversationType
 function ChatController:get_conversation_type(template_id)
     return self.conversation_types_provider:get_conversation_type(template_id)
 end

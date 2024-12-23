@@ -1,48 +1,54 @@
+local Client = require('fittencode.client')
+local Fn = require('fittencode.fn')
+
 local State = {}
 
----@return fittencode.chat.StateConversation
-function State.convert_to_state_conversation(conv)
-    local chat_interface = conv.template.chatInterface or 'message-exchange'
+---@param conversation fittencode.Chat.Conversation
+---@return fittencode.State.Conversation
+local function to_state(conversation)
+    local chat_interface = conversation.template.chatInterface or 'message-exchange'
 
     local sc = {
-        id = conv.id,
+        id = conversation.id,
         reference = { selectText = '', selectRange = '' },
         header = {
-            title = conv:get_title(),
-            isTitleMessage = conv:is_title_message(),
-            codicon = conv:get_codicon()
+            title = conversation:get_title(),
+            isTitleMessage = conversation:is_title_message(),
+            codicon = conversation:get_codicon()
         },
         content = {},
-        timestamp = conv.creation_timestamp,
-        isFavorited = conv.is_favorited,
-        mode = conv.mode
+        timestamp = conversation.creation_timestamp,
+        isFavorited = conversation.is_favorited,
+        mode = conversation.mode
     }
 
     if chat_interface == 'message-exchange' then
         sc.content.type = 'messageExchange'
-        sc.content.messages = conv:is_title_message() and Fn.slice(conv.messages, 2) or conv.messages
-        sc.content.state = conv.state
-        sc.content.reference = conv.reference
-        sc.content.error = conv.error
+        sc.content.messages = conversation:is_title_message() and Fn.slice(conversation.messages, 2) or conversation.messages
+        sc.content.state = conversation.state
+        sc.content.reference = conversation.reference
+        sc.content.error = conversation.error
     else
         sc.content.type = 'instructionRefinement'
         sc.content.instruction = ''
-        sc.content.state = conv:refinement_instruction_state()
-        sc.content.error = conv.error
+        sc.content.state = conversation:refinement_instruction_state()
+        sc.content.error = conversation.error
     end
 
     return sc
 end
 
----@param model fittencode.chat.ChatModel
+---@param editor fittencode.Editor
+---@param tracker fittencode.Tracker
+---@param model fittencode.Chat.ChatModel
 ---@param selected_state boolean
----@return fittencode.chat.PersistenceState
-function State.get_state_from_model(model, selected_state)
+---@return fittencode.State
+function State.get_state_from_model(editor, tracker, model, selected_state)
     selected_state = selected_state == nil and true or selected_state
     local n = {}
 
     for _, a in pairs(model.conversations) do
-        local A = State.convert_to_state_conversation(a)
+        local A = to_state(a)
         if selected_state then
             if a.id == model.selected_conversation_id then
                 A.reference = {
@@ -66,10 +72,9 @@ function State.get_state_from_model(model, selected_state)
         selectedConversationId = model.selected_conversation_id,
         conversations = n,
         hasFittenAIApiKey = Client.has_fitten_ai_api_key(),
-        surfacePromptForFittenAIPlus = Config.fittencode.fittenAI.surfacePromptForPlus,
         serverURL = Client.server_url(),
         fittenAIApiKey = Client.get_ft_token(),
-        tracker = model.tracker,
-        trackerOptions = model.tracker_options
+        tracker = tracker,
+        trackerOptions = tracker.options
     }
 end

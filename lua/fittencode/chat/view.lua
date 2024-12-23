@@ -30,7 +30,7 @@ Experience the high-efficiency code auto-completion now!
 }
 setmetatable(welcome_message, { __index = function() return welcome_message['en'] end })
 
----@class fittencode.chat.ChatView
+---@class fittencode.Chat.ChatView
 local ChatView = {
     messages_exchange = {
         win = nil,
@@ -53,7 +53,7 @@ local ChatView = {
 }
 ChatView.__index = ChatView
 
----@return fittencode.chat.ChatView
+---@return fittencode.Chat.ChatView
 function ChatView:new(opts)
     local obj = {
     }
@@ -120,7 +120,7 @@ function ChatView:render_reference(conv)
         return
     end
     local range = conv.reference.selectRange
-    local title = string.format('%s %d:%d', range.filename, range.start_row, range.end_row)
+    -- local title = string.format('%s %d:%d', range.filename, range.start_row, range.end_row)
 end
 
 function ChatView:render_conversation(conv, id)
@@ -276,6 +276,7 @@ function ChatView:update_char_input(enable, id)
             callback = function()
                 vim.api.nvim_buf_call(self.char_input.buf, function()
                     local message = vim.api.nvim_buf_get_lines(self.char_input.buf, 0, -1, false)[1]
+                    message = self:with_fcps(message)
                     self:send_message({
                         type = 'send_message',
                         data = {
@@ -316,8 +317,16 @@ function ChatView:set_fcps(enable)
     self.fcps = enable
 end
 
+function ChatView:with_fcps(message)
+    if self.fcps then
+        return '@FCPS ' .. message
+    else
+        return message
+    end
+end
+
 function ChatView:is_visible()
-    return self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win)
+    return self.messages_exchange.win ~= nil and vim.api.nvim_win_is_valid(self.messages_exchange.win)
 end
 
 return ChatView

@@ -1,3 +1,4 @@
+---@class fittencode.Editor
 local Editor = {}
 
 function Editor.get_ft_language()
@@ -25,7 +26,7 @@ function Editor.get_selected_text()
     return selected_text
 end
 
-function Editor.get_selected_location_text()
+function Editor.get_selected_range()
     local name = Editor.get_filename()
     local location = Editor.get_selected().location
     return name .. ' ' .. location.row .. ':' .. location.col
