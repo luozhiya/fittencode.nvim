@@ -2,7 +2,7 @@ local Editor = require('fittencode.editor')
 local Log = require('fittencode.log')
 local Fn = require('fittencode.fn')
 local Config = require('fittencode.config')
-local Client = require('fittencode.chat.client')
+local Client = require('fittencode.client')
 local Runtime = require('fittencode.chat.runtime')
 local VM = require('fittencode.chat.vm')
 

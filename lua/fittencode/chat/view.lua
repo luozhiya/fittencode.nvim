@@ -228,8 +228,8 @@ function ChatView:show(opts)
 end
 
 function ChatView:hide()
-    self:_destroy_win()
     self:update_char_input(false)
+    self:_destroy_win()
 end
 
 function ChatView:send_message(msg)
