@@ -30,31 +30,30 @@ Experience the high-efficiency code auto-completion now!
 }
 setmetatable(welcome_message, { __index = function() return welcome_message['en'] end })
 
----@class fittencode.chat.view.ChatView
+---@class fittencode.chat.ChatView
 local ChatView = {
-    ---@class fittencode.chat.view.ChatWindow
-    win = {
-        messages_exchange = nil,
-        user_input = nil,
-        reference = nil,
+    messages_exchange = {
+        win = nil,
+        buf = {
+            welcome = nil,
+            conversations = {},
+        }
+    },
+    reference = {
+        win = nil,
+        buf = nil,
+    },
+    char_input = {
+        win = nil,
+        buf = nil,
+        on_key_ns = nil,
+        autocmd_id = nil,
     },
     last_win_mode = nil,
-    ---@class fittencode.chat.view.ChatBuffer
-    buffer = {
-        conversations = {},
-        welcome = nil,
-        user_input = nil,
-        reference = nil,
-    },
-    buffer_initialized = false,
-    ---@class fittencode.chat.view.ChatEvent
-    event = {
-        on_input = nil,
-    },
 }
 ChatView.__index = ChatView
 
----@return fittencode.chat.view.ChatView
+---@return fittencode.chat.ChatView
 function ChatView:new(opts)
     local obj = {
     }
@@ -63,114 +62,35 @@ function ChatView:new(opts)
 end
 
 function ChatView:init()
-    self.buffer.welcome = vim.api.nvim_create_buf(false, true)
-    self.buffer.user_input = vim.api.nvim_create_buf(false, true)
-    self.buffer.reference = vim.api.nvim_create_buf(false, true)
+    self.messages_exchange.buf.welcome = vim.api.nvim_create_buf(false, true)
+    self.char_input.buf = vim.api.nvim_create_buf(false, true)
+    self.reference.buf = vim.api.nvim_create_buf(false, true)
 
-    vim.api.nvim_buf_call(self.buffer.welcome, function()
-        vim.api.nvim_buf_set_lines(self.buffer.welcome, 0, -1, false, { welcome_message[Fn.display_preference()] })
-        vim.api.nvim_set_option_value('modifiable', false, { buf = self.buffer.welcome })
-        vim.api.nvim_set_option_value('readonly', true, { buf = self.buffer.welcome })
+    vim.api.nvim_buf_call(self.messages_exchange.buf.welcome, function()
+        vim.api.nvim_buf_set_lines(self.messages_exchange.buf.welcome, 0, -1, false, { welcome_message[Fn.display_preference()] })
+        vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf.welcome })
     end)
-
-    local enter_key = vim.api.nvim_replace_termcodes('<Enter>', true, true, true)
-    vim.on_key(function(key)
-        vim.schedule(function()
-            if vim.api.nvim_get_mode().mode == 'i' and vim.api.nvim_get_current_buf() == self.buffer.user_input and key == enter_key then
-                vim.api.nvim_buf_call(self.buffer.user_input, function()
-                    vim.api.nvim_command('doautocmd User fittencode.UserInputReady')
-                end)
-            end
-        end)
+    vim.api.nvim_buf_call(self.reference.buf, function()
+        vim.api.nvim_set_option_value('modifiable', false, { buf = self.reference.buf })
     end)
-
-    vim.api.nvim_create_autocmd('fittencode.UserInputReady', {
-        buffer = self.buffer.user_input,
-        callback = function()
-            vim.api.nvim_buf_call(self.buffer.user_input, function()
-                local input_text = vim.api.nvim_buf_get_lines(self.buffer.user_input, 0, -1, false)[1]
-                self:send_message({
-                    type = 'send_message',
-                    data = {
-                        id = self:selected_conversation_id(),
-                        message = input_text
-                    }
-                })
-            end)
-        end
-    })
-
-    self.buffer_initialized = true
-end
-
-function ChatView:_buffer(id)
-    return self.buffer.conversations[id].buffer
-end
-
-function ChatView:_create_win(opts)
-    self.last_win_mode = opts.mode
-    if opts.mode == 'panel' then
-        self.win.messages_exchange = vim.api.nvim_open_win(self:_buffer(), true, {
-            vertical = true,
-            split = 'left',
-            width = 60,
-            height = 15,
-            row = 5,
-            col = 5,
-        })
-        self.win.user_input = vim.api.nvim_open_win(self.buffer.user_input, true, {
-            vertical = false,
-            split = 'below',
-            width = 60,
-            height = 5,
-            row = 20,
-            col = 5,
-        })
-    elseif opts.mode == 'float' then
-        self.win.messages_exchange = vim.api.nvim_open_win(self:_buffer(), true, {
-            relative = 'editor',
-            width = 60,
-            height = 15,
-            row = 5,
-            col = 5,
-            border = 'single'
-        })
-        self.win.user_input = vim.api.nvim_open_win(self.buffer.user_input, true, {
-            relative = 'editor',
-            width = 60,
-            height = 5,
-            row = 20,
-            col = 5,
-            border = 'single'
-        })
-    end
 end
 
 function ChatView:_destroy_win()
-    for _, win in pairs(self.win) do
-        if vim.api.nvim_win_is_valid(win) then
+    local wins = {
+        'messages_exchange',
+        'char_input',
+        'reference',
+    }
+    for _, win_name in ipairs(wins) do
+        local win = self[win_name].win
+        if win and vim.api.nvim_win_is_valid(win) then
             vim.api.nvim_win_close(win, true)
         end
-        self.win[win] = nil
-    end
-end
-
-function ChatView:_destroy_buffer()
-    for _, buffer in pairs(self.buffer) do
-        if type(buffer) == 'number' and vim.api.nvim_buf_is_valid(buffer) then
-            vim.api.nvim_buf_delete(buffer, {})
-        elseif type(buffer) == 'table' then
-            for _, buf in pairs(buffer) do
-                if vim.api.nvim_buf_is_valid(buf) then
-                    vim.api.nvim_buf_delete(buf, {})
-                end
-            end
-        end
+        self[win_name].win = nil
     end
 end
 
 function ChatView:update(state)
-    assert(self.buffer_initialized)
     local id = state.selectedConversationId
     if not id then
         self:send_message({
@@ -178,25 +98,25 @@ function ChatView:update(state)
         })
         return
     end
-    if not self.buffer.conversations[id] then
+    if not self.messages_exchange.buf.conversations[id] then
         self:create_conversation(id)
     end
-    local conv = state.conversations[id]
-    assert(conv)
+    local conversation = state.conversations[id]
+    assert(conversation)
 
-    if conv:is_empty() then
-        self:show_welcome()
-        self:enable_user_input(true)
-    else
-        self:render_conversation(conv, id)
-        self:show_conversation(id)
-        self:enable_user_input(conv:user_can_reply(id))
-    end
-    self:render_reference(conv)
+    self:render_conversation(conversation, id)
+    self:render_reference(conversation)
+    self:show({
+        mode = state.view.mode,
+        show = state.view.show,
+        conversation = conversation,
+        id = id,
+    })
+    self:update_char_input(conversation:user_can_reply(), id)
 end
 
 function ChatView:render_reference(conv)
-    if not vim.api.nvim_buf_is_valid(self.buffer.reference) then
+    if not vim.api.nvim_buf_is_valid(self.reference.buf) then
         return
     end
     local range = conv.reference.selectRange
@@ -204,10 +124,14 @@ function ChatView:render_reference(conv)
 end
 
 function ChatView:render_conversation(conv, id)
-    if not self.buffer.conversations[id] then
+    if not self.messages_exchange.buf.conversations[id] then
         return
     end
-    local buf = self:_buffer(id)
+    if conv:is_empty() then
+        return
+    end
+    local buf = self.messages_exchange.buf.conversations(id)
+    assert(buf)
     local user = Client.get_user_id()
     local bot = 'Fitten Code'
 
@@ -233,21 +157,79 @@ function ChatView:render_conversation(conv, id)
         lines[#lines + 1] = content.partial_answer
     end
 
-    vim.api.nvim_buf_call(self:_buffer(id), function()
-        vim.api.nvim_buf_set_lines(self:_buffer(id), 0, -1, false, lines)
+    vim.api.nvim_buf_call(buf, function()
+        local view = vim.fn.winsaveview()
+        vim.api.nvim_set_option_value('modifiable', true, { buf = buf })
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+        vim.api.nvim_set_option_value('modifiable', false, { buf = buf })
+        vim.fn.winrestview(view)
     end)
 end
 
 function ChatView:show(opts)
-    assert(self.buffer_initialized)
-    if self.last_win_mode and self.last_win_mode ~= opts.mode then
+    if self.last_win_mode ~= opts.mode then
         self:_destroy_win()
     end
-    self:_create_win(opts)
+    self.last_win_mode = opts.mode
+
+    if not opts.show then
+        self:_destroy_win()
+        return
+    end
+
+    local msg_buf = nil
+    if opts.conversation:is_empty() then
+        msg_buf = self.messages_exchange.buf.welcome
+    else
+        msg_buf = self.messages_exchange.buf.conversations[opts.id]
+    end
+    assert(msg_buf)
+
+    local current = vim.api.nvim_win_get_buf(self.messages_exchange.win)
+    if current == msg_buf then
+        return
+    end
+
+    if opts.mode == 'panel' then
+        self.messages_exchange.win = vim.api.nvim_open_win(msg_buf, true, {
+            vertical = true,
+            split = 'left',
+            width = 60,
+            height = 15,
+            row = 5,
+            col = 5,
+        })
+        self.char_input.win = vim.api.nvim_open_win(self.char_input.buf, true, {
+            vertical = false,
+            split = 'below',
+            width = 60,
+            height = 5,
+            row = 20,
+            col = 5,
+        })
+    elseif opts.mode == 'float' then
+        self.messages_exchange.win = vim.api.nvim_open_win(msg_buf, true, {
+            relative = 'editor',
+            width = 60,
+            height = 15,
+            row = 5,
+            col = 5,
+            border = 'single'
+        })
+        self.char_input.win = vim.api.nvim_open_win(self.char_input.buf, true, {
+            relative = 'editor',
+            width = 60,
+            height = 5,
+            row = 20,
+            col = 5,
+            border = 'single'
+        })
+    end
 end
 
 function ChatView:hide()
     self:_destroy_win()
+    self:update_char_input(false)
 end
 
 function ChatView:send_message(msg)
@@ -260,59 +242,82 @@ function ChatView:register_message_receiver(receive_view_message)
     self.receive_view_message = receive_view_message
 end
 
-function ChatView:destroy()
-    self:_destroy_win()
-    self:_destroy_buffer()
+function ChatView:update_char_input(enable, id)
+    local is_enabled = false
+    vim.api.nvim_buf_call(self.char_input.buf, function()
+        is_enabled = vim.api.nvim_get_option_value('modifiable', { buf = self.char_input.buf })
+    end)
+    if is_enabled == enable then
+        return
+    end
+
+    vim.on_key(nil, self.char_input.on_key_ns)
+    self.char_input.on_key_ns = nil
+    vim.api.nvim_del_autocmd(self.char_input.autocmd_id)
+    self.char_input.autocmd_id = nil
+
+    vim.api.nvim_buf_call(self.char_input.buf, function()
+        vim.api.nvim_set_option_value('modifiable', enable, { buf = self.char_input.buf })
+    end)
+
+    if enable then
+        local enter_key = vim.api.nvim_replace_termcodes('<Enter>', true, true, true)
+        self.char_input.on_key_ns = vim.on_key(function(key)
+            vim.schedule(function()
+                if vim.api.nvim_get_mode().mode == 'i' and vim.api.nvim_get_current_buf() == self.char_input.buf and key == enter_key then
+                    vim.api.nvim_buf_call(self.char_input.buf, function()
+                        vim.api.nvim_command('doautocmd User fittencode.UserInputReady')
+                    end)
+                end
+            end)
+        end)
+        self.char_input_autocmd = vim.api.nvim_create_autocmd('fittencode.UserInputReady', {
+            buffer = self.char_input.buf,
+            callback = function()
+                vim.api.nvim_buf_call(self.char_input.buf, function()
+                    local message = vim.api.nvim_buf_get_lines(self.char_input.buf, 0, -1, false)[1]
+                    self:send_message({
+                        type = 'send_message',
+                        data = {
+                            id = id,
+                            message = message
+                        }
+                    })
+                    vim.api.nvim_buf_set_lines(self.char_input.buf, 0, -1, false, {})
+                end)
+            end
+        })
+    end
 end
 
-function ChatView:enable_user_input(enable)
-    vim.api.nvim_buf_call(self.buffer.user_input, function()
-        vim.api.nvim_set_option_value('modifiable', enable, { buf = self.buffer.user_input })
+function ChatView:create_conversation(id)
+    if self.messages_exchange.buf.conversations[id] then
+        return
+    end
+    local buf = vim.api.nvim_create_buf(false, true)
+    self.messages_exchange.buf.conversations[id] = {
+        id = id,
+        buffer = buf,
+    }
+    vim.api.nvim_buf_call(buf, function()
+        vim.api.nvim_set_option_value('modifiable', false, { buf = buf })
     end)
 end
 
-function ChatView:show_conversation(id)
-    if not self.buffer.conversations[id] then
-        return
-    end
-    local current = vim.api.nvim_win_get_buf(self.win.messages_exchange)
-    if current ~= self:_buffer(id) then
-        vim.api.nvim_win_set_buf(self.win.messages_exchange, self:_buffer(id))
-    end
-end
-
-function ChatView:show_welcome()
-    if not self.buffer.welcome or not vim.api.nvim_buf_is_valid(self.buffer.welcome) then
-        return
-    end
-    vim.api.nvim_win_set_buf(self.win.messages_exchange, self.buffer.welcome)
-end
-
-function ChatView:create_conversation(id, show_welcome)
-    if self.buffer.conversations[id] then
-        return
-    end
-    self.buffer.conversations[id] = {
-        id = id,
-        buffer = vim.api.nvim_create_buf(false, true),
-        show_welcome = show_welcome,
-    }
-end
-
 function ChatView:delete_conversation(id)
-    if not self.buffer.conversations[id] then
+    if not self.messages_exchange.buf.conversations[id] then
         return
     end
-    vim.api.nvim_buf_delete(self:_buffer(id), {})
-    self.buffer.conversations[id] = nil
+    vim.api.nvim_buf_delete(self.messages_exchange.buf.conversations[id], {})
+    self.messages_exchange.buf.conversations[id] = nil
 end
 
 function ChatView:set_fcps(enable)
-    self.model.fcps = enable
+    self.fcps = enable
 end
 
 function ChatView:is_visible()
-    return self.win.messages_exchange and vim.api.nvim_win_is_valid(self.win.messages_exchange)
+    return self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win)
 end
 
 return ChatView

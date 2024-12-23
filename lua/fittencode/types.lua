@@ -172,7 +172,7 @@
 ---@field ft_token string
 
 ---@class fittencode.chat.ChatController
----@field chat_view fittencode.chat.view.ChatView
+---@field chat_view fittencode.chat.ChatView
 ---@field chat_model fittencode.chat.ChatModel
 ---@field get_conversation_type function
 ---@field basic_chat_template_id string
@@ -204,36 +204,4 @@
 ---@field load_from_file function
 ---@field load_from_directory function
 
----@class fittencode.chat.view.ChatWindow
----@field messages_exchange number|nil
----@field user_input number|nil
----@field reference number|nil
-
----@class fittencode.chat.view.ChatConversation
----@field id string
----@field buffer number
-
----@class fittencode.chat.view.ChatBuffer
----@field conversations table<string, fittencode.chat.view.ChatConversation>|nil
----@field user_input number|nil
----@field reference number|nil
-
----@class fittencode.chat.view.ChatEvent
----@field on_input function|nil
-
----@class fittencode.chat.view.ChatView
----@field win fittencode.chat.view.ChatWindow
----@field last_win_mode string|nil
----@field buffer fittencode.chat.view.ChatBuffer
----@field buffer_initialized boolean
----@field event fittencode.chat.view.ChatEvent
----@field create_conversation function
----@field delete_conversation function
----@field show_conversation function
----@field append_message function
----@field set_messages function
----@field clear_messages function
----@field enable_user_input function
----@field update function
----@field is_visible function
----@field model fittencode.chat.ChatModel?
+---@class fittencode.chat.ChatView

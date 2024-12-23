@@ -8,7 +8,7 @@ local defaults = {
         -- Avaiable options:
         -- * 'default'
         -- * 'enterprise'
-        version = 'default',
+        fitten_version = 'default',
         -- The server URL for Fitten Code.
         -- You can also change it to your own server URL if you have a private server.
         -- Default server URL: 'https://fc.fittenlab.cn'
