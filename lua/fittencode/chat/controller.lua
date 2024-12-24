@@ -126,10 +126,10 @@ end
 
 function ChatController:get_conversations_brief()
     local result = {}
-    for _, conv in pairs(self.chat_model.conversations) do
+    for _, conversation in pairs(self.chat_model.conversations) do
         local brief = {
-            id = conv.id,
-            name = conv.name,
+            id = conversation.id,
+            name = conversation.name,
         }
         table.insert(result, brief)
     end
@@ -141,8 +141,8 @@ function ChatController:list_conversations()
 end
 
 function ChatController:show_conversation(id)
-    local conv = self.chat_model:get_conversation_by_id(id)
-    if conv then
+    local conversation = self.chat_model:get_conversation_by_id(id)
+    if conversation then
         self.chat_model.selected_conversation_id = id
         self:show_view()
     end
