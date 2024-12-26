@@ -1,9 +1,9 @@
-local ChatController = require('fittencode.Chat.controller')
-local ChatModel = require('fittencode.Chat.model')
-local ConversationTypesProvider = require('fittencode.Chat.conversation_types_provider')
+local ChatController = require('fittencode.chat.controller')
+local ChatModel = require('fittencode.chat.model')
+local ConversationTypesProvider = require('fittencode.chat.conversation_types_provider')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
-local View = require('fittencode.Chat.view')
+local View = require('fittencode.chat.view')
 
 ---@type fittencode.Chat.ChatController
 local chat_controller = nil

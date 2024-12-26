@@ -3,8 +3,8 @@ local Log = require('fittencode.log')
 local Fn = require('fittencode.fn')
 local Config = require('fittencode.config')
 local Client = require('fittencode.client')
-local Runtime = require('fittencode.Chat.runtime')
-local VM = require('fittencode.Chat.vm')
+local Runtime = require('fittencode.chat.runtime')
+local VM = require('fittencode.chat.vm')
 
 ---@class fittencode.Chat.Conversation
 local Conversation = {}

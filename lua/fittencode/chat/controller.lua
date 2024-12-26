@@ -1,6 +1,6 @@
 local Config = require('fittencode.config')
 local Log = require('fittencode.log')
-local Runtime = require('fittencode.Chat.runtime')
+local Runtime = require('fittencode.chat.runtime')
 local State = require('fittencode.state')
 
 ---@class fittencode.Chat.ChatController

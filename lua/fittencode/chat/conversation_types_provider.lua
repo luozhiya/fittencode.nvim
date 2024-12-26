@@ -1,5 +1,5 @@
-local TemplateResolver = require('fittencode.Chat.template_resolver')
-local ConversationType = require('fittencode.Chat.conversation_type')
+local TemplateResolver = require('fittencode.chat.template_resolver')
+local ConversationType = require('fittencode.chat.conversation_type')
 local Editor = require('fittencode.editor')
 
 ---@class fittencode.Chat.ConversationTypeProvider
