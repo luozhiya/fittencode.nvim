@@ -2,6 +2,8 @@ local Config = require('fittencode.config')
 local Log = require('fittencode.log')
 local Runtime = require('fittencode.chat.runtime')
 local State = require('fittencode.state')
+local Status = require('fittencode.chat.status')
+local Fn = require('fittencode.fn')
 
 ---@class fittencode.Chat.Controller
 local Controller = {}
@@ -9,11 +11,18 @@ Controller.__index = Controller
 
 ---@return fittencode.Chat.Controller
 function Controller:new(opts)
-    local obj = setmetatable({}, Controller)
-    obj.view = opts.view
-    obj.model = opts.model
-    obj.basic_chat_template_id = opts.basic_chat_template_id
-    obj.conversation_types_provider = opts.conversation_types_provider
+    local obj = setmetatable({
+        view = opts.view,
+        model = opts.model,
+        basic_chat_template_id = opts.basic_chat_template_id,
+        conversation_types_provider = opts.conversation_types_provider,
+        status = Status:new({
+            stream = false,
+            callback = function(stream)
+                Fn.schedule_call(self.status_changed_callback, stream)
+            end
+        })
+    }, Controller)
     return obj
 end
 
@@ -146,6 +155,14 @@ function Controller:show_conversation(id)
         self.model.selected_conversation_id = id
         self:show_view()
     end
+end
+
+function Controller:set_status_changed_callback(callback)
+    self.status_changed_callback = callback
+end
+
+function Controller:get_status()
+    return self.status.stream
 end
 
 return Controller

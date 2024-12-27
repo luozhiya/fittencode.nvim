@@ -20,10 +20,8 @@ local commands = {
     },
     logout = { execute = function() Client.logout() end },
     -- Inline
-    onlyenable = { execute = function() Inline.onlyenable() end },
-    onlydisable = { execute = function() Inline.onlydisable() end },
-    disable = { execute = function() Inline.disable() end },
-    enable = { execute = function() Inline.enable() end },
+    enable_completions = { execute = function(ext) Inline.enable_completions(ext) end },
+    disable_completions = { execute = function(ext) Inline.disable_completions(ext) end },
     -- Chat
     show_chat = { execute = function() Chat.show_chat() end },
     hide_chat = { execute = function() Chat.hide_chat() end },

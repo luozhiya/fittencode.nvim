@@ -2,28 +2,38 @@ local Client = require('fittencode.client')
 local Config = require('fittencode.config')
 local Fn = require('fittencode.fn')
 local Promise = require('fittencode.promise')
+local Status = require('fittencode.inline.status')
 
 ---@class fittencode.Inline.Controller
+local Controller = {}
+Controller.__index = Controller
 
----@class fittencode.Inline.Model
-local model = {
-    suggestions = nil,
-    completion_data = nil,
-    cursor = nil,
-    cache_hit = function(row, col) end,
-    update = function(row, col, timestamp, suggestions, completion_data) end,
-}
+---@return fittencode.Inline.Controller
+function Controller:new(opts)
+    local obj = {
+        model = opts.model,
+        status = Status:new({
+            level = 0,
+            callback = function(level)
+                Fn.schedule_call(self.status_changed_callback, level)
+            end
+        }),
+        status_changed_callback = nil,
+    }
+    setmetatable(obj, self)
+    return obj
+end
 
-local function dismiss_suggestions()
+function Controller:dismiss_suggestions()
     if not string.match(vim.fn.mode(), '^[iR]') then
         return
     end
 end
 
-local function lazy_completion()
+function Controller:lazy_completion()
 end
 
-local function build_prompt_for_completion(row, col)
+function Controller:build_prompt_for_completion(row, col)
     local within_the_line = col ~= string.len(vim.api.nvim_buf_get_lines(0, row, row + 1, false)[1])
     if Config.inline_completion.enable and Config.inline_completion.disable_completion_within_the_line and within_the_line then
         return
@@ -39,7 +49,7 @@ local function build_prompt_for_completion(row, col)
     }
 end
 
-local function refine_generated_text_into_suggestions(generated_text)
+function Controller:refine_generated_text_into_suggestions(generated_text)
     local text = vim.fn.substitute(generated_text, '<.endoftext.>', '', 'g') or ''
     text = string.gsub(text, '\r\n', '\n')
     text = string.gsub(text, '\r', '\n')
@@ -70,24 +80,25 @@ local function refine_generated_text_into_suggestions(generated_text)
 end
 
 local generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion)
+local au_inline = vim.api.nvim_create_augroup('fittencode.inline', { clear = true })
 
-local function triggering_completion(force, on_success, on_error)
+function Controller:triggering_completion(force, on_success, on_error)
     if not string.match(vim.fn.mode(), '^[iR]') then
         return
     end
     force = force == nil and false or force
     local row, col = unpack(vim.api.nvim_win_get_cursor(0))
     local timestamp = vim.uv.hrtime()
-    if not force and model.cache_hit(row, col) then
+    if not force and self.model:cache_hit(row, col) then
         return
     end
     Promise:new(function(resolve, reject)
-        generate_one_stage(build_prompt_for_completion(row, col), function(completion_data)
-            local suggestions = refine_generated_text_into_suggestions(completion_data.generated_text)
+        generate_one_stage(self:build_prompt_for_completion(row, col), function(completion_data)
+            local suggestions = self:refine_generated_text_into_suggestions(completion_data.generated_text)
             if not suggestions and (completion_data.ex_msg == nil or completion_data.ex_msg == '') then
                 reject()
             else
-                model.update(row, col, timestamp, suggestions, completion_data)
+                self.model:update(row, col, timestamp, suggestions, completion_data)
                 resolve()
             end
         end, function()
@@ -100,15 +111,13 @@ local function triggering_completion(force, on_success, on_error)
     end)
 end
 
-local au_inline = vim.api.nvim_create_augroup('fittencode.inline', { clear = true })
-
-local function setup_autocmds(enable)
+function Controller:setup_autocmds(enable)
     local autocmds = {
-        { { 'InsertEnter', 'CursorMovedI', 'CompleteChanged' }, function() triggering_completion() end },
-        { { 'BufEnter' },                                       function() triggering_completion() end },
-        { { 'InsertLeave' },                                    function() dismiss_suggestions() end },
-        { { 'BufLeave' },                                       function() dismiss_suggestions() end },
-        { { 'TextChangedI' },                                   function() lazy_completion() end },
+        { { 'InsertEnter', 'CursorMovedI', 'CompleteChanged' }, function() self:triggering_completion() end },
+        { { 'BufEnter' },                                       function() self:triggering_completion() end },
+        { { 'InsertLeave' },                                    function() self:dismiss_suggestions() end },
+        { { 'BufLeave' },                                       function() self:dismiss_suggestions() end },
+        { { 'TextChangedI' },                                   function() self:lazy_completion() end },
     }
     if enable then
         for _, autocmd in ipairs(autocmds) do
@@ -122,13 +131,13 @@ local function setup_autocmds(enable)
     end
 end
 
-local function enable_completions(enable, global, suffixes)
+function Controller:enable_completions(enable, global, suffixes)
     enable = enable == nil and true or enable
     global = global == nil and true or global
     suffixes = suffixes or {}
     if global then
         if Config.inline_completion.enable ~= enable then
-            setup_autocmds(enable)
+            self:setup_autocmds(enable)
             Config.inline_completion.enable = enable
         end
     else
@@ -145,8 +154,12 @@ local function enable_completions(enable, global, suffixes)
     end
 end
 
-return {
-    build_prompt_for_completion = build_prompt_for_completion,
-    refine_generated_text_into_suggestions = refine_generated_text_into_suggestions,
-    enable_completions = enable_completions,
-}
+function Controller:get_status()
+    return self.status.level
+end
+
+function Controller:set_status_changed_callback(callback)
+    self.status_changed_callback = callback
+end
+
+return Controller

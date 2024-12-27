@@ -184,6 +184,7 @@
 ---@field reload_chat_breaker function
 ---@field create_conversation function
 ---@field conversation_types_provider fittencode.Chat.ConversationTypeProvider
+---@field status fittencode.Chat.Status
 
 ---@class fittencode.Chat.ConversationTypeProvider
 ---@field extension_uri string
@@ -231,3 +232,9 @@
 ---@field get_state_from_model function
 
 ---@class fittencode.Editor
+
+---@class fittencode.Inline.Controller
+---@field model fittencode.Inline.Model
+---@field status fittencode.Inline.Status
+
+---@class fittencode.Inline.Model

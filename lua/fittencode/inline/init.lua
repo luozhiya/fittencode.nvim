@@ -5,7 +5,15 @@ local Config = require('fittencode.config')
 local controller = nil
 
 local function setup()
-    controller.enable_completions(Config.inline_completion.enable)
+    controller:enable_completions(Config.inline_completion.enable)
+end
+
+local function set_status_changed_callback(callback)
+    controller:set_status_changed_callback(callback)
+end
+
+local function get_status()
+    return controller:get_status()
 end
 
 return {

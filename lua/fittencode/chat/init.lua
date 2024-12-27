@@ -6,7 +6,7 @@ local Log = require('fittencode.log')
 local View = require('fittencode.chat.view')
 
 ---@type fittencode.Chat.Controller
-local chat_controller = nil
+local controller = nil
 
 local function setup()
     local model = Model:new()
@@ -24,41 +24,49 @@ local function setup()
         Log.error('Failed to load basic chat template')
         return
     end
-    chat_controller = Controller:new({
+    controller = Controller:new({
         view = view,
         model = model,
         conversation_types_provider = conversation_types_provider,
         basic_chat_template_id = basic_chat_template_id
     })
     view:register_message_receiver(function(message)
-        chat_controller:receive_view_message(message)
+        controller:receive_view_message(message)
     end)
 end
 
 local function show_chat()
-    if chat_controller:view_visible() then
+    if controller:view_visible() then
         return
     end
-    chat_controller:show_view()
+    controller:show_view()
 end
 
 local function hide_chat()
-    if not chat_controller:view_visible() then
+    if not controller:view_visible() then
         return
     end
-    chat_controller:hide_view()
+    controller:hide_view()
 end
 
 local function toggle_chat()
-    if chat_controller:view_visible() then
-        chat_controller:hide_view()
+    if controller:view_visible() then
+        controller:hide_view()
     else
-        chat_controller:show_view()
+        controller:show_view()
     end
 end
 
 local function reload_templates()
-    chat_controller.conversation_types_provider:load_conversation_types()
+    controller.conversation_types_provider:load_conversation_types()
+end
+
+local function get_status()
+    return controller:get_status()
+end
+
+local function set_status_changed_callback(callback)
+    controller:set_status_changed_callback(callback)
 end
 
 return {
