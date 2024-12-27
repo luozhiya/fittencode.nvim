@@ -12,6 +12,8 @@ end
 
 return setmetatable(M, {
     __index = function(_, key)
-        return require('fittencode.api')[key]
+        return function(...)
+            return require('fittencode.api')[key](...)
+        end
     end,
 })
