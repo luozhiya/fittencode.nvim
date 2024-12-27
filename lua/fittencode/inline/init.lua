@@ -148,8 +148,12 @@ local function enable_completions(enable, global, suffixes)
     end
 end
 
+local function setup()
+end
+
 return {
     build_prompt_for_completion = build_prompt_for_completion,
     refine_generated_text_into_suggestions = refine_generated_text_into_suggestions,
     enable_completions = enable_completions,
+    setup = setup,
 }

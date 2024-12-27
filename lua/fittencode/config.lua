@@ -150,6 +150,13 @@ local defaults = {
     log = {
         level = vim.log.levels.WARN,
     },
+    http = {
+        -- The backend for http request.
+        -- Avaiable options:
+        -- * 'curl'
+        -- * 'libcurl'
+        backend = 'curl',
+    }
 }
 
 ---@type fittencode.Config

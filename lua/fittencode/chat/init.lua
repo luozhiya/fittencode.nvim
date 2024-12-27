@@ -5,11 +5,10 @@ local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local View = require('fittencode.chat.view')
 
----@type fittencode.Chat.ChatController
+---@type fittencode.Chat.Controller
 local chat_controller = nil
 
--- Active
-local function active()
+local function setup()
     local chat_model = ChatModel:new()
     local chat_view = View:new({
         model = chat_model,
@@ -63,7 +62,7 @@ local function reload_templates()
 end
 
 return {
-    active = active,
+    setup = setup,
     reload_templates = reload_templates,
     show_chat = show_chat,
     hide_chat = hide_chat,

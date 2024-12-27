@@ -116,6 +116,10 @@ local function remove_special_token(t)
     return string.gsub(t, '<|(%w{%d,10})|>', '<| %1 |>')
 end
 
+local function sysname() return vim.uv.os_uname().sysname:lower() end
+local function is_windows() return sysname():find('windows') ~= nil end
+local function is_linux() return sysname():find('linux') ~= nil end
+
 return {
     debounce = debounce,
     schedule_call = schedule_call,
@@ -126,4 +130,6 @@ return {
     format = format,
     slice = slice,
     remove_special_token = remove_special_token,
+    is_windows = is_windows,
+    is_linux = is_linux,
 }

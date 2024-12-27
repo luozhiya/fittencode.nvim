@@ -3,13 +3,13 @@ local Log = require('fittencode.log')
 local Runtime = require('fittencode.chat.runtime')
 local State = require('fittencode.state')
 
----@class fittencode.Chat.ChatController
-local ChatController = {}
-ChatController.__index = ChatController
+---@class fittencode.Chat.Controller
+local Controller = {}
+Controller.__index = Controller
 
----@return fittencode.Chat.ChatController
-function ChatController:new(opts)
-    local obj = setmetatable({}, ChatController)
+---@return fittencode.Chat.Controller
+function Controller:new(opts)
+    local obj = setmetatable({}, Controller)
     obj.chat_view = opts.chat_view
     obj.chat_model = opts.chat_model
     obj.basic_chat_template_id = opts.basic_chat_template_id
@@ -18,7 +18,7 @@ function ChatController:new(opts)
 end
 
 ---@return string
-function ChatController:generate_conversation_id()
+function Controller:generate_conversation_id()
     local function random(length)
         local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
         local result = {}
@@ -33,27 +33,27 @@ function ChatController:generate_conversation_id()
     return random(36).sub(2, 10)
 end
 
-function ChatController:update_view()
+function Controller:update_view()
     local state = State.get_state_from_model(self.chat_model)
     self.chat_view:update(state)
 end
 
-function ChatController:show_view()
+function Controller:show_view()
     self.chat_view:show()
 end
 
-function ChatController:hide_view()
+function Controller:hide_view()
     self.chat_view:hide()
 end
 
-function ChatController:view_visible()
+function Controller:view_visible()
     return self.chat_view:is_visible()
 end
 
 ---@param conversation fittencode.Chat.Conversation
 ---@param show boolean
 ---@return fittencode.Chat.Conversation
-function ChatController:add_and_show_conversation(conversation, show)
+function Controller:add_and_show_conversation(conversation, show)
     self.chat_model:add_and_select_conversation(conversation)
     self:update_view()
     if show then
@@ -63,7 +63,7 @@ function ChatController:add_and_show_conversation(conversation, show)
 end
 
 ---@param msg table
-function ChatController:receive_view_message(msg)
+function Controller:receive_view_message(msg)
     if not msg then return end
     local ty = msg.type
     if ty == 'ping' then
@@ -85,7 +85,7 @@ end
 ---@param template_id string
 ---@param show boolean
 ---@param mode string
-function ChatController:create_conversation(template_id, show, mode)
+function Controller:create_conversation(template_id, show, mode)
     show = show or true
     mode = mode or 'chat'
 
@@ -120,11 +120,11 @@ end
 
 ---@param template_id string
 ---@return fittencode.Chat.ConversationType
-function ChatController:get_conversation_type(template_id)
+function Controller:get_conversation_type(template_id)
     return self.conversation_types_provider:get_conversation_type(template_id)
 end
 
-function ChatController:get_conversations_brief()
+function Controller:get_conversations_brief()
     local result = {}
     for _, conversation in pairs(self.chat_model.conversations) do
         local brief = {
@@ -136,11 +136,11 @@ function ChatController:get_conversations_brief()
     return result
 end
 
-function ChatController:list_conversations()
+function Controller:list_conversations()
 
 end
 
-function ChatController:show_conversation(id)
+function Controller:show_conversation(id)
     local conversation = self.chat_model:get_conversation_by_id(id)
     if conversation then
         self.chat_model.selected_conversation_id = id
@@ -148,4 +148,4 @@ function ChatController:show_conversation(id)
     end
 end
 
-return ChatController
+return Controller

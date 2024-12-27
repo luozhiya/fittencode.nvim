@@ -123,7 +123,7 @@
 ---@field min number -- 最小值
 ---@field type string -- 类型
 
----@class fittencode.Chat.ChatModel
+---@class fittencode.Chat.Model
 ---@field add_and_select_conversation function
 ---@field get_conversation_by_id function
 ---@field delete_conversation function
@@ -171,9 +171,9 @@
 ---@field statistic_dict table
 ---@field ft_token string
 
----@class fittencode.Chat.ChatController
----@field chat_view fittencode.Chat.ChatView
----@field chat_model fittencode.Chat.ChatModel
+---@class fittencode.Chat.Controller
+---@field chat_view fittencode.Chat.View
+---@field chat_model fittencode.Chat.Model
 ---@field get_conversation_type function
 ---@field basic_chat_template_id string
 ---@field generate_conversation_id function
@@ -204,7 +204,7 @@
 ---@field load_from_file function
 ---@field load_from_directory function
 
----@class fittencode.Chat.ChatView
+---@class fittencode.Chat.View
 
 ---@class fittencode.State.Conversation
 ---@field id string

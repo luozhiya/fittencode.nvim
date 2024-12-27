@@ -2,15 +2,6 @@ local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
 
-local function sysname()
-    return vim.uv.os_uname().sysname:lower()
-end
-
----@return boolean
-local function is_windows()
-    return sysname():find('windows') ~= nil
-end
-
 local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     local cmd = params.cmd
     local args = params.args
@@ -98,7 +89,7 @@ local function build_args(args, headers)
     vim.list_extend(args, curl.default_args)
     for k, v in pairs(headers or {}) do
         args[#args + 1] = '-H'
-        if is_windows() then
+        if Fn.is_windows() then
             args[#args + 1] = '"' .. k .. ': ' .. v .. '"'
         else
             args[#args + 1] = k .. ': ' .. v
@@ -129,7 +120,7 @@ local function arg_max()
     if max_arg_length ~= nil then
         return max_arg_length
     end
-    if is_windows() then
+    if Fn.is_windows() then
         max_arg_length = 32767
     else
         local _, sys = pcall(tonumber, vim.fn.system('getconf ARG_MAX'))

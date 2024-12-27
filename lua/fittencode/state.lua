@@ -40,7 +40,7 @@ end
 
 ---@param editor fittencode.Editor
 ---@param tracker fittencode.Tracker
----@param model fittencode.Chat.ChatModel
+---@param model fittencode.Chat.Model
 ---@param selected_state boolean
 ---@return fittencode.State
 function State.get_state_from_model(editor, tracker, model, selected_state)

@@ -1,18 +1,18 @@
----@class fittencode.Chat.ChatModel
-local ChatModel = {}
-ChatModel.__index = ChatModel
+---@class fittencode.Chat.Model
+local Model = {}
+Model.__index = Model
 
----@return fittencode.Chat.ChatModel
-function ChatModel:new()
+---@return fittencode.Chat.Model
+function Model:new()
     local obj = {
         conversations = {}
     }
-    setmetatable(obj, ChatModel)
+    setmetatable(obj, Model)
     return obj
 end
 
 ---@param e fittencode.Chat.Conversation
-function ChatModel:add_and_select_conversation(e)
+function Model:add_and_select_conversation(e)
     if #self.conversations > 0 then
         local r = self.conversations[#self.conversations]
         if r and #r.messages == 0 then
@@ -28,7 +28,7 @@ end
 
 ---@param id string
 ---@return fittencode.Chat.Conversation?
-function ChatModel:get_conversation_by_id(id)
+function Model:get_conversation_by_id(id)
     for _, r in ipairs(self.conversations) do
         if r.id == id then
             return r
@@ -38,7 +38,7 @@ function ChatModel:get_conversation_by_id(id)
 end
 
 ---@param id string
-function ChatModel:delete_conversation(id)
+function Model:delete_conversation(id)
     for i = #self.conversations, 1, -1 do
         if self.conversations[i].id == id then
             table.remove(self.conversations, i)
@@ -46,7 +46,7 @@ function ChatModel:delete_conversation(id)
     end
 end
 
-function ChatModel:delete_all_conversations()
+function Model:delete_all_conversations()
     for i = #self.conversations, 1, -1 do
         if not self.conversations[i].is_favorited then
             table.remove(self.conversations, i)
@@ -56,7 +56,7 @@ function ChatModel:delete_all_conversations()
 end
 
 ---@param id string
-function ChatModel:change_favorited(id)
+function Model:change_favorited(id)
     for _, n in ipairs(self.conversations) do
         if n.id == id then
             n:set_is_favorited()
@@ -67,16 +67,16 @@ end
 
 ---@param id string
 ---@return boolean
-function ChatModel:is_empty(id)
+function Model:is_empty(id)
     local conversation = self:get_conversation_by_id(id)
     if not conversation then return true end
     return conversation:is_empty()
 end
 
-function ChatModel:user_can_reply(id)
+function Model:user_can_reply(id)
     local conversation = self:get_conversation_by_id(id)
     if not conversation then return false end
     return conversation:user_can_reply()
 end
 
-return ChatModel
+return Model

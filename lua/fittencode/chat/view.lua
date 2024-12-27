@@ -30,8 +30,8 @@ Experience the high-efficiency code auto-completion now!
 }
 setmetatable(welcome_message, { __index = function() return welcome_message['en'] end })
 
----@class fittencode.Chat.ChatView
-local ChatView = {
+---@class fittencode.Chat.View
+local View = {
     messages_exchange = {
         win = nil,
         buf = {
@@ -51,17 +51,17 @@ local ChatView = {
     },
     last_win_mode = nil,
 }
-ChatView.__index = ChatView
+View.__index = View
 
----@return fittencode.Chat.ChatView
-function ChatView:new(opts)
+---@return fittencode.Chat.View
+function View:new(opts)
     local obj = {
     }
-    setmetatable(obj, ChatView)
+    setmetatable(obj, View)
     return obj
 end
 
-function ChatView:init()
+function View:init()
     self.messages_exchange.buf.welcome = vim.api.nvim_create_buf(false, true)
     self.char_input.buf = vim.api.nvim_create_buf(false, true)
     self.reference.buf = vim.api.nvim_create_buf(false, true)
@@ -75,7 +75,7 @@ function ChatView:init()
     end)
 end
 
-function ChatView:_destroy_win()
+function View:_destroy_win()
     local wins = {
         'messages_exchange',
         'char_input',
@@ -90,7 +90,7 @@ function ChatView:_destroy_win()
     end
 end
 
-function ChatView:update(state)
+function View:update(state)
     local id = state.selectedConversationId
     if not id then
         self:send_message({
@@ -115,7 +115,7 @@ function ChatView:update(state)
     self:update_char_input(conversation:user_can_reply(), id)
 end
 
-function ChatView:render_reference(conv)
+function View:render_reference(conv)
     if not vim.api.nvim_buf_is_valid(self.reference.buf) then
         return
     end
@@ -123,7 +123,7 @@ function ChatView:render_reference(conv)
     -- local title = string.format('%s %d:%d', range.filename, range.start_row, range.end_row)
 end
 
-function ChatView:render_conversation(conv, id)
+function View:render_conversation(conv, id)
     if not self.messages_exchange.buf.conversations[id] then
         return
     end
@@ -166,7 +166,7 @@ function ChatView:render_conversation(conv, id)
     end)
 end
 
-function ChatView:show(opts)
+function View:show(opts)
     if self.last_win_mode ~= opts.mode then
         self:_destroy_win()
     end
@@ -227,22 +227,22 @@ function ChatView:show(opts)
     end
 end
 
-function ChatView:hide()
+function View:hide()
     self:update_char_input(false)
     self:_destroy_win()
 end
 
-function ChatView:send_message(msg)
+function View:send_message(msg)
     if type(msg) == 'table' then
         Fn.schedule_call(self.receive_view_message, msg)
     end
 end
 
-function ChatView:register_message_receiver(receive_view_message)
+function View:register_message_receiver(receive_view_message)
     self.receive_view_message = receive_view_message
 end
 
-function ChatView:update_char_input(enable, id)
+function View:update_char_input(enable, id)
     local is_enabled = false
     vim.api.nvim_buf_call(self.char_input.buf, function()
         is_enabled = vim.api.nvim_get_option_value('modifiable', { buf = self.char_input.buf })
@@ -291,7 +291,7 @@ function ChatView:update_char_input(enable, id)
     end
 end
 
-function ChatView:create_conversation(id)
+function View:create_conversation(id)
     if self.messages_exchange.buf.conversations[id] then
         return
     end
@@ -305,7 +305,7 @@ function ChatView:create_conversation(id)
     end)
 end
 
-function ChatView:delete_conversation(id)
+function View:delete_conversation(id)
     if not self.messages_exchange.buf.conversations[id] then
         return
     end
@@ -313,11 +313,11 @@ function ChatView:delete_conversation(id)
     self.messages_exchange.buf.conversations[id] = nil
 end
 
-function ChatView:set_fcps(enable)
+function View:set_fcps(enable)
     self.fcps = enable
 end
 
-function ChatView:with_fcps(message)
+function View:with_fcps(message)
     if self.fcps then
         return '@FCPS ' .. message
     else
@@ -325,8 +325,8 @@ function ChatView:with_fcps(message)
     end
 end
 
-function ChatView:is_visible()
+function View:is_visible()
     return self.messages_exchange.win ~= nil and vim.api.nvim_win_is_valid(self.messages_exchange.win)
 end
 
-return ChatView
+return View

@@ -1,0 +1,1 @@
+---@class fittencode.Inline.Model
