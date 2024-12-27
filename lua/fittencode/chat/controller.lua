@@ -10,8 +10,8 @@ Controller.__index = Controller
 ---@return fittencode.Chat.Controller
 function Controller:new(opts)
     local obj = setmetatable({}, Controller)
-    obj.chat_view = opts.chat_view
-    obj.chat_model = opts.chat_model
+    obj.view = opts.view
+    obj.model = opts.model
     obj.basic_chat_template_id = opts.basic_chat_template_id
     obj.conversation_types_provider = opts.conversation_types_provider
     return obj
@@ -34,27 +34,27 @@ function Controller:generate_conversation_id()
 end
 
 function Controller:update_view()
-    local state = State.get_state_from_model(self.chat_model)
-    self.chat_view:update(state)
+    local state = State.get_state_from_model(self.model)
+    self.view:update(state)
 end
 
 function Controller:show_view()
-    self.chat_view:show()
+    self.view:show()
 end
 
 function Controller:hide_view()
-    self.chat_view:hide()
+    self.view:hide()
 end
 
 function Controller:view_visible()
-    return self.chat_view:is_visible()
+    return self.view:is_visible()
 end
 
 ---@param conversation fittencode.Chat.Conversation
 ---@param show boolean
 ---@return fittencode.Chat.Conversation
 function Controller:add_and_show_conversation(conversation, show)
-    self.chat_model:add_and_select_conversation(conversation)
+    self.model:add_and_select_conversation(conversation)
     self:update_view()
     if show then
         self:show_view()
@@ -69,9 +69,9 @@ function Controller:receive_view_message(msg)
     if ty == 'ping' then
         self:update_view()
     elseif ty == 'send_message' then
-        assert(msg.data.id == self.chat_model.selected_conversation_id)
+        assert(msg.data.id == self.model.selected_conversation_id)
         ---@type fittencode.Chat.Conversation
-        local conv = self.chat_model:get_conversation_by_id(msg.data.id)
+        local conv = self.model:get_conversation_by_id(msg.data.id)
         if conv then
             conv:answer(msg.data.message)
         end
@@ -126,7 +126,7 @@ end
 
 function Controller:get_conversations_brief()
     local result = {}
-    for _, conversation in pairs(self.chat_model.conversations) do
+    for _, conversation in pairs(self.model.conversations) do
         local brief = {
             id = conversation.id,
             name = conversation.name,
@@ -141,9 +141,9 @@ function Controller:list_conversations()
 end
 
 function Controller:show_conversation(id)
-    local conversation = self.chat_model:get_conversation_by_id(id)
+    local conversation = self.model:get_conversation_by_id(id)
     if conversation then
-        self.chat_model.selected_conversation_id = id
+        self.model.selected_conversation_id = id
         self:show_view()
     end
 end

@@ -129,21 +129,35 @@ local defaults = {
         -- * 'unittest'
         ['Python'] = 'Not specified',
     },
-    use_project_completion = {
-        -- Entire Project Perception based Completion
+    -- Intelligent Triggered Edit Completion
+    use_auto_edit_completion = {
         -- Avaiable options:
         -- * 'auto'
         -- * 'on'
         -- * 'off'
         open = 'auto',
     },
+    -- Entire Project Perception based Completion
+    use_project_completion = {
+        -- Avaiable options:
+        -- * 'auto'
+        -- * 'on'
+        -- * 'off'
+        open = 'auto',
+    },
+    -- Use default keymaps for Fitten Code.
+    -- If set to false, all defaults keymaps will be removed.
     use_default_keymaps = true,
     -- Default keymaps for Fitten Code.
     keymaps = {
         inline = {
-            ['<TAB>'] = 'accept_all_suggestions',
+            ['<A-O>'] = 'edit_completion',
+            ['<Tab>'] = 'accept',
+            ['<Esc>'] = 'cancel',
             ['<C-Down>'] = 'accept_line',
+            ['<C-Up>'] = 'revoke_line',
             ['<C-Right>'] = 'accept_word',
+            ['<C-Left>'] = 'revoke_word',
             ['<A-\\>'] = 'triggering_completion',
         },
     },

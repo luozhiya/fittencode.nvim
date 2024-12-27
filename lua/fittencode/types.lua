@@ -172,8 +172,8 @@
 ---@field ft_token string
 
 ---@class fittencode.Chat.Controller
----@field chat_view fittencode.Chat.View
----@field chat_model fittencode.Chat.Model
+---@field view fittencode.Chat.View
+---@field model fittencode.Chat.Model
 ---@field get_conversation_type function
 ---@field basic_chat_template_id string
 ---@field generate_conversation_id function

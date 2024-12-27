@@ -1,0 +1,7 @@
+-- New session when suggestion is available
+-- Register keys
+---@class fittencode.Inline.Session
+---@field mode string -- 'inline_suggest' or 'edit_completion'
+---@field request_handle number
+---@field suggestion string
+---@field start_pos table<number, number>
