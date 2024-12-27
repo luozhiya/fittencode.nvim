@@ -2,6 +2,7 @@ local Client = require('fittencode.client')
 local Chat = require('fittencode.chat')
 local Log = require('fittencode.log')
 local Translate = require('fittencode.translate')
+local Inline = require('fittencode.inline')
 
 local commands = {
     -- Account
@@ -18,6 +19,11 @@ local commands = {
         complete = Client.login_providers
     },
     logout = { execute = function() Client.logout() end },
+    -- Inline
+    onlyenable = { execute = function() Inline.onlyenable() end },
+    onlydisable = { execute = function() Inline.onlydisable() end },
+    disable = { execute = function() Inline.disable() end },
+    enable = { execute = function() Inline.enable() end },
     -- Chat
     show_chat = { execute = function() Chat.show_chat() end },
     hide_chat = { execute = function() Chat.hide_chat() end },
