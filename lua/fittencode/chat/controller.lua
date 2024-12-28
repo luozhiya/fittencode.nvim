@@ -64,7 +64,7 @@ end
 ---@return fittencode.Chat.Conversation
 function Controller:add_and_show_conversation(conversation, show)
     self.model:add_and_select_conversation(conversation)
-    self:update_view()
+    self:update_view(show)
     if show then
         self:show_view()
     end
@@ -101,13 +101,16 @@ function Controller:create_conversation(template_id, show, mode)
     local conversation_ty = self:get_conversation_type(template_id)
     if not conversation_ty then Log.error('No conversation type found for {}', template_id) end
 
-    local variables = Runtime.resolve_variables(conversation_ty.variables, { time = 'conversation-start' })
+    Log.debug('Creating conversation with type {}', conversation_ty)
+    local variables = Runtime.resolve_variables(conversation_ty.template.variables, { time = 'conversation-start' })
+    Log.debug('Variables: {}', variables)
     local created_conversation = conversation_ty:create_conversation({
         conversation_id = self:generate_conversation_id(),
         init_variables = variables,
         update_view = function() self:update_view() end,
         update_status = function(data) self:update_status(data) end,
     })
+    Log.debug('Created conversation: {}', created_conversation)
 
     if created_conversation.type == 'unavailable' then
         if created_conversation.display == 'info' then

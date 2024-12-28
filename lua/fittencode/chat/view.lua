@@ -1,5 +1,6 @@
 local Fn = require('fittencode.fn')
 local Client = require('fittencode.client')
+local Log = require('fittencode.log')
 
 local welcome_message = {
     ['zh-cn'] = {
@@ -91,7 +92,9 @@ function View:_destroy_win()
 end
 
 -- Even if the view is not visible, the view should be updated to reflect the latest model state.
+---@param state fittencode.State
 function View:update(state)
+    Log.debug('View update state = {}', state)
     local id = state.selectedConversationId
     if not id then
         self:send_message({
@@ -118,6 +121,8 @@ function View:render_reference(conv)
     -- local title = string.format('%s %d:%d', range.filename, range.start_row, range.end_row)
 end
 
+---@param conversation fittencode.State.Conversation
+---@param id string
 function View:render_conversation(conversation, id)
     if not self.messages_exchange.conversations[id] then
         return
@@ -173,6 +178,9 @@ function View:set_mode(mode)
 end
 
 function View:show()
+    if not self.state or not self.state.selectedConversationId then
+        return
+    end
     assert(self.state)
     assert(self.state.selectedConversationId)
     if self.mode == 'panel' then
@@ -181,16 +189,12 @@ function View:show()
             split = 'left',
             width = 60,
             height = 15,
-            row = 5,
-            col = 5,
         })
         self.char_input.win = vim.api.nvim_open_win(self.char_input.buf, true, {
             vertical = false,
             split = 'below',
             width = 60,
             height = 5,
-            row = 20,
-            col = 5,
         })
     elseif self.mode == 'float' then
         self.messages_exchange.win = vim.api.nvim_open_win(self.messages_exchange.conversations[self.state.selectedConversationId], true, {
@@ -236,10 +240,14 @@ function View:update_char_input(enable, id)
         return
     end
 
-    vim.on_key(nil, self.char_input.on_key_ns)
-    self.char_input.on_key_ns = nil
-    vim.api.nvim_del_autocmd(self.char_input.autocmd_id)
-    self.char_input.autocmd_id = nil
+    if self.char_input.on_key_ns then
+        vim.on_key(nil, self.char_input.on_key_ns)
+        self.char_input.on_key_ns = nil
+    end
+    if self.char_input.autocmd_id then
+        vim.api.nvim_del_autocmd(self.char_input.autocmd_id)
+        self.char_input.autocmd_id = nil
+    end
 
     vim.api.nvim_buf_call(self.char_input.buf, function()
         vim.api.nvim_set_option_value('modifiable', enable, { buf = self.char_input.buf })

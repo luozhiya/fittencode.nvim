@@ -8,8 +8,7 @@ function Editor.get_ft_language()
 end
 
 function Editor.get_filename()
-    local filename = vim.api.nvim_buf_get_name(0)
-    return filename
+    return vim.api.nvim_buf_get_name(0)
 end
 
 function Editor.get_workspace_path()
@@ -18,12 +17,17 @@ function Editor.get_workspace_path()
 end
 
 function Editor.get_selected()
-    return {}
+    return {
+        text = '',
+        location = {
+            row = 0,
+            col = 0
+        }
+    }
 end
 
 function Editor.get_selected_text()
-    local selected_text = Editor.get_selected().text
-    return selected_text
+    return Editor.get_selected().text
 end
 
 function Editor.get_selected_range()

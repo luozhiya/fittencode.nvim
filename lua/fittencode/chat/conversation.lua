@@ -15,7 +15,11 @@ Conversation.__index = Conversation
 ---@return fittencode.Chat.Conversation
 function Conversation:new(opts)
     local obj = {
+        id = opts.id,
+        template = opts.template,
+        init_variables = opts.init_variables,
         update_view = Fn.schedule_call_wrap_fn(opts.update_view),
+        update_status = Fn.schedule_call_wrap_fn(opts.update_status)
     }
     setmetatable(obj, Conversation)
     return obj
@@ -31,7 +35,10 @@ end
 ---@return string
 function Conversation:get_title()
     local header = self.template.header
-    local message = self.messages[1] and self.messages[1].content or nil
+    local message
+    if self.messages and self.messages[1] then
+        message = self.messages[1].content
+    end
     if header.useFirstMessageAsTitle == true and message ~= nil then
         return message
     else
@@ -45,7 +52,7 @@ end
 
 ---@return boolean
 function Conversation:is_title_message()
-    return self.template.header.useFirstMessageAsTitle == true and self.messages[1] ~= nil
+    return self.template.header.useFirstMessageAsTitle == true and self.messages and self.messages[1] ~= nil
 end
 
 ---@return string
@@ -101,7 +108,8 @@ function Conversation:evaluate_template(template, variables)
     if self.temporary_editor_content then
         variables.temporaryEditorContent = self.temporary_editor_content
     end
-    local env = vim.tbl_deep_extend('force', {}, self.init_variables, self.variables)
+    local env = vim.tbl_deep_extend('force', {}, self.init_variables or {}, self.variables or {})
+    Log.debug('Evaluating env = {}', env)
     return VM.run(env, template)
 end
 
@@ -214,15 +222,6 @@ end
 ---@return boolean
 function Conversation:is_busying()
     return self.request_handle and self.request_handle.is_active() or false
-end
-
----@return boolean
-function Conversation:is_empty()
-    return #self.messages == 0
-end
-
-function Conversation:user_can_reply()
-    return self.state.type == 'user_can_reply'
 end
 
 return Conversation
