@@ -18,6 +18,7 @@ function Conversation:new(opts)
         id = opts.id,
         template = opts.template,
         init_variables = opts.init_variables,
+        messages = {},
         update_view = Fn.schedule_call_wrap_fn(opts.update_view),
         update_status = Fn.schedule_call_wrap_fn(opts.update_status)
     }
@@ -36,7 +37,7 @@ end
 function Conversation:get_title()
     local header = self.template.header
     local message
-    if self.messages and self.messages[1] then
+    if self.messages[1] then
         message = self.messages[1].content
     end
     if header.useFirstMessageAsTitle == true and message ~= nil then
@@ -52,7 +53,7 @@ end
 
 ---@return boolean
 function Conversation:is_title_message()
-    return self.template.header.useFirstMessageAsTitle == true and self.messages and self.messages[1] ~= nil
+    return self.template.header.useFirstMessageAsTitle == true and self.messages[1] ~= nil
 end
 
 ---@return string
@@ -105,6 +106,9 @@ function Conversation:evaluate_template(template, variables)
         variables.temporaryEditorContent = self.temporary_editor_content
     end
     local env = vim.tbl_deep_extend('force', {}, self.init_variables or {}, self.variables or {})
+    env.messages = self.messages
+    Log.debug('Evaluating template: {}', template)
+    Log.debug('Evaluating env: {}', env)
     return VM.run(env, template)
 end
 
@@ -138,7 +142,7 @@ end
 
 ---@param opts table
 function Conversation:execute_chat(opts)
-    if Config.fitten.version == 'default' then
+    if Config.server.fitten_version == 'default' then
         opts.workspace = false
     end
     if opts._workspace then
@@ -161,6 +165,7 @@ function Conversation:execute_chat(opts)
         local variables = self:resolve_variables_at_message_time()
         local retrieval_augmentation = ir.retrievalAugmentation
         local evaluated = self:evaluate_template(ir.template, variables)
+        Log.debug('Evaluated message: {}', evaluated)
 
         Promise:new(function(resolve, reject)
             self.request_handle = Client.chat({
@@ -170,19 +175,19 @@ function Conversation:execute_chat(opts)
                     project_id = '',
                 }
             }, function()
-                self.update_state({ id = self.id, stream = true })
+                self.update_status({ id = self.id, stream = true })
             end, nil, function(response)
-                self.update_state({ id = self.id, stream = true })
-                self:handle_partial_completion(response)
+                self.update_status({ id = self.id, stream = true })
+                -- self:handle_partial_completion(response)
             end, function(error)
                 reject(error)
             end, function()
                 resolve()
             end)
         end):forward(function()
-            self.update_state({ id = self.id, stream = false })
+            self.update_status({ id = self.id, stream = false })
         end, function(error)
-            self.update_state({ id = self.id, stream = false })
+            self.update_status({ id = self.id, stream = false })
             Log.error('Error while executing chat, conversation id = {}, error = {}', self.id, error)
         end)
     end

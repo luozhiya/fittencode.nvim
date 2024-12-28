@@ -14,7 +14,7 @@ local function get_platform_info_as_url_params()
     if not platform_info then
         platform_info = table.concat({
             'ide=' .. ide,
-            'ide_v=' .. vim.version(),
+            'ide_v=' .. tostring(vim.version()),
             'os=' .. vim.uv.os_uname().sysname,
             'os_v=' .. vim.uv.os_uname().release,
             'v=' .. version,
@@ -154,8 +154,8 @@ local function login(username, password, on_success, on_error)
             on_error = vim.schedule_wrap(function()
                 reject()
             end),
-            on_once = vim.schedule_wrap(function(res)
-                local _, login_data = pcall(vim.fn.json_decode, res)
+            on_once = vim.schedule_wrap(function(data)
+                local _, login_data = pcall(vim.fn.json_decode, data.output)
                 if not _ or login_data.code ~= 200 then
                     reject()
                 else
@@ -172,8 +172,8 @@ local function login(username, password, on_success, on_error)
                 on_error = vim.schedule_wrap(function()
                     reject()
                 end),
-                on_once = vim.schedule_wrap(function(res)
-                    local _, fico_data = pcall(vim.fn.json_decode, res)
+                on_once = vim.schedule_wrap(function(data)
+                    local _, fico_data = pcall(vim.fn.json_decode, data.output)
                     if not _ or fico_data.data == nil or fico_data.data.fico_token == nil then
                         reject()
                     else
@@ -362,8 +362,8 @@ local function login3rd(source, on_success, on_error)
             Promise:new(function(resolve, reject)
                 HTTP.get(check_url, {
                     on_error = vim.schedule_wrap(function() reject() end),
-                    on_once = vim.schedule_wrap(function(fico_res)
-                        local _, fico_data = pcall(vim.fn.json_decode, fico_res)
+                    on_once = vim.schedule_wrap(function(data)
+                        local _, fico_data = pcall(vim.fn.json_decode, data.output)
                         if not _ or fico_data.token == nil or fico_data.token == '' then
                             reject()
                         else
@@ -415,7 +415,7 @@ end
 ---@field is_active function
 
 ---@return RequestHandle?
-local function request(method, url, headers, body, on_create, on_once, on_stream, on_error, on_exit)
+local function request(method, url, headers, body, no_buffer, on_create, on_once, on_stream, on_error, on_exit)
     local function wrap()
         local canceled = false
         ---@type uv_process_t?
@@ -423,29 +423,32 @@ local function request(method, url, headers, body, on_create, on_once, on_stream
         local opts = {
             headers = headers,
             body = body,
+            no_buffer = no_buffer,
             on_create = vim.schedule_wrap(function(data)
+                Log.debug('process created {}', data)
                 if canceled then return end
                 process = data.process
                 Fn.schedule_call(on_create)
             end),
-            on_once = vim.schedule_wrap(function(res)
+            on_once = vim.schedule_wrap(function(data)
+                Log.debug('process once {}', data)
                 if canceled then return end
-                Fn.schedule_call(on_once, res)
+                Fn.schedule_call(on_once, data)
             end),
-            on_stream = vim.schedule_wrap(function(error, chunk)
+            on_stream = vim.schedule_wrap(function(data)
                 if canceled then return end
-                if error then
-                    Fn.schedule_call(on_error)
+                if data.error then
+                    Fn.schedule_call(on_error, { error = data.error })
                 else
-                    Fn.schedule_call(on_stream, chunk)
+                    Fn.schedule_call(on_stream, { chunk = data.chunk })
                 end
             end),
-            on_error = vim.schedule_wrap(function()
+            on_error = vim.schedule_wrap(function(data)
                 if canceled then return end
-                Fn.schedule_call(on_error)
+                Fn.schedule_call(on_error, data)
             end),
-            on_exit = vim.schedule_wrap(function()
-                Fn.schedule_call(on_exit)
+            on_exit = vim.schedule_wrap(function(data)
+                Fn.schedule_call(on_exit, data)
             end),
         }
         HTTP[method](url, opts)
@@ -496,7 +499,7 @@ local function generate_one_stage(prompt, on_once, on_error, on_exit)
         ['Content-Type'] = 'application/json',
     }
     local url = server_url() .. preset_urls.generate_one_stage .. '/' .. key .. '？' .. get_platform_info_as_url_params()
-    return request('post', url, headers, prompt, nil, on_once, nil, on_error, on_exit)
+    return request('post', url, headers, prompt, false, nil, on_once, nil, on_error, on_exit)
 end
 
 local function chat(prompt, on_create, on_once, on_stream, on_error, on_exit)
@@ -508,26 +511,9 @@ local function chat(prompt, on_create, on_once, on_stream, on_error, on_exit)
     local headers = {
         ['Content-Type'] = 'application/json',
     }
-    local url = server_url() .. preset_urls.chat .. '/?ft_token=' .. key .. '&' .. get_platform_info_as_url_params()
-    return request('post', url, headers, prompt, on_create, on_once, on_stream, on_error, on_exit)
-end
-
-local function chat_heartbeat(prompt, on_once, on_stream, on_error, on_exit)
-    local on_once_hb = function(output)
-        local data = {}
-        for _, line in ipairs(output) do
-            local _, delta = pcall(vim.fn.json_decode, line)
-            if not _ then
-                -- ignore invalid json
-            else
-                if not Fn.startwith(delta, 'heartbeat') then
-                    data[#data + 1] = delta
-                end
-            end
-        end
-        on_once(table.concat(data))
-    end
-    return chat(prompt, on_once_hb, on_stream, on_error, on_exit)
+    local url = server_url() .. preset_urls.chat .. '?ft_token=' .. key .. '&' .. get_platform_info_as_url_params()
+    Log.debug('chat url: {}', url)
+    return request('post', url, headers, prompt, true, on_create, on_once, on_stream, on_error, on_exit)
 end
 
 return {

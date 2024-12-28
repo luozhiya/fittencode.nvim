@@ -30,7 +30,7 @@
 ---@field evaluate_template function
 ---@field request_handle RequestHandle?
 ---@field update_view function?
----@field update_state function?
+---@field update_status function?
 
 ---@class fittencode.Chat.StateConversation.Header
 ---@field title string

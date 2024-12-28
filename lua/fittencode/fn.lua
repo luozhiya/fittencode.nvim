@@ -16,6 +16,9 @@ local function schedule_call_wrap_fn(fx, ...)
 end
 
 local function schedule_call_foreach(v, ...)
+    if not v then
+        return
+    end
     if vim.islist(v) then
         for _, fx in ipairs(v) do
             schedule_call(fx, ...)
@@ -92,7 +95,7 @@ local function timezone_language()
 end
 
 local function pack(...)
-    return { n = select("#", ...); ... }
+    return { n = select('#', ...), ... }
 end
 
 local function format(msg, ...)

@@ -35,7 +35,7 @@ function StateConversation:is_empty()
 end
 
 function StateConversation:user_can_reply()
-    return self.content.state and self.content.state.type == 'user_can_reply'
+    return self.content.state == nil or (self.content.state ~= nil and self.content.state.type == 'user_can_reply')
 end
 
 ---@param conversation fittencode.Chat.Conversation

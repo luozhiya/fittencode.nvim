@@ -3,8 +3,12 @@ local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
 
 local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
+    Log.debug('spawn params = {}', params)
+
     local cmd = params.cmd
     local args = params.args
+
+    Log.debug('spawn args = {}', table.concat(args, ' '))
 
     local output = {}
     local error = {}
@@ -35,13 +39,14 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
             else
                 Fn.schedule_call(on_once, { exit_code = exit_code, output = output, error = error, })
             end
-            Fn.schedule_call(on_exit)
+            Fn.schedule_call(on_exit, { exit_code = exit_code })
         end)
     end)
 
     Fn.schedule_call(on_create, { process = process, pid = pid, })
 
     local function on_stdout(err, chunk)
+        Log.debug('on_stdout err = {}, chunk = {}', err, chunk)
         Fn.schedule_call(on_stream, { error = err, chunk = chunk })
         if not err and chunk then
             output[#output + 1] = chunk
@@ -49,6 +54,7 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     end
 
     local function on_stderr(err, chunk)
+        Log.debug('on_stderr err = {}, chunk = {}', err, chunk)
         if not err and chunk then
             error[#error + 1] = chunk
         end
@@ -79,15 +85,19 @@ local function spawn_curl(args, opts)
         if exit_code ~= curl.exit_code_success then
             Fn.schedule_call(opts.on_error, { exit_code = exit_code, error = error, })
         else
-            Fn.schedule_call(opts.on_once, output)
+            Fn.schedule_call(opts.on_once, { output = output })
         end
     end
     spawn(params, opts.on_create, on_once, opts.on_stream, opts.on_error, opts.on_exit)
 end
 
-local function build_args(args, headers)
+local function build_args(args, opts)
+    if opts.no_buffer then
+        args[#args + 1] = '--no-buffer'
+    end
+    local headers = opts.headers or {}
     vim.list_extend(args, curl.default_args)
-    for k, v in pairs(headers or {}) do
+    for k, v in pairs(headers) do
         args[#args + 1] = '-H'
         if Fn.is_windows() then
             args[#args + 1] = '"' .. k .. ': ' .. v .. '"'
@@ -107,7 +117,7 @@ local function get(url, opts)
     local args = {
         url,
     }
-    build_args(args, opts.headers)
+    build_args(args, opts)
     spawn_curl(args, opts)
 end
 
@@ -135,7 +145,7 @@ local function post(url, opts)
         '-X',
         'POST',
     }
-    build_args(args, opts.headers)
+    build_args(args, opts)
     if type(opts.body) == 'string' and vim.fn.filereadable(opts.body) == 1 then
         add_data_argument(args, opts.body, true)
         spawn_curl(args, opts)

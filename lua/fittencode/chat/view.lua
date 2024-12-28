@@ -262,17 +262,19 @@ function View:update_char_input(enable, id)
                 if vim.api.nvim_get_mode().mode == 'i' and vim.api.nvim_get_current_buf() == self.char_input.buf and key == enter_key then
                     vim.api.nvim_buf_call(self.char_input.buf, function()
                         Log.debug('View char input enter key')
-                        vim.api.nvim_command('doautocmd User fittencode.ChatInputReady')
+                        vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.ChatInputReady', modeline = false })
                     end)
                 end
             end)
         end)
-        self.char_input_autocmd = vim.api.nvim_create_autocmd('fittencode.ChatInputReady', {
-            buffer = self.char_input.buf,
+        self.char_input_autocmd = vim.api.nvim_create_autocmd('User', {
+            pattern = 'fittencode.ChatInputReady',
+            once = true,
             callback = function()
                 vim.api.nvim_buf_call(self.char_input.buf, function()
                     local message = vim.api.nvim_buf_get_lines(self.char_input.buf, 0, -1, false)[1]
                     message = self:with_fcps(message)
+                    Log.debug('View char input send message: {}', message)
                     self:send_message({
                         type = 'send_message',
                         data = {
