@@ -94,8 +94,7 @@ end
 -- Even if the view is not visible, the view should be updated to reflect the latest model state.
 ---@param state fittencode.State
 function View:update(state)
-    Log.debug('View update state = {}', state)
-    local id = state.selectedConversationId
+    local id = state.selected_conversation_id
     if not id then
         self:send_message({
             type = 'start_chat'
@@ -178,13 +177,13 @@ function View:set_mode(mode)
 end
 
 function View:show()
-    if not self.state or not self.state.selectedConversationId then
+    if not self.state or not self.state.selected_conversation_id then
         return
     end
     assert(self.state)
-    assert(self.state.selectedConversationId)
+    assert(self.state.selected_conversation_id)
     if self.mode == 'panel' then
-        self.messages_exchange.win = vim.api.nvim_open_win(self.messages_exchange.conversations[self.state.selectedConversationId], true, {
+        self.messages_exchange.win = vim.api.nvim_open_win(self.messages_exchange.conversations[self.state.selected_conversation_id], true, {
             vertical = true,
             split = 'left',
             width = 60,
@@ -197,7 +196,7 @@ function View:show()
             height = 5,
         })
     elseif self.mode == 'float' then
-        self.messages_exchange.win = vim.api.nvim_open_win(self.messages_exchange.conversations[self.state.selectedConversationId], true, {
+        self.messages_exchange.win = vim.api.nvim_open_win(self.messages_exchange.conversations[self.state.selected_conversation_id], true, {
             relative = 'editor',
             width = 60,
             height = 15,
@@ -232,6 +231,9 @@ function View:register_message_receiver(receive_view_message)
 end
 
 function View:update_char_input(enable, id)
+    print(enable, id)
+    Log.debug('View update_char_input {} {}', id, enable)
+
     local is_enabled = false
     vim.api.nvim_buf_call(self.char_input.buf, function()
         is_enabled = vim.api.nvim_get_option_value('modifiable', { buf = self.char_input.buf })
@@ -259,6 +261,7 @@ function View:update_char_input(enable, id)
             vim.schedule(function()
                 if vim.api.nvim_get_mode().mode == 'i' and vim.api.nvim_get_current_buf() == self.char_input.buf and key == enter_key then
                     vim.api.nvim_buf_call(self.char_input.buf, function()
+                        Log.debug('View char input enter key')
                         vim.api.nvim_command('doautocmd User fittencode.ChatInputReady')
                     end)
                 end

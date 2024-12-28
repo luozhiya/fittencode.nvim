@@ -1,6 +1,6 @@
 -- Inspect for chat/inline
 -- chat(conversation)
---   - status
+--   - stream
 --   - timing
 -- inline(completion)
 --   - status

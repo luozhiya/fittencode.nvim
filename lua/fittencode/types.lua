@@ -34,7 +34,7 @@
 
 ---@class fittencode.Chat.StateConversation.Header
 ---@field title string
----@field isTitleMessage boolean
+---@field is_title_message boolean
 ---@field codicon string
 
 ---@class fittencode.Chat.StateConversation
@@ -43,18 +43,18 @@
 ---@field header fittencode.Chat.StateConversation.Header
 ---@field content fittencode.Chat.Conversation
 ---@field timestamp string
----@field isFavorited boolean
+---@field is_favorited boolean
 ---@field mode string
 
 ---@class fittencode.Chat.PersistenceState
 ---@field type string
----@field selectedConversationId string
+---@field selected_conversation_id string
 ---@field conversations table<fittencode.Chat.StateConversation>
----@field hasFittenAIApiKey boolean
+---@field has_fitten_ai_api_key boolean
 ---@field surfacePromptForFittenAIPlus boolean
----@field serverURL string
+---@field server_url string
 ---@field showHistory boolean
----@field fittenAIApiKey string
+---@field fitten_ai_api_key string
 ---@field openUserCenter boolean
 ---@field tracker fittencode.Chat.Tracker
 ---@field trackerOptions fittencode.Chat.Tracker.Options
@@ -216,7 +216,7 @@
 ---@field header table<string, string>
 ---@field content table<string, any>
 ---@field timestamp number
----@field isFavorited boolean
+---@field is_favorited boolean
 ---@field mode string
 
 ---@class fittencode.Tracker
@@ -225,11 +225,11 @@
 
 ---@class fittencode.State
 ---@field type string
----@field selectedConversationId string
+---@field selected_conversation_id string
 ---@field conversations table<string, fittencode.State.Conversation>
----@field hasFittenAIApiKey boolean
----@field serverURL string
----@field fittenAIApiKey string
+---@field has_fitten_ai_api_key boolean
+---@field server_url string
+---@field fitten_ai_api_key string
 ---@field tracker fittencode.Tracker
 ---@field trackerOptions fittencode.TrackerOptions
 ---@field get_state_from_model function

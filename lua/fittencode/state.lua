@@ -18,12 +18,12 @@ function StateConversation:new(conversation)
         reference = { selectText = '', selectRange = '' },
         header = {
             title = conversation:get_title(),
-            isTitleMessage = conversation:is_title_message(),
+            is_title_message = conversation:is_title_message(),
             codicon = conversation:get_codicon()
         },
         content = {},
         timestamp = conversation.creation_timestamp,
-        isFavorited = conversation.is_favorited,
+        is_favorited = conversation.is_favorited,
         mode = conversation.mode
     }
     setmetatable(obj, StateConversation)
@@ -31,7 +31,7 @@ function StateConversation:new(conversation)
 end
 
 function StateConversation:is_empty()
-    return (self.header.isTitleMessage and (self.header.title == nil or self.header.title == '')) or (not self.header.isTitleMessage and (self.content.messages == nil or #self.content.messages == 0))
+    return (self.header.is_title_message and (self.header.title == nil or self.header.title == '')) or (not self.header.is_title_message and (self.content.messages == nil or #self.content.messages == 0))
 end
 
 function StateConversation:user_can_reply()
@@ -67,7 +67,6 @@ function State.get_state_from_model(model, selected_state, tracker)
     local n = {}
 
     for _, a in pairs(model.conversations) do
-        Log.debug('conversation = {}', a)
         local A = to_state(a)
         if selected_state then
             if a.id == model.selected_conversation_id then
@@ -89,11 +88,11 @@ function State.get_state_from_model(model, selected_state, tracker)
 
     return {
         type = 'chat',
-        selectedConversationId = model.selected_conversation_id,
+        selected_conversation_id = model.selected_conversation_id,
         conversations = n,
-        hasFittenAIApiKey = Client.has_fitten_ai_api_key(),
-        serverURL = Client.server_url(),
-        fittenAIApiKey = Client.get_ft_token(),
+        has_fitten_ai_api_key = Client.has_fitten_ai_api_key(),
+        server_url = Client.server_url(),
+        fitten_ai_api_key = Client.get_ft_token(),
         -- tracker = tracker,
         -- trackerOptions = tracker.options
     }

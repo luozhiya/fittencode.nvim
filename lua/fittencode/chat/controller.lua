@@ -36,7 +36,7 @@ function Controller:generate_conversation_id()
 
         return table.concat(result)
     end
-    return random(36).sub(2, 10)
+    return random(36):sub(2, 10)
 end
 
 function Controller:update_view(force)
@@ -101,16 +101,13 @@ function Controller:create_conversation(template_id, show, mode)
     local conversation_ty = self:get_conversation_type(template_id)
     if not conversation_ty then Log.error('No conversation type found for {}', template_id) end
 
-    Log.debug('Creating conversation with type {}', conversation_ty)
     local variables = Runtime.resolve_variables(conversation_ty.template.variables, { time = 'conversation-start' })
-    Log.debug('Variables: {}', variables)
     local created_conversation = conversation_ty:create_conversation({
         conversation_id = self:generate_conversation_id(),
         init_variables = variables,
         update_view = function() self:update_view() end,
         update_status = function(data) self:update_status(data) end,
     })
-    Log.debug('Created conversation: {}', created_conversation)
 
     if created_conversation.type == 'unavailable' then
         if created_conversation.display == 'info' then

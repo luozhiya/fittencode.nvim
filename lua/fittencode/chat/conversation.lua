@@ -66,11 +66,7 @@ end
 function Conversation:export_markdown()
     local md = self:get_markdown_export()
     if md then
-        local e = Editor.open_text_document({
-            language = 'markdown',
-            content = md
-        })
-        Editor.show_text_document(e)
+        vim.fn.setreg('+', md)
     end
 end
 
@@ -109,7 +105,6 @@ function Conversation:evaluate_template(template, variables)
         variables.temporaryEditorContent = self.temporary_editor_content
     end
     local env = vim.tbl_deep_extend('force', {}, self.init_variables or {}, self.variables or {})
-    Log.debug('Evaluating env = {}', env)
     return VM.run(env, template)
 end
 

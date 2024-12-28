@@ -1,3 +1,5 @@
+local Log = require('fittencode.log')
+
 ---@class fittencode.Chat.Model
 local Model = {}
 Model.__index = Model
@@ -52,7 +54,7 @@ function Model:delete_all_conversations()
             table.remove(self.conversations, i)
         end
     end
-    self.selected_conversation_id = ''
+    self.selected_conversation_id = nil
 end
 
 ---@param id string

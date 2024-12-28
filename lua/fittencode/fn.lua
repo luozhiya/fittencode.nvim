@@ -91,15 +91,23 @@ local function timezone_language()
     return tzlangs[os.date('%z')]
 end
 
+local function pack(...)
+    return { n = select("#", ...); ... }
+end
+
 local function format(msg, ...)
     ---@type string
     msg = msg or ''
-    local args = { ... }
-    for i, arg in ipairs(args) do
-        if type(arg) == 'integer' then
+    local args = pack(...)
+    for i = 1, args.n do
+        local arg = args[i]
+        if arg == nil then
+            msg = msg:gsub('{}', '%%s', 1)
+            args[i] = 'nil'
+        elseif type(arg) == 'integer' then
             msg = msg:gsub('{}', '%%d', 1)
         elseif type(arg) == 'number' then
-            msg = msg:gsub('{}', '%%.2f', 1)
+            msg = msg:gsub('{}', '%%.3f', 1)
         elseif type(arg) == 'string' then
             msg = msg:gsub('{}', '%%s', 1)
         else
