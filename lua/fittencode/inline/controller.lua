@@ -15,10 +15,10 @@ function Controller:new(opts)
         status = Status:new({
             level = 0,
             callback = function(level)
-                Fn.schedule_call(self.status_changed_callback, level)
+                Fn.schedule_call(self.status_changed_callbacks, level)
             end
         }),
-        status_changed_callback = nil,
+        status_changed_callbacks = nil,
     }
     setmetatable(obj, self)
     return obj
@@ -79,7 +79,7 @@ function Controller:refine_generated_text_into_suggestions(generated_text)
     return lines
 end
 
-local generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion)
+local generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
 local au_inline = vim.api.nvim_create_augroup('fittencode.inline', { clear = true })
 
 function Controller:triggering_completion(force, on_success, on_error)
@@ -159,7 +159,7 @@ function Controller:get_status()
 end
 
 function Controller:set_status_changed_callback(callback)
-    self.status_changed_callback = callback
+    self.status_changed_callbacks = callback
 end
 
 return Controller

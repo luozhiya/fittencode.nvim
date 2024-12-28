@@ -24,6 +24,7 @@ function ConversationType:create_conversation(opts)
             id = opts.conversation_id,
             init_variables = opts.init_variables,
             update_view = opts.update_view,
+            update_status = opts.update_status,
         }),
         should_immediately_answer = self.template.initialMessage ~= nil
     }

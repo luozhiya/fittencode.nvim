@@ -3,6 +3,7 @@ local Log = require('fittencode.log')
 
 local VM = {}
 
+---@return string?
 function VM.run(env, template)
     local function sample()
         local env_name, code = OPL.CompilerRunner(env, template)

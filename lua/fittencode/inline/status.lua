@@ -40,3 +40,5 @@ function Status:update(level)
     end
     self:reset()
 end
+
+return Status

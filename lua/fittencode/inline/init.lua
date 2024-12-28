@@ -1,10 +1,14 @@
 local Controller = require('fittencode.inline.controller')
+local Model = require('fittencode.inline.model')
 local Config = require('fittencode.config')
 
 ---@type fittencode.Inline.Controller
 local controller = nil
 
 local function setup()
+    controller = Controller:new({
+        model = Model:new(),
+    })
     controller:enable_completions(Config.inline_completion.enable)
 end
 

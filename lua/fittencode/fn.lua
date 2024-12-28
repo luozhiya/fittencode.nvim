@@ -9,6 +9,24 @@ local function schedule_call(fx, ...)
     end
 end
 
+local function schedule_call_wrap_fn(fx, ...)
+    return function(...)
+        schedule_call(fx, ...)
+    end
+end
+
+local function schedule_call_foreach(v, ...)
+    if vim.islist(v) then
+        for _, fx in ipairs(v) do
+            schedule_call(fx, ...)
+        end
+    else
+        for _, fx in pairs(v) do
+            schedule_call(fx, ...)
+        end
+    end
+end
+
 local function debounce(func, delay)
     local timer = nil
     if not delay or tonumber(delay) <= 0 then
@@ -123,6 +141,8 @@ local function is_linux() return sysname():find('linux') ~= nil end
 return {
     debounce = debounce,
     schedule_call = schedule_call,
+    schedule_call_wrap_fn = schedule_call_wrap_fn,
+    schedule_call_foreach = schedule_call_foreach,
     startwith = startwith,
     fs_all_entries = fs_all_entries,
     timezone_language = timezone_language,

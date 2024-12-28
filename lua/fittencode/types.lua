@@ -30,6 +30,7 @@
 ---@field evaluate_template function
 ---@field request_handle RequestHandle?
 ---@field update_view function?
+---@field update_state function?
 
 ---@class fittencode.Chat.StateConversation.Header
 ---@field title string
@@ -185,6 +186,7 @@
 ---@field create_conversation function
 ---@field conversation_types_provider fittencode.Chat.ConversationTypeProvider
 ---@field status fittencode.Chat.Status
+---@field on_status_updated_callbacks table<function>
 
 ---@class fittencode.Chat.ConversationTypeProvider
 ---@field extension_uri string

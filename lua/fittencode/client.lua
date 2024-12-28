@@ -486,33 +486,33 @@ end
 --     "delta_line": 0,
 --     "ex_msg": "1+2)*3"
 -- }
-local function generate_one_stage(prompt, on_once, on_error)
-    if not has_fitten_ai_api_key() then
+local function generate_one_stage(prompt, on_once, on_error, on_exit)
+    local key = get_ft_token()
+    if not key then
         Fn.schedule_call(on_error)
         return
     end
-    assert(keyring)
     local headers = {
         ['Content-Type'] = 'application/json',
     }
-    local url = server_url() .. preset_urls.generate_one_stage .. '/' .. keyring.key .. '？' .. get_platform_info_as_url_params()
-    return request('post', url, headers, prompt, nil, on_once, nil, on_error)
+    local url = server_url() .. preset_urls.generate_one_stage .. '/' .. key .. '？' .. get_platform_info_as_url_params()
+    return request('post', url, headers, prompt, nil, on_once, nil, on_error, on_exit)
 end
 
-local function chat(prompt, on_once, on_stream, on_error)
-    if not has_fitten_ai_api_key() then
+local function chat(prompt, on_create, on_once, on_stream, on_error, on_exit)
+    local key = get_ft_token()
+    if not key then
         Fn.schedule_call(on_error)
         return
     end
-    assert(keyring)
     local headers = {
         ['Content-Type'] = 'application/json',
     }
-    local url = server_url() .. preset_urls.chat .. '/?ft_token=' .. keyring.key .. '&' .. get_platform_info_as_url_params()
-    return request('post', url, headers, prompt, nil, on_once, on_stream, on_error)
+    local url = server_url() .. preset_urls.chat .. '/?ft_token=' .. key .. '&' .. get_platform_info_as_url_params()
+    return request('post', url, headers, prompt, on_create, on_once, on_stream, on_error, on_exit)
 end
 
-local function chat_heartbeat(prompt, on_once, on_stream, on_error)
+local function chat_heartbeat(prompt, on_once, on_stream, on_error, on_exit)
     local on_once_hb = function(output)
         local data = {}
         for _, line in ipairs(output) do
@@ -527,7 +527,7 @@ local function chat_heartbeat(prompt, on_once, on_stream, on_error)
         end
         on_once(table.concat(data))
     end
-    return chat(prompt, on_once_hb, on_stream, on_error)
+    return chat(prompt, on_once_hb, on_stream, on_error, on_exit)
 end
 
 return {

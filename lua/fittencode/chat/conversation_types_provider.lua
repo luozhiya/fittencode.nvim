@@ -1,6 +1,8 @@
 local TemplateResolver = require('fittencode.chat.template_resolver')
 local ConversationType = require('fittencode.chat.conversation_type')
 local Editor = require('fittencode.editor')
+local Promise = require('fittencode.promise')
+local Fn = require('fittencode.fn')
 
 ---@class fittencode.Chat.ConversationTypeProvider
 local ConversationTypesProvider = {}
@@ -11,7 +13,7 @@ function ConversationTypesProvider:new(opts)
     local obj = {
         extension_templates = {},
         conversation_types = {},
-        extension_uri = opts.extensionUri
+        extension_uri = opts.extension_uri
     }
     setmetatable(obj, ConversationTypesProvider)
     return obj
@@ -38,6 +40,17 @@ function ConversationTypesProvider:load_conversation_types()
     self:load_builtin_templates()
     self:load_extension_templates()
     self:load_workspace_templates()
+end
+
+function ConversationTypesProvider:async_load_conversation_types(on_loaded)
+    Fn.schedule_call(function()
+        Promise:new(function(resolve, reject)
+            self:load_conversation_types()
+            resolve()
+        end):forward(function()
+            Fn.schedule_call(on_loaded)
+        end)
+    end)
 end
 
 function ConversationTypesProvider:load_builtin_templates()
@@ -103,12 +116,21 @@ function ConversationTypesProvider:load_extension_templates()
 end
 
 function ConversationTypesProvider:load_workspace_templates()
-    local e = TemplateResolver.load_from_directory(Editor.get_workspace_path())
-    for _, r in ipairs(e) do
-        if r and r.isEnabled then
-            self.conversation_types[r.id] = ConversationType:new({ template = r, source = 'local-workspace' })
-        end
-    end
+    -- TODO: load workspace templates
+    -- .fittencode/template/
+    --  ├── chat
+    --  │   ├── chat-en.rdt.md
+    --  │   └── chat-zh-cn.rdt.md
+    --  └── task
+    --      ├── diagnose-errors-en.rdt.md
+    --      ├── diagnose-errors-zh-cn.rdt.md
+
+    -- local e = TemplateResolver.load_from_directory(Editor.get_workspace_path())
+    -- for _, r in ipairs(e) do
+    --     if r and r.isEnabled then
+    --         self.conversation_types[r.id] = ConversationType:new({ template = r, source = 'local-workspace' })
+    --     end
+    -- end
 end
 
 return ConversationTypesProvider

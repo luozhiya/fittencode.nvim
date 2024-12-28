@@ -1,27 +1,26 @@
 local Fn = require('fittencode.fn')
 
 ---@class fittencode.Chat.Status
----@field stream boolean
----@field callback function
----@field update function
+---@field conversations table<string, boolean>
+---@field on_updated function
 local Status = {}
 Status.__index = Status
 
 function Status:new(opts)
     local obj = {
-        stream = false,
-        callback = opts.callback,
+        conversations = {},
+        on_updated = opts.on_updated,
     }
     setmetatable(obj, self)
     return obj
 end
 
-function Status:update(stream)
-    if self.stream == stream then
+function Status:update(data)
+    if self.conversations[data.id] == data.stream then
         return
     end
-    self.stream = stream
-    if self.callback then
-        Fn.schedule_call(self.callback, stream)
-    end
+    self.conversations[data.id] = data.stream
+    Fn.schedule_call(self.on_updated, data)
 end
+
+return Status

@@ -5,6 +5,7 @@ local Config = require('fittencode.config')
 local Client = require('fittencode.client')
 local Runtime = require('fittencode.chat.runtime')
 local VM = require('fittencode.chat.vm')
+local Promise = require('fittencode.promise')
 
 ---@class fittencode.Chat.Conversation
 local Conversation = {}
@@ -14,7 +15,7 @@ Conversation.__index = Conversation
 ---@return fittencode.Chat.Conversation
 function Conversation:new(opts)
     local obj = {
-        update_view = opts.update_view,
+        update_view = Fn.schedule_call_wrap_fn(opts.update_view),
     }
     setmetatable(obj, Conversation)
     return obj
@@ -34,9 +35,9 @@ function Conversation:get_title()
     if header.useFirstMessageAsTitle == true and message ~= nil then
         return message
     else
-        local ok, result = pcall(function() return self:evaluate_template(header.title) end)
-        if ok then
-            return result
+        local evaluated = self:evaluate_template(header.title)
+        if evaluated ~= nil then
+            return evaluated
         end
     end
     return header.title
@@ -153,18 +154,34 @@ function Conversation:execute_chat(opts)
             ir = self.template.initialMessage
         end
         assert(ir)
+
         local variables = self:resolve_variables_at_message_time()
         local retrieval_augmentation = ir.retrievalAugmentation
         local evaluated = self:evaluate_template(ir.template, variables)
-        self.request_handle = Client.chat({
-            inputs = evaluated,
-            ft_token = Client.get_ft_token(),
-            meta_datas = {
-                project_id = '',
-            }
-        }, nil, function(response)
-            self:handle_partial_completion(response)
-        end, function(error) end)
+
+        Promise:new(function(resolve, reject)
+            self.request_handle = Client.chat({
+                inputs = evaluated,
+                ft_token = Client.get_ft_token(),
+                meta_datas = {
+                    project_id = '',
+                }
+            }, function()
+                self.update_state({ id = self.id, stream = true })
+            end, nil, function(response)
+                self.update_state({ id = self.id, stream = true })
+                self:handle_partial_completion(response)
+            end, function(error)
+                reject(error)
+            end, function()
+                resolve()
+            end)
+        end):forward(function()
+            self.update_state({ id = self.id, stream = false })
+        end, function(error)
+            self.update_state({ id = self.id, stream = false })
+            Log.error('Error while executing chat, conversation id = {}, error = {}', self.id, error)
+        end)
     end
 end
 

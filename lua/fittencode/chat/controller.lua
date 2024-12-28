@@ -17,10 +17,7 @@ function Controller:new(opts)
         basic_chat_template_id = opts.basic_chat_template_id,
         conversation_types_provider = opts.conversation_types_provider,
         status = Status:new({
-            stream = false,
-            callback = function(stream)
-                Fn.schedule_call(self.status_changed_callback, stream)
-            end
+            on_updated = function(data) Fn.schedule_call_foreach(self.on_status_updated_callbacks, data) end
         })
     }, Controller)
     return obj
@@ -106,6 +103,7 @@ function Controller:create_conversation(template_id, show, mode)
         conversation_id = self:generate_conversation_id(),
         init_variables = variables,
         update_view = function() self:update_view() end,
+        update_status = function(data) self:update_status(data) end,
     })
 
     if created_conversation.type == 'unavailable' then
@@ -133,22 +131,6 @@ function Controller:get_conversation_type(template_id)
     return self.conversation_types_provider:get_conversation_type(template_id)
 end
 
-function Controller:get_conversations_brief()
-    local result = {}
-    for _, conversation in pairs(self.model.conversations) do
-        local brief = {
-            id = conversation.id,
-            name = conversation.name,
-        }
-        table.insert(result, brief)
-    end
-    return result
-end
-
-function Controller:list_conversations()
-
-end
-
 function Controller:show_conversation(id)
     local conversation = self.model:get_conversation_by_id(id)
     if conversation then
@@ -157,12 +139,20 @@ function Controller:show_conversation(id)
     end
 end
 
-function Controller:set_status_changed_callback(callback)
-    self.status_changed_callback = callback
+function Controller:update_status(data)
+    self.status:update(data)
+end
+
+function Controller:register_status_callback(name, fx)
+    self.on_status_updated_callbacks[name] = fx
+end
+
+function Controller:unregister_status_callback(name)
+    self.on_status_updated_callbacks[name] = nil
 end
 
 function Controller:get_status()
-    return self.status.stream
+    return self.status.conversations
 end
 
 return Controller

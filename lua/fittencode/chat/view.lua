@@ -49,7 +49,7 @@ local View = {
         on_key_ns = nil,
         autocmd_id = nil,
     },
-    last_win_mode = nil,
+    mode = nil,
 }
 View.__index = View
 
@@ -67,7 +67,8 @@ function View:init()
     self.reference.buf = vim.api.nvim_create_buf(false, true)
 
     vim.api.nvim_buf_call(self.messages_exchange.buf.welcome, function()
-        vim.api.nvim_buf_set_lines(self.messages_exchange.buf.welcome, 0, -1, false, { welcome_message[Fn.display_preference()] })
+        local lines = vim.split(welcome_message[Fn.display_preference()], '\n')
+        vim.api.nvim_buf_set_lines(self.messages_exchange.buf.welcome, 0, -1, false, lines)
         vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf.welcome })
     end)
     vim.api.nvim_buf_call(self.reference.buf, function()
@@ -90,6 +91,7 @@ function View:_destroy_win()
     end
 end
 
+-- Even if the view is not visible, the view should be updated to reflect the latest model state.
 function View:update(state)
     local id = state.selectedConversationId
     if not id then
@@ -106,12 +108,10 @@ function View:update(state)
 
     self:render_conversation(conversation, id)
     self:render_reference(conversation)
-    self:show({
-        mode = state.view.mode,
-        show = state.view.show,
-        conversation = conversation,
-        id = id,
-    })
+    -- self:show({
+    --     conversation = conversation,
+    --     id = id,
+    -- })
     self:update_char_input(conversation:user_can_reply(), id)
 end
 
@@ -166,31 +166,26 @@ function View:render_conversation(conv, id)
     end)
 end
 
-function View:show(opts)
-    if self.last_win_mode ~= opts.mode then
+function View:set_mode(mode)
+    if self.mode ~= mode then
         self:_destroy_win()
     end
-    self.last_win_mode = opts.mode
+    self.mode = mode
+end
 
-    if not opts.show then
-        self:_destroy_win()
-        return
-    end
+-- 
+function View:show(opts)
+    opts = opts or {}
 
     local msg_buf = nil
-    if opts.conversation:is_empty() then
+    if not opts.id then
         msg_buf = self.messages_exchange.buf.welcome
     else
         msg_buf = self.messages_exchange.buf.conversations[opts.id]
     end
     assert(msg_buf)
 
-    local current = vim.api.nvim_win_get_buf(self.messages_exchange.win)
-    if current == msg_buf then
-        return
-    end
-
-    if opts.mode == 'panel' then
+    if self.mode == 'panel' then
         self.messages_exchange.win = vim.api.nvim_open_win(msg_buf, true, {
             vertical = true,
             split = 'left',
@@ -207,7 +202,7 @@ function View:show(opts)
             row = 20,
             col = 5,
         })
-    elseif opts.mode == 'float' then
+    elseif self.mode == 'float' then
         self.messages_exchange.win = vim.api.nvim_open_win(msg_buf, true, {
             relative = 'editor',
             width = 60,
@@ -266,12 +261,12 @@ function View:update_char_input(enable, id)
             vim.schedule(function()
                 if vim.api.nvim_get_mode().mode == 'i' and vim.api.nvim_get_current_buf() == self.char_input.buf and key == enter_key then
                     vim.api.nvim_buf_call(self.char_input.buf, function()
-                        vim.api.nvim_command('doautocmd User fittencode.UserInputReady')
+                        vim.api.nvim_command('doautocmd User fittencode.ChatInputReady')
                     end)
                 end
             end)
         end)
-        self.char_input_autocmd = vim.api.nvim_create_autocmd('fittencode.UserInputReady', {
+        self.char_input_autocmd = vim.api.nvim_create_autocmd('fittencode.ChatInputReady', {
             buffer = self.char_input.buf,
             callback = function()
                 vim.api.nvim_buf_call(self.char_input.buf, function()

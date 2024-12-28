@@ -1,4 +1,5 @@
 local Fn = require('fittencode.fn')
+local Log = require('fittencode.log')
 
 ---@class fittencode.Chat.TemplateResolver
 local TemplateResolver = {}
