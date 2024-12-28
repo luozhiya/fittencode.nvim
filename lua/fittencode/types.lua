@@ -208,6 +208,7 @@
 ---@field load_from_directory function
 
 ---@class fittencode.Chat.View
+---@field state? fittencode.State
 
 ---@class fittencode.State.Conversation
 ---@field id string

@@ -170,6 +170,13 @@ local defaults = {
         -- * 'curl'
         -- * 'libcurl'
         backend = 'curl',
+    },
+    chat = {
+        view = {
+            mode = 'panel',
+            panel = {},
+            float = {}
+        }
     }
 }
 

@@ -2,42 +2,41 @@ local Fn = require('fittencode.fn')
 local Client = require('fittencode.client')
 
 local welcome_message = {
-    ['zh-cn'] = [[
-
-欢迎使用 Fitten Code - CHAT
-
-打开您正在编写的代码文件，输入任意代码即可使用自动补全功能。
-
-按下 TAB 接受所有补全建议。
-按下 Ctrl+⬇️ 接受一行补全建议。
-按下 Ctrl+➡️ 接受一个单词的补全建议。
-
-Fitten Code 现支持本地私有化，代码不上云，网络无延迟，功能更丰富！
-
-]],
-    ['en'] = [[
-
-Welcome to Fitten Code - CHAT
-
-Open the code file you are working on, and type any code to use the autocomplete feature.
-Press TAB to accept all completion suggestions.
-Press Ctrl+⬇️ to accept one line of completion suggestion.
-Press Ctrl+➡️ to accept one word of completion suggestion.
-
-Experience the high-efficiency code auto-completion now!
-
-]]
+    ['zh-cn'] = {
+        '',
+        '欢迎使用 Fitten Code - CHAT',
+        '',
+        '打开您正在编写的代码文件，输入任意代码即可使用自动补全功能。',
+        '',
+        '按下 TAB 接受所有补全建议。',
+        '按下 Ctrl+⬇️ 接受一行补全建议。',
+        '按下 Ctrl+➡️ 接受一个单词的补全建议。',
+        '',
+        'Fitten Code 现支持本地私有化，代码不上云，网络无延迟，功能更丰富！',
+        ''
+    },
+    ['en'] = {
+        '',
+        'Welcome to Fitten Code - CHAT',
+        '',
+        'Open the code file you are working on, and type any code to use the autocomplete feature.',
+        '',
+        'Press TAB to accept all completion suggestions.',
+        'Press Ctrl+⬇️ to accept one line of completion suggestion.',
+        'Press Ctrl+➡️ to accept one word of completion suggestion.',
+        '',
+        'Experience the high-efficiency code auto-completion now!',
+        ''
+    }
 }
+
 setmetatable(welcome_message, { __index = function() return welcome_message['en'] end })
 
 ---@class fittencode.Chat.View
 local View = {
     messages_exchange = {
         win = nil,
-        buf = {
-            welcome = nil,
-            conversations = {},
-        }
+        conversations = {},
     },
     reference = {
         win = nil,
@@ -50,30 +49,30 @@ local View = {
         autocmd_id = nil,
     },
     mode = nil,
+    state = nil,
 }
 View.__index = View
 
 ---@return fittencode.Chat.View
 function View:new(opts)
     local obj = {
+        mode = opts.mode
     }
     setmetatable(obj, View)
     return obj
 end
 
+local function set_modifiable(buf, v)
+    vim.api.nvim_buf_call(buf, function()
+        vim.api.nvim_set_option_value('modifiable', v, { buf = buf })
+    end)
+end
+
 function View:init()
-    self.messages_exchange.buf.welcome = vim.api.nvim_create_buf(false, true)
     self.char_input.buf = vim.api.nvim_create_buf(false, true)
     self.reference.buf = vim.api.nvim_create_buf(false, true)
-
-    vim.api.nvim_buf_call(self.messages_exchange.buf.welcome, function()
-        local lines = vim.split(welcome_message[Fn.display_preference()], '\n')
-        vim.api.nvim_buf_set_lines(self.messages_exchange.buf.welcome, 0, -1, false, lines)
-        vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf.welcome })
-    end)
-    vim.api.nvim_buf_call(self.reference.buf, function()
-        vim.api.nvim_set_option_value('modifiable', false, { buf = self.reference.buf })
-    end)
+    set_modifiable(self.char_input.buf, false)
+    set_modifiable(self.reference.buf, false)
 end
 
 function View:_destroy_win()
@@ -100,19 +99,15 @@ function View:update(state)
         })
         return
     end
-    if not self.messages_exchange.buf.conversations[id] then
+    if not self.messages_exchange.conversations[id] then
         self:create_conversation(id)
     end
     local conversation = state.conversations[id]
     assert(conversation)
-
     self:render_conversation(conversation, id)
     self:render_reference(conversation)
-    -- self:show({
-    --     conversation = conversation,
-    --     id = id,
-    -- })
     self:update_char_input(conversation:user_can_reply(), id)
+    self.state = state
 end
 
 function View:render_reference(conv)
@@ -123,19 +118,19 @@ function View:render_reference(conv)
     -- local title = string.format('%s %d:%d', range.filename, range.start_row, range.end_row)
 end
 
-function View:render_conversation(conv, id)
-    if not self.messages_exchange.buf.conversations[id] then
+function View:render_conversation(conversation, id)
+    if not self.messages_exchange.conversations[id] then
         return
     end
-    if conv:is_empty() then
+    if conversation:is_empty() then
         return
     end
-    local buf = self.messages_exchange.buf.conversations(id)
+    local buf = self.messages_exchange.conversations[id]
     assert(buf)
     local user = Client.get_user_id()
     local bot = 'Fitten Code'
 
-    local content = conv.content
+    local content = conversation.content
     local lines = {}
 
     local messages = content.messages
@@ -157,11 +152,15 @@ function View:render_conversation(conv, id)
         lines[#lines + 1] = content.partial_answer
     end
 
+    if #messages == 0 and content.state == 'user_can_reply' then
+        lines = welcome_message[Fn.display_preference()]
+    end
+
     vim.api.nvim_buf_call(buf, function()
         local view = vim.fn.winsaveview()
-        vim.api.nvim_set_option_value('modifiable', true, { buf = buf })
+        set_modifiable(buf, true)
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-        vim.api.nvim_set_option_value('modifiable', false, { buf = buf })
+        set_modifiable(buf, false)
         vim.fn.winrestview(view)
     end)
 end
@@ -173,20 +172,11 @@ function View:set_mode(mode)
     self.mode = mode
 end
 
--- 
-function View:show(opts)
-    opts = opts or {}
-
-    local msg_buf = nil
-    if not opts.id then
-        msg_buf = self.messages_exchange.buf.welcome
-    else
-        msg_buf = self.messages_exchange.buf.conversations[opts.id]
-    end
-    assert(msg_buf)
-
+function View:show()
+    assert(self.state)
+    assert(self.state.selectedConversationId)
     if self.mode == 'panel' then
-        self.messages_exchange.win = vim.api.nvim_open_win(msg_buf, true, {
+        self.messages_exchange.win = vim.api.nvim_open_win(self.messages_exchange.conversations[self.state.selectedConversationId], true, {
             vertical = true,
             split = 'left',
             width = 60,
@@ -203,7 +193,7 @@ function View:show(opts)
             col = 5,
         })
     elseif self.mode == 'float' then
-        self.messages_exchange.win = vim.api.nvim_open_win(msg_buf, true, {
+        self.messages_exchange.win = vim.api.nvim_open_win(self.messages_exchange.conversations[self.state.selectedConversationId], true, {
             relative = 'editor',
             width = 60,
             height = 15,
@@ -287,25 +277,22 @@ function View:update_char_input(enable, id)
 end
 
 function View:create_conversation(id)
-    if self.messages_exchange.buf.conversations[id] then
+    if self.messages_exchange.conversations[id] then
         return
     end
     local buf = vim.api.nvim_create_buf(false, true)
-    self.messages_exchange.buf.conversations[id] = {
-        id = id,
-        buffer = buf,
-    }
+    self.messages_exchange.conversations[id] = buf
     vim.api.nvim_buf_call(buf, function()
         vim.api.nvim_set_option_value('modifiable', false, { buf = buf })
     end)
 end
 
 function View:delete_conversation(id)
-    if not self.messages_exchange.buf.conversations[id] then
+    if not self.messages_exchange.conversations[id] then
         return
     end
-    vim.api.nvim_buf_delete(self.messages_exchange.buf.conversations[id], {})
-    self.messages_exchange.buf.conversations[id] = nil
+    vim.api.nvim_buf_delete(self.messages_exchange.conversations[id], {})
+    self.messages_exchange.conversations[id] = nil
 end
 
 function View:set_fcps(enable)

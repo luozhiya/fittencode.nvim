@@ -39,9 +39,12 @@ function Controller:generate_conversation_id()
     return random(36).sub(2, 10)
 end
 
-function Controller:update_view()
-    local state = State.get_state_from_model(self.model)
-    self.view:update(state)
+function Controller:update_view(force)
+    force = force or false
+    if self:view_visible() or force then
+        local state = State.get_state_from_model(self.model)
+        self.view:update(state)
+    end
 end
 
 function Controller:show_view()

@@ -4,6 +4,7 @@ local ConversationTypesProvider = require('fittencode.chat.conversation_types_pr
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local View = require('fittencode.chat.view')
+local Config = require('fittencode.config')
 
 ---@type fittencode.Chat.Controller
 local controller = nil
@@ -12,6 +13,7 @@ local function setup()
     local model = Model:new()
     local view = View:new({
         model = model,
+        mode = Config.chat.view.mode
     })
     view:init()
     local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('init.lua', '')
@@ -40,7 +42,7 @@ local function show_chat()
     if controller:view_visible() then
         return
     end
-    controller:update_view()
+    controller:update_view(true)
     controller:show_view()
 end
 
