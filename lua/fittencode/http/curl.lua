@@ -1,6 +1,7 @@
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
+local Config = require('fittencode.config')
 
 local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     Log.debug('spawn params = {}', params)
@@ -67,7 +68,7 @@ local curl = {
     default_args = {
         '-s',
         '--connect-timeout',
-        10, -- seconds
+        Config.http.timeout,
         '--show-error',
     },
     exit_code_success = 0
