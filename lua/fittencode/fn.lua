@@ -149,6 +149,34 @@ local function sysname() return vim.uv.os_uname().sysname:lower() end
 local function is_windows() return sysname():find('windows') ~= nil end
 local function is_linux() return sysname():find('linux') ~= nil end
 
+local function utf8(decimal)
+    local bytemarkers = { { 0x7FF, 192 }, { 0xFFFF, 224 }, { 0x1FFFFF, 240 } }
+    if decimal < 128 then return string.char(decimal) end
+    local charbytes = {}
+    for bytes, vals in ipairs(bytemarkers) do
+        if decimal <= vals[1] then
+            for b = bytes + 1, 2, -1 do
+                local mod = decimal % 64
+                decimal = (decimal - mod) / 64
+                charbytes[b] = string.char(128 + mod)
+            end
+            charbytes[1] = string.char(vals[2] + decimal)
+            break
+        end
+    end
+    return table.concat(charbytes)
+end
+
+local function unicode_sequence_to_utf8(seq)
+    local v = vim.split(seq, '\\u', { trimempty = true })
+    local s = ''
+    for i, code in ipairs(v) do
+        local c = utf8(tonumber(code, 16))
+        s = s .. c
+    end
+    return s
+end
+
 return {
     debounce = debounce,
     schedule_call = schedule_call,
@@ -163,4 +191,5 @@ return {
     remove_special_token = remove_special_token,
     is_windows = is_windows,
     is_linux = is_linux,
+    unicode_sequence_to_utf8 = unicode_sequence_to_utf8,
 }

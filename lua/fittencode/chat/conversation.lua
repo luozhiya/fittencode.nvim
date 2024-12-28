@@ -176,12 +176,31 @@ function Conversation:execute_chat(opts)
                 }
             }, function()
                 self.update_status({ id = self.id, stream = true })
-            end, nil, function(response)
+            end, nil, function(data)
                 self.update_status({ id = self.id, stream = true })
-                -- self:handle_partial_completion(response)
+                local chunk = data.chunk
+                if not chunk then
+                    resolve()
+                    return
+                end
+                local v = vim.split(chunk, '\n', { trimempty = true })
+                for _, line in ipairs(v) do
+                    local ok, result = pcall(vim.fn.json_decode, line)
+                    if ok then
+                        Log.debug('Received delta: {}', result.delta)
+                        self:handle_partial_completion(result.delta)
+                    else
+                        Log.error('Error while decoding chunk: {}', line)
+                        reject(line)
+                    end
+                end
+                Log.debug('1 Handle {}', self.request_handle:is_active())
+                self.request_handle:cancel()
+                Log.debug('2 Handle {}', self.request_handle:is_active())
             end, function(error)
                 reject(error)
             end, function()
+                Log.debug('on_exit Handle {}', self.request_handle:is_active())
                 resolve()
             end)
         end):forward(function()

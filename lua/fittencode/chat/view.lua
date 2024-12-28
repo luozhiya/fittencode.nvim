@@ -231,9 +231,6 @@ function View:register_message_receiver(receive_view_message)
 end
 
 function View:update_char_input(enable, id)
-    print(enable, id)
-    Log.debug('View update_char_input {} {}', id, enable)
-
     local is_enabled = false
     vim.api.nvim_buf_call(self.char_input.buf, function()
         is_enabled = vim.api.nvim_get_option_value('modifiable', { buf = self.char_input.buf })

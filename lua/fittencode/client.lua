@@ -425,13 +425,11 @@ local function request(method, url, headers, body, no_buffer, on_create, on_once
             body = body,
             no_buffer = no_buffer,
             on_create = vim.schedule_wrap(function(data)
-                Log.debug('process created {}', data)
                 if canceled then return end
                 process = data.process
                 Fn.schedule_call(on_create)
             end),
             on_once = vim.schedule_wrap(function(data)
-                Log.debug('process once {}', data)
                 if canceled then return end
                 Fn.schedule_call(on_once, data)
             end),

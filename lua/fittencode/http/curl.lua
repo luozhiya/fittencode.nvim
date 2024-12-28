@@ -46,7 +46,6 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     Fn.schedule_call(on_create, { process = process, pid = pid, })
 
     local function on_stdout(err, chunk)
-        Log.debug('on_stdout err = {}, chunk = {}', err, chunk)
         Fn.schedule_call(on_stream, { error = err, chunk = chunk })
         if not err and chunk then
             output[#output + 1] = chunk
@@ -54,7 +53,6 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     end
 
     local function on_stderr(err, chunk)
-        Log.debug('on_stderr err = {}, chunk = {}', err, chunk)
         if not err and chunk then
             error[#error + 1] = chunk
         end
