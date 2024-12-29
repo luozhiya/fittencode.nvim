@@ -95,15 +95,18 @@ end
 
 function TemplateResolver.load_from_file(e)
     local buf = vim.api.nvim_create_buf(false, true)
-
-    vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf, })
+    vim.api.nvim_buf_call(buf, function()
+        vim.api.nvim_set_option_value('buflisted', false, { buf = buf })
+        vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf, })
+    end)
     local success, err = pcall(vim.api.nvim_buf_call, buf, function()
+        local lines = e
         if vim.fn.filereadable(e) == 1 then
-            vim.cmd('silent edit ' .. e)
+            lines = vim.fn.readfile(e)
+            -- vim.cmd('silent edit ' .. e) -- create win?
             -- vim.fn.fnamemodify(e, ':t')
-        else
-            vim.api.nvim_buf_set_lines(buf, 0, -1, false, e)
         end
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
     end)
     if not success then
         vim.api.nvim_buf_delete(buf, { force = true })

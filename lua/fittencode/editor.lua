@@ -1,22 +1,62 @@
 local Log = require('fittencode.log')
 
 ---@class fittencode.Editor
-local Editor = {}
+local Editor = {
+    filter_bufs = {},
+    active_buf = nil,
+    selection = nil,
+}
 
 function Editor.get_ft_language()
-    local ft = vim.bo.filetype
-    -- Mapping vim filetype to vscode language-id ?
-    return ft == '' and 'plaintext' or ft
+    if not Editor.active_buf then
+        return
+    end
+    local ft
+    vim.api.nvim_buf_call(Editor.active_buf, function()
+        ft = vim.api.nvim_get_option_value('filetype', { buf = Editor.active_buf })
+    end)
+    return ft
 end
 
 function Editor.get_filename()
-    return vim.api.nvim_buf_get_name(0)
+    if not Editor.active_buf then
+        return
+    end
+    local name
+    vim.api.nvim_buf_call(Editor.active_buf, function()
+        name = vim.api.nvim_buf_get_name(Editor.active_buf)
+    end)
+    return name
 end
 
 function Editor.get_workspace_path()
-    local workspace_path = vim.fn.getcwd()
-    return workspace_path
+    if not Editor.active_buf then
+        return
+    end
+    local ws
+    vim.api.nvim_buf_call(Editor.active_buf, function()
+        ws = vim.fn.getcwd()
+    end)
+    return ws
 end
+
+function Editor.register_filter_buf(buf)
+    Editor.filter_bufs[#Editor.filter_bufs + 1] = buf
+end
+
+vim.api.nvim_create_autocmd({ 'BufEnter' }, {
+    group = vim.api.nvim_create_augroup('fittencode.editor.active_buffer', { clear = true }),
+    pattern = '*',
+    callback = function(args)
+        if vim.tbl_contains(Editor.filter_bufs, args.buf) then
+            return
+        end
+        if vim.api.nvim_buf_is_valid(args.buf) and vim.api.nvim_buf_is_loaded(args.buf) and vim.fn.buflisted(args.buf) == 1 then
+            Editor.active_buf = args.buf
+            Log.debug('Active buffer changed to {}, name = {}', args.buf, vim.api.nvim_buf_get_name(args.buf))
+        end
+    end
+})
 
 vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
     group = vim.api.nvim_create_augroup('fittencode.editor.selection', { clear = true }),

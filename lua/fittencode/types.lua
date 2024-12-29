@@ -235,7 +235,7 @@
 ---@field get_state_from_model function
 
 ---@class fittencode.Editor
----@field selection fittencode.Editor.Selection
+---@field selection? fittencode.Editor.Selection
 
 ---@class fittencode.Editor.Selection
 ---@field buf number

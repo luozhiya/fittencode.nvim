@@ -1,6 +1,7 @@
 local Fn = require('fittencode.fn')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
+local Editor = require('fittencode.editor')
 
 local welcome_message = {
     ['zh-cn'] = {
@@ -87,6 +88,9 @@ function View:init()
         vim.api.nvim_set_option_value('swapfile', false, { buf = self.char_input.buf })
         vim.api.nvim_set_option_value('modifiable', false, { buf = self.char_input.buf })
     end)
+    Editor.register_filter_buf(self.messages_exchange.buf)
+    Editor.register_filter_buf(self.reference.buf)
+    Editor.register_filter_buf(self.char_input.buf)
 end
 
 function View:_destroy_win()
