@@ -94,6 +94,7 @@ end
 -- Even if the view is not visible, the view should be updated to reflect the latest model state.
 ---@param state fittencode.State
 function View:update(state)
+    self.state = state
     local id = state.selected_conversation_id
     if not id then
         self:send_message({
@@ -109,7 +110,6 @@ function View:update(state)
     self:render_conversation(conversation, id)
     self:render_reference(conversation)
     self:update_char_input(conversation:user_can_reply(), id)
-    self.state = state
 end
 
 function View:render_reference(conv)
@@ -126,37 +126,41 @@ function View:render_conversation(conversation, id)
     if not self.messages_exchange.conversations[id] then
         return
     end
-    if conversation:is_empty() then
-        return
-    end
+    Log.debug('View render conversation: {}', conversation)
+
     local buf = self.messages_exchange.conversations[id]
     assert(buf)
-    local user = Client.get_user_id()
-    local bot = 'Fitten Code'
-
-    local content = conversation.content
+    local user_id = Client.get_user_id()
+    local bot_id = 'Fitten Code'
     local lines = {}
 
-    local messages = content.messages
+    local function feed(author, msg, nonewline)
+        lines[#lines + 1] = string.format('# %s', author)
+        lines[#lines + 1] = msg
+        lines[#lines + 1] = ''
+    end
+
+    if conversation.header.is_title_message then
+        feed(user_id, conversation.header.title)
+    end
+
+    local messages = conversation.content.messages
     for i, message in ipairs(messages) do
         local text = message.text
         local author = message.author
 
         if author == 'user' then
-            lines[#lines + 1] = string.format('# %s', user)
-            lines[#lines + 1] = text
+            feed(user_id, text)
         elseif author == 'bot' then
-            lines[#lines + 1] = string.format('# %s', bot)
-            lines[#lines + 1] = text
+            feed(bot_id, text)
         end
     end
 
-    if content.state == 'bot_answer_streaming' then
-        lines[#lines + 1] = string.format('# %s', bot)
-        lines[#lines + 1] = content.partial_answer
+    if conversation.content.state ~= nil and conversation.content.state.type == 'bot_answer_streaming' then
+        feed(bot_id, conversation.content.state.partial_answer)
     end
 
-    if #messages == 0 and content.state == 'user_can_reply' then
+    if #lines == 0 then
         lines = welcome_message[Fn.display_preference()]
     end
 

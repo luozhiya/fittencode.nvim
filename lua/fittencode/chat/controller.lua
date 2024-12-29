@@ -80,9 +80,9 @@ function Controller:receive_view_message(msg)
     elseif ty == 'send_message' then
         assert(msg.data.id == self.model.selected_conversation_id)
         ---@type fittencode.Chat.Conversation
-        local conv = self.model:get_conversation_by_id(msg.data.id)
-        if conv then
-            conv:answer(msg.data.message)
+        local conversation = self.model:get_conversation_by_id(msg.data.id)
+        if conversation then
+            conversation:answer(msg.data.message)
         end
     elseif ty == 'start_chat' then
         self:create_conversation(self.basic_chat_template_id)

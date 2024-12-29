@@ -168,6 +168,7 @@ function Conversation:execute_chat(opts)
         Log.debug('Evaluated message: {}', evaluated)
 
         Promise:new(function(resolve, reject)
+            local completion = {}
             self.request_handle = Client.chat({
                 inputs = evaluated,
                 ft_token = Client.get_ft_token(),
@@ -180,31 +181,30 @@ function Conversation:execute_chat(opts)
                 self.update_status({ id = self.id, stream = true })
                 local chunk = data.chunk
                 if not chunk then
-                    resolve()
+                    resolve(completion)
                     return
                 end
                 local v = vim.split(chunk, '\n', { trimempty = true })
                 for _, line in ipairs(v) do
                     local ok, result = pcall(vim.fn.json_decode, line)
                     if ok then
-                        Log.debug('Received delta: {}', result.delta)
-                        self:handle_partial_completion(result.delta)
+                        completion[#completion + 1] = vim.trim(result.delta)
+                        self:handle_partial_completion(table.concat(completion, ''))
                     else
                         Log.error('Error while decoding chunk: {}', line)
                         reject(line)
                     end
                 end
-                Log.debug('1 Handle {}', self.request_handle:is_active())
-                self.request_handle:cancel()
-                Log.debug('2 Handle {}', self.request_handle:is_active())
             end, function(error)
                 reject(error)
             end, function()
-                Log.debug('on_exit Handle {}', self.request_handle:is_active())
-                resolve()
+                resolve(completion)
             end)
-        end):forward(function()
+        end):forward(function(data)
             self.update_status({ id = self.id, stream = false })
+            if #data > 0 then
+                self:handle_completion(data)
+            end
         end, function(error)
             self.update_status({ id = self.id, stream = false })
             Log.error('Error while executing chat, conversation id = {}, error = {}', self.id, error)
@@ -212,28 +212,30 @@ function Conversation:execute_chat(opts)
     end
 end
 
+function Conversation:handle_completion(data)
+end
+
 ---@param content string
 function Conversation:handle_partial_completion(content)
     local n = { type = 'message' }
     local i = n.type
-    local s = vim.trim(content)
 
     if i == 'update-temporary-editor' then
         Log.error('Not implemented for update-temporary-editor')
     elseif i == 'active-editor-diff' then
         Log.error('Not implemented for active-editor-diff')
     elseif i == 'message' then
-        self:update_partial_bot_message({ content = s })
+        self:update_partial_bot_message({ content = content })
     else
         Log.error('Unsupported property: ' .. i)
     end
 end
 
----@param content string
-function Conversation:update_partial_bot_message(content)
+---@param e table
+function Conversation:update_partial_bot_message(e)
     self.state = {
         type = 'bot_answer_streaming',
-        partial_answer = content
+        partial_answer = e.content
     }
     self.update_view()
 end
