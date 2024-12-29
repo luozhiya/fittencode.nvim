@@ -199,7 +199,7 @@ use {
     -- Enable source completion.
     enable = true,
     -- engine support nvim-cmp and blink.cmp
-    engine = "cmp" -- "cmp" | "blink"
+    engine = "cmp", -- "cmp" | "blink"
     -- trigger characters for source completion.
     -- Available options:
     -- * A  list of characters like {'a', 'b', 'c', ...}
