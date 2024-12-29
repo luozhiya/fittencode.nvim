@@ -1,3 +1,5 @@
+local Log = require('fittencode.log')
+
 ---@class fittencode.Editor
 local Editor = {}
 
@@ -16,7 +18,25 @@ function Editor.get_workspace_path()
     return workspace_path
 end
 
+local function selection_changed_callback()
+end
+
+function Editor.monaco()
+    local buffer = vim.api.nvim_get_current_buf()
+    return buffer
+end
+
 function Editor.get_selected()
+    local region = vim.fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
+    -- [bufnum, lnum, col, off]
+    local regionpos = vim.fn.getregionpos(vim.fn.getpos('.'), vim.fn.getpos('v'))
+    Log.debug('region = {}', region)
+    Log.debug('regionpos = {}', regionpos)
+
+    local buffer = Editor.monaco()
+    local start = vim.api.nvim_buf_get_mark(buffer, '<')
+    local end_ = vim.api.nvim_buf_get_mark(buffer, '>')
+
     return {
         text = '',
         location = {

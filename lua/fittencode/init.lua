@@ -3,6 +3,9 @@ local M = {}
 
 ---@param opts? fittencode.Config
 function M.setup(opts)
+    if vim.fn.has('nvim-0.11') == 0 then
+
+    end
     require('fittencode.config').setup(opts)
     require('fittencode.client').load_last_session()
     require('fittencode.command')

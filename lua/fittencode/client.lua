@@ -510,7 +510,6 @@ local function chat(prompt, on_create, on_once, on_stream, on_error, on_exit)
         ['Content-Type'] = 'application/json',
     }
     local url = server_url() .. preset_urls.chat .. '?ft_token=' .. key .. '&' .. get_platform_info_as_url_params()
-    Log.debug('chat url: {}', url)
     return request('post', url, headers, prompt, true, on_create, on_once, on_stream, on_error, on_exit)
 end
 

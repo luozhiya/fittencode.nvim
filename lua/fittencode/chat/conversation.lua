@@ -107,8 +107,6 @@ function Conversation:evaluate_template(template, variables)
     end
     local env = vim.tbl_deep_extend('force', {}, self.init_variables or {}, self.variables or {})
     env.messages = self.messages
-    Log.debug('Evaluating template: {}', template)
-    Log.debug('Evaluating env: {}', env)
     return VM.run(env, template)
 end
 
@@ -119,7 +117,6 @@ function Conversation:answer(content)
     end
     content = Fn.remove_special_token(content)
     self:add_user_message(content)
-    self.update_view()
     self:execute_chat({
         workspace = Fn.startwith(content, '@workspace'),
         _workspace = Fn.startwith(content, '@_workspace'),
@@ -139,6 +136,7 @@ function Conversation:add_user_message(content, bot_action)
         type = 'waiting_for_bot_answer',
         bot_action = bot_action,
     }
+    self.update_view()
 end
 
 ---@param opts table
@@ -166,7 +164,6 @@ function Conversation:execute_chat(opts)
         local variables = self:resolve_variables_at_message_time()
         local retrieval_augmentation = ir.retrievalAugmentation
         local evaluated = self:evaluate_template(ir.template, variables)
-        Log.debug('Evaluated message: {}', evaluated)
 
         Promise:new(function(resolve, reject)
             local completion = {}

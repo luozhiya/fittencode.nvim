@@ -4,12 +4,8 @@ local Promise = require('fittencode.promise')
 local Config = require('fittencode.config')
 
 local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
-    Log.debug('spawn params = {}', params)
-
     local cmd = params.cmd
     local args = params.args
-
-    Log.debug('spawn args = {}', table.concat(args, ' '))
 
     local output = {}
     local error = {}

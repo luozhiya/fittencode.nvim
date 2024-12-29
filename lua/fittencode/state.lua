@@ -15,7 +15,7 @@ StateConversation.__index = StateConversation
 function StateConversation:new(conversation)
     local obj = {
         id = conversation.id,
-        reference = { selectText = '', selectRange = '' },
+        reference = { select_text = '', select_range = '' },
         header = {
             title = conversation:get_title(),
             is_title_message = conversation:is_title_message(),
@@ -71,8 +71,8 @@ function State.get_state_from_model(model, selected_state, tracker)
         if selected_state then
             if a.id == model.selected_conversation_id then
                 A.reference = {
-                    selectText = Editor.get_selected_text(),
-                    selectRange = Editor.get_selected_range()
+                    select_text = Editor.get_selected_text(),
+                    select_range = Editor.get_selected_range()
                 }
             else
                 if A.content.type == 'messageExchange' then
