@@ -27,11 +27,18 @@ function Editor.monaco()
 end
 
 function Editor.get_selected()
-    local region = vim.fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
-    -- [bufnum, lnum, col, off]
-    local regionpos = vim.fn.getregionpos(vim.fn.getpos('.'), vim.fn.getpos('v'))
-    Log.debug('region = {}', region)
-    Log.debug('regionpos = {}', regionpos)
+    local function v()
+        local modes = { ['v'] = true, ['V'] = true, [vim.api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
+        return modes[vim.api.nvim_get_mode().mode]
+    end
+
+    if v() then
+        local region = vim.fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
+        -- [bufnum, lnum, col, off]
+        local regionpos = vim.fn.getregionpos(vim.fn.getpos('.'), vim.fn.getpos('v'))
+        Log.debug('region = {}', region)
+        Log.debug('regionpos = {}', regionpos)
+    end
 
     local buffer = Editor.monaco()
     local start = vim.api.nvim_buf_get_mark(buffer, '<')
