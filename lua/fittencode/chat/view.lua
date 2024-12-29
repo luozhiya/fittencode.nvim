@@ -63,19 +63,30 @@ function View:new(opts)
     return obj
 end
 
-local function set_modifiable(buf, v)
-    vim.api.nvim_buf_call(buf, function()
-        vim.api.nvim_set_option_value('modifiable', v, { buf = buf })
-    end)
-end
-
 function View:init()
     self.messages_exchange.buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_call(self.messages_exchange.buf, function()
+        vim.api.nvim_set_option_value('filetype', 'markdown', { buf = self.messages_exchange.buf })
+        vim.api.nvim_set_option_value('buftype', 'nofile', { buf = self.messages_exchange.buf })
+        vim.api.nvim_set_option_value('buflisted', false, { buf = self.messages_exchange.buf })
+        vim.api.nvim_set_option_value('swapfile', false, { buf = self.messages_exchange.buf })
+        vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
+    end)
     self.reference.buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_call(self.reference.buf, function()
+        -- vim.api.nvim_set_option_value('filetype', 'markdown', { buf = self.reference.buf })
+        vim.api.nvim_set_option_value('buftype', 'nofile', { buf = self.reference.buf })
+        vim.api.nvim_set_option_value('buflisted', false, { buf = self.reference.buf })
+        vim.api.nvim_set_option_value('swapfile', false, { buf = self.reference.buf })
+        vim.api.nvim_set_option_value('modifiable', false, { buf = self.reference.buf })
+    end)
     self.char_input.buf = vim.api.nvim_create_buf(false, true)
-    set_modifiable(self.messages_exchange.buf, false)
-    set_modifiable(self.reference.buf, false)
-    set_modifiable(self.char_input.buf, false)
+    vim.api.nvim_buf_call(self.char_input.buf, function()
+        vim.api.nvim_set_option_value('buftype', 'nofile', { buf = self.char_input.buf })
+        vim.api.nvim_set_option_value('buflisted', false, { buf = self.char_input.buf })
+        vim.api.nvim_set_option_value('swapfile', false, { buf = self.char_input.buf })
+        vim.api.nvim_set_option_value('modifiable', false, { buf = self.char_input.buf })
+    end)
 end
 
 function View:_destroy_win()
@@ -114,15 +125,17 @@ end
 function View:render_reference(conversation)
     assert(self.reference.buf)
     local range = conversation.reference.select_range
-    local title = string.format('%s %d:%d', range.filename, range.start_row, range.end_row)
+    local title = ''
+    if range then
+        title = string.format('%s %d:%d', range.filename, range.start_row, range.end_row)
+    end
     local lines = {}
     lines[1] = title
-    lines[2] = ''
     vim.api.nvim_buf_call(self.reference.buf, function()
         local view = vim.fn.winsaveview()
-        set_modifiable(self.reference.buf, true)
+        vim.api.nvim_set_option_value('modifiable', true, { buf = self.reference.buf })
         vim.api.nvim_buf_set_lines(self.reference.buf, 0, -1, false, lines)
-        set_modifiable(self.reference.buf, false)
+        vim.api.nvim_set_option_value('modifiable', false, { buf = self.reference.buf })
         vim.fn.winrestview(view)
     end)
 end
@@ -173,9 +186,9 @@ function View:render_conversation(conversation)
 
     vim.api.nvim_buf_call(self.messages_exchange.buf, function()
         local view = vim.fn.winsaveview()
-        set_modifiable(self.messages_exchange.buf, true)
+        vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
         vim.api.nvim_buf_set_lines(self.messages_exchange.buf, 0, -1, false, lines)
-        set_modifiable(self.messages_exchange.buf, false)
+        vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
         vim.fn.winrestview(view)
     end)
 end
@@ -196,30 +209,47 @@ function View:show()
     assert(self.messages_exchange.buf)
     assert(self.char_input.buf)
     assert(self.reference.buf)
+
+    local editor_width = vim.o.columns
+    local editor_height = vim.o.lines - vim.o.cmdheight
+
     if self.mode == 'panel' then
         self.messages_exchange.win = vim.api.nvim_open_win(self.messages_exchange.buf, true, {
             vertical = true,
             split = 'left',
             width = 40,
-            height = 0.8,
+            height = editor_height,
         })
         vim.api.nvim_win_call(self.messages_exchange.win, function()
             vim.api.nvim_set_option_value('wrap', true, { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('linebreak', true, { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('cursorline', true, { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('spell', false, { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('number', false, { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('relativenumber', false, { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('conceallevel', 2, { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('concealcursor', 'niv', { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('foldenable', true, { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('colorcolumn', '', { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('foldcolumn', '2', { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('winfixwidth', true, { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('list', false, { win = self.messages_exchange.win })
+            vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.messages_exchange.win })
         end)
         self.reference.win = vim.api.nvim_open_win(self.reference.buf, true, {
-            vertical = false,
+            vertical = true,
             split = 'below',
             width = 40,
-            height = 0.1,
+            height = 7,
         })
         vim.api.nvim_win_call(self.reference.win, function()
             vim.api.nvim_set_option_value('wrap', true, { win = self.reference.win })
         end)
         self.char_input.win = vim.api.nvim_open_win(self.char_input.buf, true, {
-            vertical = false,
+            vertical = true,
             split = 'below',
             width = 40,
-            height = 0.1,
+            height = 3,
         })
         vim.api.nvim_win_call(self.char_input.win, function()
             vim.api.nvim_set_option_value('wrap', true, { win = self.char_input.win })

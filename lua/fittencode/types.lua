@@ -212,7 +212,7 @@
 
 ---@class fittencode.State.Conversation
 ---@field id string
----@field reference table<string, string>
+---@field reference table<>
 ---@field header table<string, string>
 ---@field content table<string, any>
 ---@field timestamp number

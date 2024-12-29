@@ -22,6 +22,7 @@ local function selection_changed_callback()
 end
 
 function Editor.monaco()
+    vim.api.nvim_list_bufs()
     local buffer = vim.api.nvim_get_current_buf()
     return buffer
 end
@@ -44,23 +45,36 @@ function Editor.get_selected()
     local start = vim.api.nvim_buf_get_mark(buffer, '<')
     local end_ = vim.api.nvim_buf_get_mark(buffer, '>')
 
-    return {
-        text = '',
-        location = {
-            row = 0,
-            col = 0
-        }
-    }
+    -- return {
+    --     buf = 0,
+    --     text = '',
+    --     location = {
+    --         start_row = nil,
+    --         start_col = nil,
+    --         end_row = nil,
+    --         end_col = nil
+    --     }
+    -- }
 end
 
 function Editor.get_selected_text()
+    if not Editor.get_selected() then
+        return
+    end
     return Editor.get_selected().text
 end
 
 function Editor.get_selected_range()
+    if not Editor.get_selected() then
+        return
+    end
     local name = Editor.get_filename()
     local location = Editor.get_selected().location
-    return name .. ' ' .. location.row .. ':' .. location.col
+    return {
+        name = name,
+        start_row = location.start_row,
+        end_row = location.end_row,
+    }
 end
 
 function Editor.get_selected_text_with_diagnostics(opts)

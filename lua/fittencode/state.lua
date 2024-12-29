@@ -15,7 +15,7 @@ StateConversation.__index = StateConversation
 function StateConversation:new(conversation)
     local obj = {
         id = conversation.id,
-        reference = { select_text = '', select_range = '' },
+        reference = { select_text = nil, select_range = nil },
         header = {
             title = conversation:get_title(),
             is_title_message = conversation:is_title_message(),
