@@ -119,6 +119,7 @@ function Conversation:answer(content)
     end
     content = Fn.remove_special_token(content)
     self:add_user_message(content)
+    self.update_view()
     self:execute_chat({
         workspace = Fn.startwith(content, '@workspace'),
         _workspace = Fn.startwith(content, '@_workspace'),
@@ -188,7 +189,7 @@ function Conversation:execute_chat(opts)
                 for _, line in ipairs(v) do
                     local ok, result = pcall(vim.fn.json_decode, line)
                     if ok then
-                        completion[#completion + 1] = vim.trim(result.delta)
+                        completion[#completion + 1] = result.delta
                         self:handle_partial_completion(table.concat(completion, ''))
                     else
                         Log.error('Error while decoding chunk: {}', line)
@@ -213,19 +214,37 @@ function Conversation:execute_chat(opts)
 end
 
 function Conversation:handle_completion(e, r)
-    e = e or ""
-    local n = r.completion_handler or {type = "message"}
+    e = e or ''
+    local n = (r and r.completion_handler) or { type = 'message' }
     local i = n.type
-    local s = e:trim()
-    if i == "update-temporary-editor" then
+    local s = e
+    if i == 'update-temporary-editor' then
         Log.error('Not implemented for update-temporary-editor')
-    elseif i == "active-editor-diff" then
+    elseif i == 'active-editor-diff' then
         Log.error('Not implemented for active-editor-diff')
-    elseif i == "message" then
-        self:add_bot_message({content = s})
+    elseif i == 'message' then
+        self:add_bot_message({ content = s })
     else
-        Log.error("Unsupported property: " .. i)
+        Log.error('Unsupported property: ' .. i)
     end
+end
+
+---@param e table
+function Conversation:add_bot_message(e)
+    if self.abort_before_answer then
+        self.abort_before_answer = false
+        return
+    end
+    self.messages[#self.messages + 1] = {
+        author = 'bot',
+        content = e.content,
+        reference = self.reference,
+    }
+    self.state = {
+        type = 'user_can_reply',
+        response_placeholder = e.response_placeholder
+    }
+    self.update_view()
 end
 
 ---@param content string

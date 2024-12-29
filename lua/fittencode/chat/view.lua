@@ -134,9 +134,16 @@ function View:render_conversation(conversation, id)
     local bot_id = 'Fitten Code'
     local lines = {}
 
-    local function feed(author, msg, nonewline)
+    local function feed(author, msg)
         lines[#lines + 1] = string.format('# %s', author)
-        lines[#lines + 1] = msg
+        local v = vim.split(msg, '\n', { trimempty = false })
+        for i, line in ipairs(v) do
+            if line == '\n' then
+                lines[#lines + 1] = ''
+            else
+                lines[#lines + 1] = line
+            end
+        end
         lines[#lines + 1] = ''
     end
 
@@ -146,13 +153,13 @@ function View:render_conversation(conversation, id)
 
     local messages = conversation.content.messages
     for i, message in ipairs(messages) do
-        local text = message.text
+        local content = message.content
         local author = message.author
 
         if author == 'user' then
-            feed(user_id, text)
+            feed(user_id, content)
         elseif author == 'bot' then
-            feed(bot_id, text)
+            feed(bot_id, content)
         end
     end
 
@@ -193,6 +200,9 @@ function View:show()
             width = 60,
             height = 15,
         })
+        vim.api.nvim_win_call(self.messages_exchange.win, function()
+            vim.api.nvim_set_option_value('wrap', true, { win = self.messages_exchange.win })
+        end)
         self.char_input.win = vim.api.nvim_open_win(self.char_input.buf, true, {
             vertical = false,
             split = 'below',
