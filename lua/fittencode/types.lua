@@ -235,6 +235,18 @@
 ---@field get_state_from_model function
 
 ---@class fittencode.Editor
+---@field selection fittencode.Editor.Selection
+
+---@class fittencode.Editor.Selection
+---@field buf number
+---@field text table<string>|string
+---@field location fittencode.Editor.Selection.Location
+
+---@class fittencode.Editor.Selection.Location
+---@field start_row number
+---@field start_col number
+---@field end_row number
+---@field end_col number
 
 ---@class fittencode.Inline.Controller
 ---@field model fittencode.Inline.Model
