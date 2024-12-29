@@ -203,7 +203,7 @@ function Conversation:execute_chat(opts)
         end):forward(function(data)
             self.update_status({ id = self.id, stream = false })
             if #data > 0 then
-                self:handle_completion(data)
+                self:handle_completion(table.concat(data, ''))
             end
         end, function(error)
             self.update_status({ id = self.id, stream = false })
@@ -212,7 +212,20 @@ function Conversation:execute_chat(opts)
     end
 end
 
-function Conversation:handle_completion(data)
+function Conversation:handle_completion(e, r)
+    e = e or ""
+    local n = r.completion_handler or {type = "message"}
+    local i = n.type
+    local s = e:trim()
+    if i == "update-temporary-editor" then
+        Log.error('Not implemented for update-temporary-editor')
+    elseif i == "active-editor-diff" then
+        Log.error('Not implemented for active-editor-diff')
+    elseif i == "message" then
+        self:add_bot_message({content = s})
+    else
+        Log.error("Unsupported property: " .. i)
+    end
 end
 
 ---@param content string
