@@ -40,9 +40,7 @@ Install the plugin with your preferred package manager:
 ```lua
 {
   'luozhiya/fittencode.nvim',
-  config = function()
-    require('fittencode').setup()
-  end,
+  opts = {},
 }
 ```
 
@@ -305,6 +303,18 @@ cmp.setup {
   }
   ...
 }
+```
+
+### Status line
+
+using lualine
+
+```
+{
+  function()
+  local emoji = {"🚫", "⏸️ ", "⌛️", "⚠️ ", "0️⃣ ", "✅"}
+  return "🅕" .. emoji[require("fittencode").get_current_status()] end,
+},
 ```
 
 If you do not use lspkind, simply add the custom icon however you normally handle kind formatting and it will integrate as if it was any other normal lsp completion kind.
