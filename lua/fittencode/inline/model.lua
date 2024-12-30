@@ -1,21 +1,35 @@
 ---@class Fittencode.Inline.Model
--- local model = {
---     suggestions = nil,
---     completion_data = nil,
---     cursor = nil,
---     cache_hit = function(row, col) end,
---     update = function(row, col, timestamp, suggestions, completion_data) end,
--- }
-
 local Model = {}
 Model.__index = Model
 
+---@return Fittencode.Inline.Model
 function Model:new(opts)
     local obj = {
-
+        mode = opts.mode,
+        generated_text = opts.generated_text,
+        ex_msg = opts.ex_msg,
+        delta_char = opts.delta_char,
+        delta_line = opts.delta_line,
+        buf = opts.buf,
+        row = opts.row,
+        col = opts.col,
     }
     setmetatable(obj, Model)
     return obj
+end
+
+function Model:accept(direction, range)
+end
+
+function Model:make_state()
+    if self.generated_text == nil and self.ex_msg == nil then
+        return
+    end
+end
+
+function Model:destory()
+    self.generated_text = nil
+    self.ex_msg = nil
 end
 
 return Model

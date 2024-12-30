@@ -1,4 +1,6 @@
 local Editor = require('fittencode.editor')
+local Model = require('fittencode.inline.model')
+local View = require('fittencode.inline.view')
 
 ---@class Fittencode.Inline.Session
 local Session = {}
@@ -7,14 +9,9 @@ Session.__index = Session
 ---@return Fittencode.Inline.Session
 function Session:new(opts)
     local obj = {
-        mode = opts.mode,
-        generated_text = opts.generated_text,
-        ex_msg = opts.ex_msg,
-        delta_char = opts.delta_char,
-        delta_line = opts.delta_line,
         buf = opts.buf,
-        row = opts.row,
-        col = opts.col,
+        model = Model:new(opts),
+        view = View:new({ buf = opts.buf }),
         timing = opts.timing,
         reflect = opts.reflect,
     }
@@ -23,50 +20,44 @@ function Session:new(opts)
 end
 
 function Session:init()
-    self:render_hints()
     self:set_keymaps()
     self:set_autocmds()
 end
 
-function Session:render_hints()
-    if self.mode == 'lines' or self.mode == 'edit_completion' then
-        -- Editor.set_virt_text()
-    elseif self.mode == 'multi_segments' then
-        local segments
-        for _, segment in ipairs(segments) do
-            -- Editor.set_virt_text()
-        end
-    end
-end
-
-function Session:clear_hints()
+function Session:update_view()
+    self.view.update(self.model:make_state())
 end
 
 function Session:accept_all_suggestions()
-    -- print("accept all suggestions")
+    self.model:accept('forward', 'all')
+    self:update_view()
 end
 
 function Session:accept_line()
-    -- print("accept line")
+    self.model:accept('forward', 'line')
+    self:update_view()
 end
 
 function Session:accept_word()
-    -- print("accept word")
+    self.model:accept('forward', 'word')
+    self:update_view()
 end
 
 function Session:revoke_line()
-    -- print("revoke line")
+    self.model:accept('backward', 'line')
+    self:update_view()
 end
 
 function Session:revoke_word()
-    -- print("revoke word")
+    self.model:accept('backward', 'word')
+    self:update_view()
 end
 
-function Session:set_keymaps(mode)
+function Session:set_keymaps()
     local maps = {
-        { '<TAB>', function() self:accept_all_suggestions() end },
+        { '<Tab>', function() self:accept_all_suggestions() end },
     }
-    if mode == 'lines' then
+    if self.model.mode == 'lines' then
         vim.tbl_deep_extend('force', maps, {
             { '<C-Down>',  function() self:accept_line() end },
             { '<C-Right>', function() self:accept_word() end },
@@ -98,11 +89,12 @@ function Session:clear_autocmds()
 end
 
 function Session:cache_hit(row, col)
-    -- print("cache hit")
+    -- return self.model:eq_commit_pos(row, col)
 end
 
 function Session:destory()
-    self:clear_hints()
+    self.model:destory()
+    self:update_view()
     self:restore_keymaps()
     self:clear_autocmds()
 end

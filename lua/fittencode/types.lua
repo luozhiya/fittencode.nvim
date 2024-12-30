@@ -244,16 +244,29 @@
 ---@field augroups table
 ---@field ns_ids table
 
----@class Fittencode.Inline.Model
----@field cache_hit function
-
 ---@class Fittencode.Chat.VM
 ---@field run function
 
+---@class Fittencode.Inline.State
+
 ---@class Fittencode.Inline.Session
----@field mode 'lines' | 'multi_segments' | 'edit_completion'
+---@field model Fittencode.Inline.Model
+---@field view Fittencode.Inline.View
+---@field buf number
 ---@field request_handle number
----@field suggestion string
----@field start_pos table<number, number>
 ---@field keymaps table
----@field extmark_ids table<number>
+---@field extmark_ids table
+---@field generated_text table<string>
+
+---@class Fittencode.Inline.Model
+---@field mode 'lines' | 'multi_segments' | 'edit_completion'
+---@field row number
+---@field col number
+---@field commit_row number
+---@field commit_col number
+---@field accept function
+---@field make_state function
+---@field destory function
+
+---@class Fittencode.Inline.View
+---@field state? Fittencode.Inline.State

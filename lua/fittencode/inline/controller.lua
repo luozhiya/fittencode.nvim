@@ -7,6 +7,7 @@ local Session = require('fittencode.inline.session')
 local Editor = require('fittencode.editor')
 local Translate = require('fittencode.translate')
 local Log = require('fittencode.log')
+local Model = require('fittencode.inline.model')
 
 ---@class Fittencode.Inline.Controller
 local Controller = {}
@@ -22,6 +23,7 @@ function Controller:new(opts)
         },
         augroups = {},
         ns_ids = {},
+        keymaps = {},
     }
     setmetatable(obj, self)
     return obj
@@ -203,6 +205,7 @@ function Controller:setup_autocmds(enable)
         { { 'BufLeave' },                                       function() self:dismiss_suggestions() end },
     }
     if enable then
+        self:setup_autocmds(false)
         for _, autocmd in ipairs(autocmds) do
             vim.api.nvim_create_autocmd(autocmd[1], {
                 group = self.augroups.completion,
@@ -265,7 +268,7 @@ function Controller:setup_keymaps(enable)
         { 'Alt-O',  function() self:edit_completion() end }
     }
     if enable then
-        self.keymaps = {}
+        self:setup_keymaps(false)
         for _, v in ipairs(maps) do
             self.keymaps[#self.keymaps + 1] = vim.fn.maparg(v[1], 'i', false, true)
             vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
@@ -280,16 +283,14 @@ function Controller:setup_keymaps(enable)
     end
 end
 
-function Controller:enable_completions(enable, global, force, suffixes)
+function Controller:enable_completions(enable, global, suffixes)
     enable = enable == nil and true or enable
     global = global == nil and true or global
     suffixes = suffixes or {}
     if global then
-        if Config.inline_completion.enable ~= enable or force then
-            self:setup_autocmds(enable)
-            self:setup_keymaps(enable)
-            Config.inline_completion.enable = enable
-        end
+        self:setup_autocmds(enable)
+        self:setup_keymaps(enable)
+        Config.inline_completion.enable = enable
     else
         local merge = function(tbl, filters)
             if enable then
