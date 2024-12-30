@@ -142,7 +142,12 @@ function Controller:triggering_completion(opts)
             if not generated_text and (completion_data.ex_msg == nil or completion_data.ex_msg == '') then
                 reject()
             else
+                local mode = 'lines'
+                if not generated_text then
+                    mode = 'multi_segments'
+                end
                 resolve({
+                    mode = mode,
                     generated_text = generated_text,
                     ex_msg = completion_data.ex_msg,
                     delta_char = completion_data.delta_char,
@@ -194,6 +199,7 @@ function Controller:setup_autocmds(enable)
 end
 
 function Controller:edit_completion()
+    local mode = 'edit_completion'
 end
 
 function Controller:triggering_completion_by_shortcut()

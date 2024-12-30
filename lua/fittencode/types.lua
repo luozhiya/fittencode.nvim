@@ -249,3 +249,11 @@
 
 ---@class Fittencode.Chat.VM
 ---@field run function
+
+---@class Fittencode.Inline.Session
+---@field mode 'lines' | 'multi_segments' | 'edit_completion'
+---@field request_handle number
+---@field suggestion string
+---@field start_pos table<number, number>
+---@field keymaps table
+---@field extmark_ids table<number>
