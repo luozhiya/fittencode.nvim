@@ -235,10 +235,10 @@
 ---@field get_state_from_model function
 
 ---@class fittencode.Editor
----@field selection? fittencode.Editor.Selection
 
 ---@class fittencode.Editor.Selection
 ---@field buf number
+---@field name string
 ---@field text table<string>|string
 ---@field location fittencode.Editor.Selection.Location
 

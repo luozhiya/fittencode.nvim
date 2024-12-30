@@ -1,13 +1,15 @@
 local Log = require('fittencode.log')
 
 ---@class fittencode.Editor
-local Editor = {
-    selection = nil,
-}
+local Editor = {}
 
 ---@type integer?
 local active = nil
 
+---@type fittencode.Editor.Selection?
+local selection = nil
+
+---@type table<integer>
 local filter_bufs = {}
 
 ---@return string?
@@ -69,8 +71,12 @@ function Editor.register_filter_buf(buf)
     filter_bufs[#filter_bufs + 1] = buf
 end
 
-function Editor.filebuffer(buf)
-    if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf) and vim.fn.buflisted(buf) == 1 then
+function Editor.is_filebuf(buf)
+    local ok, r = pcall(vim.api.nvim_buf_is_valid, buf)
+    if not ok or not r then
+        return false
+    end
+    if vim.api.nvim_buf_is_loaded(buf) and vim.fn.buflisted(buf) == 1 then
         local path
         vim.api.nvim_buf_call(buf, function()
             path = vim.fn.expand('%:p')
@@ -84,7 +90,7 @@ end
 
 ---@return integer?
 function Editor.active()
-    if Editor.filebuffer(active) then
+    if Editor.is_filebuf(active) then
         return active
     end
 end
@@ -96,10 +102,9 @@ vim.api.nvim_create_autocmd({ 'BufEnter' }, {
         if vim.tbl_contains(filter_bufs, args.buf) then
             return
         end
-        if Editor.filebuffer(args.buf) then
+        if Editor.is_filebuf(args.buf) then
             active = args.buf
             vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.ActiveChanged', modeline = false, data = args.buf })
-            Log.debug('Active buffer changed to id = {}, name = {}', args.buf, vim.api.nvim_buf_get_name(args.buf))
         end
     end
 })
@@ -120,8 +125,9 @@ vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
             local pos = vim.fn.getregionpos(vim.fn.getpos('.'), vim.fn.getpos('v'))
             local start = { pos[1][1][2], pos[1][1][3] }
             local end_ = { pos[#pos][2][2], pos[#pos][2][3] }
-            Editor.selection = {
+            selection = {
                 buf = args.buf,
+                name = vim.api.nvim_buf_get_name(args.buf),
                 text = region,
                 location = {
                     start_row = start[1],
@@ -130,36 +136,36 @@ vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
                     end_col = end_[2],
                 }
             }
-            vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.SelectionChanged', modeline = false, data = Editor.selection })
+            vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.SelectionChanged', modeline = false, data = selection })
         end
     end,
     desc = 'Fittencode editor selection event',
 })
 
-function Editor.selected()
-    return Editor.selection
+function Editor.selection()
+    return selection
 end
 
 function Editor.selected_text()
-    if not Editor.selected() then
+    local se = Editor.selection()
+    if not se then
         return
     end
-    return Editor.selected().text
+    return se.text
 end
 
 function Editor.selected_location_text()
 end
 
 function Editor.selected_range()
-    if not Editor.selected() then
+    local se = Editor.selection()
+    if not se then
         return
     end
-    local name = Editor.filename()
-    local location = Editor.selected().location
     return {
-        name = name,
-        start_row = location.start_row,
-        end_row = location.end_row,
+        name = se.name,
+        start_row = se.location.start_row,
+        end_row = se.location.end_row,
     }
 end
 

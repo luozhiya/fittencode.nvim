@@ -131,7 +131,7 @@ function View:render_reference(conversation)
     local range = conversation.reference.select_range
     local title = ''
     if range then
-        title = string.format('%s %d:%d', range.filename, range.start_row, range.end_row)
+        title = string.format('%s %d:%d', range.name, range.start_row, range.end_row)
     end
     local lines = {}
     lines[1] = title
