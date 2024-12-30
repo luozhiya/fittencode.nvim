@@ -1,4 +1,4 @@
-*fittencode.nvim.txt*     For Neovim >= 0.8.0    Last change: 2024 November 23
+*fittencode.nvim.txt*     For Neovim >= 0.8.0    Last change: 2024 December 30
 
 ==============================================================================
 Table of Contents                          *fittencode.nvim-table-of-contents*
@@ -222,7 +222,7 @@ DEFAULTS ~
         -- Enable source completion.
         enable = true,
         -- engine support nvim-cmp and blink.cmp
-        engine = "cmp" -- "cmp" | "blink"
+        engine = "cmp", -- "cmp" | "blink"
         -- trigger characters for source completion.
         -- Available options:
         -- * A  list of characters like {'a', 'b', 'c', ...}
