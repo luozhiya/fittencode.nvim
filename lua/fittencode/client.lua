@@ -140,8 +140,6 @@ local function login(username, password, on_success, on_error)
         return
     end
 
-    Log.debug('login with username: {}', username)
-
     Promise:new(function(resolve, reject)
         HTTP.post(server_url() .. preset_urls.login, {
             headers = {
