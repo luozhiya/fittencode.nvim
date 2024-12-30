@@ -58,52 +58,52 @@
 ---@field create_conversation function
 
 ---@class Fittencode.Chat.Template
----@field id string -- 唯一标识
----@field engineVersion number -- 引擎版本
----@field label string -- 标签
----@field description string -- 诊断错误和警告的描述
----@field tags string[] -- 标签数组
----@field header Fittencode.Chat.Template.Header -- 头部信息
+---@field id string
+---@field engineVersion number
+---@field label string
+---@field description string
+---@field tags string[]
+---@field header Fittencode.Chat.Template.Header
 ---@field chatInterface 'message-exchange' | 'instruction-refinement'
----@field isEnabled boolean -- 是否启用
----@field variables Fittencode.Chat.Template.Variable[] -- 变量数组
----@field initialMessage Fittencode.Chat.Template.InitialMessage -- 初始消息
----@field response Fittencode.Chat.Template.Response -- 响应格式
+---@field isEnabled boolean
+---@field variables Fittencode.Chat.Template.Variable[]
+---@field initialMessage Fittencode.Chat.Template.InitialMessage
+---@field response Fittencode.Chat.Template.Response
 
 ---@class Fittencode.Chat.Template.Header
----@field title string -- 标题
----@field icon Fittencode.Chat.Template.Icon -- 图标
----@field useFirstMessageAsTitle boolean -- 是否使用第一条消息作为标题
+---@field title string
+---@field icon Fittencode.Chat.Template.Icon
+---@field useFirstMessageAsTitle boolean
 
 ---@class Fittencode.Chat.Template.Icon
----@field type string -- 图标类型 'codicon'
----@field value string -- 图标值
+---@field type string
+---@field value string
 
 ---@class Fittencode.Chat.Template.InitialMessage
----@field maxTokens number -- 最大令牌数
----@field placeholder string -- 占位符
----@field template string -- 模板内容
----@field retrievalAugmentation any -- 检索增强 用于描述在数据检索过程中添加的额外信息或功能，以提高检索的效率和准确性
+---@field maxTokens number
+---@field placeholder string
+---@field template string
+---@field retrievalAugmentation any
 
 ---@class Fittencode.Chat.Template.Response
----@field placeholder string -- 占位符
----@field retrievalAugmentation any -- 检索增强 用于描述在数据检索过程中添加的额外信息或功能，以提高检索的效率和准确性
----@field maxTokens number -- 最大令牌数
----@field stop string[] -- 停止标记
----@field template string -- 响应模板
+---@field placeholder string
+---@field retrievalAugmentation any
+---@field maxTokens number
+---@field stop string[]
+---@field template string
 ---@field temperature number
 ---@field completionHandler any
 
 ---@class Fittencode.Chat.Template.Variable
----@field constraints Fittencode.Chat.Template.Constraint[] -- 约束条件
----@field name string -- 变量名
----@field severities string[] -- 严重性数组
----@field time string -- 时间
----@field type string -- 变量类型
+---@field constraints Fittencode.Chat.Template.Constraint[]
+---@field name string
+---@field severities string[]
+---@field time string
+---@field type string
 
 ---@class Fittencode.Chat.Template.Constraint
----@field min number -- 最小值
----@field type string -- 类型
+---@field min number
+---@field type string
 
 ---@class Fittencode.Chat.Model
 ---@field add_and_select_conversation function
