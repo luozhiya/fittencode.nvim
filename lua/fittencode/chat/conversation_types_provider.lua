@@ -3,6 +3,7 @@ local ConversationType = require('fittencode.chat.conversation_type')
 local Editor = require('fittencode.editor')
 local Promise = require('fittencode.promise')
 local Fn = require('fittencode.fn')
+local Log = require('fittencode.log')
 
 ---@class Fittencode.Chat.ConversationTypeProvider
 local ConversationTypesProvider = {}
@@ -116,7 +117,6 @@ function ConversationTypesProvider:load_extension_templates()
 end
 
 function ConversationTypesProvider:load_workspace_templates()
-    -- TODO: load workspace templates
     -- .fittencode/template/
     --  ├── chat
     --  │   ├── chat-en.rdt.md
@@ -124,13 +124,16 @@ function ConversationTypesProvider:load_workspace_templates()
     --  └── task
     --      ├── diagnose-errors-en.rdt.md
     --      ├── diagnose-errors-zh-cn.rdt.md
-
-    -- local e = TemplateResolver.load_from_directory(Editor.get_workspace_path())
-    -- for _, r in ipairs(e) do
-    --     if r and r.isEnabled then
-    --         self.conversation_types[r.id] = ConversationType:new({ template = r, source = 'local-workspace' })
-    --     end
-    -- end
+    local ws = Editor.workspace()
+    if not ws then
+        return
+    end
+    local e = TemplateResolver.load_from_directory(ws .. '/.fittencode/template')
+    for _, r in ipairs(e) do
+        if r and r.isEnabled then
+            self.conversation_types[r.id] = ConversationType:new({ template = r, source = 'local-workspace' })
+        end
+    end
 end
 
 return ConversationTypesProvider

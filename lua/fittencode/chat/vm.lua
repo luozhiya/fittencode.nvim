@@ -1,7 +1,7 @@
 local OPL = require('fittencode.opl')
 local Log = require('fittencode.log')
 
----@class Fittencode.VM
+---@class Fittencode.Chat.VM
 local VM = {}
 
 VM.__index = VM

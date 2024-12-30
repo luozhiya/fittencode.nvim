@@ -70,14 +70,6 @@ local function get_status()
     return controller:get_status()
 end
 
-local function register_status_callback(callback)
-    controller:register_status_callback(callback)
-end
-
-local function unregister_status_callback(name)
-    controller:unregister_status_callback(name)
-end
-
 return {
     setup = setup,
     reload_templates = reload_templates,

@@ -159,7 +159,7 @@ function Controller:create_conversation(template_id, show, mode)
     self:notify_observers('conversation_created', {
         id = created_conversation.conversation.id,
         conversation = created_conversation.conversation
-     })
+    })
 end
 
 function Controller:delete_conversation(id)

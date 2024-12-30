@@ -242,5 +242,5 @@
 
 ---@class Fittencode.Inline.Model
 
----@class Fittencode.VM
+---@class Fittencode.Chat.VM
 ---@field run function
