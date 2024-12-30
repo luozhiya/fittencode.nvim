@@ -28,7 +28,6 @@ function Controller:init()
         pattern = 'fittencode.SelectionChanged',
         once = false,
         callback = function(args)
-            Log.debug('fittencode.SelectionChanged event = {}', args)
             self:update_view()
         end
     })

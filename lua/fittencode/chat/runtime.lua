@@ -4,11 +4,11 @@ local Log = require('fittencode.log')
 
 local Runtime = {}
 
-local function get_comment_snippet()
+local function comment_snippet()
     return Config.snippet.comment or ''
 end
 
-local function get_unit_test_framework()
+local function unit_test_framework()
     local tf = {}
     tf['c'] = 'C/C++'
     tf['cpp'] = tf['c']
@@ -16,13 +16,13 @@ local function get_unit_test_framework()
     tf['python'] = 'Python'
     tf['javascript'] = 'JavaScript/TypeScript'
     tf['typescript'] = tf['javascript']
-    return Config.unit_test_framework[tf[Editor.get_ft_language()]] or ''
+    return Config.unit_test_framework[tf[Editor.ft_vsclang()]] or ''
 end
 
 function Runtime.resolve_variables_internal(v, e)
     local switch = {
         ['context'] = function()
-            return { name = Editor.get_filename(), language = Editor.get_ft_language(), content = Editor.get_selected_text() }
+            return { name = Editor.filename(), language = Editor.ft_vsclang(), content = Editor.content() }
         end,
         ['constant'] = function()
             return v.value
@@ -31,35 +31,35 @@ function Runtime.resolve_variables_internal(v, e)
             return e and e[v.index] and e[v.index][v.property]
         end,
         ['selected-text'] = function()
-            return Editor.get_selected_text()
+            return Editor.selected_text()
         end,
         ['selected-location-text'] = function()
-            return Editor.get_selected_location_text()
+            return Editor.selected_location_text()
         end,
         ['filename'] = function()
-            return Editor.get_filename()
+            return Editor.filename()
         end,
         ['language'] = function()
-            return Editor.get_ft_language()
+            return Editor.ft_vsclang()
         end,
         ['comment-snippet'] = function()
-            return get_comment_snippet()
+            return comment_snippet()
         end,
         ['unit-test-framework'] = function()
-            local s = get_unit_test_framework()
+            local s = unit_test_framework()
             return s == 'Not specified' and '' or s
         end,
         ['selected-text-with-diagnostics'] = function()
-            return Editor.get_selected_text_with_diagnostics({ diagnostic_severities = t.severities })
+            return Editor.selected_text_with_diagnostics({ diagnostic_severities = v.severities })
         end,
         ['errorMessage'] = function()
-            return Editor.get_diagnose_info()
+            return Editor.diagnose_info()
         end,
         ['errorLocation'] = function()
-            return Editor.get_error_location()
+            return Editor.error_location()
         end,
         ['title-selected-text'] = function()
-            return Editor.get_title_selected_text()
+            return Editor.title_selected_text()
         end,
         ['terminal-text'] = function()
             Log.error('Not implemented for terminal-text')

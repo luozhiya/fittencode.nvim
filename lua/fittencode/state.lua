@@ -71,8 +71,8 @@ function State.get_state_from_model(model, selected_state, tracker)
         if selected_state then
             if a.id == model.selected_conversation_id then
                 A.reference = {
-                    select_text = Editor.get_selected_text(),
-                    select_range = Editor.get_selected_range()
+                    select_text = Editor.selected_text(),
+                    select_range = Editor.selected_range()
                 }
             else
                 if A.content.type == 'messageExchange' then
