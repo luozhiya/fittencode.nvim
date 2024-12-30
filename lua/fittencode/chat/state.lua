@@ -2,44 +2,21 @@ local Client = require('fittencode.client')
 local Fn = require('fittencode.fn')
 local Editor = require('fittencode.editor')
 local Log = require('fittencode.log')
+local StateConversation = require('fittencode.chat.state_conversation')
 
----@class fittencode.State
+---@class fittencode.Chat.State
 local State = {}
+State.__index = State
 
----@class fittencode.State.Conversation
-local StateConversation = {}
-StateConversation.__index = StateConversation
-
----@param conversation fittencode.Chat.Conversation
----@return fittencode.State.Conversation
-function StateConversation:new(conversation)
-    local obj = {
-        id = conversation.id,
-        reference = { select_text = nil, select_range = nil },
-        header = {
-            title = conversation:get_title(),
-            is_title_message = conversation:is_title_message(),
-            codicon = conversation:get_codicon()
-        },
-        content = {},
-        timestamp = conversation.creation_timestamp,
-        is_favorited = conversation.is_favorited,
-        mode = conversation.mode
-    }
-    setmetatable(obj, StateConversation)
+---@return fittencode.Chat.State
+function State:new(opts)
+    local obj = {}
+    setmetatable(obj, State)
     return obj
 end
 
-function StateConversation:is_empty()
-    return (self.header.is_title_message and (self.header.title == nil or self.header.title == '')) or (not self.header.is_title_message and (self.content.messages == nil or #self.content.messages == 0))
-end
-
-function StateConversation:user_can_reply()
-    return self.content.state == nil or (self.content.state ~= nil and self.content.state.type == 'user_can_reply')
-end
-
 ---@param conversation fittencode.Chat.Conversation
----@return fittencode.State.Conversation
+---@return fittencode.Chat.State.Conversation
 local function to_state(conversation)
     local chat_interface = conversation.template.chatInterface or 'message-exchange'
     local sc = StateConversation:new(conversation)
@@ -60,9 +37,8 @@ end
 
 ---@param model fittencode.Chat.Model
 ---@param selected_state? boolean
----@param tracker? fittencode.Tracker
----@return fittencode.State
-function State.get_state_from_model(model, selected_state, tracker)
+---@return fittencode.Chat.State
+function State:get_state_from_model(model, selected_state)
     selected_state = selected_state == nil and true or selected_state
     local n = {}
 
@@ -90,11 +66,6 @@ function State.get_state_from_model(model, selected_state, tracker)
         type = 'chat',
         selected_conversation_id = model.selected_conversation_id,
         conversations = n,
-        has_fitten_ai_api_key = Client.has_fitten_ai_api_key(),
-        server_url = Client.server_url(),
-        fitten_ai_api_key = Client.get_ft_token(),
-        -- tracker = tracker,
-        -- trackerOptions = tracker.options
     }
 end
 

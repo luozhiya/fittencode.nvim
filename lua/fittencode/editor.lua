@@ -59,7 +59,7 @@ function Editor.content()
     return content
 end
 
-function Editor.workspace_path()
+function Editor.workspace()
     local buf = Editor.active()
     if not buf then
         return

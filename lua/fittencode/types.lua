@@ -15,7 +15,7 @@
 ---@field init_variables table
 ---@field template fittencode.Chat.Template
 ---@field project_path_name string
----@field state fittencode.Chat.State
+---@field state fittencode.Chat.Conversation.State
 ---@field regenerate_enable boolean
 ---@field creation_timestamp string
 ---@field variables table
@@ -65,7 +65,7 @@
 ---@field source 'bot'|'user'
 ---@field content string
 
----@class fittencode.Chat.State
+---@class fittencode.Chat.Conversation.State
 ---@field type 'user_can_reply' | 'waiting_for_bot_answer' | 'bot_answer_streaming'
 ---@field response_placeholder? string
 ---@field bot_action? string
@@ -208,9 +208,9 @@
 ---@field load_from_directory function
 
 ---@class fittencode.Chat.View
----@field state? fittencode.State
+---@field state? fittencode.Chat.State
 
----@class fittencode.State.Conversation
+---@class fittencode.Chat.State.Conversation
 ---@field id string
 ---@field reference table<>
 ---@field header table<string, string>
@@ -223,10 +223,10 @@
 
 ---@class fittencode.TrackerOptions
 
----@class fittencode.State
+---@class fittencode.Chat.State
 ---@field type string
 ---@field selected_conversation_id string
----@field conversations table<string, fittencode.State.Conversation>
+---@field conversations table<string, fittencode.Chat.State.Conversation>
 ---@field has_fitten_ai_api_key boolean
 ---@field server_url string
 ---@field fitten_ai_api_key string
@@ -253,3 +253,6 @@
 ---@field status fittencode.Inline.Status
 
 ---@class fittencode.Inline.Model
+
+---@class fittencode.VM
+---@field run function

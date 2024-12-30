@@ -1,7 +1,7 @@
 local Config = require('fittencode.config')
 local Log = require('fittencode.log')
 local Runtime = require('fittencode.chat.runtime')
-local State = require('fittencode.state')
+local State = require('fittencode.chat.state')
 local Status = require('fittencode.chat.status')
 local Fn = require('fittencode.fn')
 
@@ -52,8 +52,7 @@ end
 function Controller:update_view(force)
     force = force or false
     if self:view_visible() or force then
-        local state = State.get_state_from_model(self.model)
-        self.view:update(state)
+        self.view:update(State:new():get_state_from_model(self.model))
     end
 end
 

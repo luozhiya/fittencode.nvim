@@ -107,7 +107,7 @@ function Conversation:evaluate_template(template, variables)
     end
     local env = vim.tbl_deep_extend('force', {}, self.init_variables or {}, self.variables or {})
     env.messages = self.messages
-    return VM.run(env, template)
+    return VM:new():run(env, template)
 end
 
 ---@param content string?

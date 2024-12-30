@@ -108,7 +108,7 @@ function View:_destroy_win()
     end
 end
 
----@param state fittencode.State
+---@param state fittencode.Chat.State
 function View:update(state)
     self.state = state
     local id = state.selected_conversation_id
@@ -144,7 +144,7 @@ function View:render_reference(conversation)
     end)
 end
 
----@param conversation fittencode.State.Conversation
+---@param conversation fittencode.Chat.State.Conversation
 function View:render_conversation(conversation)
     assert(self.messages_exchange.buf)
     local user_id = Client.get_user_id()
