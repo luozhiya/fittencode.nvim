@@ -22,11 +22,15 @@ function Editor.ft_vsclang()
     vim.api.nvim_buf_call(buf, function()
         ft = vim.api.nvim_get_option_value('filetype', { buf = buf })
     end)
-    -- Mapping vim filetype to vscode language
-    if ft == '' then
-        ft = 'plaintext'
-    end
-    return ft
+    local mapping = {
+        [''] = 'plaintext',
+    }
+    setmetatable(mapping, {
+        __index = function(_, k)
+            return k
+        end
+    })
+    return mapping[ft]
 end
 
 ---@return string?
