@@ -1,4 +1,4 @@
----@class fittencode.Inline.Model
+---@class Fittencode.Inline.Model
 -- local model = {
 --     suggestions = nil,
 --     completion_data = nil,

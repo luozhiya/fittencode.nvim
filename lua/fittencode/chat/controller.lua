@@ -5,11 +5,11 @@ local State = require('fittencode.chat.state')
 local Status = require('fittencode.chat.status')
 local Fn = require('fittencode.fn')
 
----@class fittencode.Chat.Controller
+---@class Fittencode.Chat.Controller
 local Controller = {}
 Controller.__index = Controller
 
----@return fittencode.Chat.Controller
+---@return Fittencode.Chat.Controller
 function Controller:new(opts)
     local obj = setmetatable({
         view = opts.view,
@@ -68,9 +68,9 @@ function Controller:view_visible()
     return self.view:is_visible()
 end
 
----@param conversation fittencode.Chat.Conversation
+---@param conversation Fittencode.Chat.Conversation
 ---@param show boolean
----@return fittencode.Chat.Conversation
+---@return Fittencode.Chat.Conversation
 function Controller:add_and_show_conversation(conversation, show)
     self.model:add_and_select_conversation(conversation)
     self:update_view(show)
@@ -88,7 +88,7 @@ function Controller:receive_view_message(msg)
         self:update_view()
     elseif ty == 'send_message' then
         assert(msg.data.id == self.model.selected_conversation_id)
-        ---@type fittencode.Chat.Conversation
+        ---@type Fittencode.Chat.Conversation
         local conversation = self.model:get_conversation_by_id(msg.data.id)
         if conversation then
             conversation:answer(msg.data.message)
@@ -138,7 +138,7 @@ function Controller:create_conversation(template_id, show, mode)
 end
 
 ---@param template_id string
----@return fittencode.Chat.ConversationType
+---@return Fittencode.Chat.ConversationType
 function Controller:get_conversation_type(template_id)
     return self.conversation_types_provider:get_conversation_type(template_id)
 end

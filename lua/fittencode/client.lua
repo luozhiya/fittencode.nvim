@@ -3,7 +3,6 @@ local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
 local Translate = require('fittencode.translate')
-
 local HTTP = require('fittencode.http')
 
 local ide = 'neovim'

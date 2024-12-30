@@ -4,11 +4,11 @@ local Fn = require('fittencode.fn')
 local Promise = require('fittencode.promise')
 local Status = require('fittencode.inline.status')
 
----@class fittencode.Inline.Controller
+---@class Fittencode.Inline.Controller
 local Controller = {}
 Controller.__index = Controller
 
----@return fittencode.Inline.Controller
+---@return Fittencode.Inline.Controller
 function Controller:new(opts)
     local obj = {
         model = opts.model,

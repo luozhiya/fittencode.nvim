@@ -1,9 +1,9 @@
----@class fittencode.Chat.State.Conversation
+---@class Fittencode.Chat.State.Conversation
 local StateConversation = {}
 StateConversation.__index = StateConversation
 
----@param conversation fittencode.Chat.Conversation
----@return fittencode.Chat.State.Conversation
+---@param conversation Fittencode.Chat.Conversation
+---@return Fittencode.Chat.State.Conversation
 function StateConversation:new(conversation)
     local obj = {
         id = conversation.id,
@@ -29,3 +29,5 @@ end
 function StateConversation:user_can_reply()
     return self.content.state == nil or (self.content.state ~= nil and self.content.state.type == 'user_can_reply')
 end
+
+return StateConversation

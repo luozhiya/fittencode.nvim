@@ -1,6 +1,6 @@
 local Conversation = require('fittencode.chat.conversation')
 
----@class fittencode.Chat.ConversationType
+---@class Fittencode.Chat.ConversationType
 local ConversationType = {}
 ConversationType.__index = ConversationType
 

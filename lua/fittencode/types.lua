@@ -1,28 +1,28 @@
----@alias fittencode.Version 'default' | 'enterprise'
+---@alias Fittencode.Version 'default' | 'enterprise'
 
----@class fittencode.Chat.Message
----@field author string
+---@class Fittencode.Chat.Message
+---@field author 'bot'|'user'
 ---@field content string
 
----@class fittencode.Chat.Reference
+---@class Fittencode.Chat.Reference
 
----@class fittencode.Chat.Conversation
+---@class Fittencode.Chat.Conversation
 ---@field abort_before_answer boolean
 ---@field is_favorited boolean
 ---@field mode "chat"
 ---@field id string
----@field messages fittencode.Chat.Message[]
+---@field messages Fittencode.Chat.Message[]
 ---@field init_variables table
----@field template fittencode.Chat.Template
+---@field template Fittencode.Chat.Template
 ---@field project_path_name string
----@field state fittencode.Chat.Conversation.State
+---@field state Fittencode.Chat.Conversation.State
 ---@field regenerate_enable boolean
 ---@field creation_timestamp string
 ---@field variables table
 ---@field temporary_editor_content string
 ---@field update_partial_bot_message function
 ---@field set_is_favorited function
----@field reference fittencode.Chat.Reference
+---@field reference Fittencode.Chat.Reference
 ---@field error string
 ---@field set_error function
 ---@field dismiss_error function
@@ -32,79 +32,75 @@
 ---@field update_view function?
 ---@field update_status function?
 
----@class fittencode.Chat.StateConversation.Header
+---@class Fittencode.Chat.StateConversation.Header
 ---@field title string
 ---@field is_title_message boolean
 ---@field codicon string
 
----@class fittencode.Chat.StateConversation
+---@class Fittencode.Chat.StateConversation
 ---@field id string
 ---@field reference table
----@field header fittencode.Chat.StateConversation.Header
----@field content fittencode.Chat.Conversation
+---@field header Fittencode.Chat.StateConversation.Header
+---@field content Fittencode.Chat.Conversation
 ---@field timestamp string
 ---@field is_favorited boolean
 ---@field mode string
 
----@class fittencode.Chat.PersistenceState
+---@class Fittencode.Chat.PersistenceState
 ---@field type string
 ---@field selected_conversation_id string
----@field conversations table<fittencode.Chat.StateConversation>
+---@field conversations table<Fittencode.Chat.StateConversation>
 ---@field has_fitten_ai_api_key boolean
 ---@field surfacePromptForFittenAIPlus boolean
 ---@field server_url string
 ---@field showHistory boolean
 ---@field fitten_ai_api_key string
 ---@field openUserCenter boolean
----@field tracker fittencode.Chat.Tracker
----@field trackerOptions fittencode.Chat.Tracker.Options
+---@field tracker Fittencode.Chat.Tracker
+---@field trackerOptions Fittencode.Chat.Tracker.Options
 
----@alias AIModel 'Fast' | 'Search'
+---@alias Fittencode.AIModel 'Fast' | 'Search'
 
----@class Message
----@field source 'bot'|'user'
----@field content string
-
----@class fittencode.Chat.Conversation.State
+---@class Fittencode.Chat.Conversation.State
 ---@field type 'user_can_reply' | 'waiting_for_bot_answer' | 'bot_answer_streaming'
 ---@field response_placeholder? string
 ---@field bot_action? string
 ---@field partial_answer? string
 
----@class fittencode.Chat.ConversationType
+---@class Fittencode.Chat.ConversationType
 ---@field source 'built-in' | 'extension' | 'local-workspace'
----@field template fittencode.Chat.Template
+---@field template Fittencode.Chat.Template
 ---@field create_conversation function
 
----@class fittencode.Chat.Template
+---@class Fittencode.Chat.Template
 ---@field id string -- 唯一标识
 ---@field engineVersion number -- 引擎版本
 ---@field label string -- 标签
 ---@field description string -- 诊断错误和警告的描述
 ---@field tags string[] -- 标签数组
----@field header fittencode.Chat.Template.Header -- 头部信息
+---@field header Fittencode.Chat.Template.Header -- 头部信息
 ---@field chatInterface 'message-exchange' | 'instruction-refinement'
 ---@field isEnabled boolean -- 是否启用
----@field variables fittencode.Chat.Template.Variable[] -- 变量数组
----@field initialMessage fittencode.Chat.Template.InitialMessage -- 初始消息
----@field response fittencode.Chat.Template.Response -- 响应格式
+---@field variables Fittencode.Chat.Template.Variable[] -- 变量数组
+---@field initialMessage Fittencode.Chat.Template.InitialMessage -- 初始消息
+---@field response Fittencode.Chat.Template.Response -- 响应格式
 
----@class fittencode.Chat.Template.Header
+---@class Fittencode.Chat.Template.Header
 ---@field title string -- 标题
----@field icon fittencode.Chat.Template.Icon -- 图标
+---@field icon Fittencode.Chat.Template.Icon -- 图标
 ---@field useFirstMessageAsTitle boolean -- 是否使用第一条消息作为标题
 
----@class fittencode.Chat.Template.Icon
+---@class Fittencode.Chat.Template.Icon
 ---@field type string -- 图标类型 'codicon'
 ---@field value string -- 图标值
 
----@class fittencode.Chat.Template.InitialMessage
+---@class Fittencode.Chat.Template.InitialMessage
 ---@field maxTokens number -- 最大令牌数
 ---@field placeholder string -- 占位符
 ---@field template string -- 模板内容
 ---@field retrievalAugmentation any -- 检索增强 用于描述在数据检索过程中添加的额外信息或功能，以提高检索的效率和准确性
 
----@class fittencode.Chat.Template.Response
+---@class Fittencode.Chat.Template.Response
 ---@field placeholder string -- 占位符
 ---@field retrievalAugmentation any -- 检索增强 用于描述在数据检索过程中添加的额外信息或功能，以提高检索的效率和准确性
 ---@field maxTokens number -- 最大令牌数
@@ -113,30 +109,28 @@
 ---@field temperature number
 ---@field completionHandler any
 
----@class fittencode.Chat.Template.Variable
----@field constraints fittencode.Chat.Template.Constraint[] -- 约束条件
+---@class Fittencode.Chat.Template.Variable
+---@field constraints Fittencode.Chat.Template.Constraint[] -- 约束条件
 ---@field name string -- 变量名
 ---@field severities string[] -- 严重性数组
 ---@field time string -- 时间
 ---@field type string -- 变量类型
 
----@class fittencode.Chat.Template.Constraint
+---@class Fittencode.Chat.Template.Constraint
 ---@field min number -- 最小值
 ---@field type string -- 类型
 
----@class fittencode.Chat.Model
+---@class Fittencode.Chat.Model
 ---@field add_and_select_conversation function
 ---@field get_conversation_by_id function
 ---@field delete_conversation function
 ---@field delete_all_conversations function
 ---@field change_favorited function
----@field conversations table<fittencode.Chat.Conversation>
+---@field conversations table<Fittencode.Chat.Conversation>
 ---@field selected_conversation_id string
----@field tracker fittencode.Chat.Tracker
----@field tracker_options fittencode.Chat.Tracker.Options
 ---@field fcps boolean
 
----@class fittencode.Chat.Tracker
+---@class Fittencode.Inline.Tracker
 ---@field ft_token string
 ---@field has_lsp boolean
 ---@field enabled boolean
@@ -152,16 +146,16 @@
 ---@field insert_with_completion_without_paste_cnt number
 ---@field insert_with_completion_cnt number
 
----@class fittencode.Chat.Tracker.Options
+---@class Fittencode.Inline.Tracker.Options
 ---@field requestUrl string
----@field extra fittencode.Chat.Tracker.Options.Extra
+---@field extra Fittencode.Inline.Tracker.Options.Extra
 
----@class fittencode.Chat.Tracker.Options.Extra
+---@class Fittencode.Inline.Tracker.Options.Extra
 ---@field ft_token string
 ---@field tracker_type string
 ---@field tracker_event_type string
 
----@class fittencode.Chat.CompletionStatistics
+---@class Fittencode.Chat.CompletionStatistics
 ---@field update_ft_token function
 ---@field check_accept function
 ---@field send_one_status function
@@ -172,9 +166,9 @@
 ---@field statistic_dict table
 ---@field ft_token string
 
----@class fittencode.Chat.Controller
----@field view fittencode.Chat.View
----@field model fittencode.Chat.Model
+---@class Fittencode.Chat.Controller
+---@field view Fittencode.Chat.View
+---@field model Fittencode.Chat.Model
 ---@field get_conversation_type function
 ---@field basic_chat_template_id string
 ---@field generate_conversation_id function
@@ -184,14 +178,14 @@
 ---@field add_and_show_conversation function
 ---@field reload_chat_breaker function
 ---@field create_conversation function
----@field conversation_types_provider fittencode.Chat.ConversationTypeProvider
+---@field conversation_types_provider Fittencode.Chat.ConversationTypeProvider
 ---@field status fittencode.Chat.Status
 ---@field on_status_updated_callbacks table<function>
 
----@class fittencode.Chat.ConversationTypeProvider
+---@class Fittencode.Chat.ConversationTypeProvider
 ---@field extension_uri string
 ---@field extension_templates table<string, string>
----@field conversation_types table<string, fittencode.Chat.ConversationType>
+---@field conversation_types table<string, Fittencode.Chat.ConversationType>
 ---@field basic_chat_template_id string
 ---@field generate_conversation_id function
 ---@field get_conversation_type function
@@ -202,57 +196,55 @@
 ---@field load_extension_templates function
 ---@field load_workspace_templates function
 
----@class fittencode.Chat.TemplateResolver
+---@class Fittencode.Chat.TemplateResolver
 ---@field load_from_buffer function
 ---@field load_from_file function
 ---@field load_from_directory function
 
----@class fittencode.Chat.View
----@field state? fittencode.Chat.State
+---@class Fittencode.Chat.View
+---@field state? Fittencode.Chat.State
 
----@class fittencode.Chat.State.Conversation
+---@class Fittencode.Chat.State.Conversation
 ---@field id string
----@field reference table<>
+---@field reference table
 ---@field header table<string, string>
 ---@field content table<string, any>
 ---@field timestamp number
 ---@field is_favorited boolean
 ---@field mode string
 
----@class fittencode.Tracker
-
----@class fittencode.TrackerOptions
-
----@class fittencode.Chat.State
+---@class Fittencode.Chat.State
 ---@field type string
 ---@field selected_conversation_id string
----@field conversations table<string, fittencode.Chat.State.Conversation>
+---@field conversations table<string, Fittencode.Chat.State.Conversation>
+---@field get_state_from_model function
+
+---@class Fittencode.Serialize
 ---@field has_fitten_ai_api_key boolean
 ---@field server_url string
 ---@field fitten_ai_api_key string
----@field tracker fittencode.Tracker
----@field trackerOptions fittencode.TrackerOptions
----@field get_state_from_model function
+---@field state Fittencode.Chat.State
+---@field tracker Fittencode.Inline.Tracker
 
----@class fittencode.Editor
+---@class Fittencode.Editor
 
----@class fittencode.Editor.Selection
+---@class Fittencode.Editor.Selection
 ---@field buf number
 ---@field name string
 ---@field text table<string>|string
----@field location fittencode.Editor.Selection.Location
+---@field location Fittencode.Editor.Selection.Location
 
----@class fittencode.Editor.Selection.Location
+---@class Fittencode.Editor.Selection.Location
 ---@field start_row number
 ---@field start_col number
 ---@field end_row number
 ---@field end_col number
 
----@class fittencode.Inline.Controller
----@field model fittencode.Inline.Model
+---@class Fittencode.Inline.Controller
+---@field model Fittencode.Inline.Model
 ---@field status fittencode.Inline.Status
 
----@class fittencode.Inline.Model
+---@class Fittencode.Inline.Model
 
----@class fittencode.VM
+---@class Fittencode.VM
 ---@field run function

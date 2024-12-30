@@ -1,7 +1,7 @@
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 
----@class fittencode.Chat.TemplateResolver
+---@class Fittencode.Chat.TemplateResolver
 local TemplateResolver = {}
 
 function TemplateResolver.load_from_buffer(buf)

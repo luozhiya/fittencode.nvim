@@ -34,7 +34,7 @@ local welcome_message = {
 
 setmetatable(welcome_message, { __index = function() return welcome_message['en'] end })
 
----@class fittencode.Chat.View
+---@class Fittencode.Chat.View
 local View = {
     messages_exchange = {
         win = nil,
@@ -55,7 +55,7 @@ local View = {
 }
 View.__index = View
 
----@return fittencode.Chat.View
+---@return Fittencode.Chat.View
 function View:new(opts)
     local obj = {
         mode = opts.mode
@@ -108,7 +108,7 @@ function View:_destroy_win()
     end
 end
 
----@param state fittencode.Chat.State
+---@param state Fittencode.Chat.State
 function View:update(state)
     self.state = state
     local id = state.selected_conversation_id
@@ -144,7 +144,7 @@ function View:render_reference(conversation)
     end)
 end
 
----@param conversation fittencode.Chat.State.Conversation
+---@param conversation Fittencode.Chat.State.Conversation
 function View:render_conversation(conversation)
     assert(self.messages_exchange.buf)
     local user_id = Client.get_user_id()
