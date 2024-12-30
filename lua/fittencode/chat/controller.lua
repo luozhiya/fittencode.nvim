@@ -16,9 +16,7 @@ function Controller:new(opts)
         model = opts.model,
         basic_chat_template_id = opts.basic_chat_template_id,
         conversation_types_provider = opts.conversation_types_provider,
-        status = Status:new({
-            on_updated = function(data) Fn.schedule_call_foreach(self.on_status_updated_callbacks, data) end
-        })
+        observers = {},
     }, Controller)
     return obj
 end
@@ -31,6 +29,26 @@ function Controller:init()
             self:update_view()
         end
     })
+    self.status = Status:new()
+    self:register_observer(self.status)
+end
+
+function Controller:register_observer(observer)
+    table.insert(self.observers, observer)
+end
+
+function Controller:unregister_observer(observer)
+    for i = #self.observers, 1, -1 do
+        if self.observers[i] == observer then
+            table.remove(self.observers, i)
+        end
+    end
+end
+
+function Controller:notify_observers(event, data)
+    for _, observer in ipairs(self.observers) do
+        observer:update(event, data)
+    end
 end
 
 ---@return string
@@ -107,15 +125,17 @@ function Controller:create_conversation(template_id, show, mode)
     show = show or true
     mode = mode or 'chat'
 
+    ---@type Fittencode.Chat.ConversationType
     local conversation_ty = self:get_conversation_type(template_id)
     if not conversation_ty then Log.error('No conversation type found for {}', template_id) end
 
     local variables = Runtime.resolve_variables(conversation_ty.template.variables, { time = 'conversation-start' })
+    ---@type Fittencode.Chat.CreatedConversation
     local created_conversation = conversation_ty:create_conversation({
         conversation_id = self:generate_conversation_id(),
         init_variables = variables,
         update_view = function() self:update_view() end,
-        update_status = function(data) self:update_status(data) end,
+        update_status = function(data) self:on_conversation_status_updated(data) end,
     })
 
     if created_conversation.type == 'unavailable' then
@@ -133,8 +153,19 @@ function Controller:create_conversation(template_id, show, mode)
     self:add_and_show_conversation(created_conversation.conversation, show)
 
     if created_conversation.should_immediately_answer then
-        created_conversation.conversation.answer()
+        created_conversation.conversation:answer()
     end
+
+    self:notify_observers('conversation_created', {
+        id = created_conversation.conversation.id,
+        conversation = created_conversation.conversation
+     })
+end
+
+function Controller:delete_conversation(id)
+    self.model:delete_conversation(id)
+    self:update_view()
+    self:notify_observers('conversation_deleted', { id = id })
 end
 
 ---@param template_id string
@@ -143,7 +174,9 @@ function Controller:get_conversation_type(template_id)
     return self.conversation_types_provider:get_conversation_type(template_id)
 end
 
+---@param id string
 function Controller:show_conversation(id)
+    ---@type Fittencode.Chat.Conversation
     local conversation = self.model:get_conversation_by_id(id)
     if conversation then
         self.model.selected_conversation_id = id
@@ -151,20 +184,12 @@ function Controller:show_conversation(id)
     end
 end
 
-function Controller:update_status(data)
-    self.status:update(data)
-end
-
-function Controller:register_status_callback(name, fx)
-    self.on_status_updated_callbacks[name] = fx
-end
-
-function Controller:unregister_status_callback(name)
-    self.on_status_updated_callbacks[name] = nil
+function Controller:on_conversation_status_updated(data)
+    self:notify_observers('conversation_status_updated', data)
 end
 
 function Controller:get_status()
-    return self.status.conversations
+    return self.status
 end
 
 return Controller

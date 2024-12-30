@@ -154,8 +154,11 @@
 ---@class Fittencode.Chat.Controller
 ---@field view Fittencode.Chat.View
 ---@field model Fittencode.Chat.Model
----@field get_conversation_type function
 ---@field basic_chat_template_id string
+---@field conversation_types_provider Fittencode.Chat.ConversationTypeProvider
+---@field status fittencode.Chat.Status
+---@field observers table
+---@field get_conversation_type function
 ---@field generate_conversation_id function
 ---@field receive_view_message function
 ---@field update_view function
@@ -163,8 +166,6 @@
 ---@field add_and_show_conversation function
 ---@field reload_chat_breaker function
 ---@field create_conversation function
----@field conversation_types_provider Fittencode.Chat.ConversationTypeProvider
----@field status fittencode.Chat.Status
 ---@field on_status_updated_callbacks table<function>
 
 ---@class Fittencode.Chat.ConversationTypeProvider
@@ -203,6 +204,13 @@
 ---@field selected_conversation_id string
 ---@field conversations table<string, Fittencode.Chat.State.Conversation>
 ---@field get_state_from_model function
+
+---@class Fittencode.Chat.CreatedConversation
+---@field type string
+---@field conversation Fittencode.Chat.Conversation
+---@field should_immediately_answer boolean
+---@field display? boolean
+---@field message? string
 
 ---@class Fittencode.Serialize
 ---@field has_fitten_ai_api_key boolean

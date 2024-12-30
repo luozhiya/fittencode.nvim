@@ -110,7 +110,7 @@ function Conversation:evaluate_template(template, variables)
     return VM:new():run(env, template)
 end
 
----@param content string?
+---@param content? string
 function Conversation:answer(content)
     if not content or content == '' then
         return

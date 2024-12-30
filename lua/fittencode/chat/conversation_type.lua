@@ -17,6 +17,7 @@ function ConversationType:tags()
     return self.template.tags or {}
 end
 
+---@return Fittencode.Chat.CreatedConversation
 function ConversationType:create_conversation(opts)
     return {
         type = 'success',
