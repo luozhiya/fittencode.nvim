@@ -46,21 +46,6 @@
 ---@field is_favorited boolean
 ---@field mode string
 
----@class Fittencode.Chat.PersistenceState
----@field type string
----@field selected_conversation_id string
----@field conversations table<Fittencode.Chat.StateConversation>
----@field has_fitten_ai_api_key boolean
----@field surfacePromptForFittenAIPlus boolean
----@field server_url string
----@field showHistory boolean
----@field fitten_ai_api_key string
----@field openUserCenter boolean
----@field tracker Fittencode.Chat.Tracker
----@field trackerOptions Fittencode.Chat.Tracker.Options
-
----@alias Fittencode.AIModel 'Fast' | 'Search'
-
 ---@class Fittencode.Chat.Conversation.State
 ---@field type 'user_can_reply' | 'waiting_for_bot_answer' | 'bot_answer_streaming'
 ---@field response_placeholder? string
@@ -223,6 +208,9 @@
 ---@field has_fitten_ai_api_key boolean
 ---@field server_url string
 ---@field fitten_ai_api_key string
+---@field surfacePromptForFittenAIPlus boolean
+---@field showHistory boolean
+---@field openUserCenter boolean
 ---@field state Fittencode.Chat.State
 ---@field tracker Fittencode.Inline.Tracker
 
