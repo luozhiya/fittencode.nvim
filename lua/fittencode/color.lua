@@ -1,6 +1,6 @@
 local colors = {
     gray = '#808080',
-    yellow = '#FFEBC7'
+    yellow = '#FFEBCD'
 }
 
 vim.api.nvim_create_autocmd({ 'ColorScheme', 'VimEnter' }, {

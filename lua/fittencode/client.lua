@@ -484,7 +484,7 @@ end
 --     "delta_line": 0,
 --     "ex_msg": "1+2)*3"
 -- }
-local function generate_one_stage(prompt, on_once, on_error, on_exit)
+local function generate_one_stage(prompt, on_create, on_once, on_error, on_exit)
     local key = get_ft_token()
     if not key then
         Fn.schedule_call(on_error)
@@ -494,7 +494,7 @@ local function generate_one_stage(prompt, on_once, on_error, on_exit)
         ['Content-Type'] = 'application/json',
     }
     local url = server_url() .. preset_urls.generate_one_stage .. '/' .. key .. '？' .. get_platform_info_as_url_params()
-    return request('post', url, headers, prompt, false, nil, on_once, nil, on_error, on_exit)
+    return request('post', url, headers, prompt, false, on_create, on_once, nil, on_error, on_exit)
 end
 
 local function chat(prompt, on_create, on_once, on_stream, on_error, on_exit)

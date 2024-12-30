@@ -12,7 +12,6 @@ local Levels = {
 
 ---@class fittencode.Inline.Status
 ---@field level fittencode.Inline.Status.Levels
----@field callback function
 ---@field update function
 ---@field reset function
 local Status = {}
@@ -21,24 +20,20 @@ Status.__index = Status
 function Status:new(opts)
     local obj = {
         level = opts.level or Levels.IDLE,
-        callback = opts.callback,
-        reset = Fn.debounce(function()
-            self:update(Levels.IDLE)
-        end, 5000),
+        reset = Fn.debounce(function() self:update(Levels.IDLE) end, 5000),
     }
     setmetatable(obj, self)
     return obj
 end
 
-function Status:update(level)
-    if self.level == level then
-        return
+function Status:update(event, level)
+    if event == 'inline_status_updated' then
+        if self.level == level then
+            return
+        end
+        self.level = level
+        self:reset()
     end
-    self.level = level
-    if self.callback then
-        Fn.schedule_call(self.callback, level)
-    end
-    self:reset()
 end
 
 return Status

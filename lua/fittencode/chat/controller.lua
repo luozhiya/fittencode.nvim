@@ -135,7 +135,7 @@ function Controller:create_conversation(template_id, show, mode)
         conversation_id = self:generate_conversation_id(),
         init_variables = variables,
         update_view = function() self:update_view() end,
-        update_status = function(data) self:on_conversation_status_updated(data) end,
+        update_status = function(data) self:conversation_status_updated(data) end,
     })
 
     if created_conversation.type == 'unavailable' then
@@ -184,7 +184,7 @@ function Controller:show_conversation(id)
     end
 end
 
-function Controller:on_conversation_status_updated(data)
+function Controller:conversation_status_updated(data)
     self:notify_observers('conversation_status_updated', data)
 end
 

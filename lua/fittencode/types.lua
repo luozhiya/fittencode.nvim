@@ -239,8 +239,13 @@
 ---@class Fittencode.Inline.Controller
 ---@field model Fittencode.Inline.Model
 ---@field status fittencode.Inline.Status
+---@field observers table
+---@field extmark_ids table
+---@field augroups table
+---@field ns_ids table
 
 ---@class Fittencode.Inline.Model
+---@field cache_hit function
 
 ---@class Fittencode.Chat.VM
 ---@field run function
