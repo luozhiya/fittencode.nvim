@@ -151,7 +151,7 @@ local function post(url, opts)
         Fn.schedule_call(opts.on_error, { error = 'vim.fn.json_encode failed', })
         return
     end
-    if #body <= arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
+    if not Fn.is_windows() and #body <= arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
         add_data_argument(args, body, false)
         spawn_curl(args, opts)
     else

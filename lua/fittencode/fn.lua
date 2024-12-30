@@ -107,10 +107,12 @@ local function format(msg, ...)
         if arg == nil then
             msg = msg:gsub('{}', '%%s', 1)
             args[i] = 'nil'
-        elseif type(arg) == 'integer' then
-            msg = msg:gsub('{}', '%%d', 1)
-        elseif type(arg) == 'number' then
-            msg = msg:gsub('{}', '%%.3f', 1)
+        elseif type(arg) == 'integer' or type(arg) == 'number' then
+            if arg == math.floor(arg) then
+                msg = msg:gsub('{}', '%%d', 1)
+            else
+                msg = msg:gsub('{}', '%%.3f', 1)
+            end
         elseif type(arg) == 'string' then
             msg = msg:gsub('{}', '%%s', 1)
         else

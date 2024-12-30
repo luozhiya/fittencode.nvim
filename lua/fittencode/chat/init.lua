@@ -33,17 +33,10 @@ local function setup()
         conversation_types_provider = conversation_types_provider,
         basic_chat_template_id = basic_chat_template_id
     })
+    controller:init()
     view:register_message_receiver(function(message)
         controller:receive_view_message(message)
     end)
-    vim.api.nvim_create_autocmd('User', {
-        pattern = 'fittencode.SelectionChanged',
-        once = false,
-        callback = function(args)
-            Log.debug('fittencode.SelectionChanged event = {}', args)
-            controller:update_view()
-        end
-    })
 end
 
 local function show_chat()

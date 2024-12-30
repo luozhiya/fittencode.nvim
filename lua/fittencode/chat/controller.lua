@@ -23,6 +23,17 @@ function Controller:new(opts)
     return obj
 end
 
+function Controller:init()
+    self.selection_changed_autocmd = vim.api.nvim_create_autocmd('User', {
+        pattern = 'fittencode.SelectionChanged',
+        once = false,
+        callback = function(args)
+            Log.debug('fittencode.SelectionChanged event = {}', args)
+            self:update_view()
+        end
+    })
+end
+
 ---@return string
 function Controller:generate_conversation_id()
     local function random(length)

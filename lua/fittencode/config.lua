@@ -170,7 +170,7 @@ local defaults = {
         -- * 'curl'
         -- * 'libcurl'
         backend = 'curl',
-        timeout = 10, -- seconds
+        timeout = 60, -- seconds
     },
     chat = {
         view = {
