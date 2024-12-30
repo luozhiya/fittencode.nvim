@@ -10,9 +10,7 @@ local function setup()
         model = Model:new(),
     })
     controller:init()
-    local enable = Config.inline_completion.enable
-    controller:enable_completions(false)
-    controller:enable_completions(enable)
+    controller:enable_completions(Config.inline_completion.enable, true, true)
 end
 
 local function get_status()

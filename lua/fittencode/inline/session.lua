@@ -25,6 +25,7 @@ end
 function Session:init()
     self:render_hints()
     self:set_keymaps()
+    self:set_autocmds()
 end
 
 function Session:render_hints()
@@ -89,6 +90,13 @@ function Session:restore_keymaps()
     self.keymaps = {}
 end
 
+function Session:set_autocmds()
+    -- { { 'TextChangedI' },                                   function() self:lazy_completion() end },
+end
+
+function Session:clear_autocmds()
+end
+
 function Session:cache_hit(row, col)
     -- print("cache hit")
 end
@@ -96,6 +104,7 @@ end
 function Session:destory()
     self:clear_hints()
     self:restore_keymaps()
+    self:clear_autocmds()
 end
 
 return Session

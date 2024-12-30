@@ -201,7 +201,6 @@ function Controller:setup_autocmds(enable)
         { { 'InsertEnter', 'CursorMovedI', 'CompleteChanged' }, function() self:triggering_completion() end },
         { { 'InsertLeave' },                                    function() self:dismiss_suggestions() end },
         { { 'BufLeave' },                                       function() self:dismiss_suggestions() end },
-        -- { { 'TextChangedI' },                                   function() self:lazy_completion() end },
     }
     if enable then
         for _, autocmd in ipairs(autocmds) do
@@ -261,19 +260,15 @@ function Controller:triggering_completion_by_shortcut()
 end
 
 function Controller:setup_keymaps(enable)
-    if self.keymaps_enabled == enable then
-        return
-    end
-    self.keymaps_enabled = enable
-    local keymaps = {
-        { 'triggering_completion', 'Alt-\\', function() self:triggering_completion_by_shortcut() end },
-        { 'edit_completion',       'Alt-O',  function() self:edit_completion() end }
+    local maps = {
+        { 'Alt-\\', function() self:triggering_completion_by_shortcut() end },
+        { 'Alt-O',  function() self:edit_completion() end }
     }
-    local mode = 'i'
     if enable then
-        for _, keymap in ipairs(keymaps) do
-            self.keymaps[1] = vim.fn.maparg(keymap[2], mode, false, true)
-            vim.keymap.set(mode, keymap[2], keymap[3], { noremap = true, silent = true })
+        self.keymaps = {}
+        for _, v in ipairs(maps) do
+            self.keymaps[#self.keymaps + 1] = vim.fn.maparg(v[1], 'i', false, true)
+            vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
         end
     else
         for _, v in pairs(self.keymaps) do
@@ -285,13 +280,14 @@ function Controller:setup_keymaps(enable)
     end
 end
 
-function Controller:enable_completions(enable, global, suffixes)
+function Controller:enable_completions(enable, global, force, suffixes)
     enable = enable == nil and true or enable
     global = global == nil and true or global
     suffixes = suffixes or {}
     if global then
-        if Config.inline_completion.enable ~= enable then
+        if Config.inline_completion.enable ~= enable or force then
             self:setup_autocmds(enable)
+            self:setup_keymaps(enable)
             Config.inline_completion.enable = enable
         end
     else
