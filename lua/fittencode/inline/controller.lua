@@ -6,6 +6,7 @@ local Status = require('fittencode.inline.status')
 local Session = require('fittencode.inline.session')
 local Editor = require('fittencode.editor')
 local Translate = require('fittencode.translate')
+local Log = require('fittencode.log')
 
 ---@class Fittencode.Inline.Controller
 local Controller = {}
@@ -56,8 +57,10 @@ function Controller:notify_observers(event, data)
 end
 
 function Controller:dismiss_suggestions()
-    self.session:destory()
-    self.session = nil
+    if self.session then
+        self.session:destory()
+        self.session = nil
+    end
 end
 
 function Controller:lazy_completion()
@@ -68,8 +71,10 @@ function Controller:lazy_completion()
     -- move cached cursor to next char
 
     -- 2. input char ~= next char
-    self.session:destory()
-    self.session = nil
+    if self.session then
+        self.session:destory()
+        self.session = nil
+    end
 end
 
 function Controller:build_prompt_for_completion(buf, row, col)
@@ -119,25 +124,37 @@ function Controller:refine_generated_text(generated_text)
 end
 
 function Controller:triggering_completion(opts)
-    if not string.match(vim.fn.mode(), '^[iR]') then
-        return
-    end
+    opts = opts or {}
+    Log.debug('Triggering completion')
+    -- if not string.match(vim.fn.mode(), '^[iR]') then
+    --     return
+    -- end
     local buf = vim.api.nvim_get_current_buf()
     if not Editor.is_filebuf(buf) then
         return
     end
-    local row, col = unpack(vim.api.nvim_win_get_cursor(buf))
+    local row, col = unpack(vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win()))
     opts.force = (opts.force == nil) and false or opts.force
     if not opts.force and self.session and self.session:cache_hit(row, col) then
         return
     end
+    if self.session then
+        self.session:destory()
+        self.session = nil
+    end
     local timing = {}
     timing.triggering = vim.uv.hrtime()
     Promise:new(function(resolve, reject)
-        self.generate_one_stage(self:build_prompt_for_completion(buf, row, col), function()
+        Log.debug('Triggering completion for row: {}, col: {}', row, col)
+        self.generate_one_stage(self:build_prompt_for_completion(buf, row - 1, col), function()
             timing.on_create = vim.uv.hrtime()
-        end, function(completion_data)
+        end, function(data)
             timing.on_once = vim.uv.hrtime()
+            local ok, completion_data = pcall(vim.json.decode, table.concat(data.output, ''))
+            if not ok then
+                reject()
+                return
+            end
             local generated_text = self:refine_generated_text(completion_data.generated_text)
             if not generated_text and (completion_data.ex_msg == nil or completion_data.ex_msg == '') then
                 reject()
@@ -158,7 +175,7 @@ function Controller:triggering_completion(opts)
             timing.on_error = vim.uv.hrtime()
             reject()
         end, function()
-            timing.on_exit = vim.uv.hrtime()
+            -- timing.on_exit = vim.uv.hrtime()
         end)
     end):forward(function(data)
         self.session = Session:new(vim.tbl_deep_extend('force', data, {
@@ -168,6 +185,7 @@ function Controller:triggering_completion(opts)
             timing = timing,
             reflect = function(msg) self:reflect(msg) end
         }))
+        Log.debug('New session created {}', self.session)
         self.session:init()
         Fn.schedule_call(opts.on_success)
     end, function()
@@ -181,10 +199,9 @@ end
 function Controller:setup_autocmds(enable)
     local autocmds = {
         { { 'InsertEnter', 'CursorMovedI', 'CompleteChanged' }, function() self:triggering_completion() end },
-        { { 'BufEnter' },                                       function() self:triggering_completion() end },
         { { 'InsertLeave' },                                    function() self:dismiss_suggestions() end },
         { { 'BufLeave' },                                       function() self:dismiss_suggestions() end },
-        { { 'TextChangedI' },                                   function() self:lazy_completion() end },
+        -- { { 'TextChangedI' },                                   function() self:lazy_completion() end },
     }
     if enable then
         for _, autocmd in ipairs(autocmds) do

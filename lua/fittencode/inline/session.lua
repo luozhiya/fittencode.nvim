@@ -29,11 +29,11 @@ end
 
 function Session:render_hints()
     if self.mode == 'lines' or self.mode == 'edit_completion' then
-        Editor.set_virt_text()
+        -- Editor.set_virt_text()
     elseif self.mode == 'multi_segments' then
         local segments
         for _, segment in ipairs(segments) do
-            Editor.set_virt_text()
+            -- Editor.set_virt_text()
         end
     end
 end
@@ -73,8 +73,9 @@ function Session:set_keymaps(mode)
             { '<C-Left>',  function() self:revoke_word() end },
         })
     end
+    self.keymaps = {}
     for _, map in ipairs(maps) do
-        self.keymaps[#self.keymaps+1] = vim.fn.maparg(map[1], 'i', false, true)
+        self.keymaps[#self.keymaps + 1] = vim.fn.maparg(map[1], 'i', false, true)
         vim.keymap.set('i', map[1], map[2], { noremap = true, silent = true })
     end
 end
