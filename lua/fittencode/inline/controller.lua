@@ -88,71 +88,49 @@ function Controller:lazy_completion()
     end
 end
 
-function Controller:generate_prompt(buf, row, col, prompt_version)
+function Controller:generate_prompt(buf, row, col)
     local within_the_line = col ~= string.len(vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1])
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
         return
     end
-    local strategy
-    if prompt_version == 'vim' then
-        strategy = Prompt.VimPromptStrategy
-    elseif prompt_version == 'code' then
-        strategy = Prompt.CodePromptStrategy
-    else
-        Log.error('Unsupported prompt_version: ' .. prompt_version)
-        return
-    end
-    return strategy:generate_prompt(buf, row, col)
+    local prefix = table.concat(vim.api.nvim_buf_get_text(buf, 0, 0, row, col, {}), '\n')
+    local suffix = table.concat(vim.api.nvim_buf_get_text(buf, row, col, -1, -1, {}), '\n')
+    return {
+        inputs = '',
+        meta_datas = {
+            plen = 0,
+            slen = 0,
+            bplen = 0,
+            bslen = 0,
+            pmd5 = '',
+            nmd5 = 'cfcd208495d565ef66e7dff9f98764da',
+            diff = '0',
+            filename = 'Untitled-1',
+            cpos = 1,
+            bcpos = 1,
+            pc_available = false,
+            pc_prompt = '',
+            pc_prompt_type = '4',
+        }
+    }
 end
 
-function Controller:refine_completion(completion_data, prompt_version)
-    if prompt_version == 'vim' then
-        local text = vim.fn.substitute(completion_data.generated_text, '<.endoftext.>', '', 'g') or ''
-        text = string.gsub(text, '\r\n', '\n')
-        text = string.gsub(text, '\r', '\n')
-        local lines = vim.split(text, '\r')
-        local i = 1
-        while i <= #lines do
-            if string.len(lines[i]) == 0 then
-                if i ~= #lines and string.len(lines[i + 1]) == 0 then
-                    table.remove(lines, i)
-                else
-                    i = i + 1
-                end
-            else
-                lines[i] = lines[i]:gsub('\\"', '"')
-                local tabstop = vim.bo.tabstop
-                if vim.bo.expandtab and tabstop and tabstop > 0 then
-                    lines[i] = lines[i]:gsub('\t', string.rep(' ', tabstop))
-                end
-                i = i + 1
-            end
-        end
-        if vim.tbl_count(lines) == 0 or (vim.tbl_count(lines) == 1 and string.len(lines[1]) == 0) then
-            return
-        end
-        return {
-            completions = {
-                generated_text = table.concat(lines, '\n')
-            }
-        }
-    elseif prompt_version == 'code' then
-        local generated_text = (vim.fn.substitute(completion_data.generated_text, '<|endoftext|>', '', 'g') or '') .. completion_data.ex_msg
-        if generated_text == '' then
-            return
-        end
-        return {
-            request_id = completion_data.server_request_id,
-            completions = {
-                {
-                    generated_text = generated_text,
-                    character_delta = completion_data.delta_char,
-                    line_delta = completion_data.delta_line
-                },
-            },
-            context = nil -- TODO: implement fim context
-        }
+function Controller:refine_completion(completion_data)
+    local generated_text = (vim.fn.substitute(completion_data.generated_text, '<|endoftext|>', '', 'g') or '') .. completion_data.ex_msg
+    if generated_text == '' then
+        return
     end
+    return {
+        request_id = completion_data.server_request_id,
+        completions = {
+            {
+                generated_text = generated_text,
+                character_delta = completion_data.delta_char,
+                line_delta = completion_data.delta_line
+            },
+        },
+        context = nil -- TODO: implement fim context
+    }
 end
 
 function Controller:is_filetype_excluded(buf)
@@ -191,7 +169,6 @@ function Controller:triggering_completion(options)
         self.request_handle = nil
     end
 
-    local prompt_version = options.prompt_version or 'code'
     local timing = {}
     timing.triggering = vim.uv.hrtime()
 
@@ -203,8 +180,7 @@ function Controller:triggering_completion(options)
             Log.debug('Triggering completion for row: {}, col: {}', row, col)
             local gos_options = {
                 completion_version = gcv_data.version,
-                prompt_version = prompt_version,
-                prompt = self:generate_prompt(buf, row - 1, col, prompt_version),
+                prompt = self:generate_prompt(buf, row - 1, col),
                 on_create = function()
                     timing.on_create = vim.uv.hrtime()
                 end,
@@ -215,7 +191,7 @@ function Controller:triggering_completion(options)
                         reject()
                         return
                     end
-                    local completion = self:refine_completion(completion_data, prompt_version)
+                    local completion = self:refine_completion(completion_data)
                     if not completion then
                         reject()
                         return
