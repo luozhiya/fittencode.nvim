@@ -167,41 +167,49 @@ function Conversation:execute_chat(opts)
 
         Promise:new(function(resolve, reject)
             local completion = {}
-            self.request_handle = Client.chat({
+            local prompt = {
                 inputs = evaluated,
                 ft_token = Client.get_ft_token(),
                 meta_datas = {
                     project_id = '',
                 }
-            }, function()
-                self.update_status({ id = self.id, stream = true })
-            end, nil, function(data)
-                self.update_status({ id = self.id, stream = true })
-                local chunk = data.chunk
-                if not chunk then
-                    resolve(completion)
-                    return
-                end
-                local v = vim.split(chunk, '\n', { trimempty = true })
-                for _, line in ipairs(v) do
-                    local ok, result = pcall(vim.fn.json_decode, line)
-                    if ok then
-                        completion[#completion + 1] = result.delta
-                        self:handle_partial_completion(table.concat(completion, ''))
-                    else
-                        Log.error('Error while decoding chunk: {}', line)
-                        reject(line)
+            }
+            local options = {
+                prompt = prompt,
+                on_create = function()
+                    self.update_status({ id = self.id, stream = true })
+                end,
+                on_stream = function(data)
+                    self.update_status({ id = self.id, stream = true })
+                    local chunk = data.chunk
+                    if not chunk then
+                        resolve({ completion = completion })
+                        return
                     end
+                    local v = vim.split(chunk, '\n', { trimempty = true })
+                    for _, line in ipairs(v) do
+                        local ok, result = pcall(vim.fn.json_decode, line)
+                        if ok then
+                            completion[#completion + 1] = result.delta
+                            self:handle_partial_completion(table.concat(completion, ''))
+                        else
+                            Log.error('Error while decoding chunk: {}', line)
+                            reject(line)
+                        end
+                    end
+                end,
+                on_error = function(error)
+                    reject(error)
+                end,
+                on_exit = function()
+                    resolve({ completion = completion })
                 end
-            end, function(error)
-                reject(error)
-            end, function()
-                resolve(completion)
-            end)
+            }
+            self.request_handle = Client.chat(options)
         end):forward(function(data)
             self.update_status({ id = self.id, stream = false })
-            if #data > 0 then
-                self:handle_completion(table.concat(data, ''))
+            if #data.completion > 0 then
+                self:handle_completion(table.concat(data.completion, ''))
             end
         end, function(error)
             self.update_status({ id = self.id, stream = false })
