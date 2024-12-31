@@ -5,12 +5,12 @@ local Promise = require('fittencode.promise')
 local Translate = require('fittencode.translate')
 local HTTP = require('fittencode.http')
 
-local ide = 'neovim'
-local version = '0.2.0'
 local platform_info = nil
 
 local function get_platform_info_as_url_params()
     if not platform_info then
+        local ide = 'neovim'
+        local version = '0.2.0'
         platform_info = table.concat({
             'ide=' .. ide,
             'ide_v=' .. tostring(vim.version()),
@@ -449,7 +449,9 @@ local function request(req)
                 Fn.schedule_call(req.on_exit, data)
             end),
         }
+        Log.debug('HTTP Request: {}', opts)
         Fn.schedule_call(HTTP[req.method], req.url, opts)
+        -- HTTP[req.method](req.url, opts)
         return {
             abort = function()
                 if not aborted then
@@ -487,30 +489,40 @@ end
 --     "delta_line": 0,
 --     "ex_msg": "1+2)*3"
 -- }
-local function generate_one_stage(prompt, on_create, on_once, on_error, on_exit)
+---@param opts FittenCode.Client.GenerateOneStageOption
+---@return FittenCode.HTTP.RequestHandle?
+local function generate_one_stage(opts)
+    opts.version = opts.version or ''
     local key = get_ft_token()
     if not key then
-        Fn.schedule_call(on_error)
+        Fn.schedule_call(opts.on_error)
         return
     end
     local headers = {
         ['Content-Type'] = 'application/json',
-        ['Content-Encoding'] = 'gzip',
     }
-    local url = server_url() .. preset_urls.generate_one_stage .. '/' .. key .. '？' .. get_platform_info_as_url_params()
-    return request({
+    local compress = false
+    if opts.version ~= '' then
+        vim.tbl_deep_extend('force', headers, {
+            ['Content-Encoding'] = 'gzip',
+        })
+        compress = true
+    end
+    local url = server_url() .. preset_urls['generate_one_stage' .. opts.version] .. '/' .. key .. '？' .. get_platform_info_as_url_params()
+    local req = {
         method = 'post',
         url = url,
         headers = headers,
-        body = prompt,
+        body = opts.prompt,
         no_buffer = false,
-        compress = true,
-        on_create = on_create,
-        on_once = on_once,
+        compress = compress,
+        on_create = opts.on_create,
+        on_once = opts.on_once,
         on_stream = nil,
-        on_error = on_error,
-        on_exit = on_exit
-    })
+        on_error = opts.on_error,
+        on_exit = opts.on_exit
+    }
+    return request(req)
 end
 
 local function chat(prompt, on_create, on_once, on_stream, on_error, on_exit)
@@ -528,7 +540,7 @@ local function chat(prompt, on_create, on_once, on_stream, on_error, on_exit)
         url = url,
         headers = headers,
         body = prompt,
-        no_buffer = false,
+        no_buffer = true,
         on_create = on_create,
         on_once = on_once,
         on_stream = on_stream,

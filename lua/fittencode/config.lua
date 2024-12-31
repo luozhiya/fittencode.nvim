@@ -165,11 +165,13 @@ local defaults = {
         level = vim.log.levels.WARN,
     },
     http = {
-        -- The backend for http request.
+        -- cURL implemented
         -- Avaiable options:
         -- * 'curl'
         -- * 'libcurl'
-        backend = 'curl',
+        curl = 'curl',
+        curl_path = '',
+        gzip_path = '',
         timeout = 60, -- seconds
     },
     chat = {

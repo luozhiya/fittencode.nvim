@@ -110,6 +110,7 @@ end
 
 ---@param state FittenCode.Chat.State
 function View:update(state)
+    Log.debug('view update state = {}', state)
     self.state = state
     local id = state.selected_conversation_id
     if not id then

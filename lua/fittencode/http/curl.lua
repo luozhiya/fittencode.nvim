@@ -43,6 +43,7 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     Fn.schedule_call(on_create, { process = process, pid = pid, })
 
     local function on_stdout(err, chunk)
+        Log.debug('stdout err = {}, chunk = {}', err, chunk)
         Fn.schedule_call(on_stream, { error = err, chunk = chunk })
         if not err and chunk then
             output[#output + 1] = chunk
@@ -50,6 +51,7 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
     end
 
     local function on_stderr(err, chunk)
+        Log.debug('stderr err = {}, chunk = {}', err, chunk)
         if not err and chunk then
             error[#error + 1] = chunk
         end
@@ -187,7 +189,8 @@ local gzip = {
     cmd = 'gzip',
     default_args = {
         '--no-name',
-        '--force'
+        '--force',
+        '--quiet'
     },
     exit_code_success = 0
 }
@@ -214,7 +217,10 @@ local function post(url, opts)
         Fn.schedule_call(opts.on_error, { error = 'vim.fn.json_encode failed', })
         return
     end
-    if opts.compress then
+    if not opts.compress then
+        opts.body = body
+        _post(url, opts)
+    else
         Promise:new(function(resolve)
             local tmpfile = vim.fn.tempname()
             vim.uv.fs_open(tmpfile, 'w', 438, function(e_open, fd)

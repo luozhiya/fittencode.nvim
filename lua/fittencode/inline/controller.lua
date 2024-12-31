@@ -26,6 +26,7 @@ function Controller:new(opts)
         ns_ids = {},
         keymaps = {},
         request_handle = nil,
+        filter_events = {}
     }
     setmetatable(obj, self)
     return obj
@@ -137,7 +138,7 @@ function Controller:is_filetype_excluded(buf)
     vim.api.nvim_buf_call(buf, function()
         ft = vim.api.nvim_get_option_value('filetype', { buf = buf })
     end)
-    return vim.tbl_contains(Config.inline_completion.suffixes, ft)
+    return vim.tbl_contains(Config.disable_specific_inline_completion.suffixes, ft)
 end
 
 function Controller:triggering_completion(opts)
@@ -198,8 +199,6 @@ function Controller:triggering_completion(opts)
         end, function()
             timing.on_error = vim.uv.hrtime()
             reject()
-        end, function()
-            -- timing.on_exit = vim.uv.hrtime()
         end)
     end):forward(function(data)
         local model = Model:new({
@@ -364,7 +363,7 @@ function Controller:enable(enable, global, suffixes)
                 return vim.tbl_extend('force', tbl, filters)
             end
         end
-        Config.inline_completion.suffixes = merge(Config.inline_completion.suffixes, suffixes)
+        Config.disable_specific_inline_completion.suffixes = merge(Config.disable_specific_inline_completion.suffixes, suffixes)
     end
 end
 
