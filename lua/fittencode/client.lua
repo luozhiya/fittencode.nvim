@@ -5,6 +5,8 @@ local Promise = require('fittencode.promise')
 local Translate = require('fittencode.translate')
 local HTTP = require('fittencode.http')
 
+local M = {}
+
 local platform_info = nil
 
 local function get_platform_info_as_url_params()
@@ -74,7 +76,7 @@ local function merge_urls()
 end
 merge_urls()
 
-local function server_url()
+function M.server_url()
     local url = Config.server.server_url
     if not url or url == '' then
         url = 'https://fc.fittenlab.cn'
@@ -85,7 +87,7 @@ end
 local keyring_store = vim.fn.stdpath('data') .. '/fittencode' .. '/api_key.json'
 local keyring = nil
 
-local function has_fitten_ai_api_key()
+function M.has_fitten_ai_api_key()
     if not keyring then
         return false
     end
@@ -96,8 +98,9 @@ local function notify_login()
     Log.notify_error(Translate('[Fitten Code] Please login first.'))
 end
 
-local function get_ft_token()
-    if not has_fitten_ai_api_key() then
+---@return string?
+function M.get_ft_token()
+    if not M.has_fitten_ai_api_key() then
         notify_login()
         return
     end
@@ -105,8 +108,8 @@ local function get_ft_token()
     return keyring.key
 end
 
-local function get_user_id()
-    if not has_fitten_ai_api_key() then
+function M.get_user_id()
+    if not M.has_fitten_ai_api_key() then
         notify_login()
         return
     end
@@ -114,7 +117,7 @@ local function get_user_id()
     return keyring.name
 end
 
-local function load_last_session()
+function M.load_last_session()
     local _, content = pcall(vim.fn.readfile, keyring_store)
     if not _ then
         return
@@ -125,27 +128,27 @@ local function load_last_session()
     end
 end
 
-local function register()
+function M.register()
     vim.ui.open(preset_urls.register .. '/?' .. get_platform_info_as_url_params())
 end
 
-local function guide()
+function M.guide()
     vim.ui.open(preset_urls.guide)
 end
 
-local function question()
+function M.question()
     vim.ui.open(preset_urls.question)
 end
 
-local function login(username, password, on_success, on_error)
-    if has_fitten_ai_api_key() then
+function M.login(username, password, on_success, on_error)
+    if M.has_fitten_ai_api_key() then
         Log.notify_info(Translate('[Fitten Code] You are already logged in'))
         Fn.schedule_call(on_success)
         return
     end
 
     Promise:new(function(resolve, reject)
-        HTTP.post(server_url() .. preset_urls.login, {
+        HTTP.post(M.server_url() .. preset_urls.login, {
             headers = {
                 ['Content-Type'] = 'application/json',
             },
@@ -167,7 +170,7 @@ local function login(username, password, on_success, on_error)
         })
     end):forward(function(token)
         return Promise:new(function(resolve, reject)
-            HTTP.get(server_url() .. preset_urls.get_ft_token, {
+            HTTP.get(M.server_url() .. preset_urls.get_ft_token, {
                 headers = {
                     ['Authorization'] = 'Bearer ' .. token,
                 },
@@ -207,8 +210,8 @@ local login_providers = {
     'microsoft'
 }
 
-local function login3rd(source, on_success, on_error)
-    if has_fitten_ai_api_key() then
+function M.login3rd(source, on_success, on_error)
+    if M.has_fitten_ai_api_key() then
         Log.notify_info(Translate('[Fitten Code] You are already logged in'))
         Fn.schedule_call(on_success)
         return
@@ -234,7 +237,7 @@ local function login3rd(source, on_success, on_error)
         Fn.schedule_call(on_error)
         return
     end
-    local login_url = server_url() .. preset_urls.fb_sign_in .. '?source=' .. source .. '&client_token=' .. client_token
+    local login_url = M.server_url() .. preset_urls.fb_sign_in .. '?source=' .. source .. '&client_token=' .. client_token
     start_check = true;
     vim.ui.open(login_url)
 
@@ -253,7 +256,7 @@ local function login3rd(source, on_success, on_error)
                 Log.info('Login in timeout.')
                 Fn.schedule_call(on_error)
             end
-            local check_url = server_url() .. preset_urls.fb_check_login .. '?client_token=' .. client_token
+            local check_url = M.server_url() .. preset_urls.fb_check_login .. '?client_token=' .. client_token
             Promise:new(function(resolve, reject)
                 HTTP.get(check_url, {
                     on_error = vim.schedule_wrap(function() reject() end),
@@ -279,7 +282,7 @@ local function login3rd(source, on_success, on_error)
                 Fn.schedule_call(on_success)
 
                 local type = fico_data.create and 'register_fb' or 'login_fb';
-                local click_count_url = server_url() .. preset_urls.click_count .. '?apikey==' .. fico_data.token .. '&type=' .. type
+                local click_count_url = M.server_url() .. preset_urls.click_count .. '?apikey==' .. fico_data.token .. '&type=' .. type
                 HTTP.get(click_count_url, {
                     headers = {
                         ['Content-Type'] = 'application/json',
@@ -295,8 +298,8 @@ local function login3rd(source, on_success, on_error)
     start_check_login()
 end
 
-local function logout()
-    if not has_fitten_ai_api_key() and vim.fn.filereadable(keyring_store) == 0 then
+function M.logout()
+    if not M.has_fitten_ai_api_key() and vim.fn.filereadable(keyring_store) == 0 then
         Log.notify_info(Translate('[Fitten Code] You are already logged out'))
         return
     end
@@ -305,14 +308,31 @@ local function logout()
     Log.notify_info(Translate('[Fitten Code] Logout successful'))
 end
 
-local function copy_on(a)
+local function make_req_from_options(a, c)
     local b = {}
     for k, v in pairs(a) do
         if Fn.startwith(k, 'on_') then
             b[k] = v
         end
     end
-    return b
+    return vim.tbl_deep_extend('force', b, c)
+end
+
+function M.get_completion_version(options)
+    local key = M.get_ft_token()
+    if not key then
+        Fn.schedule_call(options.on_error)
+        return
+    end
+    local headers = {
+        ['Content-Type'] = 'application/json',
+    }
+    local url = M.server_url() .. preset_urls.get_completion_version .. '?ft_token=' .. key
+    local req = make_req_from_options(options, {
+        method = 'GET',
+        headers = headers,
+    })
+    return HTTP.fetch(url, req)
 end
 
 -- Example of `completion_data`:
@@ -334,8 +354,8 @@ end
 --     "ex_msg": "1+2)*3"
 -- }
 ---@return FittenCode.HTTP.RequestHandle?
-local function generate_one_stage(options)
-    local key = get_ft_token()
+function M.generate_one_stage(options)
+    local key = M.get_ft_token()
     if not key then
         Fn.schedule_call(options.on_error)
         return
@@ -351,20 +371,19 @@ local function generate_one_stage(options)
         })
         compress = true
     end
-    local url = server_url() .. preset_urls['generate_one_stage' .. options.version] .. '/' .. key .. '？' .. get_platform_info_as_url_params()
-    local req = copy_on(options)
-    req = vim.tbl_deep_extend('force', req, {
-        method = 'post',
+    local url = M.server_url() .. preset_urls['generate_one_stage' .. options.version] .. '/' .. key .. '？' .. get_platform_info_as_url_params()
+    local req = make_req_from_options(options, {
+        method = 'POST',
         headers = headers,
         body = options.prompt,
         no_buffer = false,
         compress = compress,
     })
-    return HTTP.request(url, req)
+    return HTTP.fetch(url, req)
 end
 
-local function chat(options)
-    local key = get_ft_token()
+function M.chat(options)
+    local key = M.get_ft_token()
     if not key then
         Fn.schedule_call(options.on_error)
         return
@@ -372,30 +391,14 @@ local function chat(options)
     local headers = {
         ['Content-Type'] = 'application/json',
     }
-    local url = server_url() .. preset_urls.chat .. '?ft_token=' .. key .. '&' .. get_platform_info_as_url_params()
-    local req = copy_on(options)
-    req = vim.tbl_deep_extend('force', req, {
-        method = 'post',
+    local url = M.server_url() .. preset_urls.chat .. '?ft_token=' .. key .. '&' .. get_platform_info_as_url_params()
+    local req = make_req_from_options(options, {
+        method = 'POST',
         headers = headers,
         body = options.prompt,
         no_buffer = true,
     })
-    return HTTP.request(url, req)
+    return HTTP.fetch(url, req)
 end
 
-return {
-    has_fitten_ai_api_key = has_fitten_ai_api_key,
-    get_ft_token = get_ft_token,
-    get_user_id = get_user_id,
-    load_last_session = load_last_session,
-    server_url = server_url,
-    register = register,
-    login = login,
-    login3rd = login3rd,
-    login_providers = login_providers,
-    logout = logout,
-    generate_one_stage = generate_one_stage,
-    chat = chat,
-    question = question,
-    guide = guide,
-}
+return M

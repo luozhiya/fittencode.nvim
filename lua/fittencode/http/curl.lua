@@ -234,7 +234,7 @@ function M.post(url, opts)
 end
 
 ---@return FittenCode.HTTP.RequestHandle?
-function M.request(url, options)
+function M.fetch(url, options)
     local function _()
         local aborted = false
         ---@type uv_process_t?
@@ -266,7 +266,7 @@ function M.request(url, options)
                 Fn.schedule_call(options.on_exit, data)
             end),
         })
-        Fn.schedule_call(M[options.method], url, o2)
+        Fn.schedule_call(M[string.lower(options.method)], url, o2)
         return {
             abort = function()
                 if not aborted then
