@@ -3,21 +3,17 @@ local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
 local Config = require('fittencode.config')
 
-local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
-    local cmd = params.cmd
-    local args = params.args
-
+local function _spawn(opts)
     local output = {}
     local error = {}
     local process = nil
     local pid = nil
-
     local stdout = assert(vim.uv.new_pipe())
     local stderr = assert(vim.uv.new_pipe())
 
     ---@diagnostic disable-next-line: missing-fields
-    process, pid = vim.uv.spawn(cmd, {
-        args = args,
+    process, pid = vim.uv.spawn(opts.cmd, {
+        args = opts.args,
         stdio = { nil, stdout, stderr },
         verbatim = true,
     }, function(exit_code, exit_signal)
@@ -32,31 +28,26 @@ local function spawn(params, on_create, on_once, on_stream, on_error, on_exit)
             end
             check:stop()
             if exit_signal ~= 0 then
-                Fn.schedule_call(on_error, { exit_signal = exit_signal, })
+                Fn.schedule_call(opts.on_error, { exit_signal = exit_signal, })
             else
-                Fn.schedule_call(on_once, { exit_code = exit_code, output = output, error = error, })
+                Fn.schedule_call(opts.on_once, { exit_code = exit_code, output = output, error = error, })
             end
-            Fn.schedule_call(on_exit, { exit_code = exit_code })
+            Fn.schedule_call(opts.on_exit, { exit_code = exit_code })
         end)
     end)
-
-    Fn.schedule_call(on_create, { process = process, pid = pid, })
+    Fn.schedule_call(opts.on_create, { process = process, pid = pid, })
 
     local function on_stdout(err, chunk)
-        Log.debug('stdout err = {}, chunk = {}', err, chunk)
-        Fn.schedule_call(on_stream, { error = err, chunk = chunk })
+        Fn.schedule_call(opts.on_stream, { error = err, chunk = chunk })
         if not err and chunk then
             output[#output + 1] = chunk
         end
     end
-
     local function on_stderr(err, chunk)
-        Log.debug('stderr err = {}, chunk = {}', err, chunk)
         if not err and chunk then
             error[#error + 1] = chunk
         end
     end
-
     vim.uv.read_start(stdout, function(err, chunk) on_stdout(err, chunk) end)
     vim.uv.read_start(stderr, function(err, chunk) on_stderr(err, chunk) end)
 end
@@ -72,20 +63,24 @@ local curl = {
     exit_code_success = 0
 }
 
-local function spawn_curl(args, opts)
+local function spwan(app, args, opts)
     local params = {
-        cmd = curl.cmd,
+        cmd = app.cmd,
         args = args,
     }
     local on_once = function(res)
         local exit_code, output, error = res.exit_code, res.output, res.error
-        if exit_code ~= curl.exit_code_success then
+        if exit_code ~= app.exit_code_success then
             Fn.schedule_call(opts.on_error, { exit_code = exit_code, error = error, })
         else
             Fn.schedule_call(opts.on_once, { output = output })
         end
     end
-    spawn(params, opts.on_create, on_once, opts.on_stream, opts.on_error, opts.on_exit)
+    _spawn(params, opts.on_create, on_once, opts.on_stream, opts.on_error, opts.on_exit)
+end
+
+local function spawn_curl(args, opts)
+    spwan(curl, args, opts)
 end
 
 local function build_args(args, opts)
@@ -110,9 +105,9 @@ local function add_data_argument(args, data, is_file)
     args[#args + 1] = is_file and ('@' .. data) or data
 end
 
-local function get(url, opts)
+local function get(opts)
     local args = {
-        url,
+        opts.url,
     }
     build_args(args, opts)
     spawn_curl(args, opts)
@@ -136,9 +131,9 @@ local function arg_max()
     return max_arg_length
 end
 
-local function _post(url, opts)
+local function _post(opts)
     local args = {
-        url,
+        opts.url,
         '-X',
         'POST',
     }
@@ -196,22 +191,10 @@ local gzip = {
 }
 
 local function spwan_gzip(args, opts)
-    local params = {
-        cmd = gzip.cmd,
-        args = args,
-    }
-    local on_once = function(res)
-        local exit_code, output, error = res.exit_code, res.output, res.error
-        if exit_code ~= gzip.exit_code_success then
-            Fn.schedule_call(opts.on_error, { exit_code = exit_code, error = error, })
-        else
-            Fn.schedule_call(opts.on_once, { output = output })
-        end
-    end
-    spawn(params, opts.on_create, on_once, opts.on_stream, opts.on_error, opts.on_exit)
+    spwan(gzip, args, opts)
 end
 
-local function post(url, opts)
+local function post(opts)
     local _, body = pcall(vim.fn.json_encode, opts.body)
     if not _ then
         Fn.schedule_call(opts.on_error, { error = 'vim.fn.json_encode failed', })
@@ -219,7 +202,7 @@ local function post(url, opts)
     end
     if not opts.compress then
         opts.body = body
-        _post(url, opts)
+        _post(opts)
     else
         Promise:new(function(resolve)
             local tmpfile = vim.fn.tempname()
@@ -254,7 +237,7 @@ local function post(url, opts)
                         Fn.schedule_call(opts.on_exit)
                         vim.uv.fs_unlink(data.tempfile, function(_, _) end)
                     end
-                    _post(url, opts)
+                    _post(opts)
                 end,
                 on_eroor = opts.on_error,
             }

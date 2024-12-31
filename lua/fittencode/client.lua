@@ -420,6 +420,7 @@ local function request(req)
         local process = nil
         ---@type FittenCode.HTTP.RequestOption
         local opts = {
+            url = req.url,
             headers = req.headers,
             body = req.body,
             no_buffer = req.no_buffer,
@@ -449,9 +450,7 @@ local function request(req)
                 Fn.schedule_call(req.on_exit, data)
             end),
         }
-        Log.debug('HTTP Request: {}', opts)
-        Fn.schedule_call(HTTP[req.method], req.url, opts)
-        -- HTTP[req.method](req.url, opts)
+        Fn.schedule_call(HTTP[req.method], opts)
         return {
             abort = function()
                 if not aborted then
@@ -518,7 +517,7 @@ local function generate_one_stage(opts)
         compress = compress,
         on_create = opts.on_create,
         on_once = opts.on_once,
-        on_stream = nil,
+        on_stream = opts.on_stream,
         on_error = opts.on_error,
         on_exit = opts.on_exit
     }

@@ -10,14 +10,16 @@
 ---@field on_exit? function
 
 ---@class FittenCode.HTTP.RequestOption : FittenCode.AsyncCallback
+---@field method? string
+---@field url? string
 ---@field headers? table<string, string>
----@field body? string
+---@field body? string|table
+---@field prompt? table
 ---@field no_buffer? boolean
 ---@field compress? boolean
 
----@class FittenCode.Client.GenerateOneStageOption : FittenCode.AsyncCallback
+---@class FittenCode.Client.GenerateOneStageOption : FittenCode.HTTP.RequestOption
 ---@field version? '' | '2_1' | '2_2' | '2_3'
----@field prompt? table
 
 ---@alias FittenCode.Version 'default' | 'enterprise'
 
