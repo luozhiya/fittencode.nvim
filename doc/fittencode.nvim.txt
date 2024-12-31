@@ -1,4 +1,4 @@
-*fittencode.nvim.txt*     For Neovim >= 0.8.0    Last change: 2024 December 30
+*fittencode.nvim.txt*     For Neovim >= 0.8.0    Last change: 2024 December 31
 
 ==============================================================================
 Table of Contents                          *fittencode.nvim-table-of-contents*
@@ -60,9 +60,7 @@ FOR EXAMPLE WITH LAZY.NVIM
 >lua
     {
       'luozhiya/fittencode.nvim',
-      config = function()
-        require('fittencode').setup()
-      end,
+      opts = {},
     }
 <
 
@@ -333,6 +331,19 @@ format function.
       }
       ...
     }
+<
+
+
+STATUS LINE ~
+
+using lualine
+
+>
+    {
+      function()
+      local emoji = {"🚫", "⏸️ ", "⌛️", "⚠️ ", "0️⃣ ", "✅"}
+      return "🅕" .. emoji[require("fittencode").get_current_status()] end,
+    },
 <
 
 If you do not use lspkind, simply add the custom icon however you normally
