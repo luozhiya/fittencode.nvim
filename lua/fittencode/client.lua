@@ -318,21 +318,28 @@ local function make_req_from_options(a, c)
     return vim.tbl_deep_extend('force', b, c)
 end
 
-function M.get_completion_version(options)
+function M.get_completion_version(on_success, on_error)
     local key = M.get_ft_token()
     if not key then
-        Fn.schedule_call(options.on_error)
+        Fn.schedule_call(on_error)
         return
     end
-    local headers = {
-        ['Content-Type'] = 'application/json',
-    }
     local url = M.server_url() .. preset_urls.get_completion_version .. '?ft_token=' .. key
-    local req = make_req_from_options(options, {
-        method = 'GET',
-        headers = headers,
-    })
-    return HTTP.fetch(url, req)
+    Promise:new(function(resolve, reject)
+        HTTP.get(url, {
+            headers = {
+                ['Content-Type'] = 'application/json',
+            },
+            on_error = vim.schedule_wrap(function()
+                reject()
+            end),
+            on_once = vim.schedule_wrap(function(data)
+                resolve({ version = data.output })
+            end)
+        })
+    end):forward(function(data)
+        Fn.schedule_call(on_success, { version = data.version })
+    end, function() Fn.schedule_call(on_error) end)
 end
 
 -- Example of `completion_data`:

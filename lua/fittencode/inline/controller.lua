@@ -171,35 +171,41 @@ function Controller:triggering_completion(opts)
     timing.triggering = vim.uv.hrtime()
     Promise:new(function(resolve, reject)
         Log.debug('Triggering completion for row: {}, col: {}', row, col)
-        self.generate_one_stage(self:generate_prompt(buf, row - 1, col), function()
-            timing.on_create = vim.uv.hrtime()
-        end, function(data)
-            timing.on_once = vim.uv.hrtime()
-            local ok, completion_data = pcall(vim.json.decode, table.concat(data.output, ''))
-            if not ok then
-                reject()
-                return
-            end
-            local generated_text = self:refine_generated_text(completion_data.generated_text)
-            if not generated_text and (completion_data.ex_msg == nil or completion_data.ex_msg == '') then
-                reject()
-            else
-                local mode = 'lines'
-                if not generated_text then
-                    mode = 'multi_segments'
+        local options = {
+            prompt = self:generate_prompt(buf, row - 1, col),
+            on_create = function()
+                timing.on_create = vim.uv.hrtime()
+            end,
+            on_once = function(data)
+                timing.on_once = vim.uv.hrtime()
+                local ok, completion_data = pcall(vim.json.decode, table.concat(data.output, ''))
+                if not ok then
+                    reject()
+                    return
                 end
-                resolve({
-                    mode = mode,
-                    generated_text = generated_text,
-                    ex_msg = completion_data.ex_msg,
-                    delta_char = completion_data.delta_char,
-                    delta_line = completion_data.delta_line,
-                })
+                local generated_text = self:refine_generated_text(completion_data.generated_text)
+                if not generated_text and (completion_data.ex_msg == nil or completion_data.ex_msg == '') then
+                    reject()
+                else
+                    local mode = 'lines'
+                    if not generated_text then
+                        mode = 'multi_segments'
+                    end
+                    resolve({
+                        mode = mode,
+                        generated_text = generated_text,
+                        ex_msg = completion_data.ex_msg,
+                        delta_char = completion_data.delta_char,
+                        delta_line = completion_data.delta_line,
+                    })
+                end
+            end,
+            on_error = function()
+                timing.on_error = vim.uv.hrtime()
+                reject()
             end
-        end, function()
-            timing.on_error = vim.uv.hrtime()
-            reject()
-        end)
+        }
+        self.generate_one_stage(options)
     end):forward(function(data)
         local model = Model:new({
             buf = buf,
