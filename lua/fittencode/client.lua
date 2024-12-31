@@ -271,33 +271,6 @@ local function v4()
 end
 local v4_default = v4
 
-local function set_timeout(timeout, callback)
-    local timer = vim.uv.new_timer()
-    assert(timer)
-    timer:start(timeout, 0, function()
-        timer:stop()
-        timer:close()
-        callback()
-    end)
-    return timer
-end
-
-local function set_interval(interval, callback)
-    local timer = vim.uv.new_timer()
-    assert(timer)
-    timer:start(interval, interval, function()
-        callback()
-    end)
-    return timer
-end
-
-local function clear_interval(timer)
-    if timer then
-        timer:stop()
-        timer:close()
-    end
-end
-
 local function _encode_uri_char(char)
     return string.format('%%%0X', string.byte(char))
 end
@@ -328,7 +301,7 @@ local function login3rd(source, on_success, on_error)
     end
 
     local is_login_fb_running = false;
-    clear_interval(start_check_login_timer)
+    Fn.clear_interval(start_check_login_timer)
 
     local total_time_limit = 600;
     local time_delta = 3;
@@ -374,7 +347,7 @@ local function login3rd(source, on_success, on_error)
                     end)
                 })
             end):forward(function(fico_data)
-                clear_interval(start_check_login_timer)
+                Fn.clear_interval(start_check_login_timer)
                 is_login_fb_running = false
 
                 keyring = {
@@ -397,7 +370,7 @@ local function login3rd(source, on_success, on_error)
                 end
             end)
         end
-        start_check_login_timer = set_interval(time_delta * 1e3, check_login)
+        start_check_login_timer = Fn.set_interval(time_delta * 1e3, check_login)
     end
     start_check_login()
 end
@@ -418,9 +391,7 @@ local function request(req)
         local aborted = false
         ---@type uv_process_t?
         local process = nil
-        ---@type FittenCode.HTTP.RequestOption
         local opts = {
-            url = req.url,
             headers = req.headers,
             body = req.body,
             no_buffer = req.no_buffer,
@@ -450,7 +421,7 @@ local function request(req)
                 Fn.schedule_call(req.on_exit, data)
             end),
         }
-        Fn.schedule_call(HTTP[req.method], opts)
+        Fn.schedule_call(HTTP[req.method], req.url, opts)
         return {
             abort = function()
                 if not aborted then
@@ -488,7 +459,6 @@ end
 --     "delta_line": 0,
 --     "ex_msg": "1+2)*3"
 -- }
----@param opts FittenCode.Client.GenerateOneStageOption
 ---@return FittenCode.HTTP.RequestHandle?
 local function generate_one_stage(opts)
     opts.version = opts.version or ''

@@ -2,25 +2,6 @@
 ---@field abort function
 ---@field is_active function
 
----@class FittenCode.AsyncCallback
----@field on_create? function
----@field on_once? function
----@field on_stream? function
----@field on_error? function
----@field on_exit? function
-
----@class FittenCode.HTTP.RequestOption : FittenCode.AsyncCallback
----@field method? string
----@field url? string
----@field headers? table<string, string>
----@field body? string|table
----@field prompt? table
----@field no_buffer? boolean
----@field compress? boolean
-
----@class FittenCode.Client.GenerateOneStageOption : FittenCode.HTTP.RequestOption
----@field version? '' | '2_1' | '2_2' | '2_3'
-
 ---@alias FittenCode.Version 'default' | 'enterprise'
 
 ---@class FittenCode.Chat.Message

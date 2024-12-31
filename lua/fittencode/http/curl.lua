@@ -3,7 +3,38 @@ local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
 local Config = require('fittencode.config')
 
-local function _spawn(opts)
+local executables = {
+    gzip = {
+        cmd = 'gzip',
+        default_args = {
+            '--no-name',
+            '--force',
+            '--quiet'
+        },
+        exit_code_success = 0
+    },
+    curl = {
+        cmd = 'curl',
+        default_args = {
+            '-s',
+            '--connect-timeout',
+            Config.http.timeout,
+            '--show-error',
+        },
+        exit_code_success = 0
+    }
+}
+
+local function spawn(exe, args, opts)
+    local on_once = function(data)
+        local exit_code = data.exit_code
+        if exit_code ~= exe.exit_code_success then
+            Fn.schedule_call(opts.on_error, { exit_code = exit_code, error = data.error, })
+        else
+            Fn.schedule_call(opts.on_once, { output = data.output })
+        end
+    end
+
     local output = {}
     local error = {}
     local process = nil
@@ -12,8 +43,8 @@ local function _spawn(opts)
     local stderr = assert(vim.uv.new_pipe())
 
     ---@diagnostic disable-next-line: missing-fields
-    process, pid = vim.uv.spawn(opts.cmd, {
-        args = opts.args,
+    process, pid = vim.uv.spawn(exe.cmd, {
+        args = args,
         stdio = { nil, stdout, stderr },
         verbatim = true,
     }, function(exit_code, exit_signal)
@@ -30,7 +61,7 @@ local function _spawn(opts)
             if exit_signal ~= 0 then
                 Fn.schedule_call(opts.on_error, { exit_signal = exit_signal, })
             else
-                Fn.schedule_call(opts.on_once, { exit_code = exit_code, output = output, error = error, })
+                Fn.schedule_call(on_once, { exit_code = exit_code, output = output, error = error, })
             end
             Fn.schedule_call(opts.on_exit, { exit_code = exit_code })
         end)
@@ -52,47 +83,12 @@ local function _spawn(opts)
     vim.uv.read_start(stderr, function(err, chunk) on_stderr(err, chunk) end)
 end
 
-local curl = {
-    cmd = 'curl',
-    default_args = {
-        '-s',
-        '--connect-timeout',
-        Config.http.timeout,
-        '--show-error',
-    },
-    exit_code_success = 0
-}
-
-local function spwan(app, args, opts)
-    local on_once = function(res)
-        local exit_code, output, error = res.exit_code, res.output, res.error
-        if exit_code ~= app.exit_code_success then
-            Fn.schedule_call(opts.on_error, { exit_code = exit_code, error = error, })
-        else
-            Fn.schedule_call(opts.on_once, { output = output })
-        end
-    end
-    _spawn({
-        cmd = app.cmd,
-        args = args,
-        on_once = on_once,
-        on_error = opts.on_error,
-        on_create = opts.on_create,
-        on_stream = opts.on_stream,
-        on_exit = opts.on_exit,
-    })
-end
-
-local function spawn_curl(args, opts)
-    spwan(curl, args, opts)
-end
-
-local function build_args(args, opts)
+local function build_curl_args(args, opts)
     if opts.no_buffer then
         args[#args + 1] = '--no-buffer'
     end
     local headers = opts.headers or {}
-    vim.list_extend(args, curl.default_args)
+    vim.list_extend(args, executables.curl.default_args)
     for k, v in pairs(headers) do
         args[#args + 1] = '-H'
         if Fn.is_windows() then
@@ -104,17 +100,12 @@ local function build_args(args, opts)
     return args
 end
 
-local function add_data_argument(args, data, is_file)
-    args[#args + 1] = '-d'
-    args[#args + 1] = is_file and ('@' .. data) or data
-end
-
-local function get(opts)
+local function get(url, opts)
     local args = {
-        opts.url,
+        url,
     }
-    build_args(args, opts)
-    spawn_curl(args, opts)
+    build_curl_args(args, opts)
+    spawn(executables.curl, args, opts)
 end
 
 -- libuv command line length limit
@@ -135,21 +126,25 @@ local function arg_max()
     return max_arg_length
 end
 
-local function _post(opts)
+local function _post(url, opts)
     local args = {
-        opts.url,
+        url,
         '-X',
         'POST',
     }
-    build_args(args, opts)
+    local function add_data(v, data, is_file)
+        v[#v + 1] = '-d'
+        v[#v + 1] = is_file and ('@' .. data) or data
+    end
+    build_curl_args(args, opts)
     if type(opts.body) == 'string' and vim.fn.filereadable(opts.body) == 1 then
-        add_data_argument(args, opts.body, true)
-        spawn_curl(args, opts)
+        add_data(args, opts.body, true)
+        spawn(executables.curl, args, opts)
         return
     end
     if not Fn.is_windows() and #opts.body <= arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
-        add_data_argument(args, opts.body, false)
-        spawn_curl(args, opts)
+        add_data(args, opts.body, false)
+        spawn(executables.curl, args, opts)
     else
         Promise:new(function(resolve)
             local tmpfile = vim.fn.tempname()
@@ -173,32 +168,18 @@ local function _post(opts)
                 end)
             end)
         end):forward(function(data)
-            add_data_argument(args, data.tmpfile, true)
+            add_data(args, data.tmpfile, true)
             local co = vim.deepcopy(opts)
             co.on_exit = function()
                 Fn.schedule_call(opts.on_exit)
                 vim.uv.fs_unlink(data.tmpfile, function(_, _) end)
             end
-            spawn_curl(args, co)
+            spawn(executables.curl, args, co)
         end)
     end
 end
 
-local gzip = {
-    cmd = 'gzip',
-    default_args = {
-        '--no-name',
-        '--force',
-        '--quiet'
-    },
-    exit_code_success = 0
-}
-
-local function spwan_gzip(args, opts)
-    spwan(gzip, args, opts)
-end
-
-local function post(opts)
+local function post(url, opts)
     local _, body = pcall(vim.fn.json_encode, opts.body)
     if not _ then
         Fn.schedule_call(opts.on_error, { error = 'vim.fn.json_encode failed', })
@@ -206,7 +187,7 @@ local function post(opts)
     end
     if not opts.compress then
         opts.body = body
-        _post(opts)
+        _post(url, opts)
     else
         Promise:new(function(resolve)
             local tmpfile = vim.fn.tempname()
@@ -233,7 +214,7 @@ local function post(opts)
             local args = {
                 data.tempfile,
             }
-            vim.list_extend(args, gzip.default_args)
+            vim.list_extend(args, executables.gzip.default_args)
             local go = {
                 on_once = function()
                     opts.body = data.tempfile .. '.gz'
@@ -241,11 +222,11 @@ local function post(opts)
                         Fn.schedule_call(opts.on_exit)
                         vim.uv.fs_unlink(data.tempfile, function(_, _) end)
                     end
-                    _post(opts)
+                    _post(url, opts)
                 end,
                 on_eroor = opts.on_error,
             }
-            spwan_gzip(args, go)
+            spawn(executables.gzip, args, go)
         end)
     end
 end
