@@ -214,7 +214,6 @@ local function validate(uuid)
     local pattern = '%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x'
     return uuid:match(pattern) ~= nil
 end
-local validate_default = validate
 
 local byte_to_hex = {}
 for i = 0, 255 do
@@ -230,12 +229,11 @@ local function stringify(arr)
         byte_to_hex[arr[11]] .. byte_to_hex[arr[12]] .. byte_to_hex[arr[13]] .. byte_to_hex[arr[14]] .. byte_to_hex[arr[15]] .. byte_to_hex[arr[16]]
     }
     local uuid = table.concat(uuid_parts, '-')
-    if not validate_default(uuid) then
+    if not validate(uuid) then
         return
     end
     return uuid
 end
-local stringify_default = stringify
 
 local function rng(len)
     math.randomseed(os.time())
@@ -278,14 +276,13 @@ local function uuid_v4()
     local rnds = rng(16)
     rnds[6] = bit_or(bit_and(rnds[6], 15), 64)
     rnds[8] = bit_or(bit_and(rnds[8], 63), 128)
-    return stringify_default(rnds)
-end
-
-local function _encode_uri_char(char)
-    return string.format('%%%0X', string.byte(char))
+    return stringify(rnds)
 end
 
 local function encode_uri(uri)
+    local function _encode_uri_char(char)
+        return string.format('%%%0X', string.byte(char))
+    end
     return (string.gsub(uri, "[^%a%d%-_%.!~%*'%(%);/%?:@&=%+%$,#]", _encode_uri_char))
 end
 
