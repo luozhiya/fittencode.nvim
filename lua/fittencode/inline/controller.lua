@@ -9,7 +9,6 @@ local Translate = require('fittencode.translate')
 local Log = require('fittencode.log')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
-local Prompt = require('fittencode.inline.prompt')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
@@ -115,18 +114,18 @@ function Controller:generate_prompt(buf, row, col)
     }
 end
 
-function Controller:refine_completion(completion_data)
-    local generated_text = (vim.fn.substitute(completion_data.generated_text, '<|endoftext|>', '', 'g') or '') .. completion_data.ex_msg
+function Controller:generate_completion(data)
+    local generated_text = (vim.fn.substitute(data.generated_text, '<|endoftext|>', '', 'g') or '') .. data.ex_msg
     if generated_text == '' then
         return
     end
     return {
-        request_id = completion_data.server_request_id,
+        request_id = data.server_request_id,
         completions = {
             {
                 generated_text = generated_text,
-                character_delta = completion_data.delta_char,
-                line_delta = completion_data.delta_line
+                character_delta = data.delta_char,
+                line_delta = data.delta_line
             },
         },
         context = nil -- TODO: implement fim context
@@ -173,45 +172,29 @@ function Controller:triggering_completion(options)
     timing.triggering = vim.uv.hrtime()
 
     Promise:new(function(resolve, reject)
-        Client.get_completion_version(function(data) resolve({ version = data.version }) end, function() Fn.schedule_call(options.on_error) end)
-    end):forward(function(gcv_data)
+        Client.get_completion_version(function(version) resolve(version) end, function() Fn.schedule_call(options.on_error) end)
+    end):forward(function(version)
         return Promise:new(function(resolve, reject)
-            Log.debug('Got completion version: {}', gcv_data.version)
             Log.debug('Triggering completion for row: {}, col: {}', row, col)
             local gos_options = {
-                completion_version = gcv_data.version,
+                completion_version = version,
                 prompt = self:generate_prompt(buf, row - 1, col),
                 on_create = function()
                     timing.on_create = vim.uv.hrtime()
                 end,
                 on_once = function(data)
                     timing.on_once = vim.uv.hrtime()
-                    local _, completion_data = pcall(vim.json.decode, table.concat(data.output, ''))
+                    local _, json = pcall(vim.json.decode, table.concat(data.output, ''))
                     if not _ then
                         reject()
                         return
                     end
-                    local completion = self:refine_completion(completion_data)
+                    local completion = self:generate_completion(json)
                     if not completion then
                         reject()
                         return
                     end
-                    -- local generated_text = self:refine_generated_text(completion_data.generated_text, prompt_version)
-                    -- if not generated_text and (completion_data.ex_msg == nil or completion_data.ex_msg == '') then
-                    --     reject()
-                    -- else
-                    --     local mode = 'lines'
-                    --     if not generated_text then
-                    --         mode = 'multi_segments'
-                    --     end
-                    --     resolve({
-                    --         mode = mode,
-                    --         generated_text = generated_text,
-                    --         ex_msg = completion_data.ex_msg,
-                    --         delta_char = completion_data.delta_char,
-                    --         delta_line = completion_data.delta_line,
-                    --     })
-                    -- end
+                    resolve(completion)
                 end,
                 on_error = function()
                     timing.on_error = vim.uv.hrtime()
@@ -219,16 +202,12 @@ function Controller:triggering_completion(options)
                 end
             }
             self.generate_one_stage(gos_options)
-        end):forward(function(gos_data)
+        end):forward(function(completion)
             local model = Model:new({
                 buf = buf,
                 row = row,
                 col = col,
-                mode = gos_data.mode,
-                generated_text = gos_data.generated_text,
-                ex_msg = gos_data.ex_msg,
-                delta_char = gos_data.delta_char,
-                delta_line = gos_data.delta_line,
+                completion = completion,
             })
             local view = View:new({ buf = buf })
             self.session = Session:new({
@@ -236,7 +215,7 @@ function Controller:triggering_completion(options)
                 model = model,
                 view = view,
                 timing = timing,
-                reflect = function(msg) self:reflect(msg) end,
+                reflect = function(_) self:reflect(_) end,
             })
             self.session:init()
             Log.debug('New session created {}', self.session)

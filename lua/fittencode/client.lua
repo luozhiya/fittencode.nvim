@@ -339,13 +339,11 @@ function M.get_completion_version(on_success, on_error)
                 if not _ or version == nil then
                     reject()
                 else
-                    resolve({ version = version })
+                    Fn.schedule_call(on_success, version)
                 end
             end)
         })
-    end):forward(function(data)
-        Fn.schedule_call(on_success, { version = data.version })
-    end, function() Fn.schedule_call(on_error) end)
+    end):catch(function() Fn.schedule_call(on_error) end)
 end
 
 -- Example of `completion_data`:
