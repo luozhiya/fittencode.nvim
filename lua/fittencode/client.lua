@@ -429,51 +429,41 @@ end
 
 ---@return RequestHandle?
 local function request(req)
-    local method = req.method
-    local url = req.url
-    local headers = req.headers
-    local body = req.body
-    local no_buffer = req.no_buffer
-    local compress = req.compress
-    local on_create = req.on_create
-    local on_once = req.on_once
-    local on_stream = req.on_stream
-    local on_error = req.on_error
-    local on_exit = req.on_exit
     local function wrap()
         local canceled = false
         ---@type uv_process_t?
         local process = nil
         local opts = {
-            headers = headers,
-            body = body,
-            no_buffer = no_buffer,
+            headers = req.headers,
+            body = req.body,
+            no_buffer = req.no_buffer,
+            compress = req.compress,
             on_create = vim.schedule_wrap(function(data)
                 if canceled then return end
                 process = data.process
-                Fn.schedule_call(on_create)
+                Fn.schedule_call(req.on_create)
             end),
             on_once = vim.schedule_wrap(function(data)
                 if canceled then return end
-                Fn.schedule_call(on_once, data)
+                Fn.schedule_call(req.on_once, data)
             end),
             on_stream = vim.schedule_wrap(function(data)
                 if canceled then return end
                 if data.error then
-                    Fn.schedule_call(on_error, { error = data.error })
+                    Fn.schedule_call(req.on_error, { error = data.error })
                 else
-                    Fn.schedule_call(on_stream, { chunk = data.chunk })
+                    Fn.schedule_call(req.on_stream, { chunk = data.chunk })
                 end
             end),
             on_error = vim.schedule_wrap(function(data)
                 if canceled then return end
-                Fn.schedule_call(on_error, data)
+                Fn.schedule_call(req.on_error, data)
             end),
             on_exit = vim.schedule_wrap(function(data)
-                Fn.schedule_call(on_exit, data)
+                Fn.schedule_call(req.on_exit, data)
             end),
         }
-        HTTP[method](url, opts)
+        Fn.schedule_call(HTTP[req.method], req.url, opts)
         return {
             cancel = function()
                 if not canceled then

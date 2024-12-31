@@ -215,9 +215,6 @@ local function post(url, opts)
         return
     end
     if opts.compress then
-        local tmpfile = vim.fn.tempname()
-    end
-    if opts.compress then
         Promise:new(function(resolve)
             local tmpfile = vim.fn.tempname()
             vim.uv.fs_open(tmpfile, 'w', 438, function(e_open, fd)
@@ -252,7 +249,8 @@ local function post(url, opts)
                         vim.uv.fs_unlink(data.tempfile, function(_, _) end)
                     end
                     _post(url, opts)
-                end
+                end,
+                on_eroor = opts.on_error,
             }
             spwan_gzip(args, go)
         end)
