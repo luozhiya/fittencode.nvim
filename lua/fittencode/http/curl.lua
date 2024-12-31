@@ -64,10 +64,6 @@ local curl = {
 }
 
 local function spwan(app, args, opts)
-    local params = {
-        cmd = app.cmd,
-        args = args,
-    }
     local on_once = function(res)
         local exit_code, output, error = res.exit_code, res.output, res.error
         if exit_code ~= app.exit_code_success then
@@ -76,7 +72,15 @@ local function spwan(app, args, opts)
             Fn.schedule_call(opts.on_once, { output = output })
         end
     end
-    _spawn(params, opts.on_create, on_once, opts.on_stream, opts.on_error, opts.on_exit)
+    _spawn({
+        cmd = app.cmd,
+        args = args,
+        on_once = on_once,
+        on_error = opts.on_error,
+        on_create = opts.on_create,
+        on_stream = opts.on_stream,
+        on_exit = opts.on_exit,
+    })
 end
 
 local function spawn_curl(args, opts)
