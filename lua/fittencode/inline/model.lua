@@ -27,7 +27,7 @@ function Model:make_state()
     end
 end
 
-function Model:destory()
+function Model:clear()
     self.generated_text = nil
     self.ex_msg = nil
 end

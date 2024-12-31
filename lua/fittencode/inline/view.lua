@@ -60,6 +60,18 @@ function View:clear()
         vim.api.nvim_buf_del_extmark(self.buf, ns_ids.completion, id)
     end
     self.extmark_ids.lines = {}
+    for _, id in ipairs(self.extmark_ids.segments) do
+        vim.api.nvim_buf_del_extmark(self.buf, ns_ids.completion, id)
+    end
+    self.extmark_ids.segments = {}
+end
+
+function View:delete_text(start_pos, end_pos)
+    vim.api.nvim_buf_set_text(self.buf, start_pos[1] - 1, start_pos[2] - 1, end_pos[1] - 1, end_pos[2] - 1, {})
+end
+
+function View:insert_text(start_pos, text)
+    vim.api.nvim_buf_set_text(self.buf, start_pos[1] - 1, start_pos[2] - 1, start_pos[1] - 1, start_pos[2] - 1, { text })
 end
 
 function View:update(state)

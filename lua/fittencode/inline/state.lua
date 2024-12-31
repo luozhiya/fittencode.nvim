@@ -3,7 +3,10 @@ local State = {}
 State.__index = State
 
 function State:new(opts)
-    local obj = {}
+    local obj = {
+        segments = {
+        }
+    }
     setmetatable(obj, State)
     return obj
 end

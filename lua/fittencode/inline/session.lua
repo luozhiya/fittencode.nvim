@@ -1,6 +1,7 @@
 local Editor = require('fittencode.editor')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
+local State = require('fittencode.inline.state')
 
 ---@class Fittencode.Inline.Session
 local Session = {}
@@ -25,7 +26,7 @@ function Session:init()
 end
 
 function Session:update_view()
-    self.view.update(self.model:make_state())
+    self.view.update(State:new():get_state_from_model(self.model))
 end
 
 function Session:accept_all_suggestions()
@@ -92,7 +93,7 @@ function Session:cache_hit(row, col)
 end
 
 function Session:destory()
-    self.model:destory()
+    self.model:clear()
     self:update_view()
     self:restore_keymaps()
     self:clear_autocmds()

@@ -38,7 +38,12 @@ local preset_urls = {
     guide = 'https://code.fittentech.com/tutor_vim_zh',
     playground = 'https://code.fittentech.com/playground_zh',
     -- Completion
+    accept = '/codeapi/completion/accept',
+    get_completion_version = '/codeuser/get_completion_version', -- ?ft_token=
     generate_one_stage = '/codeapi/completion/generate_one_stage',
+    generate_one_stage2_1 = '/codeapi/completion2_1/generate_one_stage',
+    generate_one_stage2_2 = '/codeapi/completion2_2/generate_one_stage',
+    generate_one_stage2_3 = '/codeapi/completion2_3/generate_one_stage',
     -- Chat (Fast/Search @FCPS)
     chat = '/codeapi/chat', -- ?ft_token=
     -- RAG
@@ -411,8 +416,29 @@ end
 ---@field cancel function
 ---@field is_active function
 
+---@class RequestOptions
+---@field headers? table<string, string>
+---@field body? string
+---@field no_buffer? boolean
+---@field compress? boolean
+---@field on_create? function
+---@field on_once? function
+---@field on_stream? function
+---@field on_error? function
+---@field on_exit? function
+
 ---@return RequestHandle?
-local function request(method, url, headers, body, no_buffer, on_create, on_once, on_stream, on_error, on_exit)
+local function request(reqopts)
+    local method = reqopts.method
+    local url = reqopts.url
+    local headers = reqopts.headers
+    local body = reqopts.body
+    local no_buffer = reqopts.no_buffer
+    local on_create = reqopts.on_create
+    local on_once = reqopts.on_once
+    local on_stream = reqopts.on_stream
+    local on_error = reqopts.on_error
+    local on_exit = reqopts.on_exit
     local function wrap()
         local canceled = false
         ---@type uv_process_t?
@@ -492,9 +518,21 @@ local function generate_one_stage(prompt, on_create, on_once, on_error, on_exit)
     end
     local headers = {
         ['Content-Type'] = 'application/json',
+        ['Content-Encoding'] = 'gzip',
     }
     local url = server_url() .. preset_urls.generate_one_stage .. '/' .. key .. '？' .. get_platform_info_as_url_params()
-    return request('post', url, headers, prompt, false, on_create, on_once, nil, on_error, on_exit)
+    return request({
+        method = 'post',
+        url = url,
+        headers = headers,
+        body = prompt,
+        no_buffer = false,
+        on_create = on_create,
+        on_once = on_once,
+        on_stream = nil,
+        on_error = on_error,
+        on_exit = on_exit
+    })
 end
 
 local function chat(prompt, on_create, on_once, on_stream, on_error, on_exit)
@@ -507,7 +545,18 @@ local function chat(prompt, on_create, on_once, on_stream, on_error, on_exit)
         ['Content-Type'] = 'application/json',
     }
     local url = server_url() .. preset_urls.chat .. '?ft_token=' .. key .. '&' .. get_platform_info_as_url_params()
-    return request('post', url, headers, prompt, true, on_create, on_once, on_stream, on_error, on_exit)
+    return request({
+        method = 'post',
+        url = url,
+        headers = headers,
+        body = prompt,
+        no_buffer = false,
+        on_create = on_create,
+        on_once = on_once,
+        on_stream = on_stream,
+        on_error = on_error,
+        on_exit = on_exit
+    })
 end
 
 return {

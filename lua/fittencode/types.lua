@@ -267,7 +267,7 @@
 ---@field commit_col number
 ---@field accept function
 ---@field make_state function
----@field destory function
+---@field clear function
 
 ---@class Fittencode.Inline.View
 ---@field state? Fittencode.Inline.State
