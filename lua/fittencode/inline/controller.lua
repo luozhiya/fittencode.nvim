@@ -8,6 +8,7 @@ local Editor = require('fittencode.editor')
 local Translate = require('fittencode.translate')
 local Log = require('fittencode.log')
 local Model = require('fittencode.inline.model')
+local View = require('fittencode.inline.view')
 
 ---@class Fittencode.Inline.Controller
 local Controller = {}
@@ -24,6 +25,7 @@ function Controller:new(opts)
         augroups = {},
         ns_ids = {},
         keymaps = {},
+        request_handle = nil,
     }
     setmetatable(obj, self)
     return obj
@@ -34,10 +36,11 @@ function Controller:init()
         level = 0,
     })
     self:register_observer(self.status)
-    self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
+    self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime, function(data) self:on_request_return(data) end)
     self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
     self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
     self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
+    self:enable(Config.inline_completion.enable)
 end
 
 function Controller:register_observer(observer)
@@ -65,6 +68,10 @@ function Controller:dismiss_suggestions()
     end
 end
 
+function Controller:on_request_return(data)
+    self.request_handle = data
+end
+
 function Controller:lazy_completion()
     if not string.match(vim.fn.mode(), '^[iR]') then
         return
@@ -79,7 +86,7 @@ function Controller:lazy_completion()
     end
 end
 
-function Controller:build_prompt_for_completion(buf, row, col)
+function Controller:generate_prompt(buf, row, col)
     local within_the_line = col ~= string.len(vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1])
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
         return
@@ -125,14 +132,25 @@ function Controller:refine_generated_text(generated_text)
     return lines
 end
 
+function Controller:is_filetype_excluded(buf)
+    local ft
+    vim.api.nvim_buf_call(buf, function()
+        ft = vim.api.nvim_get_option_value('filetype', { buf = buf })
+    end)
+    return vim.tbl_contains(Config.inline_completion.suffixes, ft)
+end
+
 function Controller:triggering_completion(opts)
     opts = opts or {}
     Log.debug('Triggering completion')
     -- if not string.match(vim.fn.mode(), '^[iR]') then
     --     return
     -- end
+    if opts.event and vim.tbl_contains(self.filter_events, opts.event.event) then
+        return
+    end
     local buf = vim.api.nvim_get_current_buf()
-    if not Editor.is_filebuf(buf) then
+    if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
         return
     end
     local row, col = unpack(vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win()))
@@ -144,11 +162,15 @@ function Controller:triggering_completion(opts)
         self.session:destory()
         self.session = nil
     end
+    if self.request_handle then
+        self.request_handle:cancel()
+        self.request_handle = nil
+    end
     local timing = {}
     timing.triggering = vim.uv.hrtime()
     Promise:new(function(resolve, reject)
         Log.debug('Triggering completion for row: {}, col: {}', row, col)
-        self.generate_one_stage(self:build_prompt_for_completion(buf, row - 1, col), function()
+        self.generate_one_stage(self:generate_prompt(buf, row - 1, col), function()
             timing.on_create = vim.uv.hrtime()
         end, function(data)
             timing.on_once = vim.uv.hrtime()
@@ -180,15 +202,26 @@ function Controller:triggering_completion(opts)
             -- timing.on_exit = vim.uv.hrtime()
         end)
     end):forward(function(data)
-        self.session = Session:new(vim.tbl_deep_extend('force', data, {
+        local model = Model:new({
             buf = buf,
             row = row,
             col = col,
+            mode = data.mode,
+            generated_text = data.generated_text,
+            ex_msg = data.ex_msg,
+            delta_char = data.delta_char,
+            delta_line = data.delta_line,
+        })
+        local view = View:new({ buf = buf })
+        self.session = Session:new({
+            buf = buf,
+            model = model,
+            view = view,
             timing = timing,
-            reflect = function(msg) self:reflect(msg) end
-        }))
-        Log.debug('New session created {}', self.session)
+            reflect = function(msg) self:reflect(msg) end,
+        })
         self.session:init()
+        Log.debug('New session created {}', self.session)
         Fn.schedule_call(opts.on_success)
     end, function()
         Fn.schedule_call(opts.on_error)
@@ -198,14 +231,15 @@ end
 function Controller:reflect(msg)
 end
 
-function Controller:setup_autocmds(enable)
+function Controller:set_autocmds(enable)
     local autocmds = {
-        { { 'InsertEnter', 'CursorMovedI', 'CompleteChanged' }, function() self:triggering_completion() end },
-        { { 'InsertLeave' },                                    function() self:dismiss_suggestions() end },
-        { { 'BufLeave' },                                       function() self:dismiss_suggestions() end },
+        { { 'InsertEnter', 'CursorMovedI', 'CompleteChanged' }, function(args) self:triggering_completion({ event = args }) end },
+        { { 'InsertLeave' },                                    function(args) self:dismiss_suggestions() end },
+        { { 'BufLeave' },                                       function(args) self:dismiss_suggestions() end },
+        -- { { 'TextChangedI' },                                   function(args) self:lazy_completion({event = args}) end },
     }
     if enable then
-        self:setup_autocmds(false)
+        self:set_autocmds(false)
         for _, autocmd in ipairs(autocmds) do
             vim.api.nvim_create_autocmd(autocmd[1], {
                 group = self.augroups.completion,
@@ -215,6 +249,30 @@ function Controller:setup_autocmds(enable)
     else
         vim.api.nvim_clear_autocmds({ group = self.augroups.completion })
     end
+end
+
+function Controller:is_enabled(buf)
+    return Config.inline_completion.enable and not self:is_filetype_excluded(buf)
+end
+
+function Controller:set_onkey()
+    local filtered = {}
+    vim.tbl_map(function(key)
+        filtered[#filtered + 1] = vim.api.nvim_replace_termcodes(key, true, true, true)
+    end, {
+        '<Backspace>',
+        '<Delete>',
+    })
+    vim.on_key(function(key)
+        vim.schedule(function()
+            local buf = vim.api.nvim_get_current_buf()
+            if vim.api.nvim_get_mode().mode == 'i' and self:is_enabled(buf) and vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
+                self.filter_events = { 'TextChangedI', 'CursorHoldI', 'CursorMovedI' }
+            else
+                self.filter_events = {}
+            end
+        end)
+    end)
 end
 
 function Controller:edit_completion()
@@ -262,13 +320,13 @@ function Controller:triggering_completion_by_shortcut()
     })
 end
 
-function Controller:setup_keymaps(enable)
+function Controller:set_keymaps(enable)
     local maps = {
         { 'Alt-\\', function() self:triggering_completion_by_shortcut() end },
         { 'Alt-O',  function() self:edit_completion() end }
     }
     if enable then
-        self:setup_keymaps(false)
+        self:set_keymaps(false)
         for _, v in ipairs(maps) do
             self.keymaps[#self.keymaps + 1] = vim.fn.maparg(v[1], 'i', false, true)
             vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
@@ -283,14 +341,19 @@ function Controller:setup_keymaps(enable)
     end
 end
 
-function Controller:enable_completions(enable, global, suffixes)
+function Controller:enable(enable, global, suffixes)
     enable = enable == nil and true or enable
     global = global == nil and true or global
     suffixes = suffixes or {}
+    local prev = Config.inline_completion.enable
+    if enable then
+        Config.inline_completion.enable = true
+    elseif global then
+        Config.inline_completion.enable = false
+    end
     if global then
-        self:setup_autocmds(enable)
-        self:setup_keymaps(enable)
-        Config.inline_completion.enable = enable
+        self:set_autocmds(enable)
+        self:set_keymaps(enable)
     else
         local merge = function(tbl, filters)
             if enable then

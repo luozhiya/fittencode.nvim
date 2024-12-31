@@ -55,7 +55,7 @@ function View:render_hints(state)
     end
 end
 
-function View:clear_hints()
+function View:clear()
     for _, id in ipairs(self.extmark_ids.lines) do
         vim.api.nvim_buf_del_extmark(self.buf, ns_ids.completion, id)
     end
@@ -63,8 +63,17 @@ function View:clear_hints()
 end
 
 function View:update(state)
-    self:clear_hints()
-    self:render_hints(state)
+    self.state = state
+    -- 0. clear all previous hints
+    self:clear()
+    -- 1. remove all content from init_pos to current_pos
+    self:delete_text(state.init_pos, state.current_pos)
+    -- 2. insert committed text
+    self:insert_text(state.init_pos, state.commit_text)
+    -- 3. render committed text virtual text overlay
+    self:render_virt_committed_text(state.init_pos, state.commit_text)
+    -- 4. render uncommitted text virtual text inline after
+    self:render_virt_uncommitted_text(state.uncommit_text)
 end
 
 return View

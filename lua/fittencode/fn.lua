@@ -30,10 +30,13 @@ local function schedule_call_foreach(v, ...)
     end
 end
 
-local function debounce(func, delay)
+local function debounce(func, delay, on_return)
     local timer = nil
     if not delay or tonumber(delay) <= 0 then
-        return func
+        return function(...)
+            local v = func(...)
+            schedule_call(on_return, v)
+        end
     end
     return function(...)
         local args = { ... }
@@ -46,7 +49,8 @@ local function debounce(func, delay)
         end
         timer:start(delay, 0, function()
             timer:close()
-            func(unpack(args))
+            local v = func(unpack(args))
+            schedule_call(on_return, v)
         end)
     end
 end

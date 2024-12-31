@@ -10,8 +10,8 @@ Session.__index = Session
 function Session:new(opts)
     local obj = {
         buf = opts.buf,
-        model = Model:new(opts),
-        view = View:new({ buf = opts.buf }),
+        model = opts.model,
+        view = opts.view,
         timing = opts.timing,
         reflect = opts.reflect,
     }
@@ -82,7 +82,6 @@ function Session:restore_keymaps()
 end
 
 function Session:set_autocmds()
-    -- { { 'TextChangedI' },                                   function() self:lazy_completion() end },
 end
 
 function Session:clear_autocmds()

@@ -34,6 +34,7 @@ local translations = {
     ['Collapse workspace reference'] = '收起 workspace 参考',
     ['Common Phrases'] = '常用语',
     ['Completions for files with the extensions of {} are disabled'] = '当前文件后缀名：{} 已禁用',
+    ['Completions for files with the extensions of {} are enabled'] = '当前文件后缀名：{} 已启用',
     ['Completions for files with the extensions of {} are enabled, global completions have been automatically activated'] = '当前文件后缀名：{} 已启用, 全局自动补全功能已自动激活',
     ['Completions for the current language are enabled'] = '当前语言自动补全功能已启用',
     ['Confirm Password'] = '确认密码',

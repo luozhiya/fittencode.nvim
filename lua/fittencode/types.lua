@@ -243,6 +243,7 @@
 ---@field extmark_ids table
 ---@field augroups table
 ---@field ns_ids table
+---@field request_handle RequestHandle?
 
 ---@class Fittencode.Chat.VM
 ---@field run function
@@ -270,3 +271,5 @@
 
 ---@class Fittencode.Inline.View
 ---@field state? Fittencode.Inline.State
+---@field extmark_ids table
+---@field buf number
