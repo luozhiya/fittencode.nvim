@@ -383,7 +383,7 @@ function M.generate_one_stage(options)
             ['Content-Encoding'] = 'gzip',
         })
     end
-    local compress = (options.prompt_version == 'vscode')
+    local compress = (options.prompt_version == 'code')
     local url = M.server_url() .. preset_urls['generate_one_stage' .. options.completion_version] .. '/' .. key .. '？' .. get_platform_info_as_url_params()
     local req = make_req_from_options(options, {
         method = 'POST',

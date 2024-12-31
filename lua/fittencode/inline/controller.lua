@@ -9,6 +9,7 @@ local Translate = require('fittencode.translate')
 local Log = require('fittencode.log')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
+local Prompt = require('fittencode.inline.prompt')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
@@ -87,50 +88,71 @@ function Controller:lazy_completion()
     end
 end
 
-function Controller:generate_prompt(buf, row, col)
+function Controller:generate_prompt(buf, row, col, prompt_version)
     local within_the_line = col ~= string.len(vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1])
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
         return
     end
-    local prefix = table.concat(vim.api.nvim_buf_get_text(buf, 0, 0, row, col, {}), '\n')
-    local suffix = table.concat(vim.api.nvim_buf_get_text(buf, row, col, -1, -1, {}), '\n')
-    local prompt = '!FCPREFIX!' .. prefix .. '!FCSUFFIX!' .. suffix .. '!FCMIDDLE!'
-    return {
-        inputs = string.gsub(prompt, '"', '\\"'),
-        meta_datas = {
-            filename = vim.api.nvim_buf_get_name(buf),
-        },
-    }
-end
-
-function Controller:refine_generated_text(generated_text)
-    local text = vim.fn.substitute(generated_text, '<.endoftext.>', '', 'g') or ''
-    text = string.gsub(text, '\r\n', '\n')
-    text = string.gsub(text, '\r', '\n')
-    local lines = vim.split(text, '\r')
-
-    local i = 1
-    while i <= #lines do
-        if string.len(lines[i]) == 0 then
-            if i ~= #lines and string.len(lines[i + 1]) == 0 then
-                table.remove(lines, i)
-            else
-                i = i + 1
-            end
-        else
-            lines[i] = lines[i]:gsub('\\"', '"')
-            local tabstop = vim.bo.tabstop
-            if vim.bo.expandtab and tabstop and tabstop > 0 then
-                lines[i] = lines[i]:gsub('\t', string.rep(' ', tabstop))
-            end
-            i = i + 1
-        end
-    end
-
-    if vim.tbl_count(lines) == 0 or (vim.tbl_count(lines) == 1 and string.len(lines[1]) == 0) then
+    local strategy
+    if prompt_version == 'vim' then
+        strategy = Prompt.VimPromptStrategy
+    elseif prompt_version == 'code' then
+        strategy = Prompt.CodePromptStrategy
+    else
+        Log.error('Unsupported prompt_version: ' .. prompt_version)
         return
     end
-    return lines
+    return strategy:generate_prompt(buf, row, col)
+end
+
+function Controller:refine_completion(completion_data, prompt_version)
+    if prompt_version == 'vim' then
+        local text = vim.fn.substitute(completion_data.generated_text, '<.endoftext.>', '', 'g') or ''
+        text = string.gsub(text, '\r\n', '\n')
+        text = string.gsub(text, '\r', '\n')
+        local lines = vim.split(text, '\r')
+        local i = 1
+        while i <= #lines do
+            if string.len(lines[i]) == 0 then
+                if i ~= #lines and string.len(lines[i + 1]) == 0 then
+                    table.remove(lines, i)
+                else
+                    i = i + 1
+                end
+            else
+                lines[i] = lines[i]:gsub('\\"', '"')
+                local tabstop = vim.bo.tabstop
+                if vim.bo.expandtab and tabstop and tabstop > 0 then
+                    lines[i] = lines[i]:gsub('\t', string.rep(' ', tabstop))
+                end
+                i = i + 1
+            end
+        end
+        if vim.tbl_count(lines) == 0 or (vim.tbl_count(lines) == 1 and string.len(lines[1]) == 0) then
+            return
+        end
+        return {
+            completions = {
+                generated_text = table.concat(lines, '\n')
+            }
+        }
+    elseif prompt_version == 'code' then
+        local generated_text = (vim.fn.substitute(completion_data.generated_text, '<|endoftext|>', '', 'g') or '') .. completion_data.ex_msg
+        if generated_text == '' then
+            return
+        end
+        return {
+            request_id = completion_data.server_request_id,
+            completions = {
+                {
+                    generated_text = generated_text,
+                    character_delta = completion_data.delta_char,
+                    line_delta = completion_data.delta_line
+                },
+            },
+            context = nil -- TODO: implement fim context
+        }
+    end
 end
 
 function Controller:is_filetype_excluded(buf)
@@ -159,6 +181,7 @@ function Controller:triggering_completion(options)
     if not options.force and self.session and self.session:cache_hit(row, col) then
         return
     end
+
     if self.session then
         self.session:destory()
         self.session = nil
@@ -167,8 +190,11 @@ function Controller:triggering_completion(options)
         self.request_handle:abort()
         self.request_handle = nil
     end
+
+    local prompt_version = options.prompt_version or 'code'
     local timing = {}
     timing.triggering = vim.uv.hrtime()
+
     Promise:new(function(resolve, reject)
         Client.get_completion_version(function(data) resolve({ version = data.version }) end, function() Fn.schedule_call(options.on_error) end)
     end):forward(function(gcv_data)
@@ -177,34 +203,39 @@ function Controller:triggering_completion(options)
             Log.debug('Triggering completion for row: {}, col: {}', row, col)
             local gos_options = {
                 completion_version = gcv_data.version,
-                prompt_version = 'vim',
-                prompt = self:generate_prompt(buf, row - 1, col),
+                prompt_version = prompt_version,
+                prompt = self:generate_prompt(buf, row - 1, col, prompt_version),
                 on_create = function()
                     timing.on_create = vim.uv.hrtime()
                 end,
                 on_once = function(data)
                     timing.on_once = vim.uv.hrtime()
-                    local ok, completion_data = pcall(vim.json.decode, table.concat(data.output, ''))
-                    if not ok then
+                    local _, completion_data = pcall(vim.json.decode, table.concat(data.output, ''))
+                    if not _ then
                         reject()
                         return
                     end
-                    local generated_text = self:refine_generated_text(completion_data.generated_text)
-                    if not generated_text and (completion_data.ex_msg == nil or completion_data.ex_msg == '') then
+                    local completion = self:refine_completion(completion_data, prompt_version)
+                    if not completion then
                         reject()
-                    else
-                        local mode = 'lines'
-                        if not generated_text then
-                            mode = 'multi_segments'
-                        end
-                        resolve({
-                            mode = mode,
-                            generated_text = generated_text,
-                            ex_msg = completion_data.ex_msg,
-                            delta_char = completion_data.delta_char,
-                            delta_line = completion_data.delta_line,
-                        })
+                        return
                     end
+                    -- local generated_text = self:refine_generated_text(completion_data.generated_text, prompt_version)
+                    -- if not generated_text and (completion_data.ex_msg == nil or completion_data.ex_msg == '') then
+                    --     reject()
+                    -- else
+                    --     local mode = 'lines'
+                    --     if not generated_text then
+                    --         mode = 'multi_segments'
+                    --     end
+                    --     resolve({
+                    --         mode = mode,
+                    --         generated_text = generated_text,
+                    --         ex_msg = completion_data.ex_msg,
+                    --         delta_char = completion_data.delta_char,
+                    --         delta_line = completion_data.delta_line,
+                    --     })
+                    -- end
                 end,
                 on_error = function()
                     timing.on_error = vim.uv.hrtime()
