@@ -202,27 +202,27 @@ function Controller:triggering_completion(options)
                 end
             }
             self.generate_one_stage(gos_options)
-        end):forward(function(completion)
-            local model = Model:new({
-                buf = buf,
-                row = row,
-                col = col,
-                completion = completion,
-            })
-            local view = View:new({ buf = buf })
-            self.session = Session:new({
-                buf = buf,
-                model = model,
-                view = view,
-                timing = timing,
-                reflect = function(_) self:reflect(_) end,
-            })
-            self.session:init()
-            Log.debug('New session created {}', self.session)
-            Fn.schedule_call(options.on_success)
-        end, function()
-            Fn.schedule_call(options.on_error)
         end)
+    end):forward(function(completion)
+        local model = Model:new({
+            buf = buf,
+            row = row,
+            col = col,
+            completion = completion,
+        })
+        local view = View:new({ buf = buf })
+        self.session = Session:new({
+            buf = buf,
+            model = model,
+            view = view,
+            timing = timing,
+            reflect = function(_) self:reflect(_) end,
+        })
+        self.session:init()
+        Log.debug('New session created {}', self.session)
+        Fn.schedule_call(options.on_success)
+    end, function()
+        Fn.schedule_call(options.on_error)
     end)
 end
 
