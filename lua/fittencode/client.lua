@@ -199,86 +199,6 @@ local function login(username, password, on_success, on_error)
     end)
 end
 
-local function validate(uuid)
-    local pattern = '%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x'
-    return uuid:match(pattern) ~= nil
-end
-local validate_default = validate
-
-local byte_to_hex = {}
-for i = 0, 255 do
-    byte_to_hex[#byte_to_hex + 1] = string.sub(string.format('%x', i + 256), 2)
-end
-
-local function stringify(arr)
-    local uuid_parts = {
-        byte_to_hex[arr[1]] .. byte_to_hex[arr[2]] .. byte_to_hex[arr[3]] .. byte_to_hex[arr[4]],
-        byte_to_hex[arr[5]] .. byte_to_hex[arr[6]],
-        byte_to_hex[arr[7]] .. byte_to_hex[arr[8]],
-        byte_to_hex[arr[9]] .. byte_to_hex[arr[10]],
-        byte_to_hex[arr[11]] .. byte_to_hex[arr[12]] .. byte_to_hex[arr[13]] .. byte_to_hex[arr[14]] .. byte_to_hex[arr[15]] .. byte_to_hex[arr[16]]
-    }
-    local uuid = table.concat(uuid_parts, '-')
-    if not validate_default(uuid) then
-        return
-    end
-    return uuid
-end
-local stringify_default = stringify
-
-local function rng(len)
-    math.randomseed(os.time())
-    local arr = {}
-    for _ = 1, len do
-        arr[#arr + 1] = math.random(0, 256)
-    end
-    return arr
-end
-
-local function bit_and(a, b)
-    local result = 0
-    local bit = 1
-    while a > 0 and b > 0 do
-        if a % 2 == 1 and b % 2 == 1 then
-            result = result + bit
-        end
-        a = math.floor(a / 2)
-        b = math.floor(b / 2)
-        bit = bit * 2
-    end
-    return result
-end
-
-local function bit_or(a, b)
-    local result = 0
-    local bit = 1
-    while a > 0 or b > 0 do
-        if a % 2 == 1 or b % 2 == 1 then
-            result = result + bit
-        end
-        a = math.floor(a / 2)
-        b = math.floor(b / 2)
-        bit = bit * 2
-    end
-    return result
-end
-
-local function v4()
-    local rnds = rng(16)
-    rnds[6] = bit_or(bit_and(rnds[6], 15), 64)
-    rnds[8] = bit_or(bit_and(rnds[8], 63), 128)
-    return stringify_default(rnds)
-end
-local v4_default = v4
-
-local function _encode_uri_char(char)
-    return string.format('%%%0X', string.byte(char))
-end
-
-local function encode_uri(uri)
-    return (string.gsub(uri, "[^%a%d%-_%.!~%*'%(%);/%?:@&=%+%$,#]", _encode_uri_char))
-end
-
 local start_check_login_timer = nil
 local login_providers = {
     'google',
@@ -308,7 +228,7 @@ local function login3rd(source, on_success, on_error)
     local total_time = 0;
     local start_check = false;
 
-    local client_token = v4_default()
+    local client_token = Fn.uuid_v4()
     if not client_token then
         Log.error('Failed to generate client token')
         Fn.schedule_call(on_error)
@@ -385,60 +305,14 @@ local function logout()
     Log.notify_info(Translate('[Fitten Code] Logout successful'))
 end
 
----@return FittenCode.HTTP.RequestHandle?
-local function request(req)
-    local function wrap()
-        local aborted = false
-        ---@type uv_process_t?
-        local process = nil
-        local opts = {
-            headers = req.headers,
-            body = req.body,
-            no_buffer = req.no_buffer,
-            compress = req.compress,
-            on_create = vim.schedule_wrap(function(data)
-                if aborted then return end
-                process = data.process
-                Fn.schedule_call(req.on_create)
-            end),
-            on_once = vim.schedule_wrap(function(data)
-                if aborted then return end
-                Fn.schedule_call(req.on_once, data)
-            end),
-            on_stream = vim.schedule_wrap(function(data)
-                if aborted then return end
-                if data.error then
-                    Fn.schedule_call(req.on_error, { error = data.error })
-                else
-                    Fn.schedule_call(req.on_stream, { chunk = data.chunk })
-                end
-            end),
-            on_error = vim.schedule_wrap(function(data)
-                if aborted then return end
-                Fn.schedule_call(req.on_error, data)
-            end),
-            on_exit = vim.schedule_wrap(function(data)
-                Fn.schedule_call(req.on_exit, data)
-            end),
-        }
-        Fn.schedule_call(HTTP[req.method], req.url, opts)
-        return {
-            abort = function()
-                if not aborted then
-                    pcall(function()
-                        assert(process)
-                        vim.uv.process_kill(process)
-                    end)
-                    aborted = true
-                end
-            end,
-            is_active = function()
-                assert(process)
-                return vim.uv.is_active(process)
-            end
-        }
+local function copy_on(a)
+    local b = {}
+    for k, v in pairs(a) do
+        if Fn.startwith(k, 'on_') then
+            b[k] = v
+        end
     end
-    return wrap()
+    return b
 end
 
 -- Example of `completion_data`:
@@ -460,62 +334,53 @@ end
 --     "ex_msg": "1+2)*3"
 -- }
 ---@return FittenCode.HTTP.RequestHandle?
-local function generate_one_stage(opts)
-    opts.version = opts.version or ''
+local function generate_one_stage(options)
     local key = get_ft_token()
     if not key then
-        Fn.schedule_call(opts.on_error)
+        Fn.schedule_call(options.on_error)
         return
     end
     local headers = {
         ['Content-Type'] = 'application/json',
     }
+    options.version = options.version or ''
     local compress = false
-    if opts.version ~= '' then
+    if options.version ~= '' then
         vim.tbl_deep_extend('force', headers, {
             ['Content-Encoding'] = 'gzip',
         })
         compress = true
     end
-    local url = server_url() .. preset_urls['generate_one_stage' .. opts.version] .. '/' .. key .. '？' .. get_platform_info_as_url_params()
-    local req = {
+    local url = server_url() .. preset_urls['generate_one_stage' .. options.version] .. '/' .. key .. '？' .. get_platform_info_as_url_params()
+    local req = copy_on(options)
+    req = vim.tbl_deep_extend('force', req, {
         method = 'post',
-        url = url,
         headers = headers,
-        body = opts.prompt,
+        body = options.prompt,
         no_buffer = false,
         compress = compress,
-        on_create = opts.on_create,
-        on_once = opts.on_once,
-        on_stream = opts.on_stream,
-        on_error = opts.on_error,
-        on_exit = opts.on_exit
-    }
-    return request(req)
+    })
+    return HTTP.request(url, req)
 end
 
-local function chat(prompt, on_create, on_once, on_stream, on_error, on_exit)
+local function chat(options)
     local key = get_ft_token()
     if not key then
-        Fn.schedule_call(on_error)
+        Fn.schedule_call(options.on_error)
         return
     end
     local headers = {
         ['Content-Type'] = 'application/json',
     }
     local url = server_url() .. preset_urls.chat .. '?ft_token=' .. key .. '&' .. get_platform_info_as_url_params()
-    return request({
+    local req = copy_on(options)
+    req = vim.tbl_deep_extend('force', req, {
         method = 'post',
-        url = url,
         headers = headers,
-        body = prompt,
+        body = options.prompt,
         no_buffer = true,
-        on_create = on_create,
-        on_once = on_once,
-        on_stream = on_stream,
-        on_error = on_error,
-        on_exit = on_exit
     })
+    return HTTP.request(url, req)
 end
 
 return {

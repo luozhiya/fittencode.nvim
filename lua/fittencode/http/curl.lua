@@ -3,6 +3,8 @@ local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
 local Config = require('fittencode.config')
 
+local M = {}
+
 local executables = {
     gzip = {
         cmd = 'gzip',
@@ -100,7 +102,7 @@ local function build_curl_args(args, opts)
     return args
 end
 
-local function get(url, opts)
+function M.get(url, opts)
     local args = {
         url,
     }
@@ -179,7 +181,7 @@ local function _post(url, opts)
     end
 end
 
-local function post(url, opts)
+function M.post(url, opts)
     local _, body = pcall(vim.fn.json_encode, opts.body)
     if not _ then
         Fn.schedule_call(opts.on_error, { error = 'vim.fn.json_encode failed', })
@@ -231,7 +233,57 @@ local function post(url, opts)
     end
 end
 
-return {
-    get = get,
-    post = post,
-}
+---@return FittenCode.HTTP.RequestHandle?
+function M.request(url, options)
+    local function _()
+        local aborted = false
+        ---@type uv_process_t?
+        local process = nil
+        local o2 = vim.deepcopy(options)
+        vim.tbl_deep_extend('force', o2, {
+            on_create = vim.schedule_wrap(function(data)
+                if aborted then return end
+                process = data.process
+                Fn.schedule_call(options.on_create)
+            end),
+            on_once = vim.schedule_wrap(function(data)
+                if aborted then return end
+                Fn.schedule_call(options.on_once, data)
+            end),
+            on_stream = vim.schedule_wrap(function(data)
+                if aborted then return end
+                if data.error then
+                    Fn.schedule_call(options.on_error, { error = data.error })
+                else
+                    Fn.schedule_call(options.on_stream, { chunk = data.chunk })
+                end
+            end),
+            on_error = vim.schedule_wrap(function(data)
+                if aborted then return end
+                Fn.schedule_call(options.on_error, data)
+            end),
+            on_exit = vim.schedule_wrap(function(data)
+                Fn.schedule_call(options.on_exit, data)
+            end),
+        })
+        Fn.schedule_call(M[options.method], url, o2)
+        return {
+            abort = function()
+                if not aborted then
+                    pcall(function()
+                        assert(process)
+                        vim.uv.process_kill(process)
+                    end)
+                    aborted = true
+                end
+            end,
+            is_active = function()
+                assert(process)
+                return vim.uv.is_active(process)
+            end
+        }
+    end
+    return _()
+end
+
+return M

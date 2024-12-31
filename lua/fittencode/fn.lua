@@ -210,6 +210,85 @@ local function unicode_sequence_to_utf8(seq)
     return s
 end
 
+local function validate(uuid)
+    local pattern = '%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x'
+    return uuid:match(pattern) ~= nil
+end
+local validate_default = validate
+
+local byte_to_hex = {}
+for i = 0, 255 do
+    byte_to_hex[#byte_to_hex + 1] = string.sub(string.format('%x', i + 256), 2)
+end
+
+local function stringify(arr)
+    local uuid_parts = {
+        byte_to_hex[arr[1]] .. byte_to_hex[arr[2]] .. byte_to_hex[arr[3]] .. byte_to_hex[arr[4]],
+        byte_to_hex[arr[5]] .. byte_to_hex[arr[6]],
+        byte_to_hex[arr[7]] .. byte_to_hex[arr[8]],
+        byte_to_hex[arr[9]] .. byte_to_hex[arr[10]],
+        byte_to_hex[arr[11]] .. byte_to_hex[arr[12]] .. byte_to_hex[arr[13]] .. byte_to_hex[arr[14]] .. byte_to_hex[arr[15]] .. byte_to_hex[arr[16]]
+    }
+    local uuid = table.concat(uuid_parts, '-')
+    if not validate_default(uuid) then
+        return
+    end
+    return uuid
+end
+local stringify_default = stringify
+
+local function rng(len)
+    math.randomseed(os.time())
+    local arr = {}
+    for _ = 1, len do
+        arr[#arr + 1] = math.random(0, 256)
+    end
+    return arr
+end
+
+local function bit_and(a, b)
+    local result = 0
+    local bit = 1
+    while a > 0 and b > 0 do
+        if a % 2 == 1 and b % 2 == 1 then
+            result = result + bit
+        end
+        a = math.floor(a / 2)
+        b = math.floor(b / 2)
+        bit = bit * 2
+    end
+    return result
+end
+
+local function bit_or(a, b)
+    local result = 0
+    local bit = 1
+    while a > 0 or b > 0 do
+        if a % 2 == 1 or b % 2 == 1 then
+            result = result + bit
+        end
+        a = math.floor(a / 2)
+        b = math.floor(b / 2)
+        bit = bit * 2
+    end
+    return result
+end
+
+local function uuid_v4()
+    local rnds = rng(16)
+    rnds[6] = bit_or(bit_and(rnds[6], 15), 64)
+    rnds[8] = bit_or(bit_and(rnds[8], 63), 128)
+    return stringify_default(rnds)
+end
+
+local function _encode_uri_char(char)
+    return string.format('%%%0X', string.byte(char))
+end
+
+local function encode_uri(uri)
+    return (string.gsub(uri, "[^%a%d%-_%.!~%*'%(%);/%?:@&=%+%$,#]", _encode_uri_char))
+end
+
 return {
     debounce = debounce,
     set_timeout = set_timeout,
@@ -228,4 +307,5 @@ return {
     is_windows = is_windows,
     is_linux = is_linux,
     unicode_sequence_to_utf8 = unicode_sequence_to_utf8,
+    uuid_v4 = uuid_v4,
 }
