@@ -141,13 +141,13 @@ function Controller:is_filetype_excluded(buf)
     return vim.tbl_contains(Config.disable_specific_inline_completion.suffixes, ft)
 end
 
-function Controller:triggering_completion(opts)
-    opts = opts or {}
+function Controller:triggering_completion(options)
+    options = options or {}
     Log.debug('Triggering completion')
     -- if not string.match(vim.fn.mode(), '^[iR]') then
     --     return
     -- end
-    if opts.event and vim.tbl_contains(self.filter_events, opts.event.event) then
+    if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
         return
     end
     local buf = vim.api.nvim_get_current_buf()
@@ -155,8 +155,8 @@ function Controller:triggering_completion(opts)
         return
     end
     local row, col = unpack(vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win()))
-    opts.force = (opts.force == nil) and false or opts.force
-    if not opts.force and self.session and self.session:cache_hit(row, col) then
+    options.force = (options.force == nil) and false or options.force
+    if not options.force and self.session and self.session:cache_hit(row, col) then
         return
     end
     if self.session then
@@ -170,13 +170,13 @@ function Controller:triggering_completion(opts)
     local timing = {}
     timing.triggering = vim.uv.hrtime()
     Promise:new(function(resolve, reject)
-        Client.get_completion_version(function(data) resolve({ version = data.version }) end, function() Fn.schedule_call(opts.on_error) end)
-    end):forward(function(resolved_data)
+        Client.get_completion_version(function(data) resolve({ version = data.version }) end, function() Fn.schedule_call(options.on_error) end)
+    end):forward(function(gcv_data)
         return Promise:new(function(resolve, reject)
-            Log.debug('Got completion version: {}', resolved_data.version)
+            Log.debug('Got completion version: {}', gcv_data.version)
             Log.debug('Triggering completion for row: {}, col: {}', row, col)
-            local options = {
-                completion_version = resolved_data.version,
+            local gos_options = {
+                completion_version = gcv_data.version,
                 prompt_version = 'vim',
                 prompt = self:generate_prompt(buf, row - 1, col),
                 on_create = function()
@@ -211,17 +211,17 @@ function Controller:triggering_completion(opts)
                     reject()
                 end
             }
-            self.generate_one_stage(options)
-        end):forward(function(data)
+            self.generate_one_stage(gos_options)
+        end):forward(function(gos_data)
             local model = Model:new({
                 buf = buf,
                 row = row,
                 col = col,
-                mode = data.mode,
-                generated_text = data.generated_text,
-                ex_msg = data.ex_msg,
-                delta_char = data.delta_char,
-                delta_line = data.delta_line,
+                mode = gos_data.mode,
+                generated_text = gos_data.generated_text,
+                ex_msg = gos_data.ex_msg,
+                delta_char = gos_data.delta_char,
+                delta_line = gos_data.delta_line,
             })
             local view = View:new({ buf = buf })
             self.session = Session:new({
@@ -233,9 +233,9 @@ function Controller:triggering_completion(opts)
             })
             self.session:init()
             Log.debug('New session created {}', self.session)
-            Fn.schedule_call(opts.on_success)
+            Fn.schedule_call(options.on_success)
         end, function()
-            Fn.schedule_call(opts.on_error)
+            Fn.schedule_call(options.on_error)
         end)
     end)
 end
