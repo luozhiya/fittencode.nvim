@@ -428,17 +428,18 @@ end
 ---@field on_exit? function
 
 ---@return RequestHandle?
-local function request(reqopts)
-    local method = reqopts.method
-    local url = reqopts.url
-    local headers = reqopts.headers
-    local body = reqopts.body
-    local no_buffer = reqopts.no_buffer
-    local on_create = reqopts.on_create
-    local on_once = reqopts.on_once
-    local on_stream = reqopts.on_stream
-    local on_error = reqopts.on_error
-    local on_exit = reqopts.on_exit
+local function request(req)
+    local method = req.method
+    local url = req.url
+    local headers = req.headers
+    local body = req.body
+    local no_buffer = req.no_buffer
+    local compress = req.compress
+    local on_create = req.on_create
+    local on_once = req.on_once
+    local on_stream = req.on_stream
+    local on_error = req.on_error
+    local on_exit = req.on_exit
     local function wrap()
         local canceled = false
         ---@type uv_process_t?
@@ -527,6 +528,7 @@ local function generate_one_stage(prompt, on_create, on_once, on_error, on_exit)
         headers = headers,
         body = prompt,
         no_buffer = false,
+        compress = true,
         on_create = on_create,
         on_once = on_once,
         on_stream = nil,

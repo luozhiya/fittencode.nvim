@@ -134,7 +134,7 @@ local function arg_max()
     return max_arg_length
 end
 
-local function post(url, opts)
+local function _post(url, opts)
     local args = {
         url,
         '-X',
@@ -146,44 +146,115 @@ local function post(url, opts)
         spawn_curl(args, opts)
         return
     end
+    if not Fn.is_windows() and #opts.body <= arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
+        add_data_argument(args, opts.body, false)
+        spawn_curl(args, opts)
+    else
+        Promise:new(function(resolve)
+            local tmpfile = vim.fn.tempname()
+            vim.uv.fs_open(tmpfile, 'w', 438, function(e_open, fd)
+                if e_open then
+                    Fn.schedule_call(opts.on_error, { error = e_open, })
+                else
+                    assert(fd ~= nil)
+                    resolve({ fd = fd, tmpfile = tmpfile })
+                end
+            end)
+        end):forward(function(data)
+            return Promise:new(function(resolve)
+                vim.uv.fs_write(data.fd, opts.body, -1, function(e_write, _)
+                    if e_write then
+                        Fn.schedule_call(opts.on_error, { error = e_write, })
+                    else
+                        vim.uv.fs_close(data.fd, function(_, _) end)
+                        resolve({ tmpfile = data.tmpfile })
+                    end
+                end)
+            end)
+        end):forward(function(data)
+            add_data_argument(args, data.tmpfile, true)
+            local co = vim.deepcopy(opts)
+            co.on_exit = function()
+                Fn.schedule_call(opts.on_exit)
+                vim.uv.fs_unlink(data.tmpfile, function(_, _) end)
+            end
+            spawn_curl(args, co)
+        end)
+    end
+end
+
+local gzip = {
+    cmd = 'gzip',
+    default_args = {
+        '--no-name',
+        '--force'
+    },
+    exit_code_success = 0
+}
+
+local function spwan_gzip(args, opts)
+    local params = {
+        cmd = gzip.cmd,
+        args = args,
+    }
+    local on_once = function(res)
+        local exit_code, output, error = res.exit_code, res.output, res.error
+        if exit_code ~= gzip.exit_code_success then
+            Fn.schedule_call(opts.on_error, { exit_code = exit_code, error = error, })
+        else
+            Fn.schedule_call(opts.on_once, { output = output })
+        end
+    end
+    spawn(params, opts.on_create, on_once, opts.on_stream, opts.on_error, opts.on_exit)
+end
+
+local function post(url, opts)
     local _, body = pcall(vim.fn.json_encode, opts.body)
     if not _ then
         Fn.schedule_call(opts.on_error, { error = 'vim.fn.json_encode failed', })
         return
     end
-    if not Fn.is_windows() and #body <= arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
-        add_data_argument(args, body, false)
-        spawn_curl(args, opts)
-    else
+    if opts.compress then
+        local tmpfile = vim.fn.tempname()
+    end
+    if opts.compress then
         Promise:new(function(resolve)
-            local tmp = vim.fn.tempname()
-            vim.uv.fs_open(tmp, 'w', 438, function(e_open, fd)
+            local tmpfile = vim.fn.tempname()
+            vim.uv.fs_open(tmpfile, 'w', 438, function(e_open, fd)
                 if e_open then
                     Fn.schedule_call(opts.on_error, { error = e_open, })
                 else
                     assert(fd ~= nil)
-                    resolve({ fd = fd, tmp = tmp })
+                    resolve({ fd = fd, tmpfile = tmpfile })
                 end
             end)
-        end):forward(function(fs)
+        end):forward(function(data)
             return Promise:new(function(resolve)
-                vim.uv.fs_write(fs.fd, body, -1, function(e_write, _)
+                vim.uv.fs_write(data.fd, body, -1, function(e_write, _)
                     if e_write then
                         Fn.schedule_call(opts.on_error, { error = e_write, })
                     else
-                        vim.uv.fs_close(fs.fd, function(_, _) end)
-                        resolve(fs.tmp)
+                        vim.uv.fs_close(data.fd, function(_, _) end)
+                        resolve({ tmpfile = data.tmpfile })
                     end
                 end)
             end)
-        end):forward(function(tmp)
-            add_data_argument(args, tmp, true)
-            local xopts = vim.deepcopy(opts)
-            xopts.on_exit = function()
-                Fn.schedule_call(opts.on_exit)
-                vim.uv.fs_unlink(tmp, function(_, _) end)
-            end
-            spawn_curl(args, xopts)
+        end):forward(function(data)
+            local args = {
+                data.tempfile,
+            }
+            vim.list_extend(args, gzip.default_args)
+            local go = {
+                on_once = function()
+                    opts.body = data.tempfile .. '.gz'
+                    opts.on_exit = function()
+                        Fn.schedule_call(opts.on_exit)
+                        vim.uv.fs_unlink(data.tempfile, function(_, _) end)
+                    end
+                    _post(url, opts)
+                end
+            }
+            spwan_gzip(args, go)
         end)
     end
 end
