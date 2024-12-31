@@ -4,19 +4,19 @@ local Editor = require('fittencode.editor')
 local Log = require('fittencode.log')
 local StateConversation = require('fittencode.chat.state_conversation')
 
----@class Fittencode.Chat.State
+---@class FittenCode.Chat.State
 local State = {}
 State.__index = State
 
----@return Fittencode.Chat.State
+---@return FittenCode.Chat.State
 function State:new(opts)
     local obj = {}
     setmetatable(obj, State)
     return obj
 end
 
----@param conversation Fittencode.Chat.Conversation
----@return Fittencode.Chat.State.Conversation
+---@param conversation FittenCode.Chat.Conversation
+---@return FittenCode.Chat.State.Conversation
 local function to_state(conversation)
     local chat_interface = conversation.template.chatInterface or 'message-exchange'
     local sc = StateConversation:new(conversation)
@@ -35,9 +35,9 @@ local function to_state(conversation)
     return sc
 end
 
----@param model Fittencode.Chat.Model
+---@param model FittenCode.Chat.Model
 ---@param selected_state? boolean
----@return Fittencode.Chat.State
+---@return FittenCode.Chat.State
 function State:get_state_from_model(model, selected_state)
     selected_state = selected_state == nil and true or selected_state
     local n = {}

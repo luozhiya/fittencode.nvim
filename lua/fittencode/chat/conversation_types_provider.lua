@@ -5,11 +5,11 @@ local Promise = require('fittencode.promise')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 
----@class Fittencode.Chat.ConversationTypeProvider
+---@class FittenCode.Chat.ConversationTypeProvider
 local ConversationTypesProvider = {}
 ConversationTypesProvider.__index = ConversationTypesProvider
 
----@return Fittencode.Chat.ConversationTypeProvider
+---@return FittenCode.Chat.ConversationTypeProvider
 function ConversationTypesProvider:new(opts)
     local obj = {
         extension_templates = {},
@@ -21,12 +21,12 @@ function ConversationTypesProvider:new(opts)
 end
 
 ---@param id string
----@return Fittencode.Chat.ConversationType
+---@return FittenCode.Chat.ConversationType
 function ConversationTypesProvider:get_conversation_type(id)
     return self.conversation_types[id]
 end
 
----@return table<string, Fittencode.Chat.ConversationType>
+---@return table<string, FittenCode.Chat.ConversationType>
 function ConversationTypesProvider:get_conversation_types()
     return self.conversation_types
 end
@@ -98,7 +98,7 @@ end
 
 ---@param type string
 ---@param file string
----@return Fittencode.Chat.ConversationType?
+---@return FittenCode.Chat.ConversationType?
 function ConversationTypesProvider:load_builtin_template(type, file)
     local r = self.extension_uri .. 'template' .. '/' .. type .. '/' .. file
     local t = TemplateResolver.load_from_file(r)

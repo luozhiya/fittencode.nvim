@@ -3,11 +3,11 @@ local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local State = require('fittencode.inline.state')
 
----@class Fittencode.Inline.Session
+---@class FittenCode.Inline.Session
 local Session = {}
 Session.__index = Session
 
----@return Fittencode.Inline.Session
+---@return FittenCode.Inline.Session
 function Session:new(opts)
     local obj = {
         buf = opts.buf,

@@ -1,12 +1,12 @@
 local Log = require('fittencode.log')
 
----@class Fittencode.Editor
+---@class FittenCode.Editor
 local Editor = {}
 
 ---@type integer?
 local active = nil
 
----@type Fittencode.Editor.Selection?
+---@type FittenCode.Editor.Selection?
 local selection = nil
 
 ---@type table<integer>

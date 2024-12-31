@@ -412,43 +412,29 @@ local function logout()
     Log.notify_info(Translate('[Fitten Code] Logout successful'))
 end
 
----@class RequestHandle
----@field cancel function
----@field is_active function
-
----@class RequestOptions
----@field headers? table<string, string>
----@field body? string
----@field no_buffer? boolean
----@field compress? boolean
----@field on_create? function
----@field on_once? function
----@field on_stream? function
----@field on_error? function
----@field on_exit? function
-
----@return RequestHandle?
+---@return FittenCode.HTTP.RequestHandle?
 local function request(req)
     local function wrap()
-        local canceled = false
+        local aborted = false
         ---@type uv_process_t?
         local process = nil
+        ---@type FittenCode.HTTP.RequestOption
         local opts = {
             headers = req.headers,
             body = req.body,
             no_buffer = req.no_buffer,
             compress = req.compress,
             on_create = vim.schedule_wrap(function(data)
-                if canceled then return end
+                if aborted then return end
                 process = data.process
                 Fn.schedule_call(req.on_create)
             end),
             on_once = vim.schedule_wrap(function(data)
-                if canceled then return end
+                if aborted then return end
                 Fn.schedule_call(req.on_once, data)
             end),
             on_stream = vim.schedule_wrap(function(data)
-                if canceled then return end
+                if aborted then return end
                 if data.error then
                     Fn.schedule_call(req.on_error, { error = data.error })
                 else
@@ -456,7 +442,7 @@ local function request(req)
                 end
             end),
             on_error = vim.schedule_wrap(function(data)
-                if canceled then return end
+                if aborted then return end
                 Fn.schedule_call(req.on_error, data)
             end),
             on_exit = vim.schedule_wrap(function(data)
@@ -465,13 +451,13 @@ local function request(req)
         }
         Fn.schedule_call(HTTP[req.method], req.url, opts)
         return {
-            cancel = function()
-                if not canceled then
+            abort = function()
+                if not aborted then
                     pcall(function()
                         assert(process)
                         vim.uv.process_kill(process)
                     end)
-                    canceled = true
+                    aborted = true
                 end
             end,
             is_active = function()

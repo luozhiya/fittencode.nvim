@@ -1,8 +1,8 @@
----@class Fittencode.Inline.Model
+---@class FittenCode.Inline.Model
 local Model = {}
 Model.__index = Model
 
----@return Fittencode.Inline.Model
+---@return FittenCode.Inline.Model
 function Model:new(opts)
     local obj = {
         mode = opts.mode,

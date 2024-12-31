@@ -2,7 +2,7 @@ local ns_ids = {
     completion = vim.api.nvim_create_namespace('Fittencode.Inline.Session.Completion')
 }
 
----@class Fittencode.Inline.View
+---@class FittenCode.Inline.View
 local View = {}
 View.__index = View
 

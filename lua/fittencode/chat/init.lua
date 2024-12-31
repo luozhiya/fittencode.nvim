@@ -6,7 +6,7 @@ local Log = require('fittencode.log')
 local View = require('fittencode.chat.view')
 local Config = require('fittencode.config')
 
----@type Fittencode.Chat.Controller
+---@type FittenCode.Chat.Controller
 local controller = nil
 
 local function setup()

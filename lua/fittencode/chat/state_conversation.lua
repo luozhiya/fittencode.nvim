@@ -1,9 +1,9 @@
----@class Fittencode.Chat.State.Conversation
+---@class FittenCode.Chat.State.Conversation
 local StateConversation = {}
 StateConversation.__index = StateConversation
 
----@param conversation Fittencode.Chat.Conversation
----@return Fittencode.Chat.State.Conversation
+---@param conversation FittenCode.Chat.Conversation
+---@return FittenCode.Chat.State.Conversation
 function StateConversation:new(conversation)
     local obj = {
         id = conversation.id,

@@ -5,11 +5,11 @@ local State = require('fittencode.chat.state')
 local Status = require('fittencode.chat.status')
 local Fn = require('fittencode.fn')
 
----@class Fittencode.Chat.Controller
+---@class FittenCode.Chat.Controller
 local Controller = {}
 Controller.__index = Controller
 
----@return Fittencode.Chat.Controller
+---@return FittenCode.Chat.Controller
 function Controller:new(opts)
     local obj = setmetatable({
         view = opts.view,
@@ -86,9 +86,9 @@ function Controller:view_visible()
     return self.view:is_visible()
 end
 
----@param conversation Fittencode.Chat.Conversation
+---@param conversation FittenCode.Chat.Conversation
 ---@param show boolean
----@return Fittencode.Chat.Conversation
+---@return FittenCode.Chat.Conversation
 function Controller:add_and_show_conversation(conversation, show)
     self.model:add_and_select_conversation(conversation)
     self:update_view(show)
@@ -106,7 +106,7 @@ function Controller:receive_view_message(msg)
         self:update_view()
     elseif ty == 'send_message' then
         assert(msg.data.id == self.model.selected_conversation_id)
-        ---@type Fittencode.Chat.Conversation
+        ---@type FittenCode.Chat.Conversation
         local conversation = self.model:get_conversation_by_id(msg.data.id)
         if conversation then
             conversation:answer(msg.data.message)
@@ -125,12 +125,12 @@ function Controller:create_conversation(template_id, show, mode)
     show = show or true
     mode = mode or 'chat'
 
-    ---@type Fittencode.Chat.ConversationType
+    ---@type FittenCode.Chat.ConversationType
     local conversation_ty = self:get_conversation_type(template_id)
     if not conversation_ty then Log.error('No conversation type found for {}', template_id) end
 
     local variables = Runtime.resolve_variables(conversation_ty.template.variables, { time = 'conversation-start' })
-    ---@type Fittencode.Chat.CreatedConversation
+    ---@type FittenCode.Chat.CreatedConversation
     local created_conversation = conversation_ty:create_conversation({
         conversation_id = self:generate_conversation_id(),
         init_variables = variables,
@@ -169,14 +169,14 @@ function Controller:delete_conversation(id)
 end
 
 ---@param template_id string
----@return Fittencode.Chat.ConversationType
+---@return FittenCode.Chat.ConversationType
 function Controller:get_conversation_type(template_id)
     return self.conversation_types_provider:get_conversation_type(template_id)
 end
 
 ---@param id string
 function Controller:show_conversation(id)
-    ---@type Fittencode.Chat.Conversation
+    ---@type FittenCode.Chat.Conversation
     local conversation = self.model:get_conversation_by_id(id)
     if conversation then
         self.model.selected_conversation_id = id

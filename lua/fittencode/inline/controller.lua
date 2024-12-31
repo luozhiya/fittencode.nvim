@@ -10,11 +10,11 @@ local Log = require('fittencode.log')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 
----@class Fittencode.Inline.Controller
+---@class FittenCode.Inline.Controller
 local Controller = {}
 Controller.__index = Controller
 
----@return Fittencode.Inline.Controller
+---@return FittenCode.Inline.Controller
 function Controller:new(opts)
     local obj = {
         session = nil,
@@ -163,7 +163,7 @@ function Controller:triggering_completion(opts)
         self.session = nil
     end
     if self.request_handle then
-        self.request_handle:cancel()
+        self.request_handle:abort()
         self.request_handle = nil
     end
     local timing = {}

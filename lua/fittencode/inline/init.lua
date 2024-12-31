@@ -4,7 +4,7 @@ local Log = require('fittencode.log')
 local Translate = require('fittencode.translate')
 local Fn = require('fittencode.fn')
 
----@type Fittencode.Inline.Controller
+---@type FittenCode.Inline.Controller
 local controller = nil
 
 local function setup()

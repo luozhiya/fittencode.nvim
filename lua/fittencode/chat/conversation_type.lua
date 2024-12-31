@@ -1,6 +1,6 @@
 local Conversation = require('fittencode.chat.conversation')
 
----@class Fittencode.Chat.ConversationType
+---@class FittenCode.Chat.ConversationType
 local ConversationType = {}
 ConversationType.__index = ConversationType
 
@@ -17,7 +17,7 @@ function ConversationType:tags()
     return self.template.tags or {}
 end
 
----@return Fittencode.Chat.CreatedConversation
+---@return FittenCode.Chat.CreatedConversation
 function ConversationType:create_conversation(opts)
     return {
         type = 'success',

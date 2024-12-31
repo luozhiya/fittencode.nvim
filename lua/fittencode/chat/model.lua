@@ -1,10 +1,10 @@
 local Log = require('fittencode.log')
 
----@class Fittencode.Chat.Model
+---@class FittenCode.Chat.Model
 local Model = {}
 Model.__index = Model
 
----@return Fittencode.Chat.Model
+---@return FittenCode.Chat.Model
 function Model:new()
     local obj = {
         conversations = {}
@@ -13,7 +13,7 @@ function Model:new()
     return obj
 end
 
----@param e Fittencode.Chat.Conversation
+---@param e FittenCode.Chat.Conversation
 function Model:add_and_select_conversation(e)
     if #self.conversations > 0 then
         local r = self.conversations[#self.conversations]
@@ -29,7 +29,7 @@ function Model:add_and_select_conversation(e)
 end
 
 ---@param id string
----@return Fittencode.Chat.Conversation?
+---@return FittenCode.Chat.Conversation?
 function Model:get_conversation_by_id(id)
     for _, r in ipairs(self.conversations) do
         if r.id == id then

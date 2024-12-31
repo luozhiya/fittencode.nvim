@@ -7,12 +7,12 @@ local Runtime = require('fittencode.chat.runtime')
 local VM = require('fittencode.chat.vm')
 local Promise = require('fittencode.promise')
 
----@class Fittencode.Chat.Conversation
+---@class FittenCode.Chat.Conversation
 local Conversation = {}
 Conversation.__index = Conversation
 
 ---@param opts table
----@return Fittencode.Chat.Conversation
+---@return FittenCode.Chat.Conversation
 function Conversation:new(opts)
     local obj = {
         id = opts.id,
@@ -154,7 +154,7 @@ function Conversation:execute_chat(opts)
             Log.error('RAG chat is not implemented yet')
         end
     else
-        ---@type Fittencode.Chat.Template.InitialMessage | Fittencode.Chat.Template.Response | nil
+        ---@type FittenCode.Chat.Template.InitialMessage | FittenCode.Chat.Template.Response | nil
         local ir = self.template.response
         if self.messages[1] == nil then
             ir = self.template.initialMessage
