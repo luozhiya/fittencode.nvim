@@ -42,7 +42,7 @@ local preset_urls = {
     -- Completion
     accept = '/codeapi/completion/accept',
     get_completion_version = '/codeuser/get_completion_version', -- ?ft_token=
-    generate_one_stage = '/codeapi/completion/generate_one_stage',
+    generate_one_stage0 = '/codeapi/completion/generate_one_stage',
     generate_one_stage2_1 = '/codeapi/completion2_1/generate_one_stage',
     generate_one_stage2_2 = '/codeapi/completion2_2/generate_one_stage',
     generate_one_stage2_3 = '/codeapi/completion2_3/generate_one_stage',
@@ -334,7 +334,13 @@ function M.get_completion_version(on_success, on_error)
                 reject()
             end),
             on_once = vim.schedule_wrap(function(data)
-                resolve({ version = data.output })
+                local json = table.concat(data.output, '')
+                local _, version = pcall(vim.fn.json_decode, json)
+                if not _ or version == nil then
+                    reject()
+                else
+                    resolve({ version = version })
+                end
             end)
         })
     end):forward(function(data)
@@ -362,6 +368,7 @@ end
 -- }
 ---@return FittenCode.HTTP.RequestHandle?
 function M.generate_one_stage(options)
+    Log.debug('generate_one_stage = {}', options)
     local key = M.get_ft_token()
     if not key then
         Fn.schedule_call(options.on_error)
@@ -370,15 +377,14 @@ function M.generate_one_stage(options)
     local headers = {
         ['Content-Type'] = 'application/json',
     }
-    options.version = options.version or ''
-    local compress = false
-    if options.version ~= '' then
+    options.completion_version = options.completion_version or ''
+    if options.completion_version ~= '0' then
         vim.tbl_deep_extend('force', headers, {
             ['Content-Encoding'] = 'gzip',
         })
-        compress = true
     end
-    local url = M.server_url() .. preset_urls['generate_one_stage' .. options.version] .. '/' .. key .. '？' .. get_platform_info_as_url_params()
+    local compress = (options.prompt_version == 'vscode')
+    local url = M.server_url() .. preset_urls['generate_one_stage' .. options.completion_version] .. '/' .. key .. '？' .. get_platform_info_as_url_params()
     local req = make_req_from_options(options, {
         method = 'POST',
         headers = headers,

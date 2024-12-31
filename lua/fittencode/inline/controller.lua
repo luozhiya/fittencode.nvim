@@ -170,66 +170,73 @@ function Controller:triggering_completion(opts)
     local timing = {}
     timing.triggering = vim.uv.hrtime()
     Promise:new(function(resolve, reject)
-        Log.debug('Triggering completion for row: {}, col: {}', row, col)
-        local options = {
-            prompt = self:generate_prompt(buf, row - 1, col),
-            on_create = function()
-                timing.on_create = vim.uv.hrtime()
-            end,
-            on_once = function(data)
-                timing.on_once = vim.uv.hrtime()
-                local ok, completion_data = pcall(vim.json.decode, table.concat(data.output, ''))
-                if not ok then
-                    reject()
-                    return
-                end
-                local generated_text = self:refine_generated_text(completion_data.generated_text)
-                if not generated_text and (completion_data.ex_msg == nil or completion_data.ex_msg == '') then
-                    reject()
-                else
-                    local mode = 'lines'
-                    if not generated_text then
-                        mode = 'multi_segments'
+        Client.get_completion_version(function(data) resolve({ version = data.version }) end, function() Fn.schedule_call(opts.on_error) end)
+    end):forward(function(resolved_data)
+        return Promise:new(function(resolve, reject)
+            Log.debug('Got completion version: {}', resolved_data.version)
+            Log.debug('Triggering completion for row: {}, col: {}', row, col)
+            local options = {
+                completion_version = resolved_data.version,
+                prompt_version = 'vim',
+                prompt = self:generate_prompt(buf, row - 1, col),
+                on_create = function()
+                    timing.on_create = vim.uv.hrtime()
+                end,
+                on_once = function(data)
+                    timing.on_once = vim.uv.hrtime()
+                    local ok, completion_data = pcall(vim.json.decode, table.concat(data.output, ''))
+                    if not ok then
+                        reject()
+                        return
                     end
-                    resolve({
-                        mode = mode,
-                        generated_text = generated_text,
-                        ex_msg = completion_data.ex_msg,
-                        delta_char = completion_data.delta_char,
-                        delta_line = completion_data.delta_line,
-                    })
+                    local generated_text = self:refine_generated_text(completion_data.generated_text)
+                    if not generated_text and (completion_data.ex_msg == nil or completion_data.ex_msg == '') then
+                        reject()
+                    else
+                        local mode = 'lines'
+                        if not generated_text then
+                            mode = 'multi_segments'
+                        end
+                        resolve({
+                            mode = mode,
+                            generated_text = generated_text,
+                            ex_msg = completion_data.ex_msg,
+                            delta_char = completion_data.delta_char,
+                            delta_line = completion_data.delta_line,
+                        })
+                    end
+                end,
+                on_error = function()
+                    timing.on_error = vim.uv.hrtime()
+                    reject()
                 end
-            end,
-            on_error = function()
-                timing.on_error = vim.uv.hrtime()
-                reject()
-            end
-        }
-        self.generate_one_stage(options)
-    end):forward(function(data)
-        local model = Model:new({
-            buf = buf,
-            row = row,
-            col = col,
-            mode = data.mode,
-            generated_text = data.generated_text,
-            ex_msg = data.ex_msg,
-            delta_char = data.delta_char,
-            delta_line = data.delta_line,
-        })
-        local view = View:new({ buf = buf })
-        self.session = Session:new({
-            buf = buf,
-            model = model,
-            view = view,
-            timing = timing,
-            reflect = function(msg) self:reflect(msg) end,
-        })
-        self.session:init()
-        Log.debug('New session created {}', self.session)
-        Fn.schedule_call(opts.on_success)
-    end, function()
-        Fn.schedule_call(opts.on_error)
+            }
+            self.generate_one_stage(options)
+        end):forward(function(data)
+            local model = Model:new({
+                buf = buf,
+                row = row,
+                col = col,
+                mode = data.mode,
+                generated_text = data.generated_text,
+                ex_msg = data.ex_msg,
+                delta_char = data.delta_char,
+                delta_line = data.delta_line,
+            })
+            local view = View:new({ buf = buf })
+            self.session = Session:new({
+                buf = buf,
+                model = model,
+                view = view,
+                timing = timing,
+                reflect = function(msg) self:reflect(msg) end,
+            })
+            self.session:init()
+            Log.debug('New session created {}', self.session)
+            Fn.schedule_call(opts.on_success)
+        end, function()
+            Fn.schedule_call(opts.on_error)
+        end)
     end)
 end
 

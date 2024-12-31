@@ -214,15 +214,15 @@ function M.post(url, opts)
             end)
         end):forward(function(data)
             local args = {
-                data.tempfile,
+                data.tmpfile,
             }
             vim.list_extend(args, executables.gzip.default_args)
             local go = {
                 on_once = function()
-                    opts.body = data.tempfile .. '.gz'
+                    opts.body = data.tmpfile .. '.gz'
                     opts.on_exit = function()
                         Fn.schedule_call(opts.on_exit)
-                        vim.uv.fs_unlink(data.tempfile, function(_, _) end)
+                        vim.uv.fs_unlink(data.tmpfile, function(_, _) end)
                     end
                     _post(url, opts)
                 end,
