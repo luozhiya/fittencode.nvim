@@ -2,7 +2,7 @@
 ---@field start FittenCode.Position
 ---@field termination FittenCode.Position
 
--- A range represents an ordered pair of two positions.
+-- A range represents an ordered pair of two positions. It is guaranteed that start:is_before_or_equal(end)
 ---@class FittenCode.Range
 local Range = {}
 Range.__index = Range
@@ -17,9 +17,9 @@ function Range:new(options)
     return obj
 end
 
+-- Returns true if the range is empty, i.e., start and termination are equal
 function Range:is_empty()
-    vim.tbl_
-    return self.start == self.termination
+    return self.start:is_equal(self.termination)
 end
 
 return Range

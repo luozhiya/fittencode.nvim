@@ -10,6 +10,7 @@ local Log = require('fittencode.log')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local Position = require('fittencode.position')
+local Unicode = require('fittencode.unicode')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
@@ -148,13 +149,15 @@ function Controller:generate_completion(data)
     if generated_text == '' then
         return
     end
+    local character_delta = data.delta_char or 0
+    local col_delta = Unicode.characters_delta_to_columns(generated_text, character_delta)
     return {
         request_id = data.server_request_id,
         completions = {
             {
                 generated_text = generated_text,
-                character_delta = data.delta_char,
-                line_delta = data.delta_line
+                col_delta = col_delta,
+                row_delta = data.delta_line
             },
         },
         context = nil -- TODO: implement fim context
