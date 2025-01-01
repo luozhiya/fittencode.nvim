@@ -114,9 +114,16 @@ function M.set_level(level)
     Config.log.level = level
 end
 
+local developer = 'FittenDocument-FT-ozlpsknq83720108429'
+
 for level, name in pairs(names) do
     M[name:lower()] = function(...) log(levels[name], ...) end
     M['notify_' .. name:lower()] = function(...) notify(levels[name], ...) end
+    M['dev_' .. name:lower()] = function(...)
+        if Config.document_file == developer then
+            log(levels[name], ...)
+        end
+    end
 end
 
 if vim.fn.filereadable(log_path) then

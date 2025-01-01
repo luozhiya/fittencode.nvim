@@ -13,8 +13,8 @@ local selection = nil
 local filter_bufs = {}
 
 ---@return string?
-function Editor.ft_vsclang()
-    local buf = Editor.active()
+function Editor.ft_vsclang(buf)
+    buf = buf or Editor.active()
     if not buf then
         return
     end
@@ -34,8 +34,8 @@ function Editor.ft_vsclang()
 end
 
 ---@return string?
-function Editor.filename()
-    local buf = Editor.active()
+function Editor.filename(buf)
+    buf = buf or Editor.active()
     if not buf then
         return
     end
@@ -47,8 +47,8 @@ function Editor.filename()
 end
 
 ---@return string?
-function Editor.content()
-    local buf = Editor.active()
+function Editor.content(buf)
+    buf = buf or Editor.active()
     if not buf then
         return
     end
@@ -59,8 +59,8 @@ function Editor.content()
     return content
 end
 
-function Editor.workspace()
-    local buf = Editor.active()
+function Editor.workspace(buf)
+    buf = buf or Editor.active()
     if not buf then
         return
     end
@@ -75,6 +75,7 @@ function Editor.register_filter_buf(buf)
     filter_bufs[#filter_bufs + 1] = buf
 end
 
+---@return boolean, string?
 function Editor.is_filebuf(buf)
     local ok, r = pcall(vim.api.nvim_buf_is_valid, buf)
     if not ok or not r then
@@ -86,10 +87,48 @@ function Editor.is_filebuf(buf)
             path = vim.fn.expand('%:p')
         end)
         if vim.api.nvim_buf_get_name(buf) ~= '' and path and vim.fn.filereadable(path) == 1 then
-            return true
+            return true, path
         end
     end
     return false
+end
+
+-- {
+--     bytes = 5,
+--     chars = 5,
+--     cursor_bytes = 3,
+--     cursor_chars = 3,
+--     cursor_words = 1,
+--     words = 1
+-- }
+function Editor.word_count(buf)
+    buf = buf or Editor.active()
+    if not buf then
+        return
+    end
+    local wc
+    vim.api.nvim_buf_call(buf, function()
+        wc = vim.fn.wordcount()
+    end)
+    return wc.chars
+end
+
+---@param buf integer?
+---@param pos FittenCode.Position
+---@return integer?
+function Editor.offset_at(buf, pos)
+    buf = buf or Editor.active()
+    if not buf then
+        return
+    end
+    local offset
+    vim.api.nvim_buf_call(buf, function()
+        local lines = vim.api.nvim_buf_get_text(buf, 0, 0, pos.line, pos.character, {})
+        vim.tbl_map(function(line)
+            offset = offset + #line + 1
+        end, lines)
+    end)
+    return offset
 end
 
 ---@return integer?

@@ -9,6 +9,7 @@ local Translate = require('fittencode.translate')
 local Log = require('fittencode.log')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
+local Position = require('fittencode.position')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
@@ -87,13 +88,41 @@ function Controller:lazy_completion()
     end
 end
 
+local function vie(buf, e, r, n)
+    local i = Editor.word_count(buf)
+    local s = t:offsetAt(e)
+    local o = t:offsetAt(r)
+    local a = math.max(0, s - n)
+    local A = math.min(i, o + n)
+    local l = t:positionAt(a)
+    local u = t:positionAt(A)
+    local c = t:getText(N.Range(l, e))
+    local h = t:getText(N.Range(r, u))
+    return c .. '<fim_middle>' .. h
+end
+
 function Controller:generate_prompt(buf, row, col)
     local within_the_line = col ~= string.len(vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1])
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
         return
     end
-    local prefix = table.concat(vim.api.nvim_buf_get_text(buf, 0, 0, row, col, {}), '\n')
-    local suffix = table.concat(vim.api.nvim_buf_get_text(buf, row, col, -1, -1, {}), '\n')
+
+    local u = Config.use_project_completion.open
+    local c = Config.server.fitten_version ~= 'default'
+    local h = -1
+
+    if ((u ~= 'off' and c) or (u == 'on' and not c)) and h == 0 then
+        -- notify install lsp
+    end
+
+    local A = ''
+    local max_chars = 22e4
+    if Editor.word_count(buf).chars <= max_chars then
+        local prefix = table.concat(vim.api.nvim_buf_get_text(buf, 0, 0, row, col, {}), '\n')
+        local suffix = table.concat(vim.api.nvim_buf_get_text(buf, row, col, -1, -1, {}), '\n')
+        local pos = Position:new({ line = row, character = col })
+        A = vie(buf, pos, pos, 100)
+    end
     return {
         inputs = '',
         meta_datas = {
