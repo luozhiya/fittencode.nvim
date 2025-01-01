@@ -1,18 +1,25 @@
----@class fittencode.Config
+---@class FittenCode.Config
 local M = {}
 
----@class fittencode.Config
+---@class FittenCode.Config
 local defaults = {
     server = {
+        package_name = 'Fitten-Code',
         ---@type FittenCode.Version
         -- Avaiable options:
         -- * 'default'
         -- * 'enterprise'
         fitten_version = 'default',
+        version_name = '',
+        enable_enterprise_code = false,
         -- The server URL for Fitten Code.
         -- You can also change it to your own server URL if you have a private server.
         -- Default server URL: 'https://fc.fittenlab.cn'
         server_url = '',
+        -- Local RAG
+        local_rag = true,
+        -- Notify login message on keyboard input
+        toggle_login_message_on_keyboard_input = true,
     },
     action = {
         document_code = {
@@ -183,10 +190,10 @@ local defaults = {
     }
 }
 
----@type fittencode.Config
+---@type FittenCode.Config
 local options
 
----@param opts? fittencode.Config
+---@param opts? FittenCode.Config
 function M.setup(opts)
     opts = opts or {}
     if opts.use_default_keymaps == false then

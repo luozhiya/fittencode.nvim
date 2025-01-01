@@ -1,7 +1,7 @@
 ---@class fittencode.api
 local M = {}
 
----@param opts? fittencode.Config
+---@param opts? FittenCode.Config
 function M.setup(opts)
     if vim.fn.has('nvim-0.11') == 0 then
         vim.api.nvim_err_writeln('fittencode.nvim requires Neovim >= 0.11.0.')

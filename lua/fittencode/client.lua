@@ -42,7 +42,7 @@ local preset_urls = {
     -- Completion
     accept = '/codeapi/completion/accept',
     get_completion_version = '/codeuser/get_completion_version', -- ?ft_token=
-    generate_one_stage0 = '/codeapi/completion/generate_one_stage',
+    generate_one_stage = '/codeapi/completion/generate_one_stage',
     generate_one_stage2_1 = '/codeapi/completion2_1/generate_one_stage',
     generate_one_stage2_2 = '/codeapi/completion2_2/generate_one_stage',
     generate_one_stage2_3 = '/codeapi/completion2_3/generate_one_stage',
@@ -381,7 +381,13 @@ function M.generate_one_stage(options)
             ['Content-Encoding'] = 'gzip',
         })
     end
-    local url = M.server_url() .. preset_urls['generate_one_stage' .. options.completion_version] .. '/' .. key .. '？' .. get_platform_info_as_url_params()
+    local vu = {
+        ['0'] = 'generate_one_stage',
+        ['1'] = 'generate_one_stage2_1',
+        ['2'] = 'generate_one_stage2_2',
+        ['3'] = 'generate_one_stage2_3',
+    }
+    local url = M.server_url() .. preset_urls[vu[options.completion_version]] .. '/' .. key .. '？' .. get_platform_info_as_url_params()
     local req = make_req_from_options(options, {
         method = 'POST',
         headers = headers,
