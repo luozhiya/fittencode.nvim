@@ -18,30 +18,35 @@ end
 
 -- Check if this position is equal to `other`.
 ---@param other FittenCode.Position
+---@return boolean
 function Position:is_equal(other)
     return self.row == other.row and self.col == other.col
 end
 
 -- Check if this position is before `other`.
 ---@param other FittenCode.Position
+---@return boolean
 function Position:is_before(other)
     return self.row < other.row or (self.row == other.row and self.col < other.col)
 end
 
 -- Check if this position is before or equal to `other`.
 ---@param other FittenCode.Position
+---@return boolean
 function Position:is_before_or_equal(other)
     return self.row < other.row or (self.row == other.row and self.col <= other.col)
 end
 
 -- Check if this position is after `other`.
 ---@param other FittenCode.Position
+---@return boolean
 function Position:is_after(other)
     return self.row > other.row or (self.row == other.row and self.col > other.col)
 end
 
 -- Check if this position is after or equal to `other`.
 ---@param other FittenCode.Position
+---@return boolean
 function Position:is_after_or_equal(other)
     return self.row > other.row or (self.row == other.row and self.col >= other.col)
 end
@@ -64,13 +69,33 @@ function Position:compare_to(other)
 end
 
 -- Create a new position relative to this position.
----@param row_delta number The number of rows to move.
----@param col_delta number The number of columns to move.
+---@param row_delta? number The number of rows to move.
+---@param col_delta? number The number of columns to move.
 ---@return FittenCode.Position The new position.
 function Position:translate(row_delta, col_delta)
     return Position:new({
         row = self.row + (row_delta or 0),
         col = self.col + (col_delta or 0),
+    })
+end
+
+-- Create a new position derived from this position.
+---@param row? number The new row value.
+---@param col? number The new column value.
+---@return FittenCode.Position The new position.
+function Position:with(row, col)
+    return Position:new({
+        row = row or self.row,
+        col = col or self.col,
+    })
+end
+
+-- Create a copy of this position.
+---@return FittenCode.Position The new position.
+function Position:clone()
+    return Position:new({
+        row = self.row,
+        col = self.col,
     })
 end
 
