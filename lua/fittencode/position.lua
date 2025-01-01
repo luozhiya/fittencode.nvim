@@ -1,6 +1,6 @@
 ---@class FittenCode.Position
 ---@field row number A zero-based row value.
----@field col number A zero-based column value.
+---@field col number A zero-based column value. In UTF-8 encoding, `col` always points to the start byte of the UTF-8 sequence. Same as `vim.api.nvim_win_get_cursor`.
 
 ---@class FittenCode.Position
 local Position = {}
