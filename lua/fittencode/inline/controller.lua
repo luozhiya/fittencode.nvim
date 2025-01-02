@@ -27,7 +27,7 @@ function Controller:new(opts)
         augroups = {},
         ns_ids = {},
         keymaps = {},
-        request_handle = nil,
+        request_handles = {},
         filter_events = {}
     }
     setmetatable(obj, self)
@@ -72,7 +72,7 @@ function Controller:dismiss_suggestions()
 end
 
 function Controller:on_request_return(data)
-    self.request_handle = data
+    self.request_handles[#self.request_handles + 1] = data
 end
 
 function Controller:lazy_completion()
@@ -195,16 +195,30 @@ function Controller:triggering_completion(options)
         self.session:destory()
         self.session = nil
     end
-    if self.request_handle then
-        self.request_handle:abort()
-        self.request_handle = nil
+    for _, handle in ipairs(self.request_handles) do
+        handle:abort()
     end
+    self.request_handles = {}
 
     local timing = {}
     timing.triggering = vim.uv.hrtime()
 
     Promise:new(function(resolve, reject)
-        Client.get_completion_version(function(version) resolve(version) end, function() Fn.schedule_call(options.on_error) end)
+        local gov_options = {
+            on_once = function(stdout)
+                local json = table.concat(stdout, '')
+                local _, version = pcall(vim.fn.json_decode, json)
+                if not _ or version == nil then
+                    reject()
+                else
+                    resolve(version)
+                end
+            end,
+            on_error = function()
+                reject()
+            end
+        }
+        self.request_handles[#self.request_handles + 1] = Client.get_completion_version(gov_options)
     end):forward(function(version)
         return Promise:new(function(resolve, reject)
             Log.debug('Triggering completion for row: {}, col: {}', row, col)
@@ -235,6 +249,8 @@ function Controller:triggering_completion(options)
             }
             self.generate_one_stage(gos_options)
         end)
+    end, function()
+        Fn.schedule_call(options.on_error)
     end):forward(function(completion)
         local model = Model:new({
             buf = buf,

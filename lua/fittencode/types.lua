@@ -247,7 +247,7 @@
 ---@field extmark_ids table
 ---@field augroups table
 ---@field ns_ids table
----@field request_handle FittenCode.HTTP.RequestHandle?
+---@field request_handles table<FittenCode.HTTP.RequestHandle?>
 
 ---@class FittenCode.Chat.VM
 ---@field run function
