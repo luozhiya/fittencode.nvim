@@ -217,6 +217,7 @@ function Controller:triggering_completion(options)
                 local json = table.concat(stdout, '')
                 local _, version = pcall(vim.fn.json_decode, json)
                 if not _ or version == nil then
+                    Log.error('Failed to get completion version: {}', json)
                     reject()
                 else
                     resolve(version)
@@ -241,11 +242,13 @@ function Controller:triggering_completion(options)
                     timing.generate_one_stage.on_once = vim.uv.hrtime()
                     local _, json = pcall(vim.json.decode, table.concat(stdout, ''))
                     if not _ then
+                        Log.error('Failed to decode completion response: {}', json)
                         reject()
                         return
                     end
                     local completion = self:generate_completion(json)
                     if not completion then
+                        Log.error('Failed to generate completion: {}', json)
                         reject()
                         return
                     end
