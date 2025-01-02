@@ -191,14 +191,15 @@ function Controller:triggering_completion(options)
         return
     end
 
-    if self.session then
-        self.session:destory()
-        self.session = nil
-    end
     for _, handle in ipairs(self.request_handles) do
         handle:abort()
     end
     self.request_handles = {}
+
+    if self.session then
+        self.session:destory()
+        self.session = nil
+    end
 
     local timing = {}
     timing.triggering = vim.uv.hrtime()
