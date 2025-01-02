@@ -61,13 +61,13 @@ local function spawn(exe, args, options)
     end)
     Fn.schedule_call(options.on_create, { process = process, pid = pid, })
 
-    local function callback(stream, std)
+    local function callback(stream, received_data)
         return function(err, chunk)
             if err then
                 Fn.schedule_call(options.on_error, { stderr = uv_stderr, error = err, })
             elseif chunk then
                 Fn.schedule_call(options.on_stream, chunk)
-                std[#std + 1] = chunk
+                received_data[#received_data + 1] = chunk
             else
                 stream:read_stop()
             end
@@ -177,7 +177,7 @@ end
 function M.post(url, opts)
     local _, body = pcall(vim.fn.json_encode, opts.body)
     if not _ then
-        Fn.schedule_call(opts.on_error)
+        Fn.schedule_call(opts.on_error, { error = body })
         return
     end
     if not opts.compress then
