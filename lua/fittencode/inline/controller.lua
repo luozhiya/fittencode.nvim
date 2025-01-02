@@ -201,12 +201,19 @@ function Controller:triggering_completion(options)
         self.session = nil
     end
 
-    local timing = {}
+    local timing = {
+        get_completion_version = {},
+        generate_one_stage = {}
+    }
     timing.triggering = vim.uv.hrtime()
 
     Promise:new(function(resolve, reject)
         local gcv_options = {
+            on_create = function()
+                timing.get_completion_version.on_create = vim.uv.hrtime()
+            end,
             on_once = function(stdout)
+                timing.get_completion_version.on_once = vim.uv.hrtime()
                 local json = table.concat(stdout, '')
                 local _, version = pcall(vim.fn.json_decode, json)
                 if not _ or version == nil then
@@ -216,6 +223,7 @@ function Controller:triggering_completion(options)
                 end
             end,
             on_error = function()
+                timing.get_completion_version.on_error = vim.uv.hrtime()
                 reject()
             end
         }
@@ -227,11 +235,11 @@ function Controller:triggering_completion(options)
                 completion_version = version,
                 prompt = self:generate_prompt(buf, row - 1, col),
                 on_create = function()
-                    timing.on_create = vim.uv.hrtime()
+                    timing.generate_one_stage.on_create = vim.uv.hrtime()
                 end,
-                on_once = function(data)
-                    timing.on_once = vim.uv.hrtime()
-                    local _, json = pcall(vim.json.decode, table.concat(data.output, ''))
+                on_once = function(stdout)
+                    timing.generate_one_stage.on_once = vim.uv.hrtime()
+                    local _, json = pcall(vim.json.decode, table.concat(stdout, ''))
                     if not _ then
                         reject()
                         return
@@ -244,7 +252,7 @@ function Controller:triggering_completion(options)
                     resolve(completion)
                 end,
                 on_error = function()
-                    timing.on_error = vim.uv.hrtime()
+                    timing.generate_one_stage.on_error = vim.uv.hrtime()
                     reject()
                 end
             }
