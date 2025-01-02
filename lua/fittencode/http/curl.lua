@@ -233,8 +233,7 @@ function M.fetch(url, options)
         local aborted = false
         ---@type uv_process_t?
         local process = nil
-        local o2 = vim.deepcopy(options)
-        vim.tbl_deep_extend('force', o2, {
+        local abortable_options = vim.tbl_deep_extend('force', options, {
             on_create = vim.schedule_wrap(function(data)
                 if aborted then return end
                 process = data.process
@@ -253,10 +252,11 @@ function M.fetch(url, options)
                 Fn.schedule_call(options.on_error, data)
             end),
             on_exit = vim.schedule_wrap(function(data)
+                if aborted then return end
                 Fn.schedule_call(options.on_exit, data)
             end),
         })
-        Fn.schedule_call(M[string.lower(options.method)], url, o2)
+        Fn.schedule_call(M[string.lower(options.method)], url, abortable_options)
         return {
             abort = function()
                 if not aborted then
