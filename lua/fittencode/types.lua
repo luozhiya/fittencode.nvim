@@ -265,10 +265,6 @@
 
 ---@class FittenCode.Inline.Model
 ---@field mode 'lines' | 'multi_segments' | 'edit_completion'
----@field row number
----@field col number
----@field commit_row number
----@field commit_col number
 ---@field accept function
 ---@field make_state function
 ---@field clear function

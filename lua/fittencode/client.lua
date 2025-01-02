@@ -386,6 +386,24 @@ function M.generate_one_stage(options)
     return HTTP.fetch(url, req)
 end
 
+function M.accept_completion(options)
+    local key = M.get_ft_token()
+    if not key then
+        Fn.schedule_call(options.on_error)
+        return
+    end
+    local headers = {
+        ['Content-Type'] = 'application/json',
+    }
+    local url = M.server_url() .. preset_urls.accept .. '/' .. key
+    local req = make_req_from_options(options, {
+        method = 'POST',
+        headers = headers,
+        body = options.prompt,
+    })
+    return HTTP.fetch(url, req)
+end
+
 function M.chat(options)
     local key = M.get_ft_token()
     if not key then

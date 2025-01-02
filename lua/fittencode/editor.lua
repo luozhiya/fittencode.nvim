@@ -1,4 +1,5 @@
 local Log = require('fittencode.log')
+local Position = require('fittencode.position')
 
 ---@class FittenCode.Editor
 local Editor = {}
@@ -111,6 +112,20 @@ function Editor.word_count(buf)
         wc = vim.fn.wordcount()
     end)
     return wc.chars
+end
+
+-- Return the zero-based current position of the cursor in the window
+---@param win integer?
+---@return FittenCode.Position?
+function Editor.position(win)
+    if not win or not vim.api.nvim_win_is_valid(win) then
+        return
+    end
+    local row, col = unpack(vim.api.nvim_win_get_cursor(win))
+    return Position:new({
+        row = row - 1,
+        col = col,
+    })
 end
 
 ---@param buf integer?

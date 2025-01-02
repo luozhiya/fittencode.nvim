@@ -89,21 +89,46 @@ function Controller:lazy_completion()
     end
 end
 
-local function vie(buf, e, r, n)
+local function vie(buf, a, b, n)
     local i = Editor.word_count(buf)
-    local s = t:offsetAt(e)
-    local o = t:offsetAt(r)
+    local s = t:offsetAt(a)
+    local o = t:offsetAt(b)
     local a = math.max(0, s - n)
     local A = math.min(i, o + n)
     local l = t:positionAt(a)
     local u = t:positionAt(A)
-    local c = t:getText(N.Range(l, e))
-    local h = t:getText(N.Range(r, u))
+    local c = t:getText(N.Range(l, s))
+    local h = t:getText(N.Range(b, u))
     return c .. '<fim_middle>' .. h
 end
 
-function Controller:generate_prompt(buf, row, col)
-    local within_the_line = col ~= string.len(vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1])
+---@class FittenCode.Inline.Prompt
+---@field inputs string
+---@field meta_datas FittenCode.Inline.Prompt.MetaDatas
+
+---@class FittenCode.Inline.Prompt.MetaDatas
+---@field plen number
+---@field slen number
+---@field bplen number
+---@field bslen number
+---@field pmd5 string
+---@field nmd5 string
+---@field diff string
+---@field filename string
+---@field cpos number
+---@field bcpos number
+---@field pc_available boolean
+---@field pc_prompt string
+---@field pc_prompt_type string
+
+---@param buf number
+---@param position FittenCode.Position?
+---@return FittenCode.Inline.Prompt?
+function Controller:generate_prompt(buf, position)
+    if not position then
+        return
+    end
+    local within_the_line = position.col ~= string.len(vim.api.nvim_buf_get_lines(buf, position.row, position.row + 1, false)[1])
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
         return
     end
@@ -119,10 +144,11 @@ function Controller:generate_prompt(buf, row, col)
     local A = ''
     local max_chars = 22e4
     if Editor.word_count(buf).chars <= max_chars then
-        local prefix = table.concat(vim.api.nvim_buf_get_text(buf, 0, 0, row, col, {}), '\n')
-        local suffix = table.concat(vim.api.nvim_buf_get_text(buf, row, col, -1, -1, {}), '\n')
-        local pos = Position:new({ line = row, character = col })
-        A = vie(buf, pos, pos, 100)
+        local prefix = table.concat(vim.api.nvim_buf_get_text(buf, 0, 0, position.row, position.col, {}), '\n')
+        local suffix = table.concat(vim.api.nvim_buf_get_text(buf, position.row, position.col, -1, -1, {}), '\n')
+        local a = position:clone()
+        local b = position:clone()
+        A = vie(buf, a, b, 100)
     end
     return {
         inputs = '',
@@ -144,8 +170,32 @@ function Controller:generate_prompt(buf, row, col)
     }
 end
 
-function Controller:generate_completion(data)
-    local generated_text = (vim.fn.substitute(data.generated_text, '<|endoftext|>', '', 'g') or '') .. data.ex_msg
+---@class FittenCode.Inline.Completion
+---@field response FittenCode.Inline.GenerateOneStageResponse
+---@field position FittenCode.Position
+
+---@class FittenCode.Inline.GenerateOneStageResponse
+---@field request_id string
+---@field completions FittenCode.Inline.GenerateOneStageResponse.Completion[]
+---@field context any
+
+---@class FittenCode.Inline.GenerateOneStageResponse.Completion
+---@field generated_text string
+---@field col_delta number
+---@field row_delta number
+
+---@class FittenCode.Inline.RawGenerateOneStageResponse
+---@field server_request_id string
+---@field generated_text string
+---@field ex_msg string
+---@field delta_char number
+---@field delta_line number
+
+---@param data FittenCode.Inline.RawGenerateOneStageResponse
+---@return FittenCode.Inline.GenerateOneStageResponse?
+function Controller:completion_response(data)
+    assert(data)
+    local generated_text = (vim.fn.substitute(data.generated_text or '', '<|endoftext|>', '', 'g') or '') .. (data.ex_msg or '')
     if generated_text == '' then
         return
     end
@@ -157,7 +207,7 @@ function Controller:generate_completion(data)
             {
                 generated_text = generated_text,
                 col_delta = col_delta,
-                row_delta = data.delta_line
+                row_delta = data.delta_line or 0,
             },
         },
         context = nil -- TODO: implement fim context
@@ -170,6 +220,18 @@ function Controller:is_filetype_excluded(buf)
         ft = vim.api.nvim_get_option_value('filetype', { buf = buf })
     end)
     return vim.tbl_contains(Config.disable_specific_inline_completion.suffixes, ft)
+end
+
+function Controller:cleanup_session()
+    for _, handle in ipairs(self.request_handles) do
+        handle:abort()
+    end
+    self.request_handles = {}
+
+    if self.session then
+        self.session:destory()
+        self.session = nil
+    end
 end
 
 function Controller:triggering_completion(options)
@@ -185,21 +247,13 @@ function Controller:triggering_completion(options)
     if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
         return
     end
-    local row, col = unpack(vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win()))
+    local position = Editor.position(vim.api.nvim_get_current_win())
     options.force = (options.force == nil) and false or options.force
-    if not options.force and self.session and self.session:cache_hit(row, col) then
+    if not options.force and self.session and self.session:cache_hit(position) then
         return
     end
 
-    for _, handle in ipairs(self.request_handles) do
-        handle:abort()
-    end
-    self.request_handles = {}
-
-    if self.session then
-        self.session:destory()
-        self.session = nil
-    end
+    self:cleanup_session()
 
     local timing = {
         get_completion_version = {},
@@ -231,10 +285,10 @@ function Controller:triggering_completion(options)
         self.request_handles[#self.request_handles + 1] = Client.get_completion_version(gcv_options)
     end):forward(function(version)
         return Promise:new(function(resolve, reject)
-            Log.debug('Triggering completion for row: {}, col: {}', row, col)
+            Log.debug('Triggering completion for position {}', position)
             local gos_options = {
                 completion_version = version,
-                prompt = self:generate_prompt(buf, row - 1, col),
+                prompt = self:generate_prompt(buf, position),
                 on_create = function()
                     timing.generate_one_stage.on_create = vim.uv.hrtime()
                 end,
@@ -246,7 +300,7 @@ function Controller:triggering_completion(options)
                         reject()
                         return
                     end
-                    local completion = self:generate_completion(json)
+                    local completion = self:completion_response(json)
                     if not completion then
                         Log.error('Failed to generate completion: {}', json)
                         reject()
@@ -266,8 +320,7 @@ function Controller:triggering_completion(options)
     end):forward(function(completion)
         local model = Model:new({
             buf = buf,
-            row = row,
-            col = col,
+            position = position,
             completion = completion,
         })
         local view = View:new({ buf = buf })
