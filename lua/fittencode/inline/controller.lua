@@ -204,7 +204,7 @@ function Controller:triggering_completion(options)
     timing.triggering = vim.uv.hrtime()
 
     Promise:new(function(resolve, reject)
-        local gov_options = {
+        local gcv_options = {
             on_once = function(stdout)
                 local json = table.concat(stdout, '')
                 local _, version = pcall(vim.fn.json_decode, json)
@@ -218,7 +218,7 @@ function Controller:triggering_completion(options)
                 reject()
             end
         }
-        self.request_handles[#self.request_handles + 1] = Client.get_completion_version(gov_options)
+        self.request_handles[#self.request_handles + 1] = Client.get_completion_version(gcv_options)
     end):forward(function(version)
         return Promise:new(function(resolve, reject)
             Log.debug('Triggering completion for row: {}, col: {}', row, col)
