@@ -8,89 +8,82 @@ local M = {}
 local executables = {
     gzip = {
         cmd = 'gzip',
-        default_args = {
+        args = {
             '--no-name',
             '--force',
             '--quiet'
         },
-        exit_code_success = 0
+        code = 0
     },
     curl = {
         cmd = 'curl',
-        default_args = {
+        args = {
             '-s',
             '--connect-timeout',
             Config.http.timeout,
             '--show-error',
         },
-        exit_code_success = 0
+        code = 0
     }
 }
 
-local function spawn(exe, args, opts)
-    local on_once = function(data)
-        local exit_code = data.exit_code
-        if exit_code ~= exe.exit_code_success then
-            Fn.schedule_call(opts.on_error, { exit_code = exit_code, error = data.error, })
-        else
-            Fn.schedule_call(opts.on_once, { output = data.output })
-        end
-    end
-
-    local output = {}
-    local error = {}
+local function spawn(exe, args, options)
+    local stdout = {}
+    local stderr = {}
     local process = nil
     local pid = nil
-    local stdout = assert(vim.uv.new_pipe())
-    local stderr = assert(vim.uv.new_pipe())
+    local uv_stdout = assert(vim.uv.new_pipe())
+    local uv_stderr = assert(vim.uv.new_pipe())
 
     ---@diagnostic disable-next-line: missing-fields
     process, pid = vim.uv.spawn(exe.cmd, {
         args = args,
-        stdio = { nil, stdout, stderr },
+        stdio = { nil, uv_stdout, uv_stderr },
         verbatim = true,
-    }, function(exit_code, exit_signal)
+    }, function(code, signal)
         assert(process)
         process:close()
-        stdout:close()
-        stderr:close()
+        uv_stdout:close()
+        uv_stderr:close()
         local check = assert(vim.uv.new_check())
         check:start(function()
-            if not stdout:is_closing() or not stderr:is_closing() then
+            if not uv_stdout:is_closing() or not uv_stderr:is_closing() then
                 return
             end
             check:stop()
-            if exit_signal ~= 0 then
-                Fn.schedule_call(opts.on_error, { exit_signal = exit_signal, })
+            if signal == 0 or code == exe.code then
+                Fn.schedule_call(options.on_once, stdout)
             else
-                Fn.schedule_call(on_once, { exit_code = exit_code, output = output, error = error, })
+                Fn.schedule_call(options.on_error, { signal = signal, code = code, stderr = stderr })
             end
-            Fn.schedule_call(opts.on_exit, { exit_code = exit_code })
+            Fn.schedule_call(options.on_exit, { code = code, signal = signal, stderr = stderr, stdout = stdout })
         end)
     end)
-    Fn.schedule_call(opts.on_create, { process = process, pid = pid, })
+    Fn.schedule_call(options.on_create, { process = process, pid = pid, })
 
-    local function on_stdout(err, chunk)
-        Fn.schedule_call(opts.on_stream, { error = err, chunk = chunk })
-        if not err and chunk then
-            output[#output + 1] = chunk
+    local function callback(stream, std)
+        return function(err, chunk)
+            if err then
+                Fn.schedule_call(options.on_error, { stderr = uv_stderr, error = err, })
+            elseif chunk then
+                Fn.schedule_call(options.on_stream, chunk)
+                std[#std + 1] = chunk
+            else
+                stream:read_stop()
+            end
         end
     end
-    local function on_stderr(err, chunk)
-        if not err and chunk then
-            error[#error + 1] = chunk
-        end
-    end
-    vim.uv.read_start(stdout, function(err, chunk) on_stdout(err, chunk) end)
-    vim.uv.read_start(stderr, function(err, chunk) on_stderr(err, chunk) end)
+
+    vim.uv.read_start(uv_stdout, callback(uv_stdout, stdout))
+    vim.uv.read_start(uv_stderr, callback(uv_stderr, stderr))
 end
 
-local function build_curl_args(args, opts)
-    if opts.no_buffer then
+local function build_curl_args(args, options)
+    if options.no_buffer then
         args[#args + 1] = '--no-buffer'
     end
-    local headers = opts.headers or {}
-    vim.list_extend(args, executables.curl.default_args)
+    local headers = options.headers or {}
+    vim.list_extend(args, executables.curl.args)
     for k, v in pairs(headers) do
         args[#args + 1] = '-H'
         if Fn.is_windows() then
@@ -102,12 +95,12 @@ local function build_curl_args(args, opts)
     return args
 end
 
-function M.get(url, opts)
+function M.get(url, options)
     local args = {
         url,
     }
-    build_curl_args(args, opts)
-    spawn(executables.curl, args, opts)
+    build_curl_args(args, options)
+    spawn(executables.curl, args, options)
 end
 
 -- libuv command line length limit
@@ -128,7 +121,7 @@ local function arg_max()
     return max_arg_length
 end
 
-local function _post(url, opts)
+local function _post(url, options)
     local args = {
         url,
         '-X',
@@ -138,21 +131,21 @@ local function _post(url, opts)
         v[#v + 1] = '-d'
         v[#v + 1] = is_file and ('@' .. data) or data
     end
-    build_curl_args(args, opts)
-    if type(opts.body) == 'string' and vim.fn.filereadable(opts.body) == 1 then
-        add_data(args, opts.body, true)
-        spawn(executables.curl, args, opts)
+    build_curl_args(args, options)
+    if type(options.body) == 'string' and vim.fn.filereadable(options.body) == 1 then
+        add_data(args, options.body, true)
+        spawn(executables.curl, args, options)
         return
     end
-    if not Fn.is_windows() and #opts.body <= arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
-        add_data(args, opts.body, false)
-        spawn(executables.curl, args, opts)
+    if not Fn.is_windows() and #options.body <= arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
+        add_data(args, options.body, false)
+        spawn(executables.curl, args, options)
     else
         Promise:new(function(resolve)
             local tmpfile = vim.fn.tempname()
             vim.uv.fs_open(tmpfile, 'w', 438, function(e_open, fd)
                 if e_open then
-                    Fn.schedule_call(opts.on_error, { error = e_open, })
+                    Fn.schedule_call(options.on_error, { error = e_open, })
                 else
                     assert(fd ~= nil)
                     resolve({ fd = fd, tmpfile = tmpfile })
@@ -160,21 +153,21 @@ local function _post(url, opts)
             end)
         end):forward(function(data)
             return Promise:new(function(resolve)
-                vim.uv.fs_write(data.fd, opts.body, -1, function(e_write, _)
+                vim.uv.fs_write(data.fd, options.body, -1, function(e_write, _)
                     if e_write then
-                        Fn.schedule_call(opts.on_error, { error = e_write, })
+                        Fn.schedule_call(options.on_error, { error = e_write, })
                     else
                         vim.uv.fs_close(data.fd, function(_, _) end)
-                        resolve({ tmpfile = data.tmpfile })
+                        resolve(data.tmpfile)
                     end
                 end)
             end)
-        end):forward(function(data)
-            add_data(args, data.tmpfile, true)
-            local co = vim.deepcopy(opts)
+        end):forward(function(tmpfile)
+            add_data(args, tmpfile, true)
+            local co = vim.deepcopy(options)
             co.on_exit = function()
-                Fn.schedule_call(opts.on_exit)
-                vim.uv.fs_unlink(data.tmpfile, function(_, _) end)
+                Fn.schedule_call(options.on_exit)
+                vim.uv.fs_unlink(tmpfile, function(_, _) end)
             end
             spawn(executables.curl, args, co)
         end)
@@ -184,7 +177,7 @@ end
 function M.post(url, opts)
     local _, body = pcall(vim.fn.json_encode, opts.body)
     if not _ then
-        Fn.schedule_call(opts.on_error, { error = 'vim.fn.json_encode failed', })
+        Fn.schedule_call(opts.on_error)
         return
     end
     if not opts.compress then
@@ -208,25 +201,26 @@ function M.post(url, opts)
                         Fn.schedule_call(opts.on_error, { error = e_write, })
                     else
                         vim.uv.fs_close(data.fd, function(_, _) end)
-                        resolve({ tmpfile = data.tmpfile })
+                        resolve(data.tmpfile)
                     end
                 end)
             end)
-        end):forward(function(data)
+        end):forward(function(tmpfile)
             local args = {
-                data.tmpfile,
+                tmpfile,
             }
-            vim.list_extend(args, executables.gzip.default_args)
+            vim.list_extend(args, executables.gzip.args)
             local go = {
-                on_once = function()
-                    opts.body = data.tmpfile .. '.gz'
+                on_exit = function()
+                    local gz = tmpfile .. '.gz'
+                    opts.body = gz
                     opts.on_exit = function()
                         Fn.schedule_call(opts.on_exit)
-                        vim.uv.fs_unlink(data.tmpfile, function(_, _) end)
+                        vim.uv.fs_unlink(gz, function(_, _) end)
                     end
                     _post(url, opts)
                 end,
-                on_eroor = opts.on_error,
+                on_error = opts.on_error,
             }
             spawn(executables.gzip, args, go)
         end)
@@ -246,17 +240,13 @@ function M.fetch(url, options)
                 process = data.process
                 Fn.schedule_call(options.on_create)
             end),
+            on_stream = vim.schedule_wrap(function(chunk)
+                if aborted then return end
+                Fn.schedule_call(options.on_stream, chunk)
+            end),
             on_once = vim.schedule_wrap(function(data)
                 if aborted then return end
                 Fn.schedule_call(options.on_once, data)
-            end),
-            on_stream = vim.schedule_wrap(function(data)
-                if aborted then return end
-                if data.error then
-                    Fn.schedule_call(options.on_error, { error = data.error })
-                else
-                    Fn.schedule_call(options.on_stream, { chunk = data.chunk })
-                end
             end),
             on_error = vim.schedule_wrap(function(data)
                 if aborted then return end
@@ -271,15 +261,18 @@ function M.fetch(url, options)
             abort = function()
                 if not aborted then
                     pcall(function()
-                        assert(process)
-                        vim.uv.process_kill(process)
+                        if process then
+                            vim.uv.process_kill(process)
+                        end
                     end)
                     aborted = true
                 end
             end,
             is_active = function()
-                assert(process)
-                return vim.uv.is_active(process)
+                if process then
+                    return vim.uv.is_active(process)
+                end
+                return false
             end
         }
     end

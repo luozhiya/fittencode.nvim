@@ -159,8 +159,8 @@ function M.login(username, password, on_success, on_error)
             on_error = vim.schedule_wrap(function()
                 reject()
             end),
-            on_once = vim.schedule_wrap(function(data)
-                local _, login_data = pcall(vim.fn.json_decode, data.output)
+            on_once = vim.schedule_wrap(function(stdout)
+                local _, login_data = pcall(vim.fn.json_decode, stdout)
                 if not _ or login_data.code ~= 200 then
                     reject()
                 else
@@ -177,8 +177,8 @@ function M.login(username, password, on_success, on_error)
                 on_error = vim.schedule_wrap(function()
                     reject()
                 end),
-                on_once = vim.schedule_wrap(function(data)
-                    local _, fico_data = pcall(vim.fn.json_decode, data.output)
+                on_once = vim.schedule_wrap(function(stdout)
+                    local _, fico_data = pcall(vim.fn.json_decode, stdout)
                     if not _ or fico_data.data == nil or fico_data.data.fico_token == nil then
                         reject()
                     else
@@ -260,8 +260,8 @@ function M.login3rd(source, on_success, on_error)
             Promise:new(function(resolve, reject)
                 HTTP.get(check_url, {
                     on_error = vim.schedule_wrap(function() reject() end),
-                    on_once = vim.schedule_wrap(function(data)
-                        local _, fico_data = pcall(vim.fn.json_decode, data.output)
+                    on_once = vim.schedule_wrap(function(stdout)
+                        local _, fico_data = pcall(vim.fn.json_decode, stdout)
                         if not _ or fico_data.token == nil or fico_data.token == '' then
                             reject()
                         else
@@ -318,32 +318,21 @@ local function make_req_from_options(a, c)
     return vim.tbl_deep_extend('force', b, c)
 end
 
-function M.get_completion_version(on_success, on_error)
+function M.get_completion_version(options)
     local key = M.get_ft_token()
     if not key then
-        Fn.schedule_call(on_error)
+        Fn.schedule_call(options.on_error)
         return
     end
+    local headers = {
+        ['Content-Type'] = 'application/json',
+    }
     local url = M.server_url() .. preset_urls.get_completion_version .. '?ft_token=' .. key
-    Promise:new(function(resolve, reject)
-        HTTP.get(url, {
-            headers = {
-                ['Content-Type'] = 'application/json',
-            },
-            on_error = vim.schedule_wrap(function()
-                reject()
-            end),
-            on_once = vim.schedule_wrap(function(data)
-                local json = table.concat(data.output, '')
-                local _, version = pcall(vim.fn.json_decode, json)
-                if not _ or version == nil then
-                    reject()
-                else
-                    Fn.schedule_call(on_success, version)
-                end
-            end)
-        })
-    end):catch(function() Fn.schedule_call(on_error) end)
+    local req = make_req_from_options(options, {
+        method = 'GET',
+        headers = headers,
+    })
+    return HTTP.fetch(url, req)
 end
 
 -- Example of `completion_data`:
@@ -392,7 +381,6 @@ function M.generate_one_stage(options)
         method = 'POST',
         headers = headers,
         body = options.prompt,
-        no_buffer = false,
         compress = true,
     })
     return HTTP.fetch(url, req)

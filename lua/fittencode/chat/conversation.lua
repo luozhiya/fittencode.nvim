@@ -139,17 +139,17 @@ function Conversation:add_user_message(content, bot_action)
     self.update_view()
 end
 
----@param opts table
-function Conversation:execute_chat(opts)
+---@param options table
+function Conversation:execute_chat(options)
     if Config.server.fitten_version == 'default' then
-        opts.workspace = false
+        options.workspace = false
     end
-    if opts._workspace then
-        opts.workspace = true
+    if options._workspace then
+        options.workspace = true
     end
     local chat_api = Client.chat
-    if opts.workspace then
-        if not opts.enterprise_workspace then
+    if options.workspace then
+        if not options.enterprise_workspace then
             chat_api = Client.rag_chat
             Log.error('RAG chat is not implemented yet')
         end
@@ -174,24 +174,20 @@ function Conversation:execute_chat(opts)
                     project_id = '',
                 }
             }
-            local options = {
+            local co = {
                 prompt = prompt,
                 on_create = function()
                     self.update_status({ id = self.id, stream = true })
                 end,
-                on_stream = function(data)
+                on_stream = function(chunk)
+                    assert(chunk)
                     self.update_status({ id = self.id, stream = true })
-                    local chunk = data.chunk
-                    if not chunk then
-                        resolve({ completion = completion })
-                        return
-                    end
                     local v = vim.split(chunk, '\n', { trimempty = true })
                     for _, line in ipairs(v) do
-                        local ok, result = pcall(vim.fn.json_decode, line)
-                        if ok then
-                            completion[#completion + 1] = result.delta
-                            self:handle_partial_completion(table.concat(completion, ''))
+                        local _, json = pcall(vim.fn.json_decode, line)
+                        if _ then
+                            completion[#completion + 1] = json.delta
+                            self:handle_partial_completion(completion)
                         else
                             Log.error('Error while decoding chunk: {}', line)
                             reject(line)
@@ -202,15 +198,13 @@ function Conversation:execute_chat(opts)
                     reject(error)
                 end,
                 on_exit = function()
-                    resolve({ completion = completion })
+                    resolve(completion)
                 end
             }
-            self.request_handle = Client.chat(options)
-        end):forward(function(data)
+            self.request_handle = Client.chat(co)
+        end):forward(function(completion)
             self.update_status({ id = self.id, stream = false })
-            if #data.completion > 0 then
-                self:handle_completion(table.concat(data.completion, ''))
-            end
+            self:handle_completion(completion)
         end, function(error)
             self.update_status({ id = self.id, stream = false })
             Log.error('Error while executing chat, conversation id = {}, error = {}', self.id, error)
@@ -218,61 +212,64 @@ function Conversation:execute_chat(opts)
     end
 end
 
-function Conversation:handle_completion(e, r)
-    e = e or ''
-    local n = (r and r.completion_handler) or { type = 'message' }
-    local i = n.type
-    local s = e
-    if i == 'update-temporary-editor' then
+---@param completion table
+---@param env table?
+function Conversation:handle_completion(completion, env)
+    completion = completion or {}
+    local handler = (env and env.completion_handler) or { type = 'message' }
+    local type = handler.type
+    local content = table.concat(completion, '')
+    if type == 'update-temporary-editor' then
         Log.error('Not implemented for update-temporary-editor')
-    elseif i == 'active-editor-diff' then
+    elseif type == 'active-editor-diff' then
         Log.error('Not implemented for active-editor-diff')
-    elseif i == 'message' then
-        self:add_bot_message({ content = s })
+    elseif type == 'message' then
+        self:add_bot_message({ content = content })
     else
-        Log.error('Unsupported property: ' .. i)
+        Log.error('Unsupported property: ' .. type)
     end
 end
 
----@param e table
-function Conversation:add_bot_message(e)
+---@param msg table
+function Conversation:add_bot_message(msg)
     if self.abort_before_answer then
         self.abort_before_answer = false
         return
     end
     self.messages[#self.messages + 1] = {
         author = 'bot',
-        content = e.content,
+        content = msg.content,
         reference = self.reference,
     }
     self.state = {
         type = 'user_can_reply',
-        response_placeholder = e.response_placeholder
+        response_placeholder = msg.response_placeholder
     }
     self.update_view()
 end
 
----@param content string
-function Conversation:handle_partial_completion(content)
-    local n = { type = 'message' }
-    local i = n.type
+---@param completion table<string>
+function Conversation:handle_partial_completion(completion)
+    local handler = { type = 'message' }
+    local type = handler.type
+    local content = table.concat(completion, '')
 
-    if i == 'update-temporary-editor' then
+    if type == 'update-temporary-editor' then
         Log.error('Not implemented for update-temporary-editor')
-    elseif i == 'active-editor-diff' then
+    elseif type == 'active-editor-diff' then
         Log.error('Not implemented for active-editor-diff')
-    elseif i == 'message' then
+    elseif type == 'message' then
         self:update_partial_bot_message({ content = content })
     else
-        Log.error('Unsupported property: ' .. i)
+        Log.error('Unsupported property: ' .. type)
     end
 end
 
----@param e table
-function Conversation:update_partial_bot_message(e)
+---@param msg table
+function Conversation:update_partial_bot_message(msg)
     self.state = {
         type = 'bot_answer_streaming',
-        partial_answer = e.content
+        partial_answer = msg.content
     }
     self.update_view()
 end
