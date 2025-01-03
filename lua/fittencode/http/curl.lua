@@ -127,18 +127,18 @@ local function _post(url, options)
         '-X',
         'POST',
     }
-    local function add_data(v, data, is_file)
-        v[#v + 1] = '-d'
+    local function add_data(v, data, bin, is_file)
+        v[#v + 1] = bin and '--data-binary' or '-d'
         v[#v + 1] = is_file and ('@' .. data) or data
     end
     build_curl_args(args, options)
     if type(options.body) == 'string' and vim.fn.filereadable(options.body) == 1 then
-        add_data(args, options.body, true)
+        add_data(args, options.body, options.binaray, true)
         spawn(executables.curl, args, options)
         return
     end
     if not Fn.is_windows() and #options.body <= arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
-        add_data(args, options.body, false)
+        add_data(args, options.body, options.binaray, false)
         spawn(executables.curl, args, options)
     else
         Promise:new(function(resolve)
@@ -163,7 +163,7 @@ local function _post(url, options)
                 end)
             end)
         end):forward(function(tmpfile)
-            add_data(args, tmpfile, true)
+            add_data(args, tmpfile, options.binaray, true)
             local co = vim.deepcopy(options)
             co.on_exit = function()
                 Fn.schedule_call(options.on_exit)
@@ -215,6 +215,7 @@ function M.post(url, options)
                     local gz = tmpfile .. '.gz'
                     local co = vim.deepcopy(options)
                     co.body = gz
+                    co.binary = true
                     co.on_exit = function()
                         Fn.schedule_call(options.on_exit)
                         vim.uv.fs_unlink(gz, function(_, _) end)
