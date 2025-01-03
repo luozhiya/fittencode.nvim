@@ -1,21 +1,12 @@
 local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 
+-- Provide `TextDocument` interface for vim buffer.
 ---@class FittenCode.Editor
-local Editor = {}
-
----@type integer?
-local active = nil
-
----@type FittenCode.Editor.Selection?
-local selection = nil
-
----@type table<integer>
-local filter_bufs = {}
+local M = {}
 
 ---@return string?
-function Editor.ft_vsclang(buf)
-    buf = buf or Editor.active()
+function M.language_id(buf)
     if not buf then
         return
     end
@@ -35,8 +26,7 @@ function Editor.ft_vsclang(buf)
 end
 
 ---@return string?
-function Editor.filename(buf)
-    buf = buf or Editor.active()
+function M.filename(buf)
     if not buf then
         return
     end
@@ -47,9 +37,42 @@ function Editor.filename(buf)
     return name
 end
 
+function M.is_dirty(buf)
+    if not buf then
+        return
+    end
+    local dirty
+    vim.api.nvim_buf_call(buf, function()
+        local info = vim.fn.getbufinfo(buf)
+        dirty = info[1].changed
+    end)
+    return dirty
+end
+
+function M.line_count(buf)
+    if not buf then
+        return
+    end
+    local count
+    vim.api.nvim_buf_call(buf, function()
+        count = vim.api.nvim_buf_line_count(buf)
+    end)
+    return count
+end
+
+function M.line_at(buf, position)
+    if not buf then
+        return
+    end
+    local line
+    vim.api.nvim_buf_call(buf, function()
+        line = vim.api.nvim_buf_get_lines(buf, position.row, position.row + 1, false)[1]
+    end)
+    return line
+end
+
 ---@return string?
-function Editor.content(buf)
-    buf = buf or Editor.active()
+function M.content(buf)
     if not buf then
         return
     end
@@ -60,8 +83,7 @@ function Editor.content(buf)
     return content
 end
 
-function Editor.workspace(buf)
-    buf = buf or Editor.active()
+function M.workspace(buf)
     if not buf then
         return
     end
@@ -72,12 +94,8 @@ function Editor.workspace(buf)
     return ws
 end
 
-function Editor.register_filter_buf(buf)
-    filter_bufs[#filter_bufs + 1] = buf
-end
-
 ---@return boolean, string?
-function Editor.is_filebuf(buf)
+function M.is_filebuf(buf)
     local ok, r = pcall(vim.api.nvim_buf_is_valid, buf)
     if not ok or not r then
         return false
@@ -102,8 +120,7 @@ end
 --     cursor_words = 1,
 --     words = 1
 -- }
-function Editor.word_count(buf)
-    buf = buf or Editor.active()
+function M.wordcount(buf)
     if not buf then
         return
     end
@@ -111,13 +128,66 @@ function Editor.word_count(buf)
     vim.api.nvim_buf_call(buf, function()
         wc = vim.fn.wordcount()
     end)
-    return wc.chars
+    return wc
+end
+
+-- Return the zero-based characters offset of the position in the buffer
+---@param buf integer?
+---@param position FittenCode.Position
+---@return number?
+function M.offset_at(buf, position)
+    if not buf then
+        return
+    end
+    local offset
+    vim.api.nvim_buf_call(buf, function()
+        local lines = vim.api.nvim_buf_get_text(buf, 0, 0, position.row, position.col, {})
+        Log.debug('offset_at lines = {}', lines)
+        vim.tbl_map(function(line)
+            local utf = vim.str_utf_pos(line)
+            if not offset then
+                offset = 0
+            end
+            offset = offset + #utf
+        end, lines)
+    end)
+    return offset
+end
+
+-- Return the position at the given zero-based characters offset in the buffer
+---@param buf integer?
+---@param offset number Character offset in the buffer.
+---@return FittenCode.Position?
+function M.position_at(buf, offset)
+    if not buf then
+        return
+    end
+    local pos
+    vim.api.nvim_buf_call(buf, function()
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        Log.debug('position_at lines = {}', lines)
+        local index = 0
+        while offset > 0 do
+            local line = lines[index + 1]
+            local utf = vim.str_utf_pos(line)
+            if offset > #utf then
+                index = index + 1
+            else
+                pos = Position:new({
+                    row = index,
+                    col = vim.str_byteindex(line, 'utf-8', offset),
+                })
+            end
+            offset = offset - #utf
+        end
+    end)
+    return pos
 end
 
 -- Return the zero-based current position of the cursor in the window
 ---@param win integer?
 ---@return FittenCode.Position?
-function Editor.position(win)
+function M.position(win)
     if not win or not vim.api.nvim_win_is_valid(win) then
         return
     end
@@ -128,139 +198,15 @@ function Editor.position(win)
     })
 end
 
----@param buf integer?
----@param pos FittenCode.Position
----@return integer?
-function Editor.offset_at(buf, pos)
-    buf = buf or Editor.active()
-    if not buf then
-        return
-    end
-    local offset
-    vim.api.nvim_buf_call(buf, function()
-        local lines = vim.api.nvim_buf_get_text(buf, 0, 0, pos.line, pos.character, {})
-        vim.tbl_map(function(line)
-            offset = offset + #line + 1
-        end, lines)
-    end)
-    return offset
+---@param text string A UTF-8 string.
+---@param delta number The delta based on characters
+---@return number?
+function M.characters_delta_to_columns(text, delta)
+    return vim.str_byteindex(text, 'utf-8', delta, false)
 end
 
----@return integer?
-function Editor.active()
-    if Editor.is_filebuf(active) then
-        return active
-    end
+function M.columns_to_characters_delta(text, columns)
+    return vim.str_utfindex(text, 'utf-8', columns, false)
 end
 
-vim.api.nvim_create_autocmd({ 'BufEnter' }, {
-    group = vim.api.nvim_create_augroup('fittencode.editor.active', { clear = true }),
-    pattern = '*',
-    callback = function(args)
-        if vim.tbl_contains(filter_bufs, args.buf) then
-            return
-        end
-        if Editor.is_filebuf(args.buf) then
-            active = args.buf
-            vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.ActiveChanged', modeline = false, data = args.buf })
-        end
-    end
-})
-
-vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
-    group = vim.api.nvim_create_augroup('fittencode.editor.selection', { clear = true }),
-    pattern = '*',
-    callback = function(args)
-        if args.buf ~= Editor.active() then
-            return
-        end
-        local function v()
-            local modes = { ['v'] = true, ['V'] = true, [vim.api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
-            return modes[vim.api.nvim_get_mode().mode]
-        end
-        if v() then
-            local region = vim.fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
-            local pos = vim.fn.getregionpos(vim.fn.getpos('.'), vim.fn.getpos('v'))
-            local start = { pos[1][1][2], pos[1][1][3] }
-            local end_ = { pos[#pos][2][2], pos[#pos][2][3] }
-            selection = {
-                buf = args.buf,
-                name = vim.api.nvim_buf_get_name(args.buf),
-                text = region,
-                location = {
-                    start_row = start[1],
-                    start_col = start[2],
-                    end_row = end_[1],
-                    end_col = end_[2],
-                }
-            }
-            vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.SelectionChanged', modeline = false, data = selection })
-        end
-    end,
-    desc = 'Fittencode editor selection event',
-})
-
-function Editor.selection()
-    return selection
-end
-
-function Editor.selected_text()
-    local se = Editor.selection()
-    if not se then
-        return
-    end
-    return se.text
-end
-
-function Editor.selected_location_text()
-end
-
-function Editor.selected_range()
-    local se = Editor.selection()
-    if not se then
-        return
-    end
-    return {
-        name = se.name,
-        start_row = se.location.start_row,
-        end_row = se.location.end_row,
-    }
-end
-
-function Editor.selected_text_with_diagnostics(opts)
-    -- 1. Get selected text with lsp diagnostic info
-    -- 2. Format
-end
-
-function Editor.diagnose_info()
-    local error_code = ''
-    local error_line = ''
-    local surrounding_code = ''
-    local error_message = ''
-    local msg = [[The error code is:
-\`\`\`
-]] .. error_code .. [[
-\`\`\`
-The error line is:
-\`\`\`
-]] .. error_line .. [[
-\`\`\`
-The surrounding code is:
-\`\`\`
-]] .. surrounding_code .. [[
-\`\`\`
-The error message is: ]] .. error_message
-    return msg
-end
-
-function Editor.error_location()
-    local error_location = ''
-    return error_location
-end
-
-function Editor.title_selected_text()
-    local title_selected_text = ''
-    return title_selected_text
-end
-
-return Editor
+return M

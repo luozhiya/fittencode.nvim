@@ -74,30 +74,16 @@ function Controller:dismiss_suggestions()
     end
 end
 
-function Controller:lazy_completion()
-    if not string.match(vim.fn.mode(), '^[iR]') then
-        return
-    end
-    -- 1. input char == next char
-    -- move cached cursor to next char
-
-    -- 2. input char ~= next char
-    if self.session then
-        self.session:destructor()
-        self.session = nil
-    end
-end
-
-local function vie(buf, a, b, n)
-    local i = Editor.word_count(buf)
-    local s = t:offsetAt(a)
-    local o = t:offsetAt(b)
-    local a = math.max(0, s - n)
-    local A = math.min(i, o + n)
-    local l = t:positionAt(a)
-    local u = t:positionAt(A)
-    local c = t:getText(N.Range(l, s))
-    local h = t:getText(N.Range(b, u))
+local function make_context(buf, e, r, chars_size)
+    local i = Editor.wordcount(buf).chars
+    local s = Editor.offset_at(buf, e) or 0
+    local o = Editor.offset_at(buf, r) or 0
+    local a = math.max(0, s - chars_size)
+    local A = math.min(i, o + chars_size)
+    local l = Editor.position_at(buf, a) or { row = 0, col = 0 }
+    local u = Editor.position_at(buf, A) or { row = 0, col = 0 }
+    local c = vim.api.nvim_buf_get_text(buf, l.row, l.col, e.row, e.col, {})
+    local h = vim.api.nvim_buf_get_text(buf, r.row, r.col, u.row, u.col, {})
     return c .. '<fim_middle>' .. h
 end
 
@@ -142,12 +128,14 @@ function Controller:generate_prompt(buf, position)
 
     local A = ''
     local max_chars = 22e4
-    if Editor.word_count(buf).chars <= max_chars then
-        local prefix = table.concat(vim.api.nvim_buf_get_text(buf, 0, 0, position.row, position.col, {}), '\n')
-        local suffix = table.concat(vim.api.nvim_buf_get_text(buf, position.row, position.col, -1, -1, {}), '\n')
+    local wc = Editor.wordcount(buf)
+    if wc.chars <= max_chars then
+        local prefix = vim.api.nvim_buf_get_text(buf, 0, 0, position.row, position.col, {})
+        local suffix = vim.api.nvim_buf_get_text(buf, position.row, position.col, -1, -1, {})
         local a = position:clone()
         local b = position:clone()
-        A = vie(buf, a, b, 100)
+        A = make_context(buf, a, b, 100)
+        Log.debug('Context: {}', A)
     end
     return {
         inputs = '',
@@ -237,6 +225,7 @@ function Controller:triggering_completion(options)
     if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
         return
     end
+    Log.debug('1 completion')
     local buf = vim.api.nvim_get_current_buf()
     if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
         return
@@ -281,9 +270,10 @@ function Controller:triggering_completion(options)
     end):forward(function(version)
         return Promise:new(function(resolve, reject)
             Log.debug('Triggering completion for position {}', position)
+            local prompt = self:generate_prompt(buf, position)
             local gos_options = {
                 completion_version = version,
-                prompt = self:generate_prompt(buf, position),
+                prompt = prompt,
                 on_create = function()
                     self.session.timing.generate_one_stage.on_create = vim.uv.hrtime()
                 end,

@@ -16,13 +16,13 @@ local function unit_test_framework()
     tf['python'] = 'Python'
     tf['javascript'] = 'JavaScript/TypeScript'
     tf['typescript'] = tf['javascript']
-    return Config.unit_test_framework[tf[Editor.ft_vsclang()]] or ''
+    return Config.unit_test_framework[tf[Editor.language_id()]] or ''
 end
 
 function Runtime.resolve_variables_internal(v, e)
     local switch = {
         ['context'] = function()
-            return { name = Editor.filename(), language = Editor.ft_vsclang(), content = Editor.content() }
+            return { name = Editor.filename(), language = Editor.language_id(), content = Editor.content() }
         end,
         ['constant'] = function()
             return v.value
@@ -40,7 +40,7 @@ function Runtime.resolve_variables_internal(v, e)
             return Editor.filename()
         end,
         ['language'] = function()
-            return Editor.ft_vsclang()
+            return Editor.language_id()
         end,
         ['comment-snippet'] = function()
             return comment_snippet()

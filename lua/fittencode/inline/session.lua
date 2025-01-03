@@ -106,7 +106,7 @@ end
 function Session:destructor()
     self:abort_and_clear_requests()
     self.model:clear()
-    self:update_view()
+    self.view:clear()
     self:restore_keymaps()
     self:clear_autocmds()
 end
