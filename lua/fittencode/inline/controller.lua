@@ -86,25 +86,6 @@ local function make_context(buf, e, r, chars_size)
     return table.concat(c, '\n') .. '<fim_middle>' .. table.concat(h, '\n')
 end
 
----@class FittenCode.Inline.Prompt
----@field inputs string
----@field meta_datas FittenCode.Inline.Prompt.MetaDatas
-
----@class FittenCode.Inline.Prompt.MetaDatas
----@field plen number
----@field slen number
----@field bplen number
----@field bslen number
----@field pmd5 string
----@field nmd5 string
----@field diff string
----@field filename string
----@field cpos number
----@field bcpos number
----@field pc_available boolean
----@field pc_prompt string
----@field pc_prompt_type string
-
 ---@param buf number
 ---@param position FittenCode.Position?
 ---@return FittenCode.Inline.Prompt?
@@ -128,32 +109,20 @@ function Controller:generate_prompt(buf, position)
     local A = ''
     local max_chars = 22e4
     local wc = Editor.wordcount(buf)
+    local prefix
+    local suffix
     if wc.chars <= max_chars then
-        local prefix = vim.api.nvim_buf_get_text(buf, 0, 0, position.row, position.col, {})
-        local suffix = vim.api.nvim_buf_get_text(buf, position.row, position.col, -1, -1, {})
+        prefix = table.concat(vim.api.nvim_buf_get_text(buf, 0, 0, position.row, position.col, {}), '\n')
+        suffix = table.concat(vim.api.nvim_buf_get_text(buf, position.row, position.col, -1, -1, {}), '\n')
         local a = position:clone()
         local b = position:clone()
         A = make_context(buf, a, b, 100)
         Log.debug('Context: {}', A)
     end
-    return {
-        inputs = '',
-        meta_datas = {
-            plen = 0,
-            slen = 0,
-            bplen = 0,
-            bslen = 0,
-            pmd5 = '',
-            nmd5 = 'cfcd208495d565ef66e7dff9f98764da',
-            diff = '0',
-            filename = 'Untitled-1',
-            cpos = 1,
-            bcpos = 1,
-            pc_available = false,
-            pc_prompt = '',
-            pc_prompt_type = '4',
-        }
-    }
+    local WL = '<((fim_((prefix)|(suffix)|(middle)))|(%|[a-z]*%|))>'
+    prefix = vim.fn.substitute(prefix, WL, '', 'g')
+    suffix = vim.fn.substitute(suffix, WL, '', 'g')
+    local prompt = Prompt:new({ Editor.filename(buf), prefix, suffix, A })
 end
 
 ---@class FittenCode.Inline.Completion
