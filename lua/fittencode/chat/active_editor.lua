@@ -17,7 +17,7 @@ end
 
 ---@return integer?
 function M.buf()
-    if M.is_filebuf(active_buf) then
+    if Editor.is_filebuf(active_buf) then
         return active_buf
     end
 end

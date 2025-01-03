@@ -10,7 +10,6 @@ local Log = require('fittencode.log')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local Position = require('fittencode.position')
-local Unicode = require('fittencode.unicode')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
@@ -84,7 +83,7 @@ local function make_context(buf, e, r, chars_size)
     local u = Editor.position_at(buf, A) or { row = 0, col = 0 }
     local c = vim.api.nvim_buf_get_text(buf, l.row, l.col, e.row, e.col, {})
     local h = vim.api.nvim_buf_get_text(buf, r.row, r.col, u.row, u.col, {})
-    return c .. '<fim_middle>' .. h
+    return table.concat(c, '\n') .. '<fim_middle>' .. table.concat(h, '\n')
 end
 
 ---@class FittenCode.Inline.Prompt
@@ -187,7 +186,7 @@ function Controller:completion_response(data)
         return
     end
     local character_delta = data.delta_char or 0
-    local col_delta = Unicode.characters_delta_to_columns(generated_text, character_delta)
+    local col_delta = Editor.characters_delta_to_columns(generated_text, character_delta)
     return {
         request_id = data.server_request_id,
         completions = {
@@ -225,7 +224,6 @@ function Controller:triggering_completion(options)
     if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
         return
     end
-    Log.debug('1 completion')
     local buf = vim.api.nvim_get_current_buf()
     if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
         return
@@ -269,6 +267,7 @@ function Controller:triggering_completion(options)
         self.session.request_handles[#self.session.request_handles + 1] = Client.get_completion_version(gcv_options)
     end):forward(function(version)
         return Promise:new(function(resolve, reject)
+            Log.debug('Got completion version {}', version)
             Log.debug('Triggering completion for position {}', position)
             local prompt = self:generate_prompt(buf, position)
             local gos_options = {
@@ -301,6 +300,7 @@ function Controller:triggering_completion(options)
             self.generate_one_stage(gos_options)
         end)
     end, function()
+        Log.debug('Failed to get completion version')
         Fn.schedule_call(options.on_error)
     end):forward(function(completion)
         local model = Model:new({
@@ -313,6 +313,7 @@ function Controller:triggering_completion(options)
         Log.debug('New session created {}', self.session)
         Fn.schedule_call(options.on_success)
     end, function()
+        Log.debug('Failed to generate completion')
         Fn.schedule_call(options.on_error)
     end)
 end

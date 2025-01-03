@@ -168,8 +168,9 @@ function M.position_at(buf, offset)
         Log.debug('position_at lines = {}', lines)
         local index = 0
         while offset > 0 do
-            local line = lines[index + 1]
+            local line = lines[index + 1] .. '\n'
             local utf = vim.str_utf_pos(line)
+            Log.debug('position_at line = {}, utf = {}, offset = {}', #line, #utf, offset)
             if offset > #utf then
                 index = index + 1
             else
