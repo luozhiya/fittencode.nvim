@@ -174,21 +174,21 @@ local function _post(url, options)
     end
 end
 
-function M.post(url, opts)
-    local _, body = pcall(vim.fn.json_encode, opts.body)
+function M.post(url, options)
+    local _, body = pcall(vim.fn.json_encode, options.body)
     if not _ then
-        Fn.schedule_call(opts.on_error, { error = body })
+        Fn.schedule_call(options.on_error, { error = body })
         return
     end
-    if not opts.compress then
-        opts.body = body
-        _post(url, opts)
+    if not options.compress then
+        options.body = body
+        _post(url, options)
     else
         Promise:new(function(resolve)
             local tmpfile = vim.fn.tempname()
             vim.uv.fs_open(tmpfile, 'w', 438, function(e_open, fd)
                 if e_open then
-                    Fn.schedule_call(opts.on_error, { error = e_open, })
+                    Fn.schedule_call(options.on_error, { error = e_open, })
                 else
                     assert(fd ~= nil)
                     resolve({ fd = fd, tmpfile = tmpfile })
@@ -198,7 +198,7 @@ function M.post(url, opts)
             return Promise:new(function(resolve)
                 vim.uv.fs_write(data.fd, body, -1, function(e_write, _)
                     if e_write then
-                        Fn.schedule_call(opts.on_error, { error = e_write, })
+                        Fn.schedule_call(options.on_error, { error = e_write, })
                     else
                         vim.uv.fs_close(data.fd, function(_, _) end)
                         resolve(data.tmpfile)
@@ -213,14 +213,15 @@ function M.post(url, opts)
             local go = {
                 on_exit = function()
                     local gz = tmpfile .. '.gz'
-                    opts.body = gz
-                    opts.on_exit = function()
-                        Fn.schedule_call(opts.on_exit)
+                    local co = vim.deepcopy(options)
+                    co.body = gz
+                    co.on_exit = function()
+                        Fn.schedule_call(options.on_exit)
                         vim.uv.fs_unlink(gz, function(_, _) end)
                     end
-                    _post(url, opts)
+                    _post(url, co)
                 end,
-                on_error = opts.on_error,
+                on_error = options.on_error,
             }
             spawn(executables.gzip, args, go)
         end)
