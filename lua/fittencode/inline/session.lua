@@ -11,16 +11,20 @@ Session.__index = Session
 function Session:new(opts)
     local obj = {
         buf = opts.buf,
-        model = opts.model,
-        view = opts.view,
-        timing = opts.timing,
         reflect = opts.reflect,
+        timing = {
+            get_completion_version = {},
+            generate_one_stage = {}
+        },
+        request_handles = {}
     }
     setmetatable(obj, Session)
     return obj
 end
 
-function Session:init()
+function Session:init(model, view)
+    self.model = model
+    self.view = view
     self:set_keymaps()
     self:set_autocmds()
 end
@@ -92,7 +96,15 @@ function Session:cache_hit(row, col)
     -- return self.model:eq_commit_pos(row, col)
 end
 
-function Session:destory()
+function Session:abort_and_clear_requests()
+    for _, handle in ipairs(self.request_handles) do
+        handle:abort()
+    end
+    self.request_handles = {}
+end
+
+function Session:destructor()
+    self:abort_and_clear_requests()
     self.model:clear()
     self:update_view()
     self:restore_keymaps()

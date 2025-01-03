@@ -27,7 +27,6 @@ function Controller:new(opts)
         augroups = {},
         ns_ids = {},
         keymaps = {},
-        request_handles = {},
         filter_events = {}
     }
     setmetatable(obj, self)
@@ -39,7 +38,11 @@ function Controller:init()
         level = 0,
     })
     self:register_observer(self.status)
-    self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime, function(data) self:on_request_return(data) end)
+    self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime, function(data)
+        if self.session then
+            self.session.request_handles[#self.session.request_handles + 1] = data
+        end
+    end)
     self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
     self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
     self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
@@ -66,13 +69,9 @@ end
 
 function Controller:dismiss_suggestions()
     if self.session then
-        self.session:destory()
+        self.session:destructor()
         self.session = nil
     end
-end
-
-function Controller:on_request_return(data)
-    self.request_handles[#self.request_handles + 1] = data
 end
 
 function Controller:lazy_completion()
@@ -84,7 +83,7 @@ function Controller:lazy_completion()
 
     -- 2. input char ~= next char
     if self.session then
-        self.session:destory()
+        self.session:destructor()
         self.session = nil
     end
 end
@@ -223,13 +222,8 @@ function Controller:is_filetype_excluded(buf)
 end
 
 function Controller:cleanup_session()
-    for _, handle in ipairs(self.request_handles) do
-        handle:abort()
-    end
-    self.request_handles = {}
-
     if self.session then
-        self.session:destory()
+        self.session:destructor()
         self.session = nil
     end
 end
@@ -255,19 +249,20 @@ function Controller:triggering_completion(options)
 
     self:cleanup_session()
 
-    local timing = {
-        get_completion_version = {},
-        generate_one_stage = {}
-    }
-    timing.triggering = vim.uv.hrtime()
+    self.session = Session:new({
+        buf = buf,
+        reflect = function(_) self:reflect(_) end,
+    })
+
+    self.session.timing.on_create = vim.uv.hrtime()
 
     Promise:new(function(resolve, reject)
         local gcv_options = {
             on_create = function()
-                timing.get_completion_version.on_create = vim.uv.hrtime()
+                self.session.timing.get_completion_version.on_create = vim.uv.hrtime()
             end,
             on_once = function(stdout)
-                timing.get_completion_version.on_once = vim.uv.hrtime()
+                self.session.timing.get_completion_version.on_once = vim.uv.hrtime()
                 local json = table.concat(stdout, '')
                 local _, version = pcall(vim.fn.json_decode, json)
                 if not _ or version == nil then
@@ -278,11 +273,11 @@ function Controller:triggering_completion(options)
                 end
             end,
             on_error = function()
-                timing.get_completion_version.on_error = vim.uv.hrtime()
+                self.session.timing.get_completion_version.on_error = vim.uv.hrtime()
                 reject()
             end
         }
-        self.request_handles[#self.request_handles + 1] = Client.get_completion_version(gcv_options)
+        self.session.request_handles[#self.session.request_handles + 1] = Client.get_completion_version(gcv_options)
     end):forward(function(version)
         return Promise:new(function(resolve, reject)
             Log.debug('Triggering completion for position {}', position)
@@ -290,10 +285,10 @@ function Controller:triggering_completion(options)
                 completion_version = version,
                 prompt = self:generate_prompt(buf, position),
                 on_create = function()
-                    timing.generate_one_stage.on_create = vim.uv.hrtime()
+                    self.session.timing.generate_one_stage.on_create = vim.uv.hrtime()
                 end,
                 on_once = function(stdout)
-                    timing.generate_one_stage.on_once = vim.uv.hrtime()
+                    self.session.timing.generate_one_stage.on_once = vim.uv.hrtime()
                     local _, json = pcall(vim.json.decode, table.concat(stdout, ''))
                     if not _ then
                         Log.error('Failed to decode completion response: {}', json)
@@ -309,7 +304,7 @@ function Controller:triggering_completion(options)
                     resolve(completion)
                 end,
                 on_error = function()
-                    timing.generate_one_stage.on_error = vim.uv.hrtime()
+                    self.session.timing.generate_one_stage.on_error = vim.uv.hrtime()
                     reject()
                 end
             }
@@ -324,14 +319,7 @@ function Controller:triggering_completion(options)
             completion = completion,
         })
         local view = View:new({ buf = buf })
-        self.session = Session:new({
-            buf = buf,
-            model = model,
-            view = view,
-            timing = timing,
-            reflect = function(_) self:reflect(_) end,
-        })
-        self.session:init()
+        self.session:init(model, view)
         Log.debug('New session created {}', self.session)
         Fn.schedule_call(options.on_success)
     end, function()

@@ -258,10 +258,14 @@
 ---@field model FittenCode.Inline.Model
 ---@field view FittenCode.Inline.View
 ---@field buf number
----@field request_handle number
+---@field request_handles table<FittenCode.HTTP.RequestHandle?>
+---@field timing FittenCode.Inline.Session.Timing
 ---@field keymaps table
----@field extmark_ids table
----@field generated_text table<string>
+
+---@class FittenCode.Inline.Session.Timing
+---@field on_create number
+---@field get_completion_version table
+---@field generate_one_stage table
 
 ---@class FittenCode.Inline.Model
 ---@field mode 'lines' | 'multi_segments' | 'edit_completion'
