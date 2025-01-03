@@ -250,11 +250,11 @@ function M.fetch(url, options)
                 Fn.schedule_call(options.on_once, data)
             end),
             on_error = vim.schedule_wrap(function(data)
-                if aborted then return end
+                -- if aborted then return end
                 Fn.schedule_call(options.on_error, data)
             end),
             on_exit = vim.schedule_wrap(function(data)
-                if aborted then return end
+                -- if aborted then return end
                 Fn.schedule_call(options.on_exit, data)
             end),
         })
