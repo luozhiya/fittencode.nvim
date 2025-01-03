@@ -1,6 +1,6 @@
-package.cpath = package.cpath .. ';'.. require('cpath')
+package.cpath = package.cpath .. ';' .. require('cpath')
 
-local C = require("hash")
+local C = require('hash')
 
 ---@class Hash
 ---@field md5 function
