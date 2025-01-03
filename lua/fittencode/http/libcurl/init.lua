@@ -3,6 +3,8 @@ package.cpath = package.cpath .. ';' .. require('cpath')
 local CC = require('libcurl')
 local Fn = require('fittencode.fn')
 
+CC.global_init()
+
 local M = {}
 
 ---@return FittenCode.HTTP.RequestHandle?
