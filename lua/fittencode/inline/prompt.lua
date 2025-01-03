@@ -1,7 +1,21 @@
+local Hash = require("fittencode.hash")
 
 ---@class FittenCode.Inline.Prompt
 ---@field inputs string
 ---@field meta_datas FittenCode.Inline.Prompt.MetaDatas
+
+local Prompt = {}
+Prompt.__index = Prompt
+
+function Prompt.new(options)
+    local obj = {
+        filename = options.filename,
+        prefix = options.prefix,
+        suffix = options.suffix,
+    }
+    setmetatable(obj, Prompt)
+    return obj
+end
 
 ---@class FittenCode.Inline.Prompt.MetaDatas
 ---@field plen number
@@ -25,13 +39,12 @@ local XL = ""
 local Lc = ""
 local QS = ""
 
-local function oVe(t)
-    local hash = require("hash")
-    return hash.md5(t)
+local function hash(t)
+    return Hash.md5(t)
 end
 
 local function aVe(t, e)
-    local r = oVe(e)
+    local r = hash(e)
     if t ~= XL then
         XL = t
         Lc = e

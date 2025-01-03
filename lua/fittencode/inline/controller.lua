@@ -10,6 +10,7 @@ local Log = require('fittencode.log')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local Position = require('fittencode.position')
+local Prompt = require('fittencode.inline.prompt')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}

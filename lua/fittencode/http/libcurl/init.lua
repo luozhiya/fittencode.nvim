@@ -1,10 +1,6 @@
-local function post()
+local M = {}
+
+function M.fetch(url, options)
 end
 
-local function get()
-end
-
-return {
-    post = post,
-    get = get
-}
+return M
