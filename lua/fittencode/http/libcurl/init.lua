@@ -7,6 +7,7 @@ CC.global_init()
 
 local M = {}
 
+---@param options FittenCode.HTTP.RequestOptions
 ---@return FittenCode.HTTP.RequestHandle?
 function M.fetch(url, options)
     local function _()

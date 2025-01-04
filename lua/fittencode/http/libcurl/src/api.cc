@@ -52,7 +52,13 @@ static int l_fetch(lua_State *L) {
     std::cout << lua_gettop(L) << std::endl;
     lua_pushnil(L); // 第一个key，nil表示从第一个元素开始
     std::cout << lua_gettop(L) << std::endl;
-    while (lua_next(L, 2) != 0) {
+    // 因为 fetch 第二个参数是options table，所以从2开始遍历
+    // lua_next(L, 2) 返回0表示遍历结束
+    // lua_next(L, 2) 返回1表示成功
+    // lua_next 会先弹出一个top，然后再push一个key-value对，所以需要先push一个nil
+    int v = lua_next(L, 2);
+    std::cout << "lua_next: " << v << std::endl;
+    while (v != 0) {
         std::cout << lua_gettop(L) << std::endl;
         // key在-2位置，value在-1位置
         std::string_view key = lua_tostring(L, -2); // 获取key
@@ -91,6 +97,8 @@ static int l_fetch(lua_State *L) {
         }
         // 弹出value，保留key用于下一次迭代
         lua_pop(L, 1);
+        v = lua_next(L, 2);
+        std::cout << "lua_next: " << v << std::endl;
     }
 
     // Set the callback function to write data to string
