@@ -229,6 +229,8 @@ function M.post(url, options)
     end
 end
 
+---@param url string
+---@param options FittenCode.HTTP.RequestOptions
 ---@return FittenCode.HTTP.RequestHandle?
 function M.fetch(url, options)
     local function _()

@@ -1,9 +1,9 @@
-.PHONY: hash clean
+.PHONY: libcurl clean
 
 BUILD_DIR := build
-TARGET := hash.so
+TARGET := libcurl.so
 
-hash: clean
+libcurl: clean
 	cmake -B $(BUILD_DIR) && $(MAKE) -C $(BUILD_DIR)
 	cp $(BUILD_DIR)/$(TARGET) .
 

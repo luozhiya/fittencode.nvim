@@ -1,3 +1,16 @@
+---@class FittenCode.HTTP.RequestOptions
+---@field method string
+---@field url string
+---@field headers table<string, string>
+---@field body table
+---@field compress? boolean
+---@field no_buffer? boolean
+---@field on_create function
+---@field on_stream function
+---@field on_once function
+---@field on_error function
+---@field on_exit function
+
 ---@class FittenCode.HTTP.RequestHandle
 ---@field abort function
 ---@field is_active function
