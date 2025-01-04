@@ -49,8 +49,11 @@ static int l_fetch(lua_State *L) {
     std::string readBuffer;
 
     // 3. 遍历options table
+    std::cout << lua_gettop(L) << std::endl;
     lua_pushnil(L); // 第一个key，nil表示从第一个元素开始
+    std::cout << lua_gettop(L) << std::endl;
     while (lua_next(L, 2) != 0) {
+        std::cout << lua_gettop(L) << std::endl;
         // key在-2位置，value在-1位置
         std::string_view key = lua_tostring(L, -2); // 获取key
         std::cout << "key: " << key << std::endl;
@@ -72,13 +75,19 @@ static int l_fetch(lua_State *L) {
         else if (key == "body") {
         }
         else if (key == "timeout") {
+            if (lua_isnumber(L, -1)) {
+                int timeout = lua_tointeger(L, -1);
+                curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
+            } else {
+                luaL_error(L, "Expected a number at index 2");
+            }
         }
         else if (key == "on_create") {
-            if (lua_isfunction(L, -1)) {
-                lua_pushvalue(L, -1);
-            } else {
-                luaL_error(L, "Expected a function at index 2");
-            }
+            // if (lua_isfunction(L, -1)) {
+            //     lua_pushvalue(L, -1);
+            // } else {
+            //     luaL_error(L, "Expected a function at index 2");
+            // }
         }
         // 弹出value，保留key用于下一次迭代
         lua_pop(L, 1);

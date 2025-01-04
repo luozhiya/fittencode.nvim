@@ -171,18 +171,43 @@ local defaults = {
     log = {
         level = vim.log.levels.WARN,
     },
+    hash = {
+        sm3 = {
+            -- SM3 hash
+            -- Avaiable options:
+            -- * 'gmssl'
+            -- * 'cc'
+            backend = 'md5sum',
+            gmssl = {
+                -- Default `gmssl`
+                command = '',
+            }
+        },
+        md5 = {
+            -- MD5 hash
+            -- Avaiable options:
+            -- * 'md5sum'
+            -- * 'cc'
+            backend = 'md5sum',
+            md5sum = {
+                -- Default `md5sum`
+                command = '',
+            },
+        }
+    },
     http = {
-        -- backend implemented
         -- Avaiable options:
         -- * 'curl'
         -- * 'libcurl' (Only available on Linux)
         backend = 'curl',
+        -- 0 (zero) which means curl(libcurl) never times out during transfer
         timeout = 600, -- seconds
         curl = {
             -- Default `curl`
             command = '',
         },
         libcurl = {},
+        -- HTTP request body gzip compress
         gzip = {
             -- Default `gzip`
             command = '',

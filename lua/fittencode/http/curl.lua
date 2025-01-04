@@ -2,6 +2,7 @@ local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
 local Config = require('fittencode.config')
+local Process = require('fittencode.process')
 
 local M = {}
 
@@ -24,57 +25,6 @@ local executables = {
         code = 0
     }
 }
-
-local function spawn(exe, args, options)
-    local stdout = {}
-    local stderr = {}
-    local process = nil
-    local pid = nil
-    local uv_stdout = assert(vim.uv.new_pipe())
-    local uv_stderr = assert(vim.uv.new_pipe())
-
-    ---@diagnostic disable-next-line: missing-fields
-    process, pid = vim.uv.spawn(exe.cmd, {
-        args = args,
-        stdio = { nil, uv_stdout, uv_stderr },
-        verbatim = true,
-    }, function(code, signal)
-        assert(process)
-        process:close()
-        uv_stdout:close()
-        uv_stderr:close()
-        local check = assert(vim.uv.new_check())
-        check:start(function()
-            if not uv_stdout:is_closing() or not uv_stderr:is_closing() then
-                return
-            end
-            check:stop()
-            if signal == 0 or code == exe.code then
-                Fn.schedule_call(options.on_once, stdout)
-            else
-                Fn.schedule_call(options.on_error, { signal = signal, code = code, stderr = stderr })
-            end
-            Fn.schedule_call(options.on_exit, { code = code, signal = signal, stderr = stderr, stdout = stdout })
-        end)
-    end)
-    Fn.schedule_call(options.on_create, { process = process, pid = pid, })
-
-    local function callback(stream, received_data)
-        return function(err, chunk)
-            if err then
-                Fn.schedule_call(options.on_error, { stderr = uv_stderr, error = err, })
-            elseif chunk then
-                Fn.schedule_call(options.on_stream, chunk)
-                received_data[#received_data + 1] = chunk
-            else
-                stream:read_stop()
-            end
-        end
-    end
-
-    vim.uv.read_start(uv_stdout, callback(uv_stdout, stdout))
-    vim.uv.read_start(uv_stderr, callback(uv_stderr, stderr))
-end
 
 local function build_curl_args(args, options)
     if options.no_buffer then
@@ -102,7 +52,7 @@ function M.get(url, options)
         url,
     }
     build_curl_args(args, options)
-    spawn(executables.curl, args, options)
+    Process.spawn(executables.curl, args, options)
 end
 
 -- libuv command line length limit
@@ -136,12 +86,12 @@ local function _post(url, options)
     build_curl_args(args, options)
     if type(options.body) == 'string' and vim.fn.filereadable(options.body) == 1 then
         add_data(args, options.body, options.binaray, true)
-        spawn(executables.curl, args, options)
+        Process.spawn(executables.curl, args, options)
         return
     end
     if not Fn.is_windows() and #options.body <= arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
         add_data(args, options.body, options.binaray, false)
-        spawn(executables.curl, args, options)
+        Process.spawn(executables.curl, args, options)
     else
         Promise:new(function(resolve)
             local tmpfile = vim.fn.tempname()
@@ -171,7 +121,7 @@ local function _post(url, options)
                 Fn.schedule_call(options.on_exit)
                 vim.uv.fs_unlink(tmpfile, function(_, _) end)
             end
-            spawn(executables.curl, args, co)
+            Process.spawn(executables.curl, args, co)
         end)
     end
 end
@@ -226,7 +176,7 @@ function M.post(url, options)
                 end,
                 on_error = options.on_error,
             }
-            spawn(executables.gzip, args, go)
+            Process.spawn(executables.gzip, args, go)
         end)
     end
 end
