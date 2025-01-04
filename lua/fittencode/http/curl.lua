@@ -55,24 +55,6 @@ function M.get(url, options)
     Process.spawn(executables.curl, args, options)
 end
 
--- libuv command line length limit
--- * win32 `CreateProcess` 32767
--- * unix  `fork`          128 KB to 2 MB (getconf ARG_MAX)
-local max_arg_length
-
-local function arg_max()
-    if max_arg_length ~= nil then
-        return max_arg_length
-    end
-    if Fn.is_windows() then
-        max_arg_length = 32767
-    else
-        local _, sys = pcall(tonumber, vim.fn.system('getconf ARG_MAX'))
-        max_arg_length = sys or (128 * 1024)
-    end
-    return max_arg_length
-end
-
 local function _post(url, options)
     local args = {
         url,
@@ -89,7 +71,7 @@ local function _post(url, options)
         Process.spawn(executables.curl, args, options)
         return
     end
-    if not Fn.is_windows() and #options.body <= arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
+    if not Fn.is_windows() and #options.body <= Process.arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
         add_data(args, options.body, options.binaray, false)
         Process.spawn(executables.curl, args, options)
     else
