@@ -19,8 +19,6 @@ local executables = {
         cmd = 'curl',
         args = {
             '-s',
-            '--connect-timeout',
-            Config.http.timeout,
             '--show-error',
         },
         code = 0
@@ -83,6 +81,10 @@ local function build_curl_args(args, options)
         args[#args + 1] = '--no-buffer'
     end
     local headers = options.headers or {}
+    if type(options.timeout) == 'number' then
+        args[#args + 1] = '--connect-timeout'
+        args[#args + 1] = options.timeout
+    end
     vim.list_extend(args, executables.curl.args)
     for k, v in pairs(headers) do
         args[#args + 1] = '-H'

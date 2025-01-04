@@ -177,16 +177,16 @@ local defaults = {
         -- * 'curl'
         -- * 'libcurl' (Only available on Linux)
         backend = 'curl',
+        timeout = 600, -- seconds
         curl = {
             -- Default `curl`
             command = '',
-            timeout = 60, -- seconds
         },
+        libcurl = {},
         gzip = {
             -- Default `gzip`
             command = '',
         },
-        libcurl = {},
     },
     chat = {
         view = {

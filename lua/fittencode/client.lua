@@ -331,6 +331,7 @@ function M.get_completion_version(options)
     local req = make_req_from_options(options, {
         method = 'GET',
         headers = headers,
+        timeout = Config.http.timeout,
     })
     return HTTP.fetch(url, req)
 end
@@ -382,6 +383,7 @@ function M.generate_one_stage(options)
         headers = headers,
         body = options.prompt,
         compress = true,
+        timeout = Config.http.timeout,
     })
     return HTTP.fetch(url, req)
 end
@@ -400,6 +402,7 @@ function M.accept_completion(options)
         method = 'POST',
         headers = headers,
         body = options.prompt,
+        timeout = Config.http.timeout,
     })
     return HTTP.fetch(url, req)
 end
@@ -419,6 +422,7 @@ function M.chat(options)
         headers = headers,
         body = options.prompt,
         no_buffer = true,
+        timeout = Config.http.timeout,
     })
     return HTTP.fetch(url, req)
 end
