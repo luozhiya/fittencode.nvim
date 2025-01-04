@@ -4,6 +4,9 @@
 
 #include <iostream>
 #include <string_view>
+#include <format>
+
+using namespace std::literals;
 
 extern "C" {
 #include <lauxlib.h>
@@ -75,20 +78,31 @@ static int l_fetch(lua_State *L) {
                     luaL_error(L, "Unsupported method: %s", value.data());
                 }
             }
-        }
-        else if (key == "headers") {
-        }
-        else if (key == "body") {
-        }
-        else if (key == "timeout") {
+        } else if (key == "headers") {
+            if (lua_istable(L, -1)) {
+                // 遍历headers table
+                lua_pushnil(L); // 第一个key，nil表示从第一个元素开始
+                curl_slist *headers = nullptr;
+                while (lua_next(L, -2) != 0) {
+                    std::string_view key = lua_tostring(L, -2);   // 获取key
+                    std::string_view value = lua_tostring(L, -1); // 获取value
+                    // CURLOPT_HEADER
+                    std::string kv = std::format("%s: %s", key.data(), value.data());
+                    headers = curl_slist_append(headers, kv.data());
+                }
+                curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+            } else {
+                //
+            }
+        } else if (key == "body") {
+        } else if (key == "timeout") {
             if (lua_isnumber(L, -1)) {
                 int timeout = lua_tointeger(L, -1);
                 curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
             } else {
                 luaL_error(L, "Expected a number at index 2");
             }
-        }
-        else if (key == "on_create") {
+        } else if (key == "on_create") {
             // if (lua_isfunction(L, -1)) {
             //     lua_pushvalue(L, -1);
             // } else {
