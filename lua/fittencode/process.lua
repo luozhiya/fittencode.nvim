@@ -19,11 +19,12 @@ function M.spawn(exe, args, options)
     }, function(code, signal)
         assert(process)
         process:close()
+        uv_stdin:close()
         uv_stdout:close()
         uv_stderr:close()
         local check = assert(vim.uv.new_check())
         check:start(function()
-            if not uv_stdout:is_closing() or not uv_stderr:is_closing() then
+            if not uv_stdin:is_closing() or not uv_stdout:is_closing() or not uv_stderr:is_closing() then
                 return
             end
             check:stop()
