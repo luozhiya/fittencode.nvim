@@ -13,7 +13,7 @@ find_package(Lua51 REQUIRED)
 # Find the libcurl package
 find_package(CURL REQUIRED)
 
-include_directories(${LUA_INCLUDE_DIR})
+include_directories(${LUA51_INCLUDE_DIR})
 
 # Add the MD5 source file
 file(GLOB SOURCES ./src/**.cc)
@@ -26,7 +26,7 @@ add_library(libcurl SHARED ${SOURCES})
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 # Link the library with Lua
-target_link_libraries(libcurl PRIVATE ${LUA_LIBRARIES})
+target_link_libraries(libcurl PRIVATE ${LUA51_LIBRARIES})
 
 # Link the library with libcurl
 target_link_libraries(libcurl PRIVATE ${CURL_LIBRARIES})
