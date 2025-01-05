@@ -10,7 +10,7 @@ function M.setup(opts)
     require('fittencode.config').setup(opts)
     require('fittencode.client').load_last_session()
     require('fittencode.command')
-    require('fittencode.editor')
+    require('fittencode.chat.active_editor')
     require('fittencode.chat').setup()
     require('fittencode.inline').setup()
 end
