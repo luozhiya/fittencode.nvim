@@ -9,20 +9,12 @@
 using namespace std::literals;
 
 extern "C" {
-#include <lauxlib.h>
-#include <lua.h>
-
 #include <curl/curl.h>
 }
 
-#include "curl.h"
+#include <lua.hpp>
 
-// Callback function to write data into a std::string
-size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, std::string *output) {
-    size_t totalSize = size * nmemb;
-    output->append(reinterpret_cast<char *>(contents), totalSize);
-    return totalSize;
-}
+static std::string readBuffer;
 
 extern "C" {
 
@@ -31,16 +23,19 @@ static int l_global_init(lua_State *L) {
     return 1;
 }
 
-static size_t l_easy_writefunction(void *ptr, size_t size, size_t nmemb, void *stream) {
+static size_t l_easy_writefunction(void *contents, size_t size, size_t nmemb, void *stream) {
+    size_t totalSize = size * nmemb;
+    readBuffer.append(reinterpret_cast<char *>(contents), totalSize);
     lua_State *L = (lua_State *) stream;
-
     lua_getfield(L, -1, "on_stream");
-    lua_pushlstring(L, (char *) ptr, nmemb * size);
+    lua_pushlstring(L, (char *) contents, nmemb * size);
     lua_call(L, 1, 0);
     return nmemb * size;
 }
 
 static int l_fetch(lua_State *L) {
+    readBuffer.clear();
+
     // 1. url
     std::string_view url = luaL_checkstring(L, 1);
     std::cout << "url: " << url << std::endl;
@@ -57,8 +52,6 @@ static int l_fetch(lua_State *L) {
     }
 
     curl_easy_setopt(curl, CURLOPT_URL, url.data());
-
-    std::string readBuffer;
 
     int on_create = LUA_REFNIL;
     int on_input = LUA_REFNIL;
@@ -177,15 +170,35 @@ static int l_fetch(lua_State *L) {
     // Pass the string to store the response
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, L);
 
+    lua_getfield(L, -1, "on_create");
+    // push curl handle to stack
+    lua_pushlightuserdata(L, curl);
+    lua_call(L, 1, 0);
+
     CURLcode res = curl_easy_perform(curl);
     // Check for errors
     if (res != CURLE_OK) {
         std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+        lua_getfield(L, -1, "on_error");
+        // push curl handle to stack
+        lua_pushlightuserdata(L, curl);
+        lua_call(L, 1, 0);
     } else {
         std::cout << "Received " << readBuffer.size() << " bytes." << std::endl;
         // std::cout << "Data: " << readBuffer << std::endl;
+        lua_getfield(L, -1, "on_once");
+        // push curl handle to stack
+        lua_pushlstring(L, readBuffer.data(), readBuffer.size());
+        // lua_pushlightuserdata(L, curl);
+        lua_call(L, 1, 0);        
     }
 
+    lua_getfield(L, -1, "on_exit");
+    // push curl handle to stack
+    lua_pushlightuserdata(L, curl);
+    lua_call(L, 1, 0);
+
+    readBuffer.clear();
     curl_easy_cleanup(curl);
 
     return 1;

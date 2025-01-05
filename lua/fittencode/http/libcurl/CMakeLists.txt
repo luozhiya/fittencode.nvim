@@ -8,7 +8,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find Lua
-find_package(Lua51 REQUIRED)
+# find_package(Lua51 REQUIRED)
+# find_package(Luajit REQUIRED)
 
 # Find the libcurl package
 find_package(CURL REQUIRED)
@@ -43,3 +44,5 @@ configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cpath.lua
     @ONLY
 )
+
+SET(CMAKE_C_FLAGS  "-pipe -fPIC -Wall -fmessage-length=0")
