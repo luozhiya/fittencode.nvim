@@ -4,6 +4,7 @@ local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
 local Translate = require('fittencode.translate')
 local HTTP = require('fittencode.http')
+local Compress = require('fittencode.compress')
 
 local M = {}
 
@@ -170,7 +171,8 @@ function M.login(username, password, on_success, on_error)
         })
     end):forward(function(token)
         return Promise:new(function(resolve, reject)
-            HTTP.get(M.server_url() .. preset_urls.get_ft_token, {
+            HTTP.fetch(M.server_url() .. preset_urls.get_ft_token, {
+                method = 'GET',
                 headers = {
                     ['Authorization'] = 'Bearer ' .. token,
                 },
@@ -258,7 +260,8 @@ function M.login3rd(source, on_success, on_error)
             end
             local check_url = M.server_url() .. preset_urls.fb_check_login .. '?client_token=' .. client_token
             Promise:new(function(resolve, reject)
-                HTTP.get(check_url, {
+                HTTP.fetch(check_url, {
+                    method = 'GET',
                     on_error = vim.schedule_wrap(function() reject() end),
                     on_once = vim.schedule_wrap(function(stdout)
                         local _, fico_data = pcall(vim.fn.json_decode, stdout)
@@ -283,13 +286,16 @@ function M.login3rd(source, on_success, on_error)
 
                 local type = fico_data.create and 'register_fb' or 'login_fb';
                 local click_count_url = M.server_url() .. preset_urls.click_count .. '?apikey==' .. fico_data.token .. '&type=' .. type
-                HTTP.get(click_count_url, {
+                HTTP.fetch(click_count_url, {
+                    method = 'GET',
                     headers = {
                         ['Content-Type'] = 'application/json',
                     },
                 })
                 if fico_data.create then
-                    HTTP.get(preset_urls.register_cvt)
+                    HTTP.fetch(preset_urls.register_cvt, {
+                        method = 'GET',
+                    })
                 end
             end)
         end
@@ -308,16 +314,7 @@ function M.logout()
     Log.notify_info(Translate('[Fitten Code] Logout successful'))
 end
 
-local function make_req_from_options(a, c)
-    local b = {}
-    for k, v in pairs(a) do
-        if Fn.startwith(k, 'on_') then
-            b[k] = v
-        end
-    end
-    return vim.tbl_deep_extend('force', b, c)
-end
-
+---@param options FittenCode.Client.GetCompletionVersionOptions
 function M.get_completion_version(options)
     local key = M.get_ft_token()
     if not key then
@@ -328,12 +325,12 @@ function M.get_completion_version(options)
         ['Content-Type'] = 'application/json',
     }
     local url = M.server_url() .. preset_urls.get_completion_version .. '?ft_token=' .. key
-    local req = make_req_from_options(options, {
+    local fetch_options = Fn.tbl_keep_events(options, {
         method = 'GET',
         headers = headers,
-        timeout = Config.http.timeout,
+        timeout = options.timeout,
     })
-    return HTTP.fetch(url, req)
+    HTTP.fetch(url, fetch_options)
 end
 
 -- Example of `completion_data`:
@@ -354,9 +351,9 @@ end
 --     "delta_line": 0,
 --     "ex_msg": "1+2)*3"
 -- }
+---@param options FittenCode.Client.GenerateOneStageOptions
 ---@return FittenCode.HTTP.RequestHandle?
 function M.generate_one_stage(options)
-    Log.debug('generate_one_stage = {}', options)
     local key = M.get_ft_token()
     if not key then
         Fn.schedule_call(options.on_error)
@@ -364,30 +361,41 @@ function M.generate_one_stage(options)
     end
     local headers = {
         ['Content-Type'] = 'application/json',
+        ['Content-Encoding'] = 'gzip',
     }
-    options.completion_version = options.completion_version or ''
-    if options.completion_version ~= '0' then
-        vim.tbl_deep_extend('force', headers, {
-            ['Content-Encoding'] = 'gzip',
-        })
-    end
     local vu = {
         ['0'] = 'generate_one_stage',
         ['1'] = 'generate_one_stage2_1',
         ['2'] = 'generate_one_stage2_2',
         ['3'] = 'generate_one_stage2_3',
     }
-    local url = M.server_url() .. preset_urls[vu[options.completion_version]] .. '/' .. key .. '？' .. get_platform_info_as_url_params()
-    local req = make_req_from_options(options, {
-        method = 'POST',
-        headers = headers,
-        body = options.prompt,
-        compress = true,
-        timeout = Config.http.timeout,
-    })
-    return HTTP.fetch(url, req)
+    local url = M.server_url() .. preset_urls[vu[options.completion_version or '0']] .. '/' .. key .. '？' .. get_platform_info_as_url_params()
+    local _, body = pcall(vim.fn.json_encode, options.prompt)
+    if not _ then
+        Fn.schedule_call(options.on_error, { error = body })
+        return
+    end
+    Promise:new(function(resolve, reject)
+        Compress.compress('gzip', body, {
+            on_once = function(compressed_stream)
+                resolve(compressed_stream)
+            end,
+            on_error = function()
+                Fn.schedule_call(options.on_error)
+            end,
+        })
+    end):forward(function(compressed_stream)
+        local fetch_options = Fn.tbl_keep_events(options, {
+            method = 'POST',
+            headers = headers,
+            body = compressed_stream,
+            timeout = options.timeout,
+        })
+        HTTP.fetch(url, fetch_options)
+    end)
 end
 
+---@param options FittenCode.Client.AcceptCompletionOptions
 function M.accept_completion(options)
     local key = M.get_ft_token()
     if not key then
@@ -398,15 +406,21 @@ function M.accept_completion(options)
         ['Content-Type'] = 'application/json',
     }
     local url = M.server_url() .. preset_urls.accept .. '/' .. key
-    local req = make_req_from_options(options, {
+    local _, body = pcall(vim.fn.json_encode, options.prompt)
+    if not _ then
+        Fn.schedule_call(options.on_error, { error = body })
+        return
+    end
+    local fetch_options = Fn.tbl_keep_events(options, {
         method = 'POST',
         headers = headers,
-        body = options.prompt,
-        timeout = Config.http.timeout,
+        body = body,
+        timeout = options.timeout,
     })
-    return HTTP.fetch(url, req)
+    HTTP.fetch(url, fetch_options)
 end
 
+---@param options FittenCode.Client.ChatOptions
 function M.chat(options)
     local key = M.get_ft_token()
     if not key then
@@ -417,14 +431,18 @@ function M.chat(options)
         ['Content-Type'] = 'application/json',
     }
     local url = M.server_url() .. preset_urls.chat .. '?ft_token=' .. key .. '&' .. get_platform_info_as_url_params()
-    local req = make_req_from_options(options, {
+    local _, body = pcall(vim.fn.json_encode, options.prompt)
+    if not _ then
+        Fn.schedule_call(options.on_error, { error = body })
+        return
+    end
+    local fetch_options = Fn.tbl_keep_events(options, {
         method = 'POST',
         headers = headers,
-        body = options.prompt,
-        no_buffer = true,
-        timeout = Config.http.timeout,
+        body = body,
+        timeout = options.timeout,
     })
-    return HTTP.fetch(url, req)
+    HTTP.fetch(url, fetch_options)
 end
 
 return M

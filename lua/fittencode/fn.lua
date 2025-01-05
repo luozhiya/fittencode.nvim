@@ -286,6 +286,16 @@ local function encode_uri(uri)
     return (string.gsub(uri, "[^%a%d%-_%.!~%*'%(%);/%?:@&=%+%$,#]", _encode_uri_char))
 end
 
+local function tbl_keep_events(a, c)
+    local b = {}
+    for k, v in pairs(a) do
+        if startwith(k, 'on_') then
+            b[k] = v
+        end
+    end
+    return vim.tbl_deep_extend('force', b, c)
+end
+
 return {
     debounce = debounce,
     set_timeout = set_timeout,
@@ -305,4 +315,6 @@ return {
     is_linux = is_linux,
     unicode_sequence_to_utf8 = unicode_sequence_to_utf8,
     uuid_v4 = uuid_v4,
+    encode_uri = encode_uri,
+    tbl_keep_events = tbl_keep_events,
 }

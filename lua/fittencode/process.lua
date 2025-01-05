@@ -2,7 +2,9 @@ local Fn = require('fittencode.fn')
 
 local M = {}
 
-function M.spawn(exe, args, options)
+---@param exe table
+---@param options FittenCode.Process.SpawnOptions
+function M.spawn(exe, options)
     local stdout = {}
     local stderr = {}
     local process = nil
@@ -13,7 +15,7 @@ function M.spawn(exe, args, options)
 
     ---@diagnostic disable-next-line: missing-fields
     process, pid = vim.uv.spawn(exe.cmd, {
-        args = args,
+        args = exe.args,
         stdio = { uv_stdin, uv_stdout, uv_stderr },
         verbatim = true,
     }, function(code, signal)

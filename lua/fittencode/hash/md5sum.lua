@@ -3,14 +3,12 @@ local Process = require('fittencode.process')
 
 local M = {}
 
-local executables = {
-    md5sum = {
-        cmd = 'md5sum',
-        args = {
-            '-', -- With no FILE, or when FILE is -, read standard input.
-        },
-        code = 0,
-    }
+local md5sum = {
+    cmd = 'md5sum',
+    args = {
+        '-', -- With no FILE, or when FILE is -, read standard input.
+    },
+    code = 0,
 }
 
 function M.is_supported(method)
@@ -22,7 +20,7 @@ function M.hash(method, plaintext, on_success, on_error)
         Fn.schedule_call(on_error)
         return
     end
-    Process.spawn(executables.md5sum, executables.md5sum.args, {
+    Process.spawn(md5sum, md5sum.args, {
         on_input = function()
             return plaintext
         end,

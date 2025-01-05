@@ -1,10 +1,4 @@
----@class FittenCode.HTTP.RequestOptions
----@field method string
----@field url? string
----@field headers table<string, string>
----@field body table
----@field compress? boolean
----@field no_buffer? boolean
+---@class FittenCode.IOAsyncCallbacks
 ---@field on_create? function
 ---@field on_input? function
 ---@field on_stream? function
@@ -12,9 +6,32 @@
 ---@field on_error? function
 ---@field on_exit? function
 
+---@class FittenCode.HTTP.Request : FittenCode.IOAsyncCallbacks
+---@field method string
+---@field headers? FittenCode.HTTP.Headers
+---@field body? string
+---@field timeout? number
+
+---@class FittenCode.Process.SpawnOptions : FittenCode.IOAsyncCallbacks
+
+---@class FittenCode.Compression.CompressOptions : FittenCode.IOAsyncCallbacks
+
+---@alias FittenCode.HTTP.Headers table<string, string>
+
 ---@class FittenCode.HTTP.RequestHandle
 ---@field abort function
 ---@field is_active function
+
+---@class FittenCode.Client.APIOptions : FittenCode.IOAsyncCallbacks
+---@field prompt table
+---@field timeout number
+
+---@class FittenCode.Client.GenerateOneStageOptions : FittenCode.Client.APIOptions
+---@field completion_version string
+
+---@class FittenCode.Client.AcceptCompletionOptions : FittenCode.Client.APIOptions
+---@class FittenCode.Client.ChatOptions : FittenCode.Client.APIOptions
+---@class FittenCode.Client.GetCompletionVersionOptions : FittenCode.Client.APIOptions
 
 ---@alias FittenCode.Version 'default' | 'enterprise'
 

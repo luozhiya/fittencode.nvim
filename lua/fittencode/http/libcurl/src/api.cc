@@ -50,6 +50,7 @@ static int l_fetch(lua_State *L) {
     curl_easy_setopt(curl, CURLOPT_URL, url.data());
 
     std::string readBuffer;
+    curl_slist *headers = nullptr;
 
     // 3. 遍历options table
     std::cout << lua_gettop(L) << std::endl;
@@ -82,7 +83,6 @@ static int l_fetch(lua_State *L) {
             if (lua_istable(L, -1)) {
                 // 遍历headers table
                 lua_pushnil(L); // 第一个key，nil表示从第一个元素开始
-                curl_slist *headers = nullptr;
                 while (lua_next(L, -2) != 0) {
                     std::string_view key = lua_tostring(L, -2);   // 获取key
                     std::string_view value = lua_tostring(L, -1); // 获取value
@@ -90,11 +90,11 @@ static int l_fetch(lua_State *L) {
                     std::string kv = std::format("%s: %s", key.data(), value.data());
                     headers = curl_slist_append(headers, kv.data());
                 }
-                curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
             } else {
                 //
             }
         } else if (key == "body") {
+
         } else if (key == "timeout") {
             if (lua_isnumber(L, -1)) {
                 int timeout = lua_tointeger(L, -1);
@@ -114,6 +114,8 @@ static int l_fetch(lua_State *L) {
         v = lua_next(L, 2);
         std::cout << "lua_next: " << v << std::endl;
     }
+
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
     // Set the callback function to write data to string
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);

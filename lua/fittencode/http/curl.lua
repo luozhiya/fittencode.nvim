@@ -4,39 +4,27 @@ local Promise = require('fittencode.promise')
 local Config = require('fittencode.config')
 local Process = require('fittencode.process')
 
-local M = {}
+---@class FittenCode.HTTP.CURL.Request : FittenCode.HTTP.Request
 
-local executables = {
-    gzip = {
-        cmd = 'gzip',
-        args = {
-            '--no-name',
-            '--force',
-            '--quiet'
-        },
-        code = 0
+local Impl = {}
+
+local curl_meta = {
+    cmd = 'curl',
+    args = {
+        '-s',
+        '--show-error',
+        '--no-buffer',
     },
-    curl = {
-        cmd = 'curl',
-        args = {
-            '-s',
-            '--show-error',
-        },
-        code = 0
-    }
+    code = 0
 }
 
-local function build_curl_args(args, options)
-    if options.no_buffer then
-        args[#args + 1] = '--no-buffer'
-    end
-    local headers = options.headers or {}
+---@param options FittenCode.HTTP.CURL.Request
+local function extend_args(curl, args, options)
     if type(options.timeout) == 'number' then
         args[#args + 1] = '--connect-timeout'
         args[#args + 1] = options.timeout
     end
-    vim.list_extend(args, executables.curl.args)
-    for k, v in pairs(headers) do
+    for k, v in pairs(options.headers or {}) do
         args[#args + 1] = '-H'
         if Fn.is_windows() then
             args[#args + 1] = '"' .. k .. ': ' .. v .. '"'
@@ -44,138 +32,88 @@ local function build_curl_args(args, options)
             args[#args + 1] = k .. ': ' .. v
         end
     end
-    return args
+    vim.list_extend(curl.args, args)
 end
 
-function M.get(url, options)
+---@param url string
+---@param options FittenCode.HTTP.CURL.Request
+function Impl.get(url, options)
+    local curl = vim.deepcopy(curl_meta)
+    if #Config.http.curl.command ~= 0 then
+        curl.cmd = Config.http.curl.command
+    end
     local args = {
         url,
     }
-    build_curl_args(args, options)
-    Process.spawn(executables.curl, args, options)
+    extend_args(curl, args, options)
+    ---@diagnostic disable-next-line: param-type-mismatch
+    Process.spawn(curl, options)
 end
 
-local function _post(url, options)
+---@param options FittenCode.HTTP.CURL.Request
+---@return boolean
+local function is_gzip(options)
+    return options.headers ~= nil and options.headers['Content-Encoding'] == 'gzip'
+end
+
+---@param url string
+---@param options FittenCode.HTTP.CURL.Request
+function Impl.post(url, options)
+    local curl = vim.deepcopy(curl_meta)
+    if #Config.http.curl.command ~= 0 then
+        curl.cmd = Config.http.curl.command
+    end
     local args = {
         url,
         '-X',
         'POST',
     }
-    local function add_data(v, data, bin, is_file)
-        v[#v + 1] = bin and '--data-binary' or '-d'
-        v[#v + 1] = is_file and ('@' .. data) or data
+    extend_args(curl, args, options)
+    local tempname = vim.fn.tempname()
+    local f = assert(vim.uv.fs_open(tempname, 'w', 438))
+    vim.uv.fs_write(f, options.body)
+    vim.uv.fs_close(f)
+    args[#args + 1] = is_gzip(options) and '--data-binary' or '--data'
+    args[#args + 1] = '@' .. tempname
+    local on_exit = function()
+        Fn.schedule_call(options.on_exit)
+        vim.uv.fs_unlink(tempname, function(_, _) end)
     end
-    build_curl_args(args, options)
-    if type(options.body) == 'string' and vim.fn.filereadable(options.body) == 1 then
-        add_data(args, options.body, options.binaray, true)
-        Process.spawn(executables.curl, args, options)
-        return
-    end
-    if not Fn.is_windows() and #options.body <= Process.arg_max() - 2 * vim.fn.strlen(table.concat(args, ' ')) then
-        add_data(args, options.body, options.binaray, false)
-        Process.spawn(executables.curl, args, options)
-    else
-        Promise:new(function(resolve)
-            local tmpfile = vim.fn.tempname()
-            vim.uv.fs_open(tmpfile, 'w', 438, function(e_open, fd)
-                if e_open then
-                    Fn.schedule_call(options.on_error, { error = e_open, })
-                else
-                    assert(fd ~= nil)
-                    resolve({ fd = fd, tmpfile = tmpfile })
-                end
-            end)
-        end):forward(function(data)
-            return Promise:new(function(resolve)
-                vim.uv.fs_write(data.fd, options.body, -1, function(e_write, _)
-                    if e_write then
-                        Fn.schedule_call(options.on_error, { error = e_write, })
-                    else
-                        vim.uv.fs_close(data.fd, function(_, _) end)
-                        resolve(data.tmpfile)
-                    end
-                end)
-            end)
-        end):forward(function(tmpfile)
-            add_data(args, tmpfile, options.binaray, true)
-            local co = vim.deepcopy(options)
-            co.on_exit = function()
-                Fn.schedule_call(options.on_exit)
-                vim.uv.fs_unlink(tmpfile, function(_, _) end)
-            end
-            Process.spawn(executables.curl, args, co)
-        end)
-    end
-end
-
-function M.post(url, options)
-    local _, body = pcall(vim.fn.json_encode, options.body)
-    if not _ then
-        Fn.schedule_call(options.on_error, { error = body })
-        return
-    end
-    if not options.compress then
-        options.body = body
-        _post(url, options)
-    else
-        Promise:new(function(resolve)
-            local tmpfile = vim.fn.tempname()
-            vim.uv.fs_open(tmpfile, 'w', 438, function(e_open, fd)
-                if e_open then
-                    Fn.schedule_call(options.on_error, { error = e_open, })
-                else
-                    assert(fd ~= nil)
-                    resolve({ fd = fd, tmpfile = tmpfile })
-                end
-            end)
-        end):forward(function(data)
-            return Promise:new(function(resolve)
-                vim.uv.fs_write(data.fd, body, -1, function(e_write, _)
-                    if e_write then
-                        Fn.schedule_call(options.on_error, { error = e_write, })
-                    else
-                        vim.uv.fs_close(data.fd, function(_, _) end)
-                        resolve(data.tmpfile)
-                    end
-                end)
-            end)
-        end):forward(function(tmpfile)
-            local args = {
-                tmpfile,
-            }
-            vim.list_extend(args, executables.gzip.args)
-            local go = {
-                on_exit = function()
-                    local gz = tmpfile .. '.gz'
-                    local co = vim.deepcopy(options)
-                    co.body = gz
-                    co.binary = true
-                    co.on_exit = function()
-                        Fn.schedule_call(options.on_exit)
-                        vim.uv.fs_unlink(gz, function(_, _) end)
-                    end
-                    _post(url, co)
-                end,
-                on_error = options.on_error,
-            }
-            Process.spawn(executables.gzip, args, go)
-        end)
-    end
+    options.on_exit = on_exit
+    ---@diagnostic disable-next-line: param-type-mismatch
+    Process.spawn(curl, options)
 end
 
 ---@param url string
----@param options FittenCode.HTTP.RequestOptions
----@return FittenCode.HTTP.RequestHandle?
-function M.fetch(url, options)
+---@param options? FittenCode.HTTP.Request
+local function fetch(url, options)
     local function _()
+        options = options or {}
         local aborted = false
-        ---@type uv_process_t?
-        local process = nil
         local abortable_options = vim.tbl_deep_extend('force', options, {
             on_create = vim.schedule_wrap(function(data)
-                if aborted then return end
-                process = data.process
-                Fn.schedule_call(options.on_create)
+                ---@type uv_process_t?
+                local process = data.process
+                ---@type FittenCode.HTTP.RequestHandle
+                local handle = {
+                    abort = function()
+                        if not aborted then
+                            pcall(function()
+                                if process then
+                                    vim.uv.process_kill(process)
+                                end
+                            end)
+                            aborted = true
+                        end
+                    end,
+                    is_active = function()
+                        if process then
+                            return vim.uv.is_active(process)
+                        end
+                        return false
+                    end
+                }
+                Fn.schedule_call(options.on_create, handle)
             end),
             on_stream = vim.schedule_wrap(function(chunk)
                 if aborted then return end
@@ -186,35 +124,17 @@ function M.fetch(url, options)
                 Fn.schedule_call(options.on_once, data)
             end),
             on_error = vim.schedule_wrap(function(data)
-                -- if aborted then return end
                 Fn.schedule_call(options.on_error, data)
             end),
             on_exit = vim.schedule_wrap(function(data)
-                -- if aborted then return end
                 Fn.schedule_call(options.on_exit, data)
             end),
         })
-        Fn.schedule_call(M[string.lower(options.method)], url, abortable_options)
-        return {
-            abort = function()
-                if not aborted then
-                    pcall(function()
-                        if process then
-                            vim.uv.process_kill(process)
-                        end
-                    end)
-                    aborted = true
-                end
-            end,
-            is_active = function()
-                if process then
-                    return vim.uv.is_active(process)
-                end
-                return false
-            end
-        }
+        Fn.schedule_call(Impl[string.lower(options.method)], url, abortable_options)
     end
     return _()
 end
 
-return M
+return {
+    fetch = fetch,
+}

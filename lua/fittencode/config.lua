@@ -195,23 +195,28 @@ local defaults = {
             },
         }
     },
+    compress = {
+        -- Avaiable options:
+        -- * 'gzip'
+        -- * 'zlib' (Only available on Linux)
+        backend = 'gzip',
+        gzip = {
+            -- Default `gzip`
+            command = '',
+        },
+    },
     http = {
         -- Avaiable options:
         -- * 'curl'
         -- * 'libcurl' (Only available on Linux)
         backend = 'curl',
-        -- 0 (zero) which means curl(libcurl) never times out during transfer
+        -- 0 (zero) which means request never times out during transfer
         timeout = 600, -- seconds
         curl = {
             -- Default `curl`
             command = '',
         },
         libcurl = {},
-        -- HTTP request body gzip compress
-        gzip = {
-            -- Default `gzip`
-            command = '',
-        },
     },
     chat = {
         view = {
