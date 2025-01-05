@@ -20,7 +20,7 @@ function M.hash(method, plaintext, on_success, on_error)
         Fn.schedule_call(on_error)
         return
     end
-    Process.spawn(md5sum, md5sum.args, {
+    Process.spawn(md5sum, {
         on_input = function()
             return plaintext
         end,

@@ -209,7 +209,7 @@ local defaults = {
         -- Avaiable options:
         -- * 'curl'
         -- * 'libcurl' (Only available on Linux)
-        backend = 'curl',
+        backend = 'libcurl',
         -- 0 (zero) which means request never times out during transfer
         timeout = 600, -- seconds
         curl = {
