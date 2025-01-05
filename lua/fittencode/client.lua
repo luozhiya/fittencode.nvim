@@ -4,7 +4,7 @@ local Log = require('fittencode.log')
 local Promise = require('fittencode.promise')
 local Translate = require('fittencode.translate')
 local HTTP = require('fittencode.http')
-local Compress = require('fittencode.compress')
+local Compression = require('fittencode.compression')
 
 local M = {}
 
@@ -352,7 +352,6 @@ end
 --     "ex_msg": "1+2)*3"
 -- }
 ---@param options FittenCode.Client.GenerateOneStageOptions
----@return FittenCode.HTTP.RequestHandle?
 function M.generate_one_stage(options)
     local key = M.get_ft_token()
     if not key then
@@ -376,7 +375,7 @@ function M.generate_one_stage(options)
         return
     end
     Promise:new(function(resolve, reject)
-        Compress.compress('gzip', body, {
+        Compression.compress('gzip', body, {
             on_once = function(compressed_stream)
                 resolve(compressed_stream)
             end,

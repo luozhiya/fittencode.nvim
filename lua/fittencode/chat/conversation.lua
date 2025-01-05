@@ -176,7 +176,8 @@ function Conversation:execute_chat(options)
             }
             local co = {
                 prompt = prompt,
-                on_create = function()
+                on_create = function(handle)
+                    self.request_handle = handle
                     self.update_status({ id = self.id, stream = true })
                 end,
                 on_stream = function(chunk)
@@ -201,7 +202,8 @@ function Conversation:execute_chat(options)
                     resolve(completion)
                 end
             }
-            self.request_handle = Client.chat(co)
+            Log.debug('Executing chat, conversation id = {}', self.id)
+            Client.chat(co)
         end):forward(function(completion)
             self.update_status({ id = self.id, stream = false })
             self:handle_completion(completion)

@@ -68,25 +68,30 @@ function Impl.post(url, options)
         '-X',
         'POST',
     }
-    extend_args(curl, args, options)
+    local t0 = vim.loop.now()
     local tempname = vim.fn.tempname()
     local f = assert(vim.uv.fs_open(tempname, 'w', 438))
     vim.uv.fs_write(f, options.body)
     vim.uv.fs_close(f)
     args[#args + 1] = is_gzip(options) and '--data-binary' or '--data'
     args[#args + 1] = '@' .. tempname
-    local on_exit = function()
-        Fn.schedule_call(options.on_exit)
-        vim.uv.fs_unlink(tempname, function(_, _) end)
-    end
-    options.on_exit = on_exit
+    extend_args(curl, args, options)
+    local spawn_options = Fn.tbl_keep_events(options, {
+        on_exit = function()
+            Fn.schedule_call(options.on_exit)
+            vim.uv.fs_unlink(tempname, function(_, _) end)
+        end,
+    })
+    local t1 = vim.loop.now()
+    Log.debug('Spawning CURL process, elapsed time: {} ms', (t1 - t0))
     ---@diagnostic disable-next-line: param-type-mismatch
-    Process.spawn(curl, options)
+    Process.spawn(curl, spawn_options)
 end
 
 ---@param url string
 ---@param options? FittenCode.HTTP.Request
 local function fetch(url, options)
+    Log.debug('Fetching URL: ' .. url)
     local function _()
         options = options or {}
         local aborted = false

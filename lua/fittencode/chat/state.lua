@@ -1,6 +1,7 @@
 local Client = require('fittencode.client')
 local Fn = require('fittencode.fn')
 local Editor = require('fittencode.editor')
+local ActiveEditor = require('fittencode.chat.active_editor')
 local Log = require('fittencode.log')
 local StateConversation = require('fittencode.chat.state_conversation')
 
@@ -47,8 +48,8 @@ function State:get_state_from_model(model, selected_state)
         if selected_state then
             if a.id == model.selected_conversation_id then
                 A.reference = {
-                    select_text = Editor.selected_text(),
-                    select_range = Editor.selected_range()
+                    select_text = ActiveEditor.selected_text(),
+                    select_range = ActiveEditor.selected_range()
                 }
             else
                 if A.content.type == 'messageExchange' then

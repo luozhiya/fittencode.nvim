@@ -1,4 +1,4 @@
-local Hash = require("fittencode.hash")
+local Hash = require('fittencode.hash')
 
 ---@class FittenCode.Inline.Prompt
 ---@field inputs string
@@ -32,12 +32,12 @@ end
 ---@field pc_prompt string
 ---@field pc_prompt_type string
 
-local WL = "<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>"
+local WL = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 local _ie = 100
 local JL = true
-local XL = ""
-local Lc = ""
-local QS = ""
+local XL = ''
+local Lc = ''
+local QS = ''
 
 local function hash(t)
     return Hash.md5(t)
@@ -54,7 +54,7 @@ local function aVe(t, e)
             slen = 0,
             bplen = 0,
             bslen = 0,
-            pmd5 = "",
+            pmd5 = '',
             nmd5 = r,
             diff = e,
             filename = t
@@ -71,7 +71,7 @@ local function aVe(t, e)
         i = i + 1
     end
 
-    local encoder = require("utf8")  -- 或根据需要使用不同的编码库
+    local encoder = require('utf8') -- 或根据需要使用不同的编码库
     local o = #encoder(e:sub(1, n))
     local a = #encoder(e:sub(#e - i + 1))
 
@@ -105,7 +105,7 @@ local function make_prompt(filename, prefix, suffix)
             nmd5 = 'cfcd208495d565ef66e7dff9f98764da',
             diff = '0',
             filename = 'Untitled-1',
-            cpos = ,
+            cpos = 1,
             bcpos = 1,
             pc_available = false,
             pc_prompt = '',

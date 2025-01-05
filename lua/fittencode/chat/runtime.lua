@@ -1,4 +1,5 @@
 local Config = require('fittencode.config')
+local ActiveEditor = require('fittencode.chat.active_editor')
 local Editor = require('fittencode.editor')
 local Log = require('fittencode.log')
 
@@ -20,9 +21,13 @@ local function unit_test_framework()
 end
 
 function Runtime.resolve_variables_internal(v, e)
+    local buf = ActiveEditor.buf()
+    if not buf then
+        return ''
+    end
     local switch = {
         ['context'] = function()
-            return { name = Editor.filename(), language = Editor.language_id(), content = Editor.content() }
+            return { name = Editor.filename(buf), language = Editor.language_id(buf), content = Editor.content(buf) }
         end,
         ['constant'] = function()
             return v.value
@@ -31,16 +36,16 @@ function Runtime.resolve_variables_internal(v, e)
             return e and e[v.index] and e[v.index][v.property]
         end,
         ['selected-text'] = function()
-            return Editor.selected_text()
+            return ActiveEditor.selected_text()
         end,
         ['selected-location-text'] = function()
-            return Editor.selected_location_text()
+            return ActiveEditor.selected_location_text()
         end,
         ['filename'] = function()
-            return Editor.filename()
+            return Editor.filename(buf)
         end,
         ['language'] = function()
-            return Editor.language_id()
+            return Editor.language_id(buf)
         end,
         ['comment-snippet'] = function()
             return comment_snippet()
@@ -50,16 +55,16 @@ function Runtime.resolve_variables_internal(v, e)
             return s == 'Not specified' and '' or s
         end,
         ['selected-text-with-diagnostics'] = function()
-            return Editor.selected_text_with_diagnostics({ diagnostic_severities = v.severities })
+            return ActiveEditor.selected_text_with_diagnostics({ diagnostic_severities = v.severities })
         end,
         ['errorMessage'] = function()
-            return Editor.diagnose_info()
+            return ActiveEditor.diagnose_info()
         end,
         ['errorLocation'] = function()
-            return Editor.error_location()
+            return ActiveEditor.error_location()
         end,
         ['title-selected-text'] = function()
-            return Editor.title_selected_text()
+            return ActiveEditor.title_selected_text()
         end,
         ['terminal-text'] = function()
             Log.error('Not implemented for terminal-text')
