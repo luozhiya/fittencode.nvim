@@ -14,8 +14,10 @@ function M.fetch(url, options)
     options = options or {}
     local function _()
         local aborted = false
+        local active = false
         local abortable_options = vim.tbl_deep_extend('force', options, {
             on_create = vim.schedule_wrap(function(curlobject)
+                active = true
                 local handle = {
                     abort = function()
                         if not aborted then
@@ -24,11 +26,7 @@ function M.fetch(url, options)
                         end
                     end,
                     is_active = function()
-                        local _, is_active = pcall(CC.is_active, curlobject)
-                        if not _ then
-                            return false
-                        end
-                        return is_active
+                        return active
                     end
                 }
                 Fn.schedule_call(options.on_create, handle)
@@ -45,6 +43,7 @@ function M.fetch(url, options)
                 Fn.schedule_call(options.on_error, data)
             end),
             on_exit = vim.schedule_wrap(function(data)
+                active = false
                 Fn.schedule_call(options.on_exit, data)
             end),
         })

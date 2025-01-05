@@ -193,13 +193,14 @@ static int l_fetch(lua_State *L) {
         lua_call(L, 1, 0);
     }
 
+    readBuffer.clear();
+    curl_easy_cleanup(curl);
+
+    curl = nullptr;
     lua_getfield(L, -1, "on_exit");
     // push curl handle to stack
     lua_pushlightuserdata(L, curl);
-    lua_call(L, 1, 0);
-
-    readBuffer.clear();
-    curl_easy_cleanup(curl);
+    lua_call(L, 1, 0);    
 
     return 1;
 }

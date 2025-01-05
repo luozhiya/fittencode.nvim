@@ -1,4 +1,4 @@
-local CC = require("fittencode.cc").hash()
+local CC = require('fittencode.cc').hash()
 local Fn = require('fittencode.fn')
 
 local M = {}

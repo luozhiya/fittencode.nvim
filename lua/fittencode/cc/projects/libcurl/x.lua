@@ -3,7 +3,10 @@ local libcurl = require('libcurl')
 
 libcurl.global_init()
 
-libcurl.fetch('https://www.baidu.com', { method = 'GET', body = {}, headers = {},
+libcurl.fetch('https://www.baidu.com', {
+    method = 'GET',
+    body = {},
+    headers = {},
     on_create = function(handle)
         print('libcurl on_create')
         print(handle)
@@ -19,4 +22,4 @@ libcurl.fetch('https://www.baidu.com', { method = 'GET', body = {}, headers = {}
         print('libcurl on_once')
         print(#data)
     end
- })
+})
