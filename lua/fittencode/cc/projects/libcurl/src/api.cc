@@ -190,7 +190,7 @@ static int l_fetch(lua_State *L) {
         // push curl handle to stack
         lua_pushlstring(L, readBuffer.data(), readBuffer.size());
         // lua_pushlightuserdata(L, curl);
-        lua_call(L, 1, 0);        
+        lua_call(L, 1, 0);
     }
 
     lua_getfield(L, -1, "on_exit");
