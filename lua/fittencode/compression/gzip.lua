@@ -50,6 +50,7 @@ function M.compress(format, input, options)
                 local fw = assert(vim.uv.fs_open(gz, 'r', 438))
                 local content = vim.uv.fs_read(fw, -1)
                 vim.uv.fs_close(fw)
+                vim.uv.fs_unlink(gz)
                 Fn.schedule_call(options.on_once, content)
             else
                 Fn.schedule_call(options.on_error)

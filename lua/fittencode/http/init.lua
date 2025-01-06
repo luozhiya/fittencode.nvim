@@ -9,7 +9,7 @@ local M = {}
 ---@param options? FittenCode.HTTP.Request
 function M.fetch(url, options)
     local fetch
-    if Config.http.backend == 'libcurl' and Fn.is_linux() then
+    if Config.http.backend == 'libcurl' then
         fetch = require('fittencode.http.libcurl').fetch
     else
         fetch = require('fittencode.http.curl').fetch
