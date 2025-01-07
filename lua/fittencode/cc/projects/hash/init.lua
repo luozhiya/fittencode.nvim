@@ -1,6 +1,9 @@
+local cpath = package.cpath
 package.cpath = package.cpath .. ';' .. require('cpath')
 
 local _, So = pcall(require, 'hash')
+package.cpath = cpath
+
 if not _ then
     return
 end
