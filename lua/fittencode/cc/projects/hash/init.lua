@@ -1,8 +1,21 @@
 package.cpath = package.cpath .. ';' .. require('cpath')
 
-local _, CC = pcall(require, 'hash')
+local _, So = pcall(require, 'hash')
 if not _ then
     return
 end
 
-return CC
+local M = {}
+
+function M.is_supported(method)
+    return So.is_supported(method)
+end
+
+function M.hash(method, plaintext)
+    local _, ciphertext = pcall(So.hash, method, plaintext)
+    if _ then
+        return ciphertext
+    end
+end
+
+return M

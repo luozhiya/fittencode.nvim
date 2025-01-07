@@ -41,13 +41,9 @@ local last_filename = ''
 local last_text = ''
 local last_ciphertext = ''
 
-local function hash(t)
-    return Hash.hash('md5', t)
-end
-
 local function aVe(filename, text, on_success, on_error)
     Promise:new(function(resolve, reject)
-        Hash.hash('md5', text, function(ciphertext)
+        Hash.hash('MD5', text, function(ciphertext)
             resolve(ciphertext)
         end, function()
             reject()
@@ -68,7 +64,7 @@ local function aVe(filename, text, on_success, on_error)
                 filename = filename
             })
         else
-            local indices = vim.diff(last_text, text, {result_type = 'indices'})
+            local indices = vim.diff(last_text, text, { result_type = 'indices' })
 
             local n = 0
             while n < #text and n < #last_text and text:sub(n + 1, n + 1) == last_text:sub(n + 1, n + 1) do

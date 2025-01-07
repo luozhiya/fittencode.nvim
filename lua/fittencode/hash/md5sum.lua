@@ -3,7 +3,7 @@ local Process = require('fittencode.process')
 
 local M = {}
 
-local md5sum = {
+local md5sum_meta = {
     cmd = 'md5sum',
     args = {
         '-', -- With no FILE, or when FILE is -, read standard input.
@@ -12,7 +12,7 @@ local md5sum = {
 }
 
 function M.is_supported(method)
-    return string.lower(method) == 'md5'
+    return method == 'MD5'
 end
 
 function M.hash(method, plaintext, on_success, on_error)
@@ -20,6 +20,7 @@ function M.hash(method, plaintext, on_success, on_error)
         Fn.schedule_call(on_error)
         return
     end
+    local md5sum = vim.deepcopy(md5sum_meta)
     Process.spawn(md5sum, {
         on_input = vim.schedule_wrap(function()
             return plaintext
