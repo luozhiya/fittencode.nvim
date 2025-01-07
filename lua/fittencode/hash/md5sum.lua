@@ -21,15 +21,15 @@ function M.hash(method, plaintext, on_success, on_error)
         return
     end
     Process.spawn(md5sum, {
-        on_input = function()
+        on_input = vim.schedule_wrap(function()
             return plaintext
-        end,
-        on_once = function(data)
+        end),
+        on_once = vim.schedule_wrap(function(data)
             Fn.schedule_call(on_success, data)
-        end,
-        on_error = function()
+        end),
+        on_error = vim.schedule_wrap(function()
             Fn.schedule_call(on_error)
-        end
+        end)
     })
 end
 

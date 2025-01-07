@@ -1,4 +1,6 @@
 local Hash = require('fittencode.hash')
+local Promise = require('fittencode.promise')
+local Fn = require('fittencode.fn')
 
 ---@class FittenCode.Inline.Prompt
 ---@field inputs string
@@ -35,60 +37,68 @@ end
 local WL = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 local _ie = 100
 local JL = true
-local XL = ''
-local Lc = ''
-local QS = ''
+local last_filename = ''
+local last_text = ''
+local last_ciphertext = ''
 
 local function hash(t)
-    return Hash.md5(t)
+    return Hash.hash('md5', t)
 end
 
-local function aVe(t, e)
-    local r = hash(e)
-    if t ~= XL then
-        XL = t
-        Lc = e
-        QS = r
-        return {
-            plen = 0,
-            slen = 0,
-            bplen = 0,
-            bslen = 0,
-            pmd5 = '',
-            nmd5 = r,
-            diff = e,
-            filename = t
-        }
-    end
+local function aVe(filename, text, on_success, on_error)
+    Promise:new(function(resolve, reject)
+        Hash.hash('md5', text, function(ciphertext)
+            resolve(ciphertext)
+        end, function()
+            reject()
+        end)
+    end):forward(function(ciphertext)
+        if filename ~= last_filename then
+            last_filename = filename
+            last_text = text
+            last_ciphertext = ciphertext
+            Fn.schedule_call(on_success, {
+                plen = 0,
+                slen = 0,
+                bplen = 0,
+                bslen = 0,
+                pmd5 = '',
+                nmd5 = ciphertext,
+                diff = text,
+                filename = filename
+            })
+        else
+            local indices = vim.diff(last_text, text, {result_type = 'indices'})
 
-    local n = 0
-    while n < #e and n < #Lc and e:sub(n + 1, n + 1) == Lc:sub(n + 1, n + 1) do
-        n = n + 1
-    end
+            local n = 0
+            while n < #text and n < #last_text and text:sub(n + 1, n + 1) == last_text:sub(n + 1, n + 1) do
+                n = n + 1
+            end
 
-    local i = 0
-    while i + n < #e and i + n < #Lc and e:sub(#e - i, #e - i) == Lc:sub(#Lc - i, #Lc - i) do
-        i = i + 1
-    end
+            local i = 0
+            while i + n < #text and i + n < #last_text and text:sub(#text - i, #text - i) == last_text:sub(#last_text - i, #last_text - i) do
+                i = i + 1
+            end
 
-    local encoder = require('utf8') -- 或根据需要使用不同的编码库
-    local o = #encoder(e:sub(1, n))
-    local a = #encoder(e:sub(#e - i + 1))
+            local encoder = require('utf8') -- 或根据需要使用不同的编码库
+            local o = #encoder(text:sub(1, n))
+            local a = #encoder(text:sub(#text - i + 1))
 
-    local A = {
-        plen = n,
-        slen = i,
-        bplen = o,
-        bslen = a,
-        pmd5 = QS,
-        nmd5 = r,
-        diff = e:sub(n + 1, #e - i),
-        filename = t
-    }
+            local A = {
+                plen = n,
+                slen = i,
+                bplen = o,
+                bslen = a,
+                pmd5 = last_ciphertext,
+                nmd5 = ciphertext,
+                diff = text:sub(n + 1, #text - i),
+                filename = filename
+            }
 
-    Lc = e
-    QS = r
-    return A
+            last_text = text
+            last_ciphertext = ciphertext
+        end
+    end)
 end
 
 local function make_prompt(filename, prefix, suffix)
