@@ -74,23 +74,10 @@ function Controller:dismiss_suggestions()
     end
 end
 
-local function make_context(buf, e, r, chars_size)
-    local i = Editor.wordcount(buf).chars
-    local s = Editor.offset_at(buf, e) or 0
-    local o = Editor.offset_at(buf, r) or 0
-    local a = math.max(0, s - chars_size)
-    local A = math.min(i, o + chars_size)
-    local l = Editor.position_at(buf, a) or { row = 0, col = 0 }
-    local u = Editor.position_at(buf, A) or { row = 0, col = 0 }
-    local c = vim.api.nvim_buf_get_text(buf, l.row, l.col, e.row, e.col, {})
-    local h = vim.api.nvim_buf_get_text(buf, r.row, r.col, u.row, u.col, {})
-    return table.concat(c, '\n') .. '<fim_middle>' .. table.concat(h, '\n')
-end
-
 ---@param buf number
 ---@param position FittenCode.Position?
 ---@return FittenCode.Inline.Prompt?
-function Controller:generate_prompt(buf, position)
+function Controller:generate_prompt(buf, position, on_success, on_error)
     if not position then
         return
     end
@@ -107,23 +94,11 @@ function Controller:generate_prompt(buf, position)
         -- notify install lsp
     end
 
-    local A = ''
-    local max_chars = 22e4
-    local wc = Editor.wordcount(buf)
-    local prefix
-    local suffix
-    if wc.chars <= max_chars then
-        prefix = table.concat(vim.api.nvim_buf_get_text(buf, 0, 0, position.row, position.col, {}), '\n')
-        suffix = table.concat(vim.api.nvim_buf_get_text(buf, position.row, position.col, -1, -1, {}), '\n')
-        local a = position:clone()
-        local b = position:clone()
-        A = make_context(buf, a, b, 100)
-        Log.debug('Context: {}', A)
-    end
-    local WL = '<((fim_((prefix)|(suffix)|(middle)))|(%|[a-z]*%|))>'
-    prefix = vim.fn.substitute(prefix, WL, '', 'g')
-    suffix = vim.fn.substitute(suffix, WL, '', 'g')
-    local prompt = Prompt:new({ Editor.filename(buf), prefix, suffix, A })
+    local prompt = Prompt.make({
+        buf = buf,
+        filename = Editor.filename(buf),
+        position = position,
+    })
 end
 
 ---@class FittenCode.Inline.Completion
@@ -214,35 +189,42 @@ function Controller:triggering_completion(options)
     self.session.timing.on_create = vim.uv.hrtime()
 
     Promise:new(function(resolve, reject)
-        local gcv_options = {
-            on_create = function()
-                self.session.timing.get_completion_version.on_create = vim.uv.hrtime()
-            end,
-            on_once = function(stdout)
-                self.session.timing.get_completion_version.on_once = vim.uv.hrtime()
-                local json = table.concat(stdout, '')
-                local _, version = pcall(vim.fn.json_decode, json)
-                if not _ or version == nil then
-                    Log.error('Failed to get completion version: {}', json)
+        Log.debug('Triggering completion for position {}', position)
+        self:generate_prompt(buf, position, function(prompt)
+            resolve(prompt)
+        end, function()
+            Fn.schedule_call(options.on_error)
+        end)
+    end):forward(function(prompt)
+        Promise:new(function(resolve, reject)
+            local gcv_options = {
+                on_create = function()
+                    self.session.timing.get_completion_version.on_create = vim.uv.hrtime()
+                end,
+                on_once = function(stdout)
+                    self.session.timing.get_completion_version.on_once = vim.uv.hrtime()
+                    local json = table.concat(stdout, '')
+                    local _, version = pcall(vim.fn.json_decode, json)
+                    if not _ or version == nil then
+                        Log.error('Failed to get completion version: {}', json)
+                        reject()
+                    else
+                        resolve({ version = version, prompt = prompt })
+                    end
+                end,
+                on_error = function()
+                    self.session.timing.get_completion_version.on_error = vim.uv.hrtime()
                     reject()
-                else
-                    resolve(version)
                 end
-            end,
-            on_error = function()
-                self.session.timing.get_completion_version.on_error = vim.uv.hrtime()
-                reject()
-            end
-        }
-        self.session.request_handles[#self.session.request_handles + 1] = Client.get_completion_version(gcv_options)
-    end):forward(function(version)
+            }
+            self.session.request_handles[#self.session.request_handles + 1] = Client.get_completion_version(gcv_options)
+        end)
+    end):forward(function(_)
         return Promise:new(function(resolve, reject)
-            Log.debug('Got completion version {}', version)
-            Log.debug('Triggering completion for position {}', position)
-            local prompt = self:generate_prompt(buf, position)
+            Log.debug('Got completion version {}', _.version)
             local gos_options = {
-                completion_version = version,
-                prompt = prompt,
+                completion_version = _.version,
+                prompt = _.prompt,
                 on_create = function()
                     self.session.timing.generate_one_stage.on_create = vim.uv.hrtime()
                 end,

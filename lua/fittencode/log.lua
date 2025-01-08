@@ -21,7 +21,7 @@ local M = {}
 ]]
 local levels = vim.deepcopy(vim.log.levels)
 
-local log_path = vim.fn.stdpath('log') .. '/fittencode' .. '/fittencode.log'
+local logfile = vim.fn.stdpath('log') .. '/fittencode' .. '/fittencode.log'
 local max_size = 2 * 1024 * 1024 -- 2MB
 
 local preface = true
@@ -57,48 +57,46 @@ local function neovim_version()
     }
 end
 
-local function write_preface(f)
-    if not preface then
-        return
-    end
-    preface = false
-
-    local edge = string.rep('=', 80) .. '\n'
-    f:write(edge)
-
-    local info = {
-        { 'Verbose logging started', os.date('%Y-%m-%d %H:%M:%S') },
-        { 'Log level',               level_name(Config.log.level) },
-        { 'Calling process',         vim.uv.exepath() },
-        { 'Neovim',                  vim.inspect(neovim_version()) },
-        { 'Process ID',              vim.uv.os_getpid() },
-        { 'Parent process ID',       vim.uv.os_getppid() },
-        { 'OS',                      vim.inspect(vim.uv.os_uname()) }
-    }
-
-    for _, entry in ipairs(info) do
-        f:write(string.format('%s: %s\n', entry[1], entry[2]))
-    end
-    f:write(edge)
+local function async_log(msg)
+    vim.schedule(function()
+        local content = {}
+        if preface then
+            preface = false
+            vim.fn.mkdir(vim.fn.fnamemodify(logfile, ':h'), 'p')
+            if Config.log.developer_mode or vim.fn.getfsize(logfile) > max_size then
+                vim.fn.delete(logfile)
+            end
+            local edge = string.rep('=', 80)
+            local info = {
+                { 'Verbose logging started', os.date('%Y-%m-%d %H:%M:%S') },
+                { 'Log level',               level_name(Config.log.level) },
+                { 'Calling process',         vim.uv.exepath() },
+                { 'Neovim',                  vim.inspect(neovim_version()) },
+                { 'Process ID',              vim.uv.os_getpid() },
+                { 'Parent process ID',       vim.uv.os_getppid() },
+                { 'OS',                      vim.inspect(vim.uv.os_uname()) }
+            }
+            content[#content + 1] = edge
+            for _, entry in ipairs(info) do
+                content[#content + 1] = string.format('%s: %s', entry[1], entry[2])
+            end
+            content[#content + 1] = edge
+        end
+        local f = assert(io.open(logfile, 'a'))
+        content[#content + 1] = string.format('%s', msg)
+        f:write(table.concat(content, '\n') .. '\n')
+        f:close()
+    end)
 end
 
 local function log(level, msg, ...)
     if level >= Config.log.level and Config.log.level ~= levels.OFF then
-        if preface then
-            vim.fn.mkdir(vim.fn.fnamemodify(log_path, ':h'), 'p')
-            if vim.fn.getfsize(log_path) > max_size then
-                vim.fn.delete(log_path)
-            end
-        end
         msg = Fn.format(msg, ...)
         local ms = string.format('%03d', math.floor((vim.uv.hrtime() / 1e6) % 1000))
         local timestamp = os.date('%Y-%m-%d %H:%M:%S') .. '.' .. ms
         local tag = string.format('[%-5s %s] ', level_name(level), timestamp)
         msg = tag .. (msg or '')
-        local f = assert(io.open(log_path, 'a'))
-        write_preface(f)
-        f:write(string.format('%s\n', msg))
-        f:close()
+        async_log(msg)
     end
 end
 
@@ -124,10 +122,6 @@ for level, name in pairs(names) do
             log(levels[name], ...)
         end
     end
-end
-
-if vim.fn.filereadable(log_path) then
-    vim.fn.delete(log_path)
 end
 
 return M

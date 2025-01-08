@@ -170,6 +170,7 @@ local defaults = {
     },
     log = {
         level = vim.log.levels.WARN,
+        developer_mode = true,
     },
     hash = {
         md5 = {

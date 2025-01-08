@@ -308,3 +308,22 @@
 ---@field state? FittenCode.Inline.State
 ---@field extmark_ids table
 ---@field buf number
+
+---@class FittenCode.Inline.Prompt
+---@field inputs string
+---@field meta_datas FittenCode.Inline.Prompt.MetaDatas
+
+---@class FittenCode.Inline.Prompt.MetaDatas
+---@field plen number
+---@field slen number
+---@field bplen number
+---@field bslen number
+---@field pmd5 string
+---@field nmd5 string
+---@field diff string
+---@field filename string
+---@field cpos number
+---@field bcpos number
+---@field pc_available boolean
+---@field pc_prompt string
+---@field pc_prompt_type string
