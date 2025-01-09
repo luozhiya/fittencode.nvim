@@ -1,5 +1,7 @@
 local Log = require('fittencode.log')
 local Position = require('fittencode.position')
+local Range = require('fittencode.range')
+local TextLine = require('fittencode.text_line')
 
 -- Provide `TextDocument` interface for vim buffer.
 ---@class FittenCode.Editor
@@ -60,15 +62,22 @@ function M.line_count(buf)
     return count
 end
 
-function M.line_at(buf, position)
+---@param buf integer?
+---@param row number A zero-based row value.
+---@return FittenCode.TextLine?
+function M.line_at(buf, row)
     if not buf then
         return
     end
-    local line
+    local text
     vim.api.nvim_buf_call(buf, function()
-        line = vim.api.nvim_buf_get_lines(buf, position.row, position.row + 1, false)[1]
+        text = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
     end)
-    return line
+    return TextLine:new({
+        text = text,
+        line_number = row,
+        range = Range.make_from_line(row, text),
+    })
 end
 
 ---@return string?
@@ -208,6 +217,9 @@ end
 
 function M.columns_to_characters_delta(text, columns)
     return vim.str_utfindex(text, 'utf-8', columns, false)
+end
+
+function M.get_text(buf, range)
 end
 
 return M

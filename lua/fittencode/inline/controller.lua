@@ -68,17 +68,12 @@ function Controller:notify_observers(event, data)
 end
 
 function Controller:dismiss_suggestions()
-    if self.session then
-        self.session:destructor()
-        self.session = nil
-    end
+    self:cleanup_session()
 end
 
----@param buf number
----@param position FittenCode.Position?
 ---@return FittenCode.Inline.Prompt?
-function Controller:generate_prompt(buf, position, on_success, on_error)
-    if not position then
+function Controller:generate_prompt(options)
+    if not options.position then
         return
     end
     local within_the_line = position.col ~= string.len(vim.api.nvim_buf_get_lines(buf, position.row, position.row + 1, false)[1])
@@ -98,6 +93,7 @@ function Controller:generate_prompt(buf, position, on_success, on_error)
         buf = buf,
         filename = Editor.filename(buf),
         position = position,
+        edit_mode = options.edit_mode,
     })
 end
 
@@ -160,6 +156,81 @@ function Controller:cleanup_session()
     end
 end
 
+---@class FittenCode.Inline.TriggeringCompletionOptions
+---@field event any
+---@field force boolean
+---@field on_success function
+---@field on_error function
+---@field edit_mode boolean
+
+-- Maybe this should be a public API?
+function Controller:send_completions(options)
+    Promise:new(function(resolve, reject)
+        local gcv_options = {
+            on_create = function(handle)
+                options.session.timing.get_completion_version.on_create = vim.uv.hrtime()
+                options.session.request_handles[#options.request_handles + 1] = handle
+            end,
+            on_once = function(stdout)
+                options.session.timing.get_completion_version.on_once = vim.uv.hrtime()
+                local json = table.concat(stdout, '')
+                local _, version = pcall(vim.fn.json_decode, json)
+                if not _ or version == nil then
+                    Log.error('Failed to get completion version: {}', json)
+                    reject()
+                else
+                    resolve(version)
+                end
+            end,
+            on_error = function()
+                options.session.timing.get_completion_version.on_error = vim.uv.hrtime()
+                reject()
+            end
+        }
+        Client.get_completion_version(gcv_options)
+    end):forward(function(version)
+        return Promise:new(function(resolve, reject)
+            Log.debug('Got completion version {}', version)
+            local gos_options = {
+                completion_version = version,
+                prompt = options.prompt,
+                on_create = function(handle)
+                    options.session.timing.generate_one_stage.on_create = vim.uv.hrtime()
+                    options.session.request_handles[#options.request_handles + 1] = handle
+                end,
+                on_once = function(stdout)
+                    options.session.timing.generate_one_stage.on_once = vim.uv.hrtime()
+                    local _, json = pcall(vim.json.decode, table.concat(stdout, ''))
+                    if not _ then
+                        Log.error('Failed to decode completion response: {}', json)
+                        reject()
+                        return
+                    end
+                    local completion = self:completion_response(json)
+                    if not completion then
+                        Log.error('Failed to generate completion: {}', json)
+                        reject()
+                        return
+                    end
+                    resolve(completion)
+                end,
+                on_error = function()
+                    options.session.timing.generate_one_stage.on_error = vim.uv.hrtime()
+                    reject()
+                end
+            }
+            self.generate_one_stage(gos_options)
+        end)
+    end, function()
+        Fn.schedule_call(options.on_error)
+    end):forward(function(completion)
+        Fn.schedule_call(options.on_success, completion)
+    end, function()
+        Fn.schedule_call(options.on_error)
+    end)
+end
+
+---@param options FittenCode.Inline.TriggeringCompletionOptions
 function Controller:triggering_completion(options)
     options = options or {}
     Log.debug('Triggering completion')
@@ -189,83 +260,28 @@ function Controller:triggering_completion(options)
     self.session.timing.on_create = vim.uv.hrtime()
 
     Promise:new(function(resolve, reject)
-        Log.debug('Triggering completion for position {}', position)
-        self:generate_prompt(buf, position, function(prompt)
-            resolve(prompt)
-        end, function()
-            Fn.schedule_call(options.on_error)
-        end)
-    end):forward(function(prompt)
-        Promise:new(function(resolve, reject)
-            local gcv_options = {
-                on_create = function()
-                    self.session.timing.get_completion_version.on_create = vim.uv.hrtime()
-                end,
-                on_once = function(stdout)
-                    self.session.timing.get_completion_version.on_once = vim.uv.hrtime()
-                    local json = table.concat(stdout, '')
-                    local _, version = pcall(vim.fn.json_decode, json)
-                    if not _ or version == nil then
-                        Log.error('Failed to get completion version: {}', json)
-                        reject()
-                    else
-                        resolve({ version = version, prompt = prompt })
-                    end
-                end,
-                on_error = function()
-                    self.session.timing.get_completion_version.on_error = vim.uv.hrtime()
-                    reject()
-                end
-            }
-            self.session.request_handles[#self.session.request_handles + 1] = Client.get_completion_version(gcv_options)
-        end)
-    end):forward(function(_)
-        return Promise:new(function(resolve, reject)
-            Log.debug('Got completion version {}', _.version)
-            local gos_options = {
-                completion_version = _.version,
-                prompt = _.prompt,
-                on_create = function()
-                    self.session.timing.generate_one_stage.on_create = vim.uv.hrtime()
-                end,
-                on_once = function(stdout)
-                    self.session.timing.generate_one_stage.on_once = vim.uv.hrtime()
-                    local _, json = pcall(vim.json.decode, table.concat(stdout, ''))
-                    if not _ then
-                        Log.error('Failed to decode completion response: {}', json)
-                        reject()
-                        return
-                    end
-                    local completion = self:completion_response(json)
-                    if not completion then
-                        Log.error('Failed to generate completion: {}', json)
-                        reject()
-                        return
-                    end
-                    resolve(completion)
-                end,
-                on_error = function()
-                    self.session.timing.generate_one_stage.on_error = vim.uv.hrtime()
-                    reject()
-                end
-            }
-            self.generate_one_stage(gos_options)
-        end)
-    end, function()
-        Fn.schedule_call(options.on_error)
-    end):forward(function(completion)
-        local model = Model:new({
-            buf = buf,
-            position = position,
-            completion = completion,
+        Log.debug('Triggering completion for position {}', options.position)
+        self:generate_prompt({
+            buf = options.buf,
+            position = options.position,
+            edit_mode = options.edit_mode,
+            on_success = function(prompt)
+                resolve(prompt)
+            end,
+            on_error = function()
+                Fn.schedule_call(options.on_error)
+            end
         })
-        local view = View:new({ buf = buf })
-        self.session:init(model, view)
-        Log.debug('New session created {}', self.session)
-        Fn.schedule_call(options.on_success)
-    end, function()
-        Fn.schedule_call(options.on_error)
     end)
+
+    local model = Model:new({
+        buf = options.buf,
+        position = options.position,
+        completion = completion,
+    })
+    local view = View:new({ buf = options.buf })
+    self.session:init(model, view)
+    Log.debug('New session created {}', self.session)
 end
 
 function Controller:reflect(msg)
@@ -315,47 +331,57 @@ function Controller:set_onkey()
     end)
 end
 
+function Controller:_show_no_more_suggestion()
+    if self.extmark_ids.no_more_suggestion.del then
+        self.extmark_ids.no_more_suggestion.del()
+    end
+    local buf = vim.api.nvim_get_current_buf()
+    local row, col = unpack(vim.api.nvim_win_get_cursor(buf))
+    self.extmark_ids.no_more_suggestion.id = vim.api.nvim_buf_set_extmark(
+        buf,
+        self.ns_ids.virt_text,
+        row - 1,
+        col - 1,
+        {
+            virt_text = { { Translate('  (Currently no completion options available)'), 'FittenCodeNoMoreSuggestion' } },
+            virt_text_pos = 'inline',
+            hl_mode = 'replace',
+        })
+    self.extmark_ids.no_more_suggestion.del = function()
+        vim.api.nvim_buf_del_extmark(buf, self.ns_ids.virt_text, self.extmark_ids.no_more_suggestion.id)
+        self.extmark_ids.no_more_suggestion = {}
+        vim.api.nvim_clear_autocmds({ group = self.augroups.no_more_suggestion })
+    end
+    vim.defer_fn(function()
+        if self.extmark_ids.no_more_suggestion.del then
+            self.extmark_ids.no_more_suggestion.del()
+        end
+    end, 2000)
+    vim.api.nvim_create_autocmd({ 'InsertLeave', 'BufLeave', 'CursorMovedI' }, {
+        group = self.augroups.no_more_suggestion,
+        callback = function()
+            if self.extmark_ids.no_more_suggestion.del then
+                self.extmark_ids.no_more_suggestion.del()
+            end
+        end,
+    })
+end
+
 function Controller:edit_completion()
-    local mode = 'edit_completion'
+    self:triggering_completion({
+        force = true,
+        edit_mode = true,
+        on_error = function()
+            self:_show_no_more_suggestion()
+        end
+    })
 end
 
 function Controller:triggering_completion_by_shortcut()
     self:triggering_completion({
         force = true,
         on_error = function()
-            if self.extmark_ids.no_more_suggestion.del then
-                self.extmark_ids.no_more_suggestion.del()
-            end
-            local buf = vim.api.nvim_get_current_buf()
-            local row, col = unpack(vim.api.nvim_win_get_cursor(buf))
-            self.extmark_ids.no_more_suggestion.id = vim.api.nvim_buf_set_extmark(
-                buf,
-                self.ns_ids.virt_text,
-                row - 1,
-                col - 1,
-                {
-                    virt_text = { { Translate('  (Currently no completion options available)'), 'FittenCodeNoMoreSuggestion' } },
-                    virt_text_pos = 'inline',
-                    hl_mode = 'replace',
-                })
-            self.extmark_ids.no_more_suggestion.del = function()
-                vim.api.nvim_buf_del_extmark(buf, self.ns_ids.virt_text, self.extmark_ids.no_more_suggestion.id)
-                self.extmark_ids.no_more_suggestion = {}
-                vim.api.nvim_clear_autocmds({ group = self.augroups.no_more_suggestion })
-            end
-            vim.defer_fn(function()
-                if self.extmark_ids.no_more_suggestion.del then
-                    self.extmark_ids.no_more_suggestion.del()
-                end
-            end, 2000)
-            vim.api.nvim_create_autocmd({ 'InsertLeave', 'BufLeave', 'CursorMovedI' }, {
-                group = self.augroups.no_more_suggestion,
-                callback = function()
-                    if self.extmark_ids.no_more_suggestion.del then
-                        self.extmark_ids.no_more_suggestion.del()
-                    end
-                end,
-            })
+            self:_show_no_more_suggestion()
         end
     })
 end

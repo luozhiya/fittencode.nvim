@@ -115,4 +115,17 @@ function Range:clone()
     })
 end
 
+function Range.make_from_line(row, line_text)
+    return Range:new({
+        start = Position:new({
+            row = row,
+            col = 0,
+        }),
+        termination = Position:new({
+            row = row,
+            col = #line_text,
+        }),
+    })
+end
+
 return Range
