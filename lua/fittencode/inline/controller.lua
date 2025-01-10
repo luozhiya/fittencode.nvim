@@ -72,7 +72,7 @@ function Controller:generate_prompt(options)
     if not options.position then
         return
     end
-    local within_the_line = position.col ~= string.len(vim.api.nvim_buf_get_lines(buf, position.row, position.row + 1, false)[1])
+    local within_the_line = options.position.col ~= string.len(vim.api.nvim_buf_get_lines(options.buf, options.position.row, options.position.row + 1, false)[1])
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
         return
     end
@@ -85,10 +85,10 @@ function Controller:generate_prompt(options)
         -- notify install lsp
     end
 
-    local prompt = Prompt.make({
-        buf = buf,
-        filename = Editor.filename(buf),
-        position = position,
+    return Prompt.make({
+        buf = options.buf,
+        filename = Editor.filename(options.buf),
+        position = options.position,
         edit_mode = options.edit_mode,
     })
 end
@@ -153,11 +153,11 @@ function Controller:cleanup_session()
 end
 
 ---@class FittenCode.Inline.TriggeringCompletionOptions
----@field event any
----@field force boolean
----@field on_success function
----@field on_error function
----@field edit_mode boolean
+---@field event? any
+---@field force? boolean
+---@field on_success? function
+---@field on_error? function
+---@field edit_mode? boolean
 
 -- Maybe this should be a public API?
 function Controller:send_completions(options)
@@ -253,13 +253,11 @@ function Controller:triggering_completion(options)
         reflect = function(_) self:reflect(_) end,
     })
 
-    self.session.timing.on_create = vim.uv.hrtime()
-
     Promise:new(function(resolve, reject)
-        Log.debug('Triggering completion for position {}', options.position)
+        Log.debug('Triggering completion for position {}', position)
         self:generate_prompt({
-            buf = options.buf,
-            position = options.position,
+            buf = buf,
+            position = position,
             edit_mode = options.edit_mode,
             on_success = function(prompt)
                 resolve(prompt)
@@ -268,16 +266,25 @@ function Controller:triggering_completion(options)
                 Fn.schedule_call(options.on_error)
             end
         })
+    end):forward(function(prompt)
+        self:send_completions({
+            prompt = prompt,
+            session = self.session,
+            on_success = function(completion)
+                Fn.schedule_call(options.on_success, completion)
+                local model = Model:new({
+                    buf = buf,
+                    position = position,
+                    completion = completion,
+                })
+                local view = View:new({ buf = buf })
+                self.session:init(model, view)
+            end,
+            on_error = function()
+                Fn.schedule_call(options.on_error)
+            end
+        });
     end)
-
-    local model = Model:new({
-        buf = options.buf,
-        position = options.position,
-        completion = completion,
-    })
-    local view = View:new({ buf = options.buf })
-    self.session:init(model, view)
-    Log.debug('New session created {}', self.session)
 end
 
 function Controller:reflect(msg)

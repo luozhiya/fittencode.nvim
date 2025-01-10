@@ -13,6 +13,7 @@ function Session:new(opts)
         buf = opts.buf,
         reflect = opts.reflect,
         timing = {
+            on_create = vim.uv.hrtime(),
             get_completion_version = {},
             generate_one_stage = {}
         },
