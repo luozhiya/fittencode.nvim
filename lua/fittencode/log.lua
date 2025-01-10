@@ -1,6 +1,24 @@
 local Config = require('fittencode.config')
 local Fn = require('fittencode.fn')
 
+---@class FittenCode.Log
+---@field error function
+---@field warn function
+---@field info function
+---@field debug function
+---@field trace function
+---@field notify_error function
+---@field notify_warn function
+---@field notify_info function
+---@field notify_debug function
+---@field notify_trace function
+---@field dev_error function
+---@field dev_warn function
+---@field dev_info function
+---@field dev_debug function
+---@field dev_trace function
+
+---@class FittenCode.Log
 local M = {}
 
 -- See `help vim.log.levels`
