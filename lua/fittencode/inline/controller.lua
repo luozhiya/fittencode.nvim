@@ -159,13 +159,20 @@ end
 ---@field on_error? function
 ---@field edit_mode? boolean
 
+---@class FittenCode.Inline.SendCompletionsOptions
+---@field prompt FittenCode.Inline.Prompt
+---@field session FittenCode.Inline.Session
+---@field on_success function
+---@field on_error function
+
 -- Maybe this should be a public API?
+---@param options FittenCode.Inline.SendCompletionsOptions
 function Controller:send_completions(options)
     Promise:new(function(resolve, reject)
         local gcv_options = {
             on_create = function(handle)
                 options.session.timing.get_completion_version.on_create = vim.uv.hrtime()
-                options.session.request_handles[#options.request_handles + 1] = handle
+                options.session.request_handles[#options.session.request_handles + 1] = handle
             end,
             on_once = function(stdout)
                 options.session.timing.get_completion_version.on_once = vim.uv.hrtime()
@@ -192,7 +199,7 @@ function Controller:send_completions(options)
                 prompt = options.prompt,
                 on_create = function(handle)
                     options.session.timing.generate_one_stage.on_create = vim.uv.hrtime()
-                    options.session.request_handles[#options.request_handles + 1] = handle
+                    options.session.request_handles[#options.session.request_handles + 1] = handle
                 end,
                 on_once = function(stdout)
                     options.session.timing.generate_one_stage.on_once = vim.uv.hrtime()
