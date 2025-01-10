@@ -95,8 +95,14 @@ function M.has_fitten_ai_api_key()
     return keyring.key ~= nil and keyring.key ~= ''
 end
 
+-- Only notify once
+local has_notify_login_message = false
 local function notify_login()
-    Log.notify_error(Translate('[Fitten Code] Please login first.'))
+    if has_notify_login_message then
+        return
+    end
+    has_notify_login_message = true
+    Log.notify_info(Translate('[Fitten Code] Please login first.'))
 end
 
 ---@return string?

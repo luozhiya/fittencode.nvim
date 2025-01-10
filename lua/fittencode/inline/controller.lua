@@ -38,11 +38,7 @@ function Controller:init()
         level = 0,
     })
     self:register_observer(self.status)
-    self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime, function(data)
-        if self.session then
-            self.session.request_handles[#self.session.request_handles + 1] = data
-        end
-    end)
+    self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
     self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
     self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
     self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
