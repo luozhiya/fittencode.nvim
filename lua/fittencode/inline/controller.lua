@@ -160,14 +160,14 @@ end
 ---@field edit_mode? boolean
 
 ---@class FittenCode.Inline.SendCompletionsOptions
----@field prompt FittenCode.Inline.Prompt
 ---@field session FittenCode.Inline.Session
 ---@field on_success function
 ---@field on_error function
 
 -- Maybe this should be a public API?
+---@param prompt FittenCode.Inline.Prompt
 ---@param options FittenCode.Inline.SendCompletionsOptions
-function Controller:send_completions(options)
+function Controller:send_completions(prompt, options)
     Promise:new(function(resolve, reject)
         local gcv_options = {
             on_create = function(handle)
@@ -196,7 +196,7 @@ function Controller:send_completions(options)
             Log.debug('Got completion version {}', version)
             local gos_options = {
                 completion_version = version,
-                prompt = options.prompt,
+                prompt = prompt,
                 on_create = function(handle)
                     options.session.timing.generate_one_stage.on_create = vim.uv.hrtime()
                     options.session.request_handles[#options.session.request_handles + 1] = handle
@@ -274,8 +274,7 @@ function Controller:triggering_completion(options)
             end
         })
     end):forward(function(prompt)
-        self:send_completions({
-            prompt = prompt,
+        self:send_completions(prompt, {
             session = self.session,
             on_success = function(completion)
                 Fn.schedule_call(options.on_success, completion)
