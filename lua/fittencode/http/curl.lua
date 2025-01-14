@@ -88,7 +88,6 @@ end
 ---@param url string
 ---@param options? FittenCode.HTTP.Request
 local function fetch(url, options)
-    Log.debug('Fetching URL: ' .. url)
     local function _()
         options = options or {}
         local aborted = false

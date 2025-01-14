@@ -6,7 +6,7 @@ local M = {}
 ---@param exe table
 ---@param options FittenCode.Process.SpawnOptions
 function M.spawn(exe, options)
-    Log.debug('spawning process {}, options {}', exe, options)
+    Log.debug('spawning exe {}', exe)
     local stdout = {}
     local stderr = {}
     local process = nil
@@ -47,7 +47,6 @@ function M.spawn(exe, options)
             if err then
                 Fn.schedule_call(options.on_error, { stderr = uv_stderr, error = err, })
             elseif chunk then
-                Log.debug('received {} bytes from {}', #chunk, chunk)
                 Fn.schedule_call(options.on_stream, chunk)
                 received_data[#received_data + 1] = chunk
             else

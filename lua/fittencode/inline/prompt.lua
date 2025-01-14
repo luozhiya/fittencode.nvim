@@ -13,7 +13,7 @@ Prompt.__index = Prompt
 ---@return FittenCode.Inline.Prompt
 function Prompt:new(options)
     local obj = {
-        inputs = options.inputs or "",
+        inputs = options.inputs or '',
         meta_datas = options.meta_datas or {}
     }
     setmetatable(obj, Prompt)
@@ -81,10 +81,6 @@ function Prompt.generate(options)
     prefix = vim.fn.substitute(prefix, WL, '', 'g')
     suffix = vim.fn.substitute(suffix, WL, '', 'g')
     local text = prefix .. suffix
-    Log.debug('Prompt: prefix = {}', prefix)
-    Log.debug('Prompt: suffix = {}', suffix)
-    Log.debug('Prompt: context = {}', context)
-    Log.debug('Prompt: text = {}', text)
     Promise:new(function(resolve, reject)
         Hash.hash('MD5', text, {
             on_once = function(ciphertext)
@@ -177,7 +173,7 @@ function Prompt.generate(options)
             -- prompt.edit_mode_trigger_type
         end
         local prompt = Prompt:new({
-            inputs = "",
+            inputs = '',
             meta_datas = meta_datas
         })
         Fn.schedule_call(options.on_once, prompt)

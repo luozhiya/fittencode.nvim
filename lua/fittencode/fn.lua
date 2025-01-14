@@ -293,6 +293,9 @@ local function encode_uri(uri)
     return (string.gsub(uri, "[^%a%d%-_%.!~%*'%(%);/%?:@&=%+%$,#]", _encode_uri_char))
 end
 
+-- 复制 on_ 开头的事件到另一个 table
+-- 注意：如果 a 和 c 都有相同的事件，则 c 的事件会覆盖 a 的事件
+-- 特别注意：如果 c 中没有重写 a 的事件，则会直接回调到 a 的事件
 local function tbl_keep_events(a, c)
     local b = {}
     for k, v in pairs(a) do
