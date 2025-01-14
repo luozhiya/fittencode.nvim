@@ -13,7 +13,8 @@ Prompt.__index = Prompt
 ---@return FittenCode.Inline.Prompt
 function Prompt:new(options)
     local obj = {
-        filename = options.filename,
+        inputs = options.inputs or "",
+        meta_datas = options.meta_datas or {}
     }
     setmetatable(obj, Prompt)
     return obj
@@ -94,11 +95,14 @@ function Prompt.generate(options)
             end
         })
     end):forward(function(ciphertext)
+        ---@type FittenCode.Inline.Prompt.MetaDatas?
+        local meta_datas
         if options.filename ~= last_filename then
             last_filename = options.filename
             last_text = text
             last_ciphertext = ciphertext
-            Fn.schedule_call(options.on_once, {
+            ---@diagnostic disable-next-line: missing-fields
+            meta_datas = {
                 plen = 0,
                 slen = 0,
                 bplen = 0,
@@ -107,7 +111,7 @@ function Prompt.generate(options)
                 nmd5 = ciphertext,
                 diff = text,
                 filename = options.filename
-            })
+            }
         else
             -- 1. 计算 text 和 last_text 的 diff
             -- 2. n，i 为 diff 的字符utf16范围
@@ -139,7 +143,8 @@ function Prompt.generate(options)
             local n = vim.str_utfindex(text, 'utf-16', o)
             local i = vim.str_utfindex(last_text, 'utf-16', a)
 
-            local AA = {
+            ---@diagnostic disable-next-line: missing-fields
+            meta_datas = {
                 plen = n,
                 slen = i,
                 bplen = o,
@@ -152,9 +157,30 @@ function Prompt.generate(options)
 
             last_text = text
             last_ciphertext = ciphertext
-
-            Fn.schedule_call(options.on_once, AA)
         end
+        return Promise:new(function(resolve, reject)
+            if meta_datas then
+                resolve(meta_datas)
+            else
+                Fn.schedule_call(options.on_error)
+            end
+        end)
+    end):forward(function(meta_datas)
+        meta_datas.cpos = prefix:len()
+        meta_datas.bcpos = prefix:len()
+        meta_datas.pc_available = true
+        meta_datas.pc_prompt = ''
+        meta_datas.pc_prompt_type = '0'
+        if options.edit_mode then
+            meta_datas.edit_mode = 'true'
+            -- prompt.edit_mode_history
+            -- prompt.edit_mode_trigger_type
+        end
+        local prompt = Prompt:new({
+            inputs = "",
+            meta_datas = meta_datas
+        })
+        Fn.schedule_call(options.on_once, prompt)
     end)
 end
 
