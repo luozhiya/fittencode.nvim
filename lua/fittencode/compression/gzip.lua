@@ -44,7 +44,7 @@ function M.compress(format, input, options)
 
     ---@type FittenCode.Process.SpawnOptions
     local spawn_options = Fn.tbl_keep_events(options, {
-        on_exit = vim.schedule_wrap(function()
+        on_once = vim.schedule_wrap(function()
             local gz = tempname .. '.gz'
             if vim.fn.filereadable(gz) == 1 then
                 local fd = assert(vim.uv.fs_open(gz, 'r', 438))
