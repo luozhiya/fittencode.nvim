@@ -75,12 +75,18 @@ function Impl.post(url, options)
     args[#args + 1] = is_gzip(options) and '--data-binary' or '--data'
     args[#args + 1] = '@' .. tempname
     extend_args(curl, args, options)
-    local spawn_options = Fn.tbl_keep_events(options, {
-        on_exit = function()
-            Fn.schedule_call(options.on_exit)
+
+    ---@class FittenCode.AsyncIOCallbacks
+    local spawn_options = {
+        on_create = function(...) Fn.schedule_call(options.on_create, ...) end,
+        on_once = function(...) Fn.schedule_call(options.on_once, ...) end,
+        on_stream = function(...) Fn.schedule_call(options.on_stream, ...) end,
+        on_error = function(...) Fn.schedule_call(options.on_error, ...) end,
+        on_exit = function(...)
+            Fn.schedule_call(options.on_exit, ...)
             vim.uv.fs_unlink(tempname)
         end,
-    })
+    }
     ---@diagnostic disable-next-line: param-type-mismatch
     Process.spawn(curl, spawn_options)
 end

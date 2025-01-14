@@ -43,8 +43,9 @@ function M.compress(format, input, options)
     gzip.args[#gzip.args + 1] = tempname
 
     ---@type FittenCode.Process.SpawnOptions
-    local spawn_options = Fn.tbl_keep_events(options, {
-        on_once = vim.schedule_wrap(function()
+    local spawn_options = {
+        -- 并没有从 on_once 读取 stdout，所以触发 on_exit 时直接读取文件
+        on_exit = vim.schedule_wrap(function()
             local gz = tempname .. '.gz'
             if vim.fn.filereadable(gz) == 1 then
                 local fd = assert(vim.uv.fs_open(gz, 'r', 438))
@@ -57,7 +58,10 @@ function M.compress(format, input, options)
                 Fn.schedule_call(options.on_error)
             end
         end),
-    })
+        on_error = vim.schedule_wrap(function(...)
+            Fn.schedule_call(options.on_error)
+        end)
+    }
     Process.spawn(gzip, spawn_options)
 end
 

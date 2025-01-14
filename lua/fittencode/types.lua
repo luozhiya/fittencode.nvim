@@ -340,3 +340,38 @@
 ---@field pc_available boolean
 ---@field pc_prompt string
 ---@field pc_prompt_type string
+
+---@class FittenCode.Inline.GeneratePromptOptions : FittenCode.AsyncIOCallbacks
+---@field buf number
+---@field position FittenCode.Position
+---@field edit_mode boolean
+---@field filename? string
+
+---@class FittenCode.Inline.Completion
+---@field response FittenCode.Inline.GenerateOneStageResponse
+---@field position FittenCode.Position
+
+---@class FittenCode.Inline.GenerateOneStageResponse
+---@field request_id string
+---@field completions FittenCode.Inline.GenerateOneStageResponse.Completion[]
+---@field context any
+
+---@class FittenCode.Inline.GenerateOneStageResponse.Completion
+---@field generated_text string
+---@field col_delta number
+---@field row_delta number
+
+---@class FittenCode.Inline.RawGenerateOneStageResponse
+---@field server_request_id string
+---@field generated_text string
+---@field ex_msg string
+---@field delta_char number
+---@field delta_line number
+
+---@class FittenCode.Inline.TriggeringCompletionOptions : FittenCode.AsyncResultCallbacks
+---@field event? any
+---@field force? boolean
+---@field edit_mode? boolean
+
+---@class FittenCode.Inline.SendCompletionsOptions : FittenCode.AsyncResultCallbacks
+---@field session FittenCode.Inline.Session

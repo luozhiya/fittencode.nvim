@@ -293,10 +293,15 @@ local function encode_uri(uri)
     return (string.gsub(uri, "[^%a%d%-_%.!~%*'%(%);/%?:@&=%+%$,#]", _encode_uri_char))
 end
 
--- 复制 on_ 开头的事件到另一个 table
--- 注意：如果 a 和 c 都有相同的事件，则 c 的事件会覆盖 a 的事件
--- 特别注意：如果 c 中没有重写 a 的事件，则会直接回调到 a 的事件
+-- 复制 on_ 开头的事件到新的 table
+-- 禁止：不允许在 c 中添加 on_ 开头的事件
+-- 这个函数仅仅适用于不修改回调，但需要修改其他数据情况下使用
 local function tbl_keep_events(a, c)
+    for k, v in pairs(c) do
+        if startwith(k, 'on_') then
+            return
+        end
+    end
     local b = {}
     for k, v in pairs(a) do
         if startwith(k, 'on_') then

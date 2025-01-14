@@ -67,12 +67,6 @@ function Controller:dismiss_suggestions()
     self:cleanup_session()
 end
 
----@class FittenCode.Inline.GeneratePromptOptions : FittenCode.AsyncIOCallbacks
----@field buf number
----@field position FittenCode.Position
----@field edit_mode boolean
----@field filename? string
-
 ---@param options FittenCode.Inline.GeneratePromptOptions
 ---@return FittenCode.Inline.Prompt?
 function Controller:generate_prompt(options)
@@ -92,29 +86,9 @@ function Controller:generate_prompt(options)
         position = options.position,
         edit_mode = options.edit_mode,
     })
+    assert(prompt_options)
     Prompt.generate(prompt_options)
 end
-
----@class FittenCode.Inline.Completion
----@field response FittenCode.Inline.GenerateOneStageResponse
----@field position FittenCode.Position
-
----@class FittenCode.Inline.GenerateOneStageResponse
----@field request_id string
----@field completions FittenCode.Inline.GenerateOneStageResponse.Completion[]
----@field context any
-
----@class FittenCode.Inline.GenerateOneStageResponse.Completion
----@field generated_text string
----@field col_delta number
----@field row_delta number
-
----@class FittenCode.Inline.RawGenerateOneStageResponse
----@field server_request_id string
----@field generated_text string
----@field ex_msg string
----@field delta_char number
----@field delta_line number
 
 ---@param data FittenCode.Inline.RawGenerateOneStageResponse
 ---@return FittenCode.Inline.GenerateOneStageResponse?
@@ -154,14 +128,6 @@ function Controller:cleanup_session()
         self.session = nil
     end
 end
-
----@class FittenCode.Inline.TriggeringCompletionOptions : FittenCode.AsyncResultCallbacks
----@field event? any
----@field force? boolean
----@field edit_mode? boolean
-
----@class FittenCode.Inline.SendCompletionsOptions : FittenCode.AsyncResultCallbacks
----@field session FittenCode.Inline.Session
 
 -- Maybe this should be a public API?
 ---@param prompt FittenCode.Inline.Prompt
