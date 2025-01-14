@@ -27,4 +27,30 @@ function Model:clear()
     self.ex_msg = nil
 end
 
+function Model:validate_word_segments(segments)
+    for k, v in pairs(segments) do
+        if table.concat(v, '') ~= self.completion.completions[tonumber(k)].generated_text then
+            return false
+        end
+    end
+    return true
+end
+
+-- Update the model with the given state, only support word_segments for now.
+function Model:update(state)
+    if not state then
+        return
+    end
+    if state.word_segments then
+        if not self:validate_word_segments(state.word_segments) then
+            return
+        end
+        self.word_segments = state.word_segments
+        self:recalculate()
+    end
+end
+
+function Model:recalculate()
+end
+
 return Model

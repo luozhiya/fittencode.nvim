@@ -222,4 +222,24 @@ end
 function M.get_text(buf, range)
 end
 
+-- Check if the given text contains only ASCII characters.
+---@param text? string|string[]
+function M.onlyascii(text)
+    if not text then
+        return false
+    end
+    if type(text) == 'table' then
+        for _, t in ipairs(text) do
+            if not M.onlyascii(t) then
+                return false
+            end
+        end
+    else
+        if #vim.str_utf_pos(text) == #text then
+            return true
+        end
+    end
+    return false
+end
+
 return M

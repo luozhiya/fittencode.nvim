@@ -67,12 +67,20 @@ function Controller:dismiss_suggestions()
     self:cleanup_session()
 end
 
+---@class FittenCode.Inline.GeneratePromptOptions
+---@field buf number
+---@field position FittenCode.Position
+---@field edit_mode boolean
+---@field on_success function
+---@field on_failure function
+
+---@param options FittenCode.Inline.GeneratePromptOptions
 ---@return FittenCode.Inline.Prompt?
 function Controller:generate_prompt(options)
     if not options.position then
         return
     end
-    local within_the_line = options.position.col ~= string.len(vim.api.nvim_buf_get_lines(options.buf, options.position.row, options.position.row + 1, false)[1])
+    local within_the_line = Editor.within_the_line(options.buf, options.position)
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
         return
     end
@@ -85,11 +93,13 @@ function Controller:generate_prompt(options)
         -- notify install lsp
     end
 
-    return Prompt.make({
+    Prompt.make({
         buf = options.buf,
         filename = Editor.filename(options.buf),
         position = options.position,
         edit_mode = options.edit_mode,
+        on_success = options.on_success,
+        on_failure = options.on_failure,
     })
 end
 
@@ -156,13 +166,13 @@ end
 ---@field event? any
 ---@field force? boolean
 ---@field on_success? function
----@field on_error? function
+---@field on_failure? function
 ---@field edit_mode? boolean
 
 ---@class FittenCode.Inline.SendCompletionsOptions
 ---@field session FittenCode.Inline.Session
 ---@field on_success function
----@field on_error function
+---@field on_failure function
 
 -- Maybe this should be a public API?
 ---@param prompt FittenCode.Inline.Prompt
@@ -225,11 +235,11 @@ function Controller:send_completions(prompt, options)
             self.generate_one_stage(gos_options)
         end)
     end, function()
-        Fn.schedule_call(options.on_error)
+        Fn.schedule_call(options.on_failure)
     end):forward(function(completion)
         Fn.schedule_call(options.on_success, completion)
     end, function()
-        Fn.schedule_call(options.on_error)
+        Fn.schedule_call(options.on_failure)
     end)
 end
 
@@ -248,6 +258,7 @@ function Controller:triggering_completion(options)
         return
     end
     local position = Editor.position(vim.api.nvim_get_current_win())
+    assert(position)
     options.force = (options.force == nil) and false or options.force
     if not options.force and self.session and self.session:cache_hit(position) then
         return
@@ -269,27 +280,29 @@ function Controller:triggering_completion(options)
             on_success = function(prompt)
                 resolve(prompt)
             end,
-            on_error = function()
-                Fn.schedule_call(options.on_error)
+            on_failure = function()
+                Fn.schedule_call(options.on_failure)
             end
         })
     end):forward(function(prompt)
-        self:send_completions(prompt, {
-            session = self.session,
-            on_success = function(completion)
-                Fn.schedule_call(options.on_success, completion)
-                local model = Model:new({
-                    buf = buf,
-                    position = position,
-                    completion = completion,
-                })
-                local view = View:new({ buf = buf })
-                self.session:init(model, view)
-            end,
-            on_error = function()
-                Fn.schedule_call(options.on_error)
-            end
-        });
+        return Promise:new(function(resolve, reject)
+            self:send_completions(prompt, {
+                session = self.session,
+                on_success = function(completion)
+                    Fn.schedule_call(options.on_success, completion)
+                    local model = Model:new({
+                        buf = buf,
+                        position = position,
+                        completion = completion,
+                    })
+                    local view = View:new({ buf = buf })
+                    self.session:init(model, view)
+                end,
+                on_failure = function()
+                    Fn.schedule_call(options.on_failure)
+                end
+            });
+        end)
     end)
 end
 
@@ -340,10 +353,10 @@ function Controller:set_onkey()
     end)
 end
 
-function Controller:_show_no_more_suggestion()
-    if self.extmark_ids.no_more_suggestion.del then
-        self.extmark_ids.no_more_suggestion.del()
-    end
+---@param msg string
+---@param timeout number
+function Controller:_show_no_more_suggestion(msg, timeout)
+    Fn.check_call(self.extmark_ids.no_more_suggestion.del)
     local buf = vim.api.nvim_get_current_buf()
     local row, col = unpack(vim.api.nvim_win_get_cursor(buf))
     self.extmark_ids.no_more_suggestion.id = vim.api.nvim_buf_set_extmark(
@@ -352,7 +365,7 @@ function Controller:_show_no_more_suggestion()
         row - 1,
         col - 1,
         {
-            virt_text = { { Translate('  (Currently no completion options available)'), 'FittenCodeNoMoreSuggestion' } },
+            virt_text = { { msg, 'FittenCodeNoMoreSuggestion' } },
             virt_text_pos = 'inline',
             hl_mode = 'replace',
         })
@@ -362,16 +375,12 @@ function Controller:_show_no_more_suggestion()
         vim.api.nvim_clear_autocmds({ group = self.augroups.no_more_suggestion })
     end
     vim.defer_fn(function()
-        if self.extmark_ids.no_more_suggestion.del then
-            self.extmark_ids.no_more_suggestion.del()
-        end
-    end, 2000)
+        Fn.check_call(self.extmark_ids.no_more_suggestion.del)
+    end, timeout)
     vim.api.nvim_create_autocmd({ 'InsertLeave', 'BufLeave', 'CursorMovedI' }, {
         group = self.augroups.no_more_suggestion,
         callback = function()
-            if self.extmark_ids.no_more_suggestion.del then
-                self.extmark_ids.no_more_suggestion.del()
-            end
+            Fn.check_call(self.extmark_ids.no_more_suggestion.del)
         end,
     })
 end
@@ -380,8 +389,8 @@ function Controller:edit_completion()
     self:triggering_completion({
         force = true,
         edit_mode = true,
-        on_error = function()
-            self:_show_no_more_suggestion()
+        on_failure = function()
+            self:_show_no_more_suggestion(Translate('  (Currently no completion options available)'), 2000)
         end
     })
 end
@@ -389,8 +398,8 @@ end
 function Controller:triggering_completion_by_shortcut()
     self:triggering_completion({
         force = true,
-        on_error = function()
-            self:_show_no_more_suggestion()
+        on_failure = function()
+            self:_show_no_more_suggestion(Translate('  (Currently no completion options available)'), 2000)
         end
     })
 end

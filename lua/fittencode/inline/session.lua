@@ -2,6 +2,11 @@ local Editor = require('fittencode.editor')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local State = require('fittencode.inline.state')
+local Promise = require('fittencode.promise')
+local WordSegmentation = require('fittencode.inline.word_segmentation')
+local Fn = require('fittencode.fn')
+local Log = require('fittencode.log')
+local Client = require('fittencode.client')
 
 ---@class FittenCode.Inline.Session
 local Session = {}
@@ -15,9 +20,10 @@ function Session:new(opts)
         timing = {
             on_create = vim.uv.hrtime(),
             get_completion_version = {},
-            generate_one_stage = {}
+            generate_one_stage = {},
+            word_segmentation = {},
         },
-        request_handles = {}
+        request_handles = {},
     }
     setmetatable(obj, Session)
     return obj
@@ -25,9 +31,48 @@ end
 
 function Session:init(model, view)
     self.model = model
+    self.model:recalculate()
     self.view = view
     self:set_keymaps()
     self:set_autocmds()
+    self:update_word_segments()
+    self:update_view()
+end
+
+function Session:update_model(update)
+    self.model:update(update)
+end
+
+function Session:update_word_segments()
+    local completion = self.model.completion
+    local generated_text = {}
+    for _, item in ipairs(completion.completions) do
+        generated_text[#generated_text + 1] = item.generated_text
+    end
+    if Editor.onlyascii(generated_text) then
+        return
+    end
+    Promise:new(function(resolve, reject)
+        local options = {
+            on_create = function()
+                self.timing.word_segmentation.on_create = vim.uv.hrtime()
+            end,
+            on_once = function(stdout)
+                self.timing.word_segmentation.on_once = vim.uv.hrtime()
+                local _, json = pcall(vim.fn.json_decode, stdout)
+                if _ then
+                    self:update_model({ word_segments = json })
+                else
+                    Log.error('Error while decoding stdout: {}', stdout)
+                end
+            end,
+            on_error = function()
+                self.timing.word_segmentation.on_error = vim.uv.hrtime()
+                Log.error('Failed to get word segmentation')
+            end
+        }
+        Client.word_segmentation(generated_text, options)
+    end)
 end
 
 function Session:update_view()

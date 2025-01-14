@@ -24,7 +24,7 @@
 
 ---@class FittenCode.Client.APIOptions : FittenCode.IOAsyncCallbacks
 ---@field prompt table
----@field timeout number
+---@field timeout? number
 
 ---@class FittenCode.Client.GenerateOneStageOptions : FittenCode.Client.APIOptions
 ---@field completion_version string
@@ -32,6 +32,7 @@
 ---@class FittenCode.Client.AcceptCompletionOptions : FittenCode.Client.APIOptions
 ---@class FittenCode.Client.ChatOptions : FittenCode.Client.APIOptions
 ---@class FittenCode.Client.GetCompletionVersionOptions : FittenCode.Client.APIOptions
+---@class FittenCode.Client.WordSegmentationOptions : FittenCode.Client.APIOptions
 
 ---@alias FittenCode.Version 'default' | 'enterprise'
 
@@ -297,12 +298,17 @@
 ---@field on_create number
 ---@field get_completion_version table
 ---@field generate_one_stage table
+---@field word_segmentation table
+
+---@alias FittenCode.Inline.WordSegmentation table<string, table<string>>
 
 ---@class FittenCode.Inline.Model
 ---@field mode 'lines' | 'multi_segments' | 'edit_completion'
 ---@field accept function
 ---@field make_state function
 ---@field clear function
+---@field completion FittenCode.Inline.GenerateOneStageResponse
+---@field word_segments FittenCode.Inline.WordSegmentation
 
 ---@class FittenCode.Inline.View
 ---@field state? FittenCode.Inline.State

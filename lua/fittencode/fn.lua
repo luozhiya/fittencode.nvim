@@ -30,6 +30,13 @@ local function schedule_call_foreach(v, ...)
     end
 end
 
+local function check_call(fx, ...)
+    if fx then
+        local args = { ... }
+        return fx(unpack(args))
+    end
+end
+
 local function debounce(func, delay, on_return)
     local timer = nil
     if not delay or tonumber(delay) <= 0 then
@@ -304,6 +311,7 @@ return {
     schedule_call = schedule_call,
     schedule_call_wrap_fn = schedule_call_wrap_fn,
     schedule_call_foreach = schedule_call_foreach,
+    check_call = check_call,
     startwith = startwith,
     fs_all_entries = fs_all_entries,
     timezone_language = timezone_language,
