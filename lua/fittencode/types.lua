@@ -15,6 +15,7 @@
 ---@class FittenCode.Process.SpawnOptions : FittenCode.IOAsyncCallbacks
 
 ---@class FittenCode.Compression.CompressOptions : FittenCode.IOAsyncCallbacks
+---@class FittenCode.Hash.HashOptions : FittenCode.IOAsyncCallbacks
 
 ---@alias FittenCode.HTTP.Headers table<string, string>
 

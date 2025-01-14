@@ -8,6 +8,7 @@ function Model:new(opts)
         buf = opts.buf,
         position = opts.position,
         completion = opts.completion,
+        selected_completion = 1, -- default to the first completion
     }
     setmetatable(obj, Model)
     return obj
@@ -48,6 +49,11 @@ function Model:update(state)
         self.word_segments = state.word_segments
         self:recalculate()
     end
+end
+
+-- TODO: Support for multiple completion items.
+function Model:set_selected_completion(index)
+    self.selected_completion = index
 end
 
 function Model:recalculate()

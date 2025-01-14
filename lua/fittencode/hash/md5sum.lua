@@ -1,5 +1,6 @@
 local Fn = require('fittencode.fn')
 local Process = require('fittencode.process')
+local Log = require('fittencode.log')
 
 local M = {}
 
@@ -15,21 +16,24 @@ function M.is_supported(method)
     return method == 'MD5'
 end
 
-function M.hash(method, plaintext, on_success, on_error)
+---@param plaintext string
+---@param options FittenCode.Hash.HashOptions
+function M.hash(method, plaintext, options)
     if not M.is_supported(method) then
-        Fn.schedule_call(on_error)
+        Fn.schedule_call(options.on_error)
         return
     end
     local md5sum = vim.deepcopy(md5sum_meta)
     Process.spawn(md5sum, {
-        on_input = vim.schedule_wrap(function()
+        on_input = function()
             return plaintext
-        end),
+        end,
         on_once = vim.schedule_wrap(function(data)
-            Fn.schedule_call(on_success, data)
+            local lines = vim.split(table.concat(data, ''), ' ')
+            Fn.schedule_call(options.on_once, lines[1])
         end),
         on_error = vim.schedule_wrap(function()
-            Fn.schedule_call(on_error)
+            Fn.schedule_call(options.on_error)
         end)
     })
 end

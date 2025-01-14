@@ -31,8 +31,8 @@ function M.compress(format, input, options)
     end
 
     local gzip = vim.deepcopy(gzip_meta)
-    if #Config.compress.gzip.command ~= 0 then
-        gzip.cmd = Config.compress.gzip.command
+    if #Config.compress.gzip.gzip.command ~= 0 then
+        gzip.cmd = Config.compress.gzip.gzip.command
     end
 
     local tempname = vim.fn.tempname()
@@ -44,14 +44,15 @@ function M.compress(format, input, options)
 
     ---@type FittenCode.Process.SpawnOptions
     local spawn_options = Fn.tbl_keep_events(options, {
-        on_once = vim.schedule_wrap(function()
+        on_exit = vim.schedule_wrap(function()
             local gz = tempname .. '.gz'
             if vim.fn.filereadable(gz) == 1 then
-                local fw = assert(vim.uv.fs_open(gz, 'r', 438))
-                local content = vim.uv.fs_read(fw, -1)
-                vim.uv.fs_close(fw)
+                local fd = assert(vim.uv.fs_open(gz, 'r', 438))
+                local stat = assert(vim.uv.fs_fstat(fd))
+                local data = assert(vim.uv.fs_read(fd, stat.size, 0))
+                assert(vim.uv.fs_close(fd))
                 vim.uv.fs_unlink(gz)
-                Fn.schedule_call(options.on_once, content)
+                Fn.schedule_call(options.on_once, data)
             else
                 Fn.schedule_call(options.on_error)
             end

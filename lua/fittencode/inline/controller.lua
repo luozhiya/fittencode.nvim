@@ -67,23 +67,15 @@ function Controller:dismiss_suggestions()
     self:cleanup_session()
 end
 
----@class FittenCode.Inline.GeneratePromptOptions
+---@class FittenCode.Inline.GeneratePromptOptions : FittenCode.IOAsyncCallbacks
 ---@field buf number
 ---@field position FittenCode.Position
 ---@field edit_mode boolean
----@field on_success function
----@field on_failure function
 
 ---@param options FittenCode.Inline.GeneratePromptOptions
 ---@return FittenCode.Inline.Prompt?
 function Controller:generate_prompt(options)
-    if not options.position then
-        return
-    end
-    local within_the_line = Editor.within_the_line(options.buf, options.position)
-    if Config.inline_completion.disable_completion_within_the_line and within_the_line then
-        return
-    end
+    assert(options.position)
 
     local u = Config.use_project_completion.open
     local c = Config.server.fitten_version ~= 'default'
@@ -93,14 +85,13 @@ function Controller:generate_prompt(options)
         -- notify install lsp
     end
 
-    Prompt.make({
+    local prompt_options = Fn.tbl_keep_events(options, {
         buf = options.buf,
         filename = Editor.filename(options.buf),
         position = options.position,
         edit_mode = options.edit_mode,
-        on_success = options.on_success,
-        on_failure = options.on_failure,
     })
+    Prompt.generate(prompt_options)
 end
 
 ---@class FittenCode.Inline.Completion
@@ -247,25 +238,27 @@ end
 function Controller:triggering_completion(options)
     options = options or {}
     Log.debug('Triggering completion')
-    -- if not string.match(vim.fn.mode(), '^[iR]') then
-    --     return
-    -- end
-    if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
-        return
-    end
+
     local buf = vim.api.nvim_get_current_buf()
     if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
         return
     end
+    if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
+        return
+    end
     local position = Editor.position(vim.api.nvim_get_current_win())
     assert(position)
+
+    local within_the_line = Editor.within_the_line(buf, position)
+    if Config.inline_completion.disable_completion_within_the_line and within_the_line then
+        return
+    end
     options.force = (options.force == nil) and false or options.force
     if not options.force and self.session and self.session:cache_hit(position) then
         return
     end
 
     self:cleanup_session()
-
     self.session = Session:new({
         buf = buf,
         reflect = function(_) self:reflect(_) end,
@@ -277,10 +270,11 @@ function Controller:triggering_completion(options)
             buf = buf,
             position = position,
             edit_mode = options.edit_mode,
-            on_success = function(prompt)
+            on_once = function(prompt)
+                Log.debug('Generated prompt = {}', prompt)
                 resolve(prompt)
             end,
-            on_failure = function()
+            on_error = function()
                 Fn.schedule_call(options.on_failure)
             end
         })
@@ -289,6 +283,7 @@ function Controller:triggering_completion(options)
             self:send_completions(prompt, {
                 session = self.session,
                 on_success = function(completion)
+                    Log.debug('Got completion = {}', completion)
                     Fn.schedule_call(options.on_success, completion)
                     local model = Model:new({
                         buf = buf,

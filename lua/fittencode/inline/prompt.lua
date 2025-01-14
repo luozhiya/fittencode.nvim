@@ -5,7 +5,6 @@ local Editor = require('fittencode.editor')
 local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')
-local TextDocument = require('fittencode.text_document')
 
 ---@class FittenCode.Inline.Prompt
 local Prompt = {}
@@ -41,8 +40,7 @@ end
 
 -- Make a prompt
 ---@return FittenCode.Inline.Prompt?
-function Prompt.make(options)
-    local text_document = TextDocument:new(options.buf)
+function Prompt.generate(options)
     local context = ''
     local max_chars = 22e4
     local sample_size = 2e3
@@ -81,11 +79,15 @@ function Prompt.make(options)
     prefix = vim.fn.substitute(prefix, WL, '', 'g')
     suffix = vim.fn.substitute(suffix, WL, '', 'g')
     local text = prefix .. suffix
+    Log.debug('Prompt: prefix = {}', prefix)
+    Log.debug('Prompt: suffix = {}', suffix)
+    Log.debug('Prompt: context = {}', context)
+    Log.debug('Prompt: text = {}', text)
     Promise:new(function(resolve, reject)
         Hash.hash('MD5', text, function(ciphertext)
             resolve(ciphertext)
         end, function()
-            Fn.schedule_call(options.on_error)
+            Fn.schedule_call(options.on_failure)
         end)
     end):forward(function(ciphertext)
         if options.filename ~= last_filename then
@@ -99,25 +101,39 @@ function Prompt.make(options)
                 bslen = 0,
                 pmd5 = '',
                 nmd5 = ciphertext,
-                diff = text,
-                filename = options.filename
+                diff = Editor.to_utf16(text),
+                filename = Editor.to_utf16(options.filename)
             })
         else
-            local indices = vim.diff(last_text, text, { result_type = 'indices' })
+            -- 1. 计算 text 和 last_text 的 diff
+            -- 2. n，i 为 diff 的字符utf16范围
+            -- 3. o,a 为 diff 的字节范围
 
-            local n = 0
-            while n < #text and n < #last_text and text:sub(n + 1, n + 1) == last_text:sub(n + 1, n + 1) do
-                n = n + 1
+            local o = 0
+            while o < #text and o < #last_text and text:sub(o + 1, o + 1) == last_text:sub(o + 1, o + 1) do
+                o = o + 1
+            end
+            local a = 0
+            while a + o < #text and a + o < #last_text and text:sub(#text - a, #text - a) == last_text:sub(#last_text - a, #last_text - a) do
+                a = a + 1
             end
 
-            local i = 0
-            while i + n < #text and i + n < #last_text and text:sub(#text - i, #text - i) == last_text:sub(#last_text - i, #last_text - i) do
-                i = i + 1
+            -- 修复 o，a 到 utf8 起始字节
+            local utf_start = vim.str_utf_pos(text)
+            for i = 1, #utf_start do
+                if o > utf_start[i] and (not utf_start[i + 1] or o < utf_start[i + 1]) then
+                    o = utf_start[i]
+                end
+            end
+            local utf_end = vim.str_utf_pos(last_text)
+            for i = #utf_end, 1, -1 do
+                if a > utf_end[i] and (not utf_end[i - 1] or a < utf_end[i - 1]) then
+                    a = utf_end[i]
+                end
             end
 
-            local encoder = require('utf8') -- 或根据需要使用不同的编码库
-            local o = #encoder(text:sub(1, n))
-            local a = #encoder(text:sub(#text - i + 1))
+            local n = vim.str_utfindex(text, 'utf-16', o)
+            local i = vim.str_utfindex(last_text, 'utf-16', a)
 
             local AA = {
                 plen = n,
@@ -126,8 +142,8 @@ function Prompt.make(options)
                 bslen = a,
                 pmd5 = last_ciphertext,
                 nmd5 = ciphertext,
-                diff = text:sub(n + 1, #text - i),
-                filename = options.filename
+                diff = Editor.to_utf16(text:sub(o, a)),
+                filename = Editor.to_utf16(options.filename)
             }
 
             last_text = text

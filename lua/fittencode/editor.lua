@@ -212,11 +212,11 @@ end
 ---@param delta number The delta based on characters
 ---@return number?
 function M.characters_delta_to_columns(text, delta)
-    return vim.str_byteindex(text, 'utf-8', delta, false)
+    return vim.str_byteindex(text, 'utf-16', delta, false)
 end
 
 function M.columns_to_characters_delta(text, columns)
-    return vim.str_utfindex(text, 'utf-8', columns, false)
+    return vim.str_utfindex(text, 'utf-16', columns, false)
 end
 
 function M.get_text(buf, range)
@@ -240,6 +240,29 @@ function M.onlyascii(text)
         end
     end
     return false
+end
+
+-- Check if the given position is within the line.
+---@param buf integer?
+---@param position FittenCode.Position
+---@return boolean
+function M.within_the_line(buf, position)
+    if not buf then
+        return false
+    end
+    local line = M.line_at(buf, position.row)
+    if not line then
+        return false
+    end
+    return line.range.termination.col > position.col
+end
+
+function M.to_utf16(text)
+    return vim.iconv(text, 'utf-8', 'utf-16')
+end
+
+function M.from_utf16(text)
+    return vim.iconv(text, 'utf-16', 'utf-8')
 end
 
 return M

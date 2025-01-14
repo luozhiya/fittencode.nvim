@@ -3,7 +3,6 @@ local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local State = require('fittencode.inline.state')
 local Promise = require('fittencode.promise')
-local WordSegmentation = require('fittencode.inline.word_segmentation')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
@@ -24,6 +23,7 @@ function Session:new(opts)
             word_segmentation = {},
         },
         request_handles = {},
+        keymaps = {}
     }
     setmetatable(obj, Session)
     return obj
@@ -149,10 +149,18 @@ function Session:abort_and_clear_requests()
     self.request_handles = {}
 end
 
+function Session:clear_mv()
+    if self.model then
+        self.model:clear()
+    end
+    if self.view then
+        self.view:clear()
+    end
+end
+
 function Session:destructor()
     self:abort_and_clear_requests()
-    self.model:clear()
-    self.view:clear()
+    self:clear_mv()
     self:restore_keymaps()
     self:clear_autocmds()
 end

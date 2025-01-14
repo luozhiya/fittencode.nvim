@@ -177,7 +177,7 @@ local defaults = {
             -- MD5 hash
             -- Avaiable options:
             -- * 'md5sum'
-            -- * 'hash'
+            -- * 'mi'
             backend = 'md5sum',
             md5sum = {
                 -- Default `md5sum`

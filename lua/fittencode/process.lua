@@ -60,7 +60,13 @@ function M.spawn(exe, options)
     vim.uv.read_start(uv_stderr, callback(uv_stderr, stderr))
 
     if options.on_input then
-        vim.uv.write(uv_stdin, options.on_input())
+        Log.debug('writing to stdin')
+        local data = options.on_input()
+        Log.debug('writing {} bytes to stdin', data)
+        vim.uv.write(uv_stdin, data)
+        vim.uv.shutdown(uv_stdin, function()
+            print('stdin shutdown', uv_stdin)
+        end)
     end
 end
 
