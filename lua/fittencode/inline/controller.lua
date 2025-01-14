@@ -175,11 +175,6 @@ function Controller:send_completions(prompt, options)
                         return
                     end
                     local completion = self:completion_response(json)
-                    if not completion then
-                        Log.error('Failed to generate completion: {}', json)
-                        reject()
-                        return
-                    end
                     resolve(completion)
                 end,
                 on_error = function()
@@ -192,6 +187,11 @@ function Controller:send_completions(prompt, options)
     end, function()
         Fn.schedule_call(options.on_failure)
     end):forward(function(completion)
+        if not completion then
+            Log.info('No more suggestion')
+            Fn.schedule_call(options.on_no_more_suggestion)
+            return
+        end
         Log.debug('Got completion = {}', completion)
         Fn.schedule_call(options.on_success, completion)
     end, function()
@@ -228,6 +228,7 @@ function Controller:triggering_completion(options)
         buf = buf,
         reflect = function(_) self:reflect(_) end,
     })
+    self:inline_status_updated(Status.Levels.GENERATING)
 
     Promise:new(function(resolve, reject)
         Log.debug('Triggering completion for position {}', position)
@@ -240,6 +241,7 @@ function Controller:triggering_completion(options)
                 resolve(prompt)
             end,
             on_error = function()
+                self:inline_status_updated(Status.Levels.ERROR)
                 Fn.schedule_call(options.on_failure)
             end
         })
@@ -247,7 +249,12 @@ function Controller:triggering_completion(options)
         return Promise:new(function(resolve, reject)
             self:send_completions(prompt, {
                 session = self.session,
+                on_no_more_suggestion = function()
+                    self:inline_status_updated(Status.Levels.NO_MORE_SUGGESTIONS)
+                    Fn.schedule_call(options.on_no_more_suggestion)
+                end,
                 on_success = function(completion)
+                    self:inline_status_updated(Status.Levels.SUGGESTIONS_READY)
                     Log.debug('Got completion = {}', completion)
                     Fn.schedule_call(options.on_success, completion)
                     local model = Model:new({
@@ -259,6 +266,7 @@ function Controller:triggering_completion(options)
                     self.session:init(model, view)
                 end,
                 on_failure = function()
+                    self:inline_status_updated(Status.Levels.ERROR)
                     Fn.schedule_call(options.on_failure)
                 end
             });
@@ -269,11 +277,21 @@ end
 function Controller:reflect(msg)
 end
 
+function Controller:on_enter_check_and_update_status()
+    local buf = vim.api.nvim_get_current_buf()
+    if self:is_enabled(buf) then
+        self:inline_status_updated(Status.Levels.DISABLED)
+    else
+        self:inline_status_updated(Status.Levels.IDLE)
+    end
+end
+
 function Controller:set_autocmds(enable)
     local autocmds = {
         { { 'InsertEnter', 'CursorMovedI', 'CompleteChanged' }, function(args) self:triggering_completion({ event = args }) end },
         { { 'InsertLeave' },                                    function(args) self:dismiss_suggestions() end },
         { { 'BufLeave' },                                       function(args) self:dismiss_suggestions() end },
+        { { 'BufEnter' },                                       function(args) self:on_enter_check_and_update_status() end },
         -- { { 'TextChangedI' },                                   function(args) self:lazy_completion({event = args}) end },
     }
     if enable then
@@ -290,7 +308,7 @@ function Controller:set_autocmds(enable)
 end
 
 function Controller:is_enabled(buf)
-    return Config.inline_completion.enable and not self:is_filetype_excluded(buf)
+    return Config.inline_completion.enable and Editor.is_filebuf(buf) == true and not self:is_filetype_excluded(buf)
 end
 
 function Controller:set_onkey()
@@ -349,7 +367,7 @@ function Controller:edit_completion()
     self:triggering_completion({
         force = true,
         edit_mode = true,
-        on_failure = function()
+        on_no_more_suggestion = function()
             self:_show_no_more_suggestion(Translate('  (Currently no completion options available)'), 2000)
         end
     })
@@ -358,7 +376,7 @@ end
 function Controller:triggering_completion_by_shortcut()
     self:triggering_completion({
         force = true,
-        on_failure = function()
+        on_no_more_suggestion = function()
             self:_show_no_more_suggestion(Translate('  (Currently no completion options available)'), 2000)
         end
     })
@@ -413,7 +431,7 @@ function Controller:enable(enable, global, suffixes)
 end
 
 function Controller:inline_status_updated(data)
-    self:notify_observers('inline_status_updated', data)
+    self:notify_observers('inline.status.updated', data)
 end
 
 function Controller:get_status()

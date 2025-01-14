@@ -5,6 +5,7 @@ local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local View = require('fittencode.chat.view')
 local Config = require('fittencode.config')
+local Shared = require('fittencode.chat.shared')
 
 ---@type FittenCode.Chat.Controller
 local controller = nil
@@ -16,11 +17,10 @@ local function setup()
         mode = Config.chat.view.mode
     })
     view:init()
-    local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('init.lua', '')
-    local extension_uri = current_dir:gsub('/lua$', '') .. '../../../'
-    local conversation_types_provider = ConversationTypesProvider:new({ extension_uri = extension_uri })
     local basic_chat_template_id = 'chat-' .. Fn.display_preference()
-    conversation_types_provider:async_load_conversation_types(function()
+    local conversation_types_provider
+    conversation_types_provider = Shared.conversation_types_provider(function()
+        assert(conversation_types_provider)
         local conversation_type = conversation_types_provider:get_conversation_type(basic_chat_template_id)
         if not conversation_type then
             Log.notify_error('Failed to load basic chat template')

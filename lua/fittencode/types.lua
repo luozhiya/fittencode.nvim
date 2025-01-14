@@ -369,9 +369,15 @@
 ---@field delta_line number
 
 ---@class FittenCode.Inline.TriggeringCompletionOptions : FittenCode.AsyncResultCallbacks
+---@field on_no_more_suggestion? function
 ---@field event? any
 ---@field force? boolean
 ---@field edit_mode? boolean
 
 ---@class FittenCode.Inline.SendCompletionsOptions : FittenCode.AsyncResultCallbacks
+---@field on_no_more_suggestion? function
 ---@field session FittenCode.Inline.Session
+
+-- Inline 的 headless 模式，允许在没有 UI 和不干扰原来 Inline 引擎的情况下，发送补全请求，用于二次开发
+---@class FittenCode.Inline.Headless
+---@field controller FittenCode.Inline.Controller
