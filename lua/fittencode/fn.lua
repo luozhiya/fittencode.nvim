@@ -311,6 +311,11 @@ local function tbl_keep_events(a, c)
     return vim.tbl_deep_extend('force', b, c)
 end
 
+local function extension_uri()
+    local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('fn.lua', '')
+    return current_dir:gsub('/lua$', '') .. '../../'
+end
+
 return {
     debounce = debounce,
     set_timeout = set_timeout,
@@ -333,4 +338,5 @@ return {
     uuid_v4 = uuid_v4,
     encode_uri = encode_uri,
     tbl_keep_events = tbl_keep_events,
+    extension_uri = extension_uri,
 }
