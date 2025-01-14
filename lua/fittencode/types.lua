@@ -1,21 +1,27 @@
----@class FittenCode.IOAsyncCallbacks
----@field on_create? function
----@field on_input? function
----@field on_stream? function
----@field on_once? function
----@field on_error? function
----@field on_exit? function
+-- 异步 IO 涉及 spawn 添加更多的事件回调方便来做性能计数
+---@class FittenCode.AsyncIOCallbacks
+---@field on_create? function 创建进程时回调
+---@field on_input? function 输入数据时回调
+---@field on_stream? function 流数据时回调
+---@field on_once? function 一次性数据时回调
+---@field on_error? function 错误时回调
+---@field on_exit? function 退出时回调
 
----@class FittenCode.HTTP.Request : FittenCode.IOAsyncCallbacks
+-- 一般性的异步回调，只需关注成功或失败即可
+---@class FittenCode.AsyncResultCallbacks
+---@field on_success? function
+---@field on_failure? function
+
+---@class FittenCode.HTTP.Request : FittenCode.AsyncIOCallbacks
 ---@field method string
 ---@field headers? FittenCode.HTTP.Headers
 ---@field body? string
 ---@field timeout? number
 
----@class FittenCode.Process.SpawnOptions : FittenCode.IOAsyncCallbacks
+---@class FittenCode.Process.SpawnOptions : FittenCode.AsyncIOCallbacks
 
----@class FittenCode.Compression.CompressOptions : FittenCode.IOAsyncCallbacks
----@class FittenCode.Hash.HashOptions : FittenCode.IOAsyncCallbacks
+---@class FittenCode.Compression.CompressOptions : FittenCode.AsyncIOCallbacks
+---@class FittenCode.Hash.HashOptions : FittenCode.AsyncIOCallbacks
 
 ---@alias FittenCode.HTTP.Headers table<string, string>
 
@@ -23,7 +29,7 @@
 ---@field abort function
 ---@field is_active function
 
----@class FittenCode.Client.APIOptions : FittenCode.IOAsyncCallbacks
+---@class FittenCode.Client.APIOptions : FittenCode.AsyncIOCallbacks
 ---@field prompt table
 ---@field timeout? number
 

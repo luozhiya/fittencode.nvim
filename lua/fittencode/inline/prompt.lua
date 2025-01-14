@@ -39,6 +39,7 @@ local function make_context(buf, e, r, peek_range)
 end
 
 -- Make a prompt
+---@param options FittenCode.Inline.GeneratePromptOptions
 ---@return FittenCode.Inline.Prompt?
 function Prompt.generate(options)
     local context = ''
@@ -84,25 +85,28 @@ function Prompt.generate(options)
     Log.debug('Prompt: context = {}', context)
     Log.debug('Prompt: text = {}', text)
     Promise:new(function(resolve, reject)
-        Hash.hash('MD5', text, function(ciphertext)
-            resolve(ciphertext)
-        end, function()
-            Fn.schedule_call(options.on_failure)
-        end)
+        Hash.hash('MD5', text, {
+            on_once = function(ciphertext)
+                resolve(ciphertext)
+            end,
+            on_error = function()
+                Fn.schedule_call(options.on_error)
+            end
+        })
     end):forward(function(ciphertext)
         if options.filename ~= last_filename then
             last_filename = options.filename
             last_text = text
             last_ciphertext = ciphertext
-            Fn.schedule_call(options.on_success, {
+            Fn.schedule_call(options.on_once, {
                 plen = 0,
                 slen = 0,
                 bplen = 0,
                 bslen = 0,
                 pmd5 = '',
                 nmd5 = ciphertext,
-                diff = Editor.to_utf16(text),
-                filename = Editor.to_utf16(options.filename)
+                diff = text,
+                filename = options.filename
             })
         else
             -- 1. 计算 text 和 last_text 的 diff
@@ -142,14 +146,14 @@ function Prompt.generate(options)
                 bslen = a,
                 pmd5 = last_ciphertext,
                 nmd5 = ciphertext,
-                diff = Editor.to_utf16(text:sub(o, a)),
-                filename = Editor.to_utf16(options.filename)
+                diff = text:sub(o, a),
+                filename = options.filename
             }
 
             last_text = text
             last_ciphertext = ciphertext
 
-            Fn.schedule_call(options.on_success, AA)
+            Fn.schedule_call(options.on_once, AA)
         end
     end)
 end

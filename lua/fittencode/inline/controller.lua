@@ -67,10 +67,11 @@ function Controller:dismiss_suggestions()
     self:cleanup_session()
 end
 
----@class FittenCode.Inline.GeneratePromptOptions : FittenCode.IOAsyncCallbacks
+---@class FittenCode.Inline.GeneratePromptOptions : FittenCode.AsyncIOCallbacks
 ---@field buf number
 ---@field position FittenCode.Position
 ---@field edit_mode boolean
+---@field filename? string
 
 ---@param options FittenCode.Inline.GeneratePromptOptions
 ---@return FittenCode.Inline.Prompt?
@@ -138,6 +139,7 @@ function Controller:completion_response(data)
     }
 end
 
+---@param buf number
 function Controller:is_filetype_excluded(buf)
     local ft
     vim.api.nvim_buf_call(buf, function()
@@ -153,17 +155,13 @@ function Controller:cleanup_session()
     end
 end
 
----@class FittenCode.Inline.TriggeringCompletionOptions
+---@class FittenCode.Inline.TriggeringCompletionOptions : FittenCode.AsyncResultCallbacks
 ---@field event? any
 ---@field force? boolean
----@field on_success? function
----@field on_failure? function
 ---@field edit_mode? boolean
 
----@class FittenCode.Inline.SendCompletionsOptions
+---@class FittenCode.Inline.SendCompletionsOptions : FittenCode.AsyncResultCallbacks
 ---@field session FittenCode.Inline.Session
----@field on_success function
----@field on_failure function
 
 -- Maybe this should be a public API?
 ---@param prompt FittenCode.Inline.Prompt
