@@ -34,9 +34,7 @@ function Controller:new(opts)
 end
 
 function Controller:init()
-    self.status = Status:new({
-        level = 0,
-    })
+    self.status = Status:new()
     self:register_observer(self.status)
     self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
     self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })

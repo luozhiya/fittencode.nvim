@@ -1,4 +1,5 @@
 local Fn = require('fittencode.fn')
+local Log = require('fittencode.log')
 
 ---@class fittencode.Inline.Status.Levels
 local Levels = {
@@ -20,9 +21,9 @@ Status.__index = Status
 Status.Levels = Levels
 
 function Status:new(opts)
+    opts = opts or {}
     local obj = {
         level = opts.level or Levels.IDLE,
-        reset = Fn.debounce(function() self:update_level(Levels.IDLE) end, 5000),
     }
     setmetatable(obj, self)
     return obj
@@ -33,6 +34,9 @@ function Status:update_level(level)
         return
     end
     self.level = level
+    if not self.reset then
+        self.reset = Fn.debounce(function() self:update_level(Levels.IDLE) end, 5000)
+    end
     self.reset()
 end
 
