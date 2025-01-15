@@ -225,11 +225,16 @@ function Controller:triggering_completion(options)
             buf = buf,
             position = position,
             edit_mode = options.edit_mode,
+            on_create = function()
+                self.session.timing.generate_prompt.on_create = vim.uv.hrtime()
+            end,
             on_once = function(prompt)
+                self.session.timing.generate_prompt.on_once = vim.uv.hrtime()
                 Log.debug('Generated prompt = {}', prompt)
                 resolve(prompt)
             end,
             on_error = function()
+                self.session.timing.generate_prompt.on_error = vim.uv.hrtime()
                 self:inline_status_updated(Status.Levels.ERROR)
                 Fn.schedule_call(options.on_failure)
             end

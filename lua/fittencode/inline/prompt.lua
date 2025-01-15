@@ -187,6 +187,8 @@ function Prompt.generate(options)
     local buf = options.buf
     local position = options.position
 
+    Fn.schedule_call(options.on_create)
+
     local prefix, suffix = calculate_prefix_suffix(buf, position)
     local text = prefix .. suffix
 

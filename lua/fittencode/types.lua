@@ -301,8 +301,10 @@
 ---@field timing FittenCode.Inline.Session.Timing
 ---@field keymaps table
 
+-- Timing 放在回调里计时，和真实时间差距一个main loop的间隔，可以用来衡量相对性能
 ---@class FittenCode.Inline.Session.Timing
 ---@field on_create number
+---@field generate_prompt table
 ---@field get_completion_version table
 ---@field generate_one_stage table
 ---@field word_segmentation table
