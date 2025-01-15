@@ -17,13 +17,16 @@ function Controller:new(opts)
         basic_chat_template_id = opts.basic_chat_template_id,
         conversation_types_provider = opts.conversation_types_provider,
         observers = {},
+        augroups = {},
     }, Controller)
     return obj
 end
 
-function Controller:init_singleton()
-    self.selection_changed_autocmd = vim.api.nvim_create_autocmd('User', {
-        pattern = 'fittencode.SelectionChanged',
+function Controller:init_integration()
+    self.augroups.event = vim.api.nvim_create_augroup('Fittencode.Chat.Controller.Event', { clear = true })
+    vim.api.nvim_create_autocmd('User', {
+        pattern = 'Fittencode.SelectionChanged',
+        group = self.augroups.event,
         once = false,
         callback = function(args)
             self:update_view()
@@ -31,6 +34,12 @@ function Controller:init_singleton()
     })
     self.status = Status:new()
     self:register_observer(self.status)
+end
+
+function Controller:destory()
+    for _, id in pairs(self.augroups) do
+        vim.api.nvim_del_augroup(id)
+    end
 end
 
 function Controller:register_observer(observer)

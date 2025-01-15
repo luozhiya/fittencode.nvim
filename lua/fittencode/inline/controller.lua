@@ -34,7 +34,7 @@ function Controller:new(opts)
     return obj
 end
 
-function Controller:init_singleton()
+function Controller:init_integration()
     self.status = Status:new()
     self:register_observer(self.status)
     self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
@@ -43,6 +43,14 @@ function Controller:init_singleton()
     self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
     self.ns_ids.on_key = vim.api.nvim_create_namespace('Fittencode.Inline.OnKey')
     self:enable(Config.inline_completion.enable)
+end
+
+function Controller:destory()
+    self:enable(false)
+    for _, id in pairs(self.augroups) do
+        vim.api.nvim_del_augroup(id)
+    end
+    self.augroups = {}
 end
 
 function Controller:register_observer(observer)
