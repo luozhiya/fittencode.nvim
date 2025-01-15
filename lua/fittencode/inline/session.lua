@@ -44,12 +44,16 @@ function Session:update_model(update)
 end
 
 function Session:update_word_segments()
-    local completion = self.model.completion
+    local computed = self.model.completion.computed
+    if not computed then
+        return
+    end
     local generated_text = {}
-    for _, item in ipairs(completion.completions) do
+    for _, item in ipairs(computed.completions) do
         generated_text[#generated_text + 1] = item.generated_text
     end
     if Editor.onlyascii(generated_text) then
+        Log.debug('Generated text is only ascii, skip word segmentation')
         return
     end
     Promise:new(function(resolve, reject)
@@ -59,11 +63,26 @@ function Session:update_word_segments()
             end,
             on_once = function(stdout)
                 self.timing.word_segmentation.on_once = vim.uv.hrtime()
-                local _, json = pcall(vim.fn.json_decode, stdout)
+                local delta = {}
+                for _, chunk in ipairs(stdout) do
+                    local v = vim.split(chunk, '\n', { trimempty = true })
+                    for _, line in ipairs(v) do
+                        local _, json = pcall(vim.fn.json_decode, line)
+                        if _ then
+                            delta[#delta + 1] = json.delta
+                        else
+                            Log.error('Error while decoding chunk: {}', line)
+                            reject(line)
+                            return
+                        end
+                    end
+                end
+                local _, word_segments = pcall(vim.fn.json_decode, table.concat(delta, ''))
                 if _ then
-                    self:update_model({ word_segments = json })
+                    Log.debug('Word segmentation: {}', word_segments)
+                    self:update_model({ word_segments = word_segments })
                 else
-                    Log.error('Error while decoding stdout: {}', stdout)
+                    Log.error('Error while decoding delta: {}', delta)
                 end
             end,
             on_error = function()

@@ -6,7 +6,6 @@ Model.__index = Model
 function Model:new(opts)
     local obj = {
         buf = opts.buf,
-        position = opts.position,
         completion = opts.completion,
         selected_completion = 1, -- default to the first completion
     }
@@ -57,6 +56,19 @@ function Model:set_selected_completion(index)
 end
 
 function Model:recalculate()
+    if not self.completion.computed then
+        local completions = {}
+        for _, completion in ipairs(self.completion.response.completions) do
+            completions[#completions + 1] = {
+                generated_text = completion.generated_text,
+                row_delta = completion.line_delta,
+                col_delta = vim.str_byteindex(completion.generated_text, 'utf-16', completion.character_delta, false),
+            }
+        end
+        self.completion.computed = {
+            completions = completions,
+        }
+    end
 end
 
 return Model

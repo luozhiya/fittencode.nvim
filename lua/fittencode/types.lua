@@ -309,14 +309,6 @@
 
 ---@alias FittenCode.Inline.WordSegmentation table<string, table<string>>
 
----@class FittenCode.Inline.Model
----@field mode 'lines' | 'multi_segments' | 'edit_completion'
----@field accept function
----@field make_state function
----@field clear function
----@field completion FittenCode.Inline.GenerateOneStageResponse
----@field word_segments FittenCode.Inline.WordSegmentation
-
 ---@class FittenCode.Inline.View
 ---@field state? FittenCode.Inline.State
 ---@field extmark_ids table
@@ -339,7 +331,10 @@
 ---@field bcpos number
 ---@field pc_available boolean
 ---@field pc_prompt string
+---@field edit_mode boolean|string
 ---@field pc_prompt_type string
+---@field edit_mode_history string
+---@field edit_mode_trigger_type string
 
 ---@class FittenCode.Inline.GeneratePromptOptions : FittenCode.AsyncIOCallbacks
 ---@field buf number
@@ -347,19 +342,36 @@
 ---@field edit_mode boolean
 ---@field filename? string
 
+---@class FittenCode.Inline.Model
+---@field mode 'lines' | 'multi_segments' | 'edit_completion'
+---@field completion FittenCode.Inline.Completion
+---@field word_segments FittenCode.Inline.WordSegmentation
+---@field accept function
+---@field make_state function
+---@field clear function
+
 ---@class FittenCode.Inline.Completion
 ---@field response FittenCode.Inline.GenerateOneStageResponse
 ---@field position FittenCode.Position
+---@field computed? FittenCode.Inline.Completion.Computed
+
+---@class FittenCode.Inline.Completion.Computed
+---@field completions FittenCode.Inline.Completion.Computed.Completion[]
+
+---@class FittenCode.Inline.Completion.Computed.Completion
+---@field text string
+---@field row_delta number
+---@field col_delta number
 
 ---@class FittenCode.Inline.GenerateOneStageResponse
 ---@field request_id string
 ---@field completions FittenCode.Inline.GenerateOneStageResponse.Completion[]
----@field context any
+---@field context string
 
 ---@class FittenCode.Inline.GenerateOneStageResponse.Completion
 ---@field generated_text string
----@field col_delta number
----@field row_delta number
+---@field character_delta number UTF-16 code units
+---@field line_delta number zero-based line number
 
 ---@class FittenCode.Inline.RawGenerateOneStageResponse
 ---@field server_request_id string

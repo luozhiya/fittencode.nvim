@@ -153,7 +153,7 @@ function M.offset_at(buf, position)
     local offset
     vim.api.nvim_buf_call(buf, function()
         local lines = vim.api.nvim_buf_get_text(buf, 0, 0, position.row, position.col, {})
-        Log.debug('offset_at lines = {}', lines)
+        -- Log.debug('offset_at lines = {}', lines)
         vim.tbl_map(function(line)
             local utf = vim.str_utf_pos(line)
             if not offset then
@@ -176,12 +176,12 @@ function M.position_at(buf, offset)
     local pos
     vim.api.nvim_buf_call(buf, function()
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-        Log.debug('position_at lines = {}', lines)
+        -- Log.debug('position_at lines = {}', lines)
         local index = 0
         while offset > 0 do
             local line = lines[index + 1] .. '\n'
             local utf = vim.str_utf_pos(line)
-            Log.debug('position_at line = {}, utf = {}, offset = {}', #line, #utf, offset)
+            -- Log.debug('position_at line = {}, utf = {}, offset = {}', #line, #utf, offset)
             if offset > #utf then
                 index = index + 1
             else
@@ -208,17 +208,6 @@ function M.position(win)
         row = row - 1,
         col = col,
     })
-end
-
----@param text string A UTF-8 string.
----@param delta number The delta based on characters
----@return number?
-function M.characters_delta_to_columns(text, delta)
-    return vim.str_byteindex(text, 'utf-8', delta, false)
-end
-
-function M.columns_to_characters_delta(text, columns)
-    return vim.str_utfindex(text, 'utf-8', columns, false)
 end
 
 ---@param buf integer?
@@ -255,6 +244,7 @@ function M.onlyascii(text)
                 return false
             end
         end
+        return true
     else
         if #vim.str_utf_pos(text) == #text then
             return true

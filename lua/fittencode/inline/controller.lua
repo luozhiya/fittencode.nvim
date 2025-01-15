@@ -134,7 +134,7 @@ function Controller:send_completions(prompt, options)
         Client.get_completion_version(gcv_options)
     end):forward(function(version)
         return Promise:new(function(resolve, reject)
-            Log.debug('Got completion version {}', version)
+            -- Log.debug('Got completion version {}', version)
             local gos_options = {
                 completion_version = version,
                 prompt = prompt,
@@ -150,8 +150,8 @@ function Controller:send_completions(prompt, options)
                         reject()
                         return
                     end
-                    local completion = Response.from_generate_one_stage(response, { buf = options.buf, position = options.position })
-                    resolve(completion)
+                    local parsed_response = Response.from_generate_one_stage(response, { buf = options.buf, position = options.position })
+                    resolve(parsed_response)
                 end,
                 on_error = function()
                     options.session.timing.generate_one_stage.on_error = vim.uv.hrtime()
@@ -162,14 +162,13 @@ function Controller:send_completions(prompt, options)
         end)
     end, function()
         Fn.schedule_call(options.on_failure)
-    end):forward(function(completion)
-        if not completion then
+    end):forward(function(parsed_response)
+        if not parsed_response then
             Log.info('No more suggestion')
             Fn.schedule_call(options.on_no_more_suggestion)
             return
         end
-        Log.debug('Got completion = {}', completion)
-        Fn.schedule_call(options.on_success, completion)
+        Fn.schedule_call(options.on_success, parsed_response)
     end, function()
         Fn.schedule_call(options.on_failure)
     end)
@@ -178,7 +177,7 @@ end
 ---@param options FittenCode.Inline.TriggeringCompletionOptions
 function Controller:triggering_completion(options)
     options = options or {}
-    Log.debug('Triggering completion')
+    -- Log.debug('Triggering completion')
 
     local buf = vim.api.nvim_get_current_buf()
     if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
@@ -207,7 +206,7 @@ function Controller:triggering_completion(options)
     self:inline_status_updated(Status.Levels.GENERATING)
 
     Promise:new(function(resolve, reject)
-        Log.debug('Triggering completion for position {}', position)
+        -- Log.debug('Triggering completion for position {}', position)
         self:generate_prompt({
             buf = buf,
             position = position,
@@ -231,13 +230,16 @@ function Controller:triggering_completion(options)
                     self:inline_status_updated(Status.Levels.NO_MORE_SUGGESTIONS)
                     Fn.schedule_call(options.on_no_more_suggestion)
                 end,
-                on_success = function(completion)
+                on_success = function(parsed_response)
                     self:inline_status_updated(Status.Levels.SUGGESTIONS_READY)
-                    Log.debug('Got completion = {}', completion)
-                    Fn.schedule_call(options.on_success, completion)
+                    Fn.schedule_call(options.on_success, parsed_response)
+                    ---@type FittenCode.Inline.Completion
+                    local completion = {
+                        response = parsed_response,
+                        position = position,
+                    }
                     local model = Model:new({
                         buf = buf,
-                        position = position,
                         completion = completion,
                     })
                     local view = View:new({ buf = buf })

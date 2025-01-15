@@ -5,6 +5,8 @@ local Position = require('fittencode.position')
 
 local Response = {}
 
+local context_threshold = 100
+
 ---@param buf number
 ---@param work_start FittenCode.Position
 ---@param work_end FittenCode.Position
@@ -27,32 +29,32 @@ local function make_context(buf, work_start, work_end, peek_range)
     return prefix .. '<fim_middle>' .. suffix
 end
 
----@param response FittenCode.Inline.RawGenerateOneStageResponse
+---@param raw FittenCode.Inline.RawGenerateOneStageResponse
 ---@return FittenCode.Inline.GenerateOneStageResponse?
-function Response.from_generate_one_stage(response, options)
-    assert(response)
+function Response.from_generate_one_stage(raw, options)
+    assert(raw)
     local buf = options.buf
     ---@type FittenCode.Position
     local position = options.position
-    local generated_text = (vim.fn.substitute(response.generated_text or '', '<|endoftext|>', '', 'g') or '') .. (response.ex_msg or '')
+    local generated_text = (vim.fn.substitute(raw.generated_text or '', '<|endoftext|>', '', 'g') or '') .. (raw.ex_msg or '')
     if generated_text == '' then
         return
     end
-    local character_delta = response.delta_char or 0
-    local col_delta = Editor.characters_delta_to_columns(generated_text, character_delta)
     local a = position:clone()
     local b = position:clone()
-    return {
-        request_id = response.server_request_id,
+    local context = make_context(buf, a, b, context_threshold)
+    local response = {
+        request_id = raw.server_request_id,
         completions = {
             {
                 generated_text = generated_text,
-                col_delta = col_delta,
-                row_delta = response.delta_line or 0,
+                character_delta = raw.delta_char or 0,
+                line_delta = raw.delta_line or 0,
             },
         },
-        context = make_context(buf, a, b, 100)
+        context = context,
     }
+    return response
 end
 
 return Response

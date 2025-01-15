@@ -20,21 +20,15 @@ function Prompt:new(options)
     return obj
 end
 
-local WL = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
-local context_threshold = 100
-local last_filename = ''
-local last_text = ''
-local last_ciphertext = ''
+local fim_pattern = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
--- Make a prompt
--- 数据传输用 UTF-8 编码
----@param options FittenCode.Inline.GeneratePromptOptions
----@return FittenCode.Inline.Prompt?
-function Prompt.generate(options)
-    assert(options.buf)
-    assert(options.position)
-    local buf = options.buf
-    local position = options.position
+local last = {
+    filename = '',
+    text = '',
+    ciphertext = ''
+}
+
+local function calculate_prefix_suffix(buf, position)
     local max_chars = 22e4
     local sample_size = 2e3
     local wordcount = Editor.wordcount(buf)
@@ -43,7 +37,6 @@ function Prompt.generate(options)
     local prefix
     local suffix
     if charscount <= max_chars then
-        Log.debug('position = {}', position)
         prefix = Editor.get_text(buf, Range:new({ start = Position:new({ row = 0, col = 0 }), termination = position }))
         suffix = Editor.get_text(buf, Range:new({ start = position, termination = Position:new({ row = -1, col = -1 }) }))
     else
@@ -68,9 +61,135 @@ function Prompt.generate(options)
         local d = Editor.offset_at(buf, ae) or 0
         local E = J - (Editor.offset_at(buf, V) or 0)
     end
-    prefix = vim.fn.substitute(prefix, WL, '', 'g')
-    suffix = vim.fn.substitute(suffix, WL, '', 'g')
+    assert(prefix and suffix)
+    prefix = vim.fn.substitute(prefix, fim_pattern, '', 'g')
+    suffix = vim.fn.substitute(suffix, fim_pattern, '', 'g')
+    return prefix, suffix
+end
+
+local function compare_bytes(x, y)
+    local a = 0
+    local b = 0
+    local lenX = #x
+    local lenY = #y
+    -- 找出从开头开始最长的相同子串
+    while a + 1 <= lenX and a + 1 <= lenY and x:sub(a + 1, a + 1) == y:sub(a + 1, a + 1) do
+        a = a + 1
+    end
+    -- 找出从结尾开始最长的相同子串
+    while b + 1 <= lenX and b + 1 <= lenY and x:sub(-b - 1, -b - 1) == y:sub(-b - 1, -b - 1) do
+        b = b + 1
+    end
+    -- 如果从结尾开始的相同子串长度超过了整个字符串的长度，可能两个字符串完全相同
+    -- 此时需要特殊处理，将 b 调整为 0，因为 b 表示的是末尾相同字符的数量，而不是长度
+    if b == math.min(lenX, lenY) then
+        b = 0
+    end
+    return a, b
+end
+
+-- 对比两个字符串
+local function compare_bytes_order(prev, curr)
+    local leq, req = compare_bytes(prev, curr)
+    local utf = vim.str_utf_pos(curr)
+    for i = 1, #utf - 1 do
+        if leq > utf[i] and leq < utf[i + 1] then
+            leq = utf[i]
+        end
+    end
+    local rv = #curr - req
+    for i = #utf - 1, 1, -1 do
+        if rv > utf[i] and req < utf[i + 1] then
+            rv = utf[i]
+        end
+    end
+    req = #curr - rv
+    return leq, req
+end
+
+local function calculate_meta_datas(options)
+    assert(options)
+    local text = options.text or ''
+    local ciphertext = options.ciphertext or ''
+    local prefix = options.prefix or ''
+    local suffix = options.suffix or ''
+    local edit_mode = options.edit_mode or false
+    local filename = options.filename or ''
+
+    ---@type FittenCode.Inline.Prompt.MetaDatas
+    local meta_datas = {
+        cpos = vim.str_utfindex(prefix, 'utf-8'),
+        bcpos = prefix:len(),
+        plen = 0,
+        slen = 0,
+        bplen = 0,
+        bslen = 0,
+        pmd5 = '',
+        nmd5 = '',
+        diff = '',
+        filename = '',
+        edit_mode = '',
+        edit_mode_history = '',
+        edit_mode_trigger_type = '',
+        pc_available = true,
+        pc_prompt = '',
+        pc_prompt_type = '0'
+    }
+    if edit_mode then
+        meta_datas.edit_mode = 'true'
+        meta_datas.edit_mode_history = ''
+        meta_datas.edit_mode_trigger_type = ''
+    end
+
+    if filename ~= last.filename then
+        last.filename = filename
+        last.text = text
+        last.ciphertext = ciphertext
+        meta_datas = vim.tbl_deep_extend('force', meta_datas, {
+            plen = 0,
+            slen = 0,
+            bplen = 0,
+            bslen = 0,
+            pmd5 = '',
+            nmd5 = ciphertext,
+            diff = text,
+            filename = filename
+        })
+        return meta_datas
+    else
+        local lbytes, rbytes = compare_bytes_order(last.text, text)
+        local lchars = vim.str_utfindex(text, 'utf-8', lbytes)
+        local rchars = vim.str_utfindex(text:sub(rbytes + 1, #text), 'utf-8')
+        local diff = text:sub(lbytes + 1, #text - rbytes)
+        meta_datas = vim.tbl_deep_extend('force', meta_datas, {
+            plen = lchars,
+            slen = rchars,
+            bplen = lbytes,
+            bslen = rbytes,
+            pmd5 = last.ciphertext,
+            nmd5 = ciphertext,
+            diff = diff,
+            filename = filename
+        })
+        last.text = text
+        last.ciphertext = ciphertext
+        return meta_datas
+    end
+end
+
+-- Make a prompt
+-- 数据传输用 UTF-8 编码
+---@param options FittenCode.Inline.GeneratePromptOptions
+---@return FittenCode.Inline.Prompt?
+function Prompt.generate(options)
+    assert(options.buf)
+    assert(options.position)
+    local buf = options.buf
+    local position = options.position
+
+    local prefix, suffix = calculate_prefix_suffix(buf, position)
     local text = prefix .. suffix
+
     Promise:new(function(resolve, reject)
         Hash.hash('MD5', text, {
             on_once = function(ciphertext)
@@ -81,87 +200,14 @@ function Prompt.generate(options)
             end
         })
     end):forward(function(ciphertext)
-        ---@type FittenCode.Inline.Prompt.MetaDatas?
-        local meta_datas
-        if options.filename ~= last_filename then
-            last_filename = options.filename
-            last_text = text
-            last_ciphertext = ciphertext
-            ---@diagnostic disable-next-line: missing-fields
-            meta_datas = {
-                plen = 0,
-                slen = 0,
-                bplen = 0,
-                bslen = 0,
-                pmd5 = '',
-                nmd5 = ciphertext,
-                diff = text,
-                filename = options.filename
-            }
-        else
-            -- 1. 计算 text 和 last_text 的 diff
-            -- 2. n，i 为 diff 的字符utf16范围
-            -- 3. o,a 为 diff 的字节范围
-
-            local o = 0
-            while o < #text and o < #last_text and text:sub(o + 1, o + 1) == last_text:sub(o + 1, o + 1) do
-                o = o + 1
-            end
-            local a = 0
-            while a + o < #text and a + o < #last_text and text:sub(#text - a, #text - a) == last_text:sub(#last_text - a, #last_text - a) do
-                a = a + 1
-            end
-
-            -- 修复 o，a 到 utf8 起始字节
-            local utf_start = vim.str_utf_pos(text)
-            for i = 1, #utf_start do
-                if o > utf_start[i] and (not utf_start[i + 1] or o < utf_start[i + 1]) then
-                    o = utf_start[i]
-                end
-            end
-            local utf_end = vim.str_utf_pos(last_text)
-            for i = #utf_end, 1, -1 do
-                if a > utf_end[i] and (not utf_end[i - 1] or a < utf_end[i - 1]) then
-                    a = utf_end[i]
-                end
-            end
-
-            local n = vim.str_utfindex(text, 'utf-16', o)
-            local i = vim.str_utfindex(last_text, 'utf-16', a)
-
-            ---@diagnostic disable-next-line: missing-fields
-            meta_datas = {
-                plen = n,
-                slen = i,
-                bplen = o,
-                bslen = a,
-                pmd5 = last_ciphertext,
-                nmd5 = ciphertext,
-                diff = text:sub(o, a),
-                filename = options.filename
-            }
-
-            last_text = text
-            last_ciphertext = ciphertext
-        end
-        return Promise:new(function(resolve, reject)
-            if meta_datas then
-                resolve(meta_datas)
-            else
-                Fn.schedule_call(options.on_error)
-            end
-        end)
-    end):forward(function(meta_datas)
-        meta_datas.cpos = prefix:len()
-        meta_datas.bcpos = prefix:len()
-        meta_datas.pc_available = true
-        meta_datas.pc_prompt = ''
-        meta_datas.pc_prompt_type = '0'
-        if options.edit_mode then
-            meta_datas.edit_mode = 'true'
-            -- prompt.edit_mode_history
-            -- prompt.edit_mode_trigger_type
-        end
+        local meta_datas = calculate_meta_datas({
+            text = text,
+            ciphertext = ciphertext,
+            prefix = prefix,
+            suffix = suffix,
+            edit_mode = options.edit_mode,
+            filename = options.filename
+        })
         local prompt = Prompt:new({
             inputs = '',
             meta_datas = meta_datas

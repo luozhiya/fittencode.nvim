@@ -480,8 +480,8 @@ function M.word_segmentation(text, options)
         '<|user|>\n' ..
         lines ..
         '\n\n' ..
-        '对上述这几段原文分别进行分词，按如下要求来执行：' ..
-        '1. 输出json格式的分词向量（一级标题作为key，json不要放入markdown code block中）' ..
+        '请对上述这几段原文分别进行分词，按如下要求来执行：' ..
+        '1. 输出json格式的分词向量（一级标题作为key，json不要放入markdown code block中,json为一个完整对象）' ..
         '2. 严禁对原文字符做任何修改，包括标点符号。返回的结果合并起来要和原文相等' ..
         '3. 直接返回结果，不要添加任何其他提示交流语句' ..
         '\n\n\n<|end|>\n<|assistant|>'
