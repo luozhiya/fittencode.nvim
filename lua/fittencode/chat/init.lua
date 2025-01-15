@@ -32,7 +32,7 @@ local function setup()
         conversation_types_provider = conversation_types_provider,
         basic_chat_template_id = basic_chat_template_id
     })
-    controller:init()
+    controller:init_singleton()
     view:register_message_receiver(function(message)
         controller:receive_view_message(message)
     end)

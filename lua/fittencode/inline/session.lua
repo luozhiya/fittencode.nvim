@@ -158,7 +158,8 @@ end
 function Session:clear_autocmds()
 end
 
-function Session:is_cached(row, col)
+---@param position FittenCode.Position
+function Session:is_cached(position)
     -- return self.model:eq_commit_pos(row, col)
 end
 
@@ -178,11 +179,22 @@ function Session:clear_mv()
     end
 end
 
-function Session:destructor()
+function Session:destroy()
     self:abort_and_clear_requests()
     self:clear_mv()
     self:restore_keymaps()
     self:clear_autocmds()
+end
+
+---@param key string
+---@return boolean
+function Session:lazy_completion(key)
+    if self.model:eq_peek(key) then
+        self.model.accept('forward', 'char')
+        self:update_view()
+        return true
+    end
+    return false
 end
 
 return Session

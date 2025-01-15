@@ -69,4 +69,7 @@ function Model:recalculate()
     end
 end
 
+function Model:eq_peek(key)
+end
+
 return Model

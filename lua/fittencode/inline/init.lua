@@ -9,7 +9,7 @@ local controller = nil
 
 local function setup()
     controller = Controller:new()
-    controller:init()
+    controller:init_singleton()
 end
 
 local function get_status()

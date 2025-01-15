@@ -34,13 +34,14 @@ function Controller:new(opts)
     return obj
 end
 
-function Controller:init()
+function Controller:init_singleton()
     self.status = Status:new()
     self:register_observer(self.status)
     self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
     self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
     self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
     self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
+    self.ns_ids.on_key = vim.api.nvim_create_namespace('Fittencode.Inline.OnKey')
     self:enable(Config.inline_completion.enable)
 end
 
@@ -62,7 +63,11 @@ function Controller:notify_observers(event, data)
     end
 end
 
-function Controller:dismiss_suggestions()
+function Controller:dismiss_suggestions(options)
+    Log.debug('Dismissing suggestions')
+    if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
+        return
+    end
     self:cleanup_session()
 end
 
@@ -100,7 +105,7 @@ end
 
 function Controller:cleanup_session()
     if self.session then
-        self.session:destructor()
+        self.session:destroy()
         self.session = nil
     end
 end
@@ -190,25 +195,34 @@ end
 
 ---@param options FittenCode.Inline.TriggeringCompletionOptions
 function Controller:triggering_completion(options)
+    Log.debug('Triggering completion')
     options = options or {}
-    -- Log.debug('Triggering completion')
 
-    local buf = vim.api.nvim_get_current_buf()
-    if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
-        return
-    end
-    if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
-        return
-    end
-    local position = Editor.position(vim.api.nvim_get_current_win())
-    assert(position)
+    local function preflight_check()
+        local buf = vim.api.nvim_get_current_buf()
+        if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
+            return
+        end
+        if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
+            return
+        end
+        local position = Editor.position(vim.api.nvim_get_current_win())
+        assert(position)
 
-    local within_the_line = Editor.within_the_line(buf, position)
-    if Config.inline_completion.disable_completion_within_the_line and within_the_line then
-        return
+        local within_the_line = Editor.within_the_line(buf, position)
+        if Config.inline_completion.disable_completion_within_the_line and within_the_line then
+            return
+        end
+        options.force = (options.force == nil) and false or options.force
+        if not options.force and self.session and self.session:is_cached(position) then
+            return
+        end
+        return buf, position
     end
-    options.force = (options.force == nil) and false or options.force
-    if not options.force and self.session and self.session:is_cached(position) then
+
+    local buf, position = preflight_check()
+    if not buf or not position then
+        Fn.schedule_call(options.on_failure)
         return
     end
 
@@ -286,14 +300,29 @@ function Controller:on_enter_check_and_update_status()
     end
 end
 
+-- Lazy 模式，在输入字符与下一个字符相等时（ascii），不触发新的补全
+-- * 回车换行比较特殊，会触发 Neovim 的自动缩进，暂不支持
+---@param key string
+function Controller:lazy_completion(key)
+    if self.session then
+        return self.session:lazy_completion(key)
+    end
+    return false
+end
+
+-- 输入事件顺序
+-- * vim.on_key
+-- * CursorMovedI
+-- * TextChangedI
+-- 只在 'TextChangedI', 'CompleteChanged' 触发自动补全，和 VSCode 一致
+-- 后续做撤销的话，还需注意撤销产生的事件，并进行过滤
 function Controller:set_autocmds(enable)
     local autocmds = {
         { { 'TextChangedI', 'CompleteChanged' }, function(args) self:triggering_completion({ event = args }) end },
-        -- { { 'CursorMovedI' },                    function(args) self:dismiss_suggestions() end },
-        { { 'InsertLeave' },                     function(args) self:dismiss_suggestions() end },
-        { { 'BufLeave' },                        function(args) self:dismiss_suggestions() end },
+        { { 'CursorMovedI' },                    function(args) self:dismiss_suggestions({ event = args }) end },
+        { { 'InsertLeave' },                     function(args) self:dismiss_suggestions({ event = args }) end },
+        { { 'BufLeave' },                        function(args) self:dismiss_suggestions({ event = args }) end },
         { { 'BufEnter' },                        function(args) self:on_enter_check_and_update_status() end },
-        -- { { 'TextChangedI' },                                   function(args) self:lazy_completion({event = args}) end },
     }
     if enable then
         self:set_autocmds(false)
@@ -312,7 +341,11 @@ function Controller:is_enabled(buf)
     return Config.inline_completion.enable and Editor.is_filebuf(buf) == true and not self:is_filetype_excluded(buf)
 end
 
-function Controller:set_onkey()
+function Controller:set_onkey(enable)
+    if not enable then
+        vim.on_key(nil, self.ns_ids.on_key)
+        return
+    end
     local filtered = {}
     vim.tbl_map(function(key)
         filtered[#filtered + 1] = vim.api.nvim_replace_termcodes(key, true, true, true)
@@ -321,15 +354,20 @@ function Controller:set_onkey()
         '<Delete>',
     })
     vim.on_key(function(key)
-        vim.schedule(function()
-            local buf = vim.api.nvim_get_current_buf()
-            if vim.api.nvim_get_mode().mode == 'i' and self:is_enabled(buf) and vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
-                self.filter_events = { 'TextChangedI', 'CursorHoldI', 'CursorMovedI' }
-            else
-                self.filter_events = {}
+        local buf = vim.api.nvim_get_current_buf()
+        if vim.api.nvim_get_mode().mode == 'i' and self:is_enabled(buf) then
+            Log.debug('on key = {}', key)
+            if vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
+                self.filter_events = { 'CursorMovedI', 'TextChangedI', 'CursorHoldI' }
+                return
             end
-        end)
-    end)
+            if self:lazy_completion(key) then
+                self.filter_events = { 'CursorMovedI', 'TextChangedI' }
+                return
+            end
+        end
+        self.filter_events = {}
+    end, self.ns_ids.on_key)
 end
 
 ---@param msg string
@@ -417,6 +455,7 @@ function Controller:enable(enable, global, suffixes)
     if global then
         self:set_autocmds(enable)
         self:set_keymaps(enable)
+        self:set_onkey(enable)
     else
         local merge = function(tbl, filters)
             if enable then

@@ -21,7 +21,7 @@ function Controller:new(opts)
     return obj
 end
 
-function Controller:init()
+function Controller:init_singleton()
     self.selection_changed_autocmd = vim.api.nvim_create_autocmd('User', {
         pattern = 'fittencode.SelectionChanged',
         once = false,
