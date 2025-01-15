@@ -28,43 +28,52 @@ local last = {
     ciphertext = ''
 }
 
-local function calculate_prefix_suffix(buf, position)
+local function recalculate_prefix_suffix(buf, position)
     local max_chars = 22e4
+    local halfmax = max_chars / 2
     local sample_size = 2e3
     local wordcount = Editor.wordcount(buf)
     assert(wordcount)
     local charscount = wordcount.chars
     local prefix
     local suffix
+    local roundprefixoffset
+    local norangecount
+
     if charscount <= max_chars then
         prefix = Editor.get_text(buf, Range:new({ start = Position:new({ row = 0, col = 0 }), termination = position }))
         suffix = Editor.get_text(buf, Range:new({ start = position, termination = Position:new({ row = -1, col = -1 }) }))
     else
-        local J = charscount
-        local S = max_chars / 2
-        local re = Editor.offset_at(buf, position) or 0
-        local R = math.floor(re / sample_size) * sample_size
-        local U = J - math.floor((J - re) / sample_size) * sample_size
-        local O = math.max(0, math.min(R - S, J - S * 2))
-        local ie = math.min(J, math.max(U + S, S * 2))
-        local ae = Editor.position_at(buf, O) or Position:new()
-        local F = Editor.position_at(buf, re) or Position:new()
-        local V = Editor.position_at(buf, ie) or Position:new()
-        if ae.col ~= 0 then
-            ae = Position:new({ row = ae.row + 1, col = 0 })
-        end
-        if Editor.line_at(buf, ae.row).range.termination.col ~= V.col then
-            V = Editor.line_at(buf, ae.row).range.termination
-        end
-        prefix = Editor.get_text(buf, Range:new({ start = ae, termination = F }))
-        suffix = Editor.get_text(buf, Range:new({ start = F, termination = V }))
-        local d = Editor.offset_at(buf, ae) or 0
-        local E = J - (Editor.offset_at(buf, V) or 0)
+        local curoffset = Editor.offset_at(buf, position) or 0
+
+        local curround = math.floor(curoffset / sample_size) * sample_size
+        local curmax = charscount - math.floor((charscount - curoffset) / sample_size) * sample_size
+        local suffixoffset = math.min(charscount, math.max(curmax + halfmax, halfmax * 2))
+        local prefixoffset = math.max(0, math.min(curround - halfmax, charscount - halfmax * 2))
+
+        local prefixpos = Editor.position_at(buf, prefixoffset) or Position:new()
+        local curpos = Editor.position_at(buf, curoffset) or Position:new()
+        local suffixpos = Editor.position_at(buf, suffixoffset) or Position:new()
+
+        -- [prefixpos, curpos]
+        -- [curpos, suffixpos]
+        prefix = Editor.get_text(buf, Range:new({ start = prefixpos, termination = curpos }))
+        suffix = Editor.get_text(buf, Range:new({ start = curpos, termination = suffixpos }))
+
+        roundprefixoffset = Editor.offset_at(buf, prefixpos) or 0
+        norangecount = charscount - (Editor.offset_at(buf, suffixpos) or 0)
     end
+
     assert(prefix and suffix)
     prefix = vim.fn.substitute(prefix, fim_pattern, '', 'g')
     suffix = vim.fn.substitute(suffix, fim_pattern, '', 'g')
-    return prefix, suffix
+
+    return {
+        prefix = prefix,
+        suffix = suffix,
+        prefixoffset = roundprefixoffset,
+        norangecount = norangecount
+    }
 end
 
 -- 对比两个字符串，返回 UTF-8 编码的字节索引
@@ -110,7 +119,7 @@ local function compare_bytes_order(prev, curr)
     return leq, req
 end
 
-local function calculate_meta_datas(options)
+local function recalculate_meta_datas(options)
     assert(options)
     local text = options.text or ''
     local ciphertext = options.ciphertext or ''
@@ -118,6 +127,8 @@ local function calculate_meta_datas(options)
     local suffix = options.suffix or ''
     local edit_mode = options.edit_mode or false
     local filename = options.filename or ''
+    local prefixoffset = options.prefixoffset or 0
+    local norangecount = options.norangecount or 0
 
     ---@type FittenCode.Inline.Prompt.MetaDatas
     local meta_datas = {
@@ -140,8 +151,11 @@ local function calculate_meta_datas(options)
     }
     if edit_mode then
         meta_datas.edit_mode = 'true'
-        meta_datas.edit_mode_history = ''
-        meta_datas.edit_mode_trigger_type = ''
+        -- local J = History.get(postion)
+        -- J = string.sub(J, prefixoffset + 1, #J - norangecount)
+        -- J = vim.fn.substitute(J, fim_pattern, '', 'g')
+        -- meta_datas.edit_mode_history = J
+        -- meta_datas.edit_mode_trigger_type = '0' -- 0: 手动触发 1：自动触发
     end
 
     if filename ~= last.filename then
@@ -192,8 +206,8 @@ function Prompt.generate(options)
 
     Fn.schedule_call(options.on_create)
 
-    local prefix, suffix = calculate_prefix_suffix(buf, position)
-    local text = prefix .. suffix
+    local ctx = recalculate_prefix_suffix(buf, position)
+    local text = ctx.prefix .. ctx.suffix
 
     Promise:new(function(resolve, reject)
         Hash.hash('MD5', text, {
@@ -205,13 +219,15 @@ function Prompt.generate(options)
             end
         })
     end):forward(function(ciphertext)
-        local meta_datas = calculate_meta_datas({
+        local meta_datas = recalculate_meta_datas({
             text = text,
             ciphertext = ciphertext,
-            prefix = prefix,
-            suffix = suffix,
+            prefix = ctx.prefix,
+            suffix = ctx.suffix,
             edit_mode = options.edit_mode,
-            filename = options.filename
+            filename = options.filename,
+            prefixoffset = ctx.prefixoffset,
+            norangecount = ctx.norangecount
         })
         local prompt = Prompt:new({
             inputs = '',

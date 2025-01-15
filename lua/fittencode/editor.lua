@@ -210,6 +210,9 @@ function M.position(win)
 end
 
 function M.round_col_start(line, col)
+    if col == 0 then
+        return col
+    end
     local utf = vim.str_utf_pos(line)
     for i = 1, #utf - 1 do
         if col > utf[i] and col < utf[i + 1] then
@@ -221,6 +224,9 @@ function M.round_col_start(line, col)
 end
 
 function M.round_col_end(line, col)
+    if col == -1 then
+        return col
+    end
     local utf_index = vim.str_utfindex(line, 'utf-8', math.min(#line, col))
     return vim.str_byteindex(line, 'utf-8', utf_index)
 end
