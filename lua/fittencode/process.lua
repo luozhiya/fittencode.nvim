@@ -6,7 +6,7 @@ local M = {}
 ---@param exe table
 ---@param options FittenCode.Process.SpawnOptions
 function M.spawn(exe, options)
-    Log.debug('spawning exe {}', exe)
+    -- Log.debug('Spawn executable = {}, options = {}', exe, options)
     local stdout = {}
     local stderr = {}
     local process = nil

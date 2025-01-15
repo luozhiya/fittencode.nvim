@@ -11,6 +11,7 @@ local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local Position = require('fittencode.position')
 local Prompt = require('fittencode.inline.prompt')
+local Response = require('fittencode.inline.response')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
@@ -88,29 +89,6 @@ function Controller:generate_prompt(options)
     Prompt.generate(prompt_options)
 end
 
----@param data FittenCode.Inline.RawGenerateOneStageResponse
----@return FittenCode.Inline.GenerateOneStageResponse?
-function Controller:completion_response(data)
-    assert(data)
-    local generated_text = (vim.fn.substitute(data.generated_text or '', '<|endoftext|>', '', 'g') or '') .. (data.ex_msg or '')
-    if generated_text == '' then
-        return
-    end
-    local character_delta = data.delta_char or 0
-    local col_delta = Editor.characters_delta_to_columns(generated_text, character_delta)
-    return {
-        request_id = data.server_request_id,
-        completions = {
-            {
-                generated_text = generated_text,
-                col_delta = col_delta,
-                row_delta = data.delta_line or 0,
-            },
-        },
-        context = nil -- TODO: implement fim context
-    }
-end
-
 ---@param buf number
 function Controller:is_filetype_excluded(buf)
     local ft
@@ -166,13 +144,13 @@ function Controller:send_completions(prompt, options)
                 end,
                 on_once = function(stdout)
                     options.session.timing.generate_one_stage.on_once = vim.uv.hrtime()
-                    local _, json = pcall(vim.json.decode, table.concat(stdout, ''))
+                    local _, response = pcall(vim.json.decode, table.concat(stdout, ''))
                     if not _ then
-                        Log.error('Failed to decode completion response: {}', json)
+                        Log.error('Failed to decode completion response: {}', response)
                         reject()
                         return
                     end
-                    local completion = self:completion_response(json)
+                    local completion = Response.from_generate_one_stage(response, { buf = options.buf, position = options.position })
                     resolve(completion)
                 end,
                 on_error = function()
@@ -217,7 +195,7 @@ function Controller:triggering_completion(options)
         return
     end
     options.force = (options.force == nil) and false or options.force
-    if not options.force and self.session and self.session:cache_hit(position) then
+    if not options.force and self.session and self.session:is_cached(position) then
         return
     end
 
@@ -246,6 +224,8 @@ function Controller:triggering_completion(options)
     end):forward(function(prompt)
         return Promise:new(function(resolve, reject)
             self:send_completions(prompt, {
+                buf = buf,
+                position = position,
                 session = self.session,
                 on_no_more_suggestion = function()
                     self:inline_status_updated(Status.Levels.NO_MORE_SUGGESTIONS)
@@ -286,10 +266,11 @@ end
 
 function Controller:set_autocmds(enable)
     local autocmds = {
-        { { 'InsertEnter', 'CursorMovedI', 'CompleteChanged' }, function(args) self:triggering_completion({ event = args }) end },
-        { { 'InsertLeave' },                                    function(args) self:dismiss_suggestions() end },
-        { { 'BufLeave' },                                       function(args) self:dismiss_suggestions() end },
-        { { 'BufEnter' },                                       function(args) self:on_enter_check_and_update_status() end },
+        { { 'TextChangedI', 'CompleteChanged' }, function(args) self:triggering_completion({ event = args }) end },
+        -- { { 'CursorMovedI' },                    function(args) self:dismiss_suggestions() end },
+        { { 'InsertLeave' },                     function(args) self:dismiss_suggestions() end },
+        { { 'BufLeave' },                        function(args) self:dismiss_suggestions() end },
+        { { 'BufEnter' },                        function(args) self:on_enter_check_and_update_status() end },
         -- { { 'TextChangedI' },                                   function(args) self:lazy_completion({event = args}) end },
     }
     if enable then

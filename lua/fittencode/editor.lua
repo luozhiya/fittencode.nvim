@@ -121,13 +121,15 @@ function M.is_filebuf(buf)
     return false
 end
 
+-- Return the word count of the buffer.
+-- Example:
 -- {
 --     bytes = 5,
 --     chars = 5,
+--     words = 1,
 --     cursor_bytes = 3,
 --     cursor_chars = 3,
 --     cursor_words = 1,
---     words = 1
 -- }
 function M.wordcount(buf)
     if not buf then
@@ -212,14 +214,33 @@ end
 ---@param delta number The delta based on characters
 ---@return number?
 function M.characters_delta_to_columns(text, delta)
-    return vim.str_byteindex(text, 'utf-16', delta, false)
+    return vim.str_byteindex(text, 'utf-8', delta, false)
 end
 
 function M.columns_to_characters_delta(text, columns)
-    return vim.str_utfindex(text, 'utf-16', columns, false)
+    return vim.str_utfindex(text, 'utf-8', columns, false)
 end
 
+---@param buf integer?
+---@param range FittenCode.Range
+---@return string[]?
+function M.get_lines(buf, range)
+    if not buf then
+        return
+    end
+    local lines
+    vim.api.nvim_buf_call(buf, function()
+        lines = vim.api.nvim_buf_get_text(buf, range.start.row, range.start.col, range.termination.row, range.termination.col, {})
+    end)
+    return lines
+end
+
+---@return string?
 function M.get_text(buf, range)
+    if not buf then
+        return
+    end
+    return table.concat(assert(M.get_lines(buf, range)), '\n')
 end
 
 -- Check if the given text contains only ASCII characters.

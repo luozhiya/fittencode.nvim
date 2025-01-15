@@ -78,10 +78,10 @@ function Impl.post(url, options)
 
     ---@class FittenCode.AsyncIOCallbacks
     local spawn_options = {
-        on_create = function(...) Fn.schedule_call(options.on_create, ...) end,
-        on_once = function(...) Fn.schedule_call(options.on_once, ...) end,
-        on_stream = function(...) Fn.schedule_call(options.on_stream, ...) end,
-        on_error = function(...) Fn.schedule_call(options.on_error, ...) end,
+        on_create = options.on_create,
+        on_once = options.on_once,
+        on_stream = options.on_stream,
+        on_error = options.on_error,
         on_exit = function(...)
             Fn.schedule_call(options.on_exit, ...)
             vim.uv.fs_unlink(tempname)

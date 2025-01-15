@@ -336,6 +336,7 @@ function M.get_completion_version(options)
         headers = headers,
         timeout = options.timeout,
     })
+    assert(fetch_options)
     HTTP.fetch(url, fetch_options)
 end
 
@@ -396,6 +397,7 @@ function M.generate_one_stage(options)
             body = compressed_stream,
             timeout = options.timeout,
         })
+        assert(fetch_options)
         HTTP.fetch(url, fetch_options)
     end)
 end
@@ -422,6 +424,7 @@ function M.accept_completion(options)
         body = body,
         timeout = options.timeout,
     })
+    assert(fetch_options)
     HTTP.fetch(url, fetch_options)
 end
 
@@ -447,6 +450,7 @@ function M.chat(options)
         body = body,
         timeout = options.timeout,
     })
+    assert(fetch_options)
     HTTP.fetch(url, fetch_options)
 end
 
@@ -491,6 +495,7 @@ function M.word_segmentation(text, options)
             }
         },
     })
+    assert(fetch_options)
     M.chat(fetch_options)
 end
 

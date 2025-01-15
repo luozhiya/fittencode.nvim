@@ -138,7 +138,7 @@ end
 function Session:clear_autocmds()
 end
 
-function Session:cache_hit(row, col)
+function Session:is_cached(row, col)
     -- return self.model:eq_commit_pos(row, col)
 end
 

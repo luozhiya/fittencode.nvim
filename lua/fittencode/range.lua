@@ -16,11 +16,20 @@ function Range:new(options)
         termination = options.termination,
     }
     -- If start is not before or equal to end, the values will be swapped.
-    if obj.start:is_after(obj.termination) then
-        obj.start, obj.termination = obj.termination, obj.start
+    if not obj.termination:is_eof() then
+        if obj.start:is_after(obj.termination) then
+            obj.start, obj.termination = obj.termination, obj.start
+        end
     end
     setmetatable(obj, Range)
     return obj
+end
+
+function Range.make(start, termination)
+    return Range:new({
+        start = start,
+        termination = termination,
+    })
 end
 
 -- Returns true if the range is empty, i.e., start and termination are equal

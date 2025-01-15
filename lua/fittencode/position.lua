@@ -8,6 +8,7 @@ Position.__index = Position
 
 ---@return FittenCode.Position
 function Position:new(options)
+    options = options or { row = 0, col = 0 }
     local obj = {
         row = options.row,
         col = options.col,
@@ -97,6 +98,12 @@ function Position:clone()
         row = self.row,
         col = self.col,
     })
+end
+
+-- Check if this position is at the end of file.
+---@return boolean
+function Position:is_eof()
+    return self.row == -1 and self.col == -1
 end
 
 return Position
