@@ -5,7 +5,6 @@ local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local View = require('fittencode.chat.view')
 local Config = require('fittencode.config')
-local Shared = require('fittencode.chat.shared')
 
 ---@type FittenCode.Chat.Controller
 local controller = nil
@@ -18,8 +17,8 @@ local function setup()
     })
     view:init()
     local basic_chat_template_id = 'chat-' .. Fn.display_preference()
-    local conversation_types_provider
-    conversation_types_provider = Shared.conversation_types_provider(function()
+    local conversation_types_provider = ConversationTypesProvider:new({ extension_uri = Fn.extension_uri() })
+    conversation_types_provider:async_load_conversation_types(function()
         assert(conversation_types_provider)
         local conversation_type = conversation_types_provider:get_conversation_type(basic_chat_template_id)
         if not conversation_type then

@@ -1,22 +1,28 @@
 local Controller = require('fittencode.chat.controller')
 local Fn = require('fittencode.fn')
 local Model = require('fittencode.chat.model')
-local Shared = require('fittencode.chat.shared')
+local ConversationTypesProvider = require('fittencode.chat.conversation_types_provider')
 
 ---@class FittenCode.Chat.Headless
 local Headless = {}
 Headless.__index = Headless
 
-function Headless:new()
-    local obj = {}
-
+local function make_controller()
     local basic_chat_template_id = 'chat-' .. Fn.display_preference()
-    obj.controller = Controller:new({
+    local conversation_types_provider = ConversationTypesProvider:new({ extension_uri = Fn.extension_uri() })
+    conversation_types_provider:async_load_conversation_types()
+    local controller = Controller:new({
         model = Model:new(),
-        conversation_types_provider = Shared.conversation_types_provider(),
+        conversation_types_provider = conversation_types_provider,
         basic_chat_template_id = basic_chat_template_id
     })
+    return controller
+end
 
+function Headless:new()
+    local obj = {
+        controller = make_controller()
+    }
     setmetatable(obj, self)
     return obj
 end
