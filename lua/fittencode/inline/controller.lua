@@ -105,18 +105,24 @@ function Controller:cleanup_session()
     end
 end
 
--- Maybe this should be a public API?
+-- 发送请求获取补全响应
+-- 有响应且响应不为空则代表有补全，否则代表无补全
 ---@param prompt FittenCode.Inline.Prompt
 ---@param options FittenCode.Inline.SendCompletionsOptions
 function Controller:send_completions(prompt, options)
+    local session = options.session
     Promise:new(function(resolve, reject)
         local gcv_options = {
             on_create = function(handle)
-                options.session.timing.get_completion_version.on_create = vim.uv.hrtime()
-                options.session.request_handles[#options.session.request_handles + 1] = handle
+                if session then
+                    session.timing.get_completion_version.on_create = vim.uv.hrtime()
+                    session.request_handles[#session.request_handles + 1] = handle
+                end
             end,
             on_once = function(stdout)
-                options.session.timing.get_completion_version.on_once = vim.uv.hrtime()
+                if session then
+                    session.timing.get_completion_version.on_once = vim.uv.hrtime()
+                end
                 local json = table.concat(stdout, '')
                 local _, version = pcall(vim.fn.json_decode, json)
                 if not _ or version == nil then
@@ -127,7 +133,9 @@ function Controller:send_completions(prompt, options)
                 end
             end,
             on_error = function()
-                options.session.timing.get_completion_version.on_error = vim.uv.hrtime()
+                if session then
+                    session.timing.get_completion_version.on_error = vim.uv.hrtime()
+                end
                 reject()
             end
         }
@@ -139,14 +147,18 @@ function Controller:send_completions(prompt, options)
                 completion_version = version,
                 prompt = prompt,
                 on_create = function(handle)
-                    options.session.timing.generate_one_stage.on_create = vim.uv.hrtime()
-                    options.session.request_handles[#options.session.request_handles + 1] = handle
+                    if session then
+                        session.timing.generate_one_stage.on_create = vim.uv.hrtime()
+                        session.request_handles[#session.request_handles + 1] = handle
+                    end
                 end,
                 on_once = function(stdout)
-                    options.session.timing.generate_one_stage.on_once = vim.uv.hrtime()
+                    if session then
+                        session.timing.generate_one_stage.on_once = vim.uv.hrtime()
+                    end
                     local _, response = pcall(vim.json.decode, table.concat(stdout, ''))
                     if not _ then
-                        Log.error('Failed to decode completion response: {}', response)
+                        Log.error('Failed to decode completion raw response: {}', response)
                         reject()
                         return
                     end
@@ -154,7 +166,9 @@ function Controller:send_completions(prompt, options)
                     resolve(parsed_response)
                 end,
                 on_error = function()
-                    options.session.timing.generate_one_stage.on_error = vim.uv.hrtime()
+                    if session then
+                        session.timing.generate_one_stage.on_error = vim.uv.hrtime()
+                    end
                     reject()
                 end
             }

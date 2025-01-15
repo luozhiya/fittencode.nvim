@@ -106,4 +106,8 @@ function Position:is_eof()
     return self.row == -1 and self.col == -1
 end
 
+function Position:is_eol()
+    return self.col == -1
+end
+
 return Position

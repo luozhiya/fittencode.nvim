@@ -16,12 +16,23 @@ function Range:new(options)
         termination = options.termination,
     }
     -- If start is not before or equal to end, the values will be swapped.
-    if not obj.termination:is_eof() then
+    -- 有 eof 和 eol 两种特殊情况要处理
+    if obj.start:is_eof() and obj.termination:is_eof() then
+        -- nothing
+    elseif obj.start:is_eof() then
+        obj.start, obj.termination = obj.termination, obj.start
+    elseif obj.start.row == obj.termination.row then
+        if obj.start:is_eol() and obj.termination:is_eol() then
+            -- nothing
+        elseif obj.start:is_eol() then
+            obj.start, obj.termination = obj.termination, obj.start
+        end
+    else
         if obj.start:is_after(obj.termination) then
             obj.start, obj.termination = obj.termination, obj.start
         end
     end
-    setmetatable(obj, Range)
+    setmetatable(obj, self)
     return obj
 end
 

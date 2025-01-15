@@ -43,7 +43,7 @@ function Response.from_generate_one_stage(raw, options)
     local a = position:clone()
     local b = position:clone()
     local context = make_context(buf, a, b, context_threshold)
-    local response = {
+    local parsed_response = {
         request_id = raw.server_request_id,
         completions = {
             {
@@ -54,7 +54,7 @@ function Response.from_generate_one_stage(raw, options)
         },
         context = context,
     }
-    return response
+    return parsed_response
 end
 
 return Response

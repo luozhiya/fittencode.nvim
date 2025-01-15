@@ -353,13 +353,10 @@
 ---@class FittenCode.Inline.Completion
 ---@field response FittenCode.Inline.GenerateOneStageResponse
 ---@field position FittenCode.Position
----@field computed? FittenCode.Inline.Completion.Computed
+---@field computed? FittenCode.Inline.Completion.Computed[]
 
 ---@class FittenCode.Inline.Completion.Computed
----@field completions FittenCode.Inline.Completion.Computed.Completion[]
-
----@class FittenCode.Inline.Completion.Computed.Completion
----@field text string
+---@field generated_text string
 ---@field row_delta number
 ---@field col_delta number
 

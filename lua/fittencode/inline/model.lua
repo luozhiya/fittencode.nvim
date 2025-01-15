@@ -29,7 +29,7 @@ end
 
 function Model:validate_word_segments(segments)
     for k, v in pairs(segments) do
-        if table.concat(v, '') ~= self.completion.completions[tonumber(k)].generated_text then
+        if table.concat(v, '') ~= self.completion.computed[tonumber(k)].generated_text then
             return false
         end
     end
@@ -57,17 +57,15 @@ end
 
 function Model:recalculate()
     if not self.completion.computed then
-        local completions = {}
+        local computed = {}
         for _, completion in ipairs(self.completion.response.completions) do
-            completions[#completions + 1] = {
+            computed[#computed + 1] = {
                 generated_text = completion.generated_text,
                 row_delta = completion.line_delta,
-                col_delta = vim.str_byteindex(completion.generated_text, 'utf-16', completion.character_delta, false),
+                col_delta = vim.str_byteindex(completion.generated_text, 'utf-16', completion.character_delta),
             }
         end
-        self.completion.computed = {
-            completions = completions,
-        }
+        self.completion.computed = computed
     end
 end
 
