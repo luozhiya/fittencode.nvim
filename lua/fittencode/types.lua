@@ -320,21 +320,22 @@
 ---@field inputs string
 ---@field meta_datas FittenCode.Inline.Prompt.MetaDatas
 
+-- 元信息
 ---@class FittenCode.Inline.Prompt.MetaDatas
----@field plen number
----@field slen number
----@field bplen number
----@field bslen number
----@field pmd5 string
----@field nmd5 string
----@field diff string
----@field filename string
----@field cpos number
----@field bcpos number
----@field pc_available boolean
----@field pc_prompt string
----@field edit_mode boolean|string
----@field pc_prompt_type string
+---@field plen number 对比结果的相似前缀的长度 UTF-16
+---@field slen number 对比结果的相似后缀的长度 UTF-16
+---@field bplen number 前缀文本的 UTF-8 字节长度
+---@field bslen number 后缀文本的 UTF-8 字节长度
+---@field pmd5 string Prev MD5
+---@field nmd5 string New MD5 (Prefix + Suffix)
+---@field diff string 差异文本，如果是首次则是 Prefix + Suffix，后续则是对比结果
+---@field filename string 文件名
+---@field cpos number Prefix 的 UTF-16 长度
+---@field bcpos number Prefix 的 UTF-8 字节长度
+---@field pc_available boolean Project Completion 是否可用
+---@field pc_prompt string Project Completion Prompt
+---@field pc_prompt_type string Project Completion Prompt 类型
+---@field edit_mode boolean|string 是否处于 Edit Completion 模式
 ---@field edit_mode_history string
 ---@field edit_mode_trigger_type string
 

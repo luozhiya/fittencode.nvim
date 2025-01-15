@@ -67,6 +67,7 @@ local function calculate_prefix_suffix(buf, position)
     return prefix, suffix
 end
 
+-- 对比两个字符串，返回 UTF-8 编码的字节索引
 local function compare_bytes(x, y)
     local a = 0
     local b = 0
@@ -88,19 +89,21 @@ local function compare_bytes(x, y)
     return a, b
 end
 
--- 对比两个字符串
+-- 对比两个字符串，返回 UTF-8 编码的字节索引，指向 UTF-8 编码的结束字节
 local function compare_bytes_order(prev, curr)
     local leq, req = compare_bytes(prev, curr)
     local utf = vim.str_utf_pos(curr)
     for i = 1, #utf - 1 do
         if leq > utf[i] and leq < utf[i + 1] then
-            leq = utf[i]
+            leq = utf[i + 1] - 1
+            break
         end
     end
     local rv = #curr - req
     for i = #utf - 1, 1, -1 do
         if rv > utf[i] and req < utf[i + 1] then
-            rv = utf[i]
+            rv = utf[i + 1] - 1
+            break
         end
     end
     req = #curr - rv
@@ -118,7 +121,7 @@ local function calculate_meta_datas(options)
 
     ---@type FittenCode.Inline.Prompt.MetaDatas
     local meta_datas = {
-        cpos = vim.str_utfindex(prefix, 'utf-8'),
+        cpos = vim.str_utfindex(prefix, 'utf-16'),
         bcpos = prefix:len(),
         plen = 0,
         slen = 0,
@@ -158,8 +161,8 @@ local function calculate_meta_datas(options)
         return meta_datas
     else
         local lbytes, rbytes = compare_bytes_order(last.text, text)
-        local lchars = vim.str_utfindex(text, 'utf-8', lbytes)
-        local rchars = vim.str_utfindex(text:sub(rbytes + 1, #text), 'utf-8')
+        local lchars = vim.str_utfindex(text, 'utf-16', lbytes)
+        local rchars = vim.str_utfindex(text:sub(rbytes + 1, #text), 'utf-16')
         local diff = text:sub(lbytes + 1, #text - rbytes)
         meta_datas = vim.tbl_deep_extend('force', meta_datas, {
             plen = lchars,
