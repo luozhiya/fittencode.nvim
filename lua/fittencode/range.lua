@@ -123,7 +123,10 @@ function Range:clone()
     })
 end
 
-function Range.make_from_line(row, line_text)
+-- 返回的 `range.termination.col` 指向末尾字节
+---@param row number
+---@param line string
+function Range.make_from_line(row, line)
     return Range:new({
         start = Position:new({
             row = row,
@@ -131,7 +134,7 @@ function Range.make_from_line(row, line_text)
         }),
         termination = Position:new({
             row = row,
-            col = #line_text,
+            col = #line,
         }),
     })
 end
