@@ -220,7 +220,7 @@ function Controller:triggering_completion(options)
     self:inline_status_updated(Status.Levels.GENERATING)
 
     Promise:new(function(resolve, reject)
-        -- Log.debug('Triggering completion for position {}', position)
+        Log.debug('Triggering completion for position {}', position)
         self:generate_prompt({
             buf = buf,
             position = position,
@@ -257,6 +257,7 @@ function Controller:triggering_completion(options)
                         response = parsed_response,
                         position = position,
                     }
+                    Log.debug('Parsed completion = {}', completion)
                     local model = Model:new({
                         buf = buf,
                         completion = completion,

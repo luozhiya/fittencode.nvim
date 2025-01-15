@@ -6,7 +6,7 @@ Model.__index = Model
 function Model:new(opts)
     local obj = {
         buf = opts.buf,
-        completion = opts.completion,
+        completion = opts.completion or {},
         selected_completion = 1, -- default to the first completion
     }
     setmetatable(obj, Model)

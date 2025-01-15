@@ -18,6 +18,7 @@ function Session:new(opts)
         reflect = opts.reflect,
         timing = {
             on_create = vim.uv.hrtime(),
+            generate_prompt = {},
             get_completion_version = {},
             generate_one_stage = {},
             word_segmentation = {},
@@ -49,7 +50,7 @@ function Session:update_word_segments()
         return
     end
     local generated_text = {}
-    for _, item in ipairs(computed.completions) do
+    for _, item in ipairs(computed) do
         generated_text[#generated_text + 1] = item.generated_text
     end
     if Editor.onlyascii(generated_text) then
