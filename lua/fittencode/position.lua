@@ -28,44 +28,52 @@ end
 ---@param other FittenCode.Position
 ---@return boolean
 function Position:is_before(other)
-    return self.row < other.row or (self.row == other.row and self.col < other.col)
+    return self:compare_to(other) == -1
 end
 
 -- Check if this position is before or equal to `other`.
 ---@param other FittenCode.Position
 ---@return boolean
 function Position:is_before_or_equal(other)
-    return self.row < other.row or (self.row == other.row and self.col <= other.col)
+    return self:compare_to(other) <= 0
 end
 
 -- Check if this position is after `other`.
 ---@param other FittenCode.Position
 ---@return boolean
 function Position:is_after(other)
-    return self.row > other.row or (self.row == other.row and self.col > other.col)
+    return self:compare_to(other) == 1
 end
 
 -- Check if this position is after or equal to `other`.
 ---@param other FittenCode.Position
 ---@return boolean
 function Position:is_after_or_equal(other)
-    return self.row > other.row or (self.row == other.row and self.col >= other.col)
+    return self:compare_to(other) >= 0
 end
 
 -- Compare this to `other`.
 ---@param other FittenCode.Position
 ---@return number -1 if this is before `other`, 1 if this is after `other`, 0 if they are equal.
 function Position:compare_to(other)
-    if self.row < other.row then
-        return -1
-    elseif self.row > other.row then
-        return 1
-    elseif self.col < other.col then
-        return -1
-    elseif self.col > other.col then
-        return 1
-    else
+    if self:is_eof() and other:is_eof() then
         return 0
+    elseif self:is_eof() then
+        return 1
+    elseif other:is_eof() then
+        return -1
+    elseif self.row == other.row then
+        if self:is_eol() and self:is_eol() then
+            return 0
+        elseif self:is_eol() then
+            return 1
+        elseif other:is_eol() then
+            return -1
+        else
+            return self.col - other.col
+        end
+    else
+        return self.row - other.row
     end
 end
 
