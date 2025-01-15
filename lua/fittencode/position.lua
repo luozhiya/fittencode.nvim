@@ -1,6 +1,11 @@
+-- 抽象的位置类，用于表示文件中的位置
+-- 
+-- 在 `UTF-8` 序列中， `col` 可能指向首字节，也可能指向末尾字节，要根据具体的上下文环境来加以判断
+-- * `vim.api.nvim_win_get_cursor` 返回的 `col` 指向首字节
+-- * `vim.api.str_byteindex` 返回的 `col` 指向末尾字节
 ---@class FittenCode.Position
 ---@field row number A zero-based row value.
----@field col number A zero-based column value. In UTF-8 encoding, `col` always points to the start byte of the UTF-8 sequence. Same as `vim.api.nvim_win_get_cursor`.
+---@field col number A zero-based column value.
 
 ---@class FittenCode.Position
 local Position = {}
@@ -56,18 +61,18 @@ end
 ---@param other FittenCode.Position
 ---@return number -1 if this is before `other`, 1 if this is after `other`, 0 if they are equal.
 function Position:compare_to(other)
-    if self:is_eof() and other:is_eof() then
+    if self:eof() and other:eof() then
         return 0
-    elseif self:is_eof() then
+    elseif self:eof() then
         return 1
-    elseif other:is_eof() then
+    elseif other:eof() then
         return -1
     elseif self.row == other.row then
-        if self:is_eol() and self:is_eol() then
+        if self:eol() and self:eol() then
             return 0
-        elseif self:is_eol() then
+        elseif self:eol() then
             return 1
-        elseif other:is_eol() then
+        elseif other:eol() then
             return -1
         else
             return self.col - other.col
@@ -110,11 +115,11 @@ end
 
 -- Check if this position is at the end of file.
 ---@return boolean
-function Position:is_eof()
+function Position:eof()
     return self.row == -1 and self.col == -1
 end
 
-function Position:is_eol()
+function Position:eol()
     return self.col == -1
 end
 
