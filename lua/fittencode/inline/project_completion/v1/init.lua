@@ -2,16 +2,16 @@ local Editor = require('fittencode.editor')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 
--- ProjectCompletionV1
--- * V1 版本，老版本
+-- ProjectCompletion.V1
+-- * V1 版本
 -- * 为代码补全提供项目级的感知与提示
----@class FittenCode.Inline.ProjectCompletionV1
+---@class FittenCode.Inline.ProjectCompletion.V1 : FittenCode.Inline.ProjectCompletion
 
----@class FittenCode.Inline.ProjectCompletionV1
+---@class FittenCode.Inline.ProjectCompletion.V1
 local ProjectCompletion = {}
 ProjectCompletion.__index = ProjectCompletion
 
----@return FittenCode.Inline.ProjectCompletionV1
+---@return FittenCode.Inline.ProjectCompletion.V1
 function ProjectCompletion:new(opts)
     local obj = {
         files = {}

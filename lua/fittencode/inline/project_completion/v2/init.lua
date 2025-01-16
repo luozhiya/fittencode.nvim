@@ -3,23 +3,23 @@ local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local ScopeTree = require('fittencode.inline.project_completion.scope_tree')
 
--- ProjectCompletionV2
--- * V2 版本，新版本
+-- ProjectCompletion.V2
+-- * V2 版本
 -- * 为代码补全提供项目级的感知与提示
 -- * 依赖 LSP 信息
----@class FittenCode.Inline.ProjectCompletionV2
----@field files table<string, FittenCode.Inline.ProjectCompletionV2.ScopeTree>
+---@class FittenCode.Inline.ProjectCompletion.V2 : FittenCode.Inline.ProjectCompletion
+---@field files table<string, FittenCode.Inline.ProjectCompletion.V2.ScopeTree>
 
----@class FittenCode.Inline.ProjectCompletionV2
+---@class FittenCode.Inline.ProjectCompletion.V2
 local ProjectCompletion = {}
 ProjectCompletion.__index = ProjectCompletion
 
----@return FittenCode.Inline.ProjectCompletionV2
+---@return FittenCode.Inline.ProjectCompletion.V2
 function ProjectCompletion:new(opts)
     local obj = {
         files = {}
     }
-    setmetatable(obj, ProjectCompletion)
+    setmetatable(obj, self)
     return obj
 end
 

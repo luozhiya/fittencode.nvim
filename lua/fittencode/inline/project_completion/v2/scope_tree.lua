@@ -1,13 +1,13 @@
 local CurrentPrompt = require('fittencode.inline.project_completion.v2.current_prompt')
 
----@class FittenCode.Inline.ProjectCompletionV2.ScopeTree
----@field lines table<FittenCode.Inline.ProjectCompletionV2.ScopeLine>
----@field current_prompt FittenCode.Inline.ProjectCompletionV2.CurrentPrompt
+---@class FittenCode.Inline.ProjectCompletion.V2.ScopeTree
+---@field lines table<FittenCode.Inline.ProjectCompletion.V2.ScopeLine>
+---@field current_prompt FittenCode.Inline.ProjectCompletion.V2.CurrentPrompt
 ---@field locked number
 ---@field status number
 ---@field has_lsp number
 
----@class FittenCode.Inline.ProjectCompletionV2.ScopeTree
+---@class FittenCode.Inline.ProjectCompletion.V2.ScopeTree
 local ScopeTree = {}
 ScopeTree.__index = ScopeTree
 

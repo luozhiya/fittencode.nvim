@@ -1,10 +1,10 @@
----@class FittenCode.Inline.ProjectCompletionV2.ScopeLineInfo
+---@class FittenCode.Inline.ProjectCompletion.V2.ScopeLineInfo
 ---@field def_identifier string
 ---@field def_init_version string
 ---@field def_document string
 ---@field def_compressed_code string
 
----@class FittenCode.Inline.ProjectCompletionV2.ScopeLine
+---@class FittenCode.Inline.ProjectCompletion.V2.ScopeLine
 local ScopeLine = {}
 ScopeLine.__index = ScopeLine
 

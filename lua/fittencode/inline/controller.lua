@@ -12,8 +12,7 @@ local View = require('fittencode.inline.view')
 local Position = require('fittencode.position')
 local Prompt = require('fittencode.inline.prompt')
 local Response = require('fittencode.inline.response')
-local ProjectCompletionV1 = require('fittencode.inline.project_completion.v1')
-local ProjectCompletionV2 = require('fittencode.inline.project_completion.v2')
+local ProjectCompletionFactory = require('fittencode.inline.project_completion')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
@@ -42,8 +41,8 @@ function Controller:init_integration()
     self:register_observer(self.status)
     self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
     self.project_completion = {
-        v1 = ProjectCompletionV1:new(),
-        v2 = ProjectCompletionV2:new(),
+        v1 = ProjectCompletionFactory.create('V1'),
+        v2 = ProjectCompletionFactory.create('V2'),
     }
     self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
     self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
