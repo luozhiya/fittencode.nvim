@@ -3,6 +3,14 @@ local M = {}
 
 local pipes = nil
 
+local function _execute(module, action)
+    if type(module[action]) == 'function' then
+        module[action](require('fittencode.' .. module.name))
+    elseif type(module[action]) == 'boolean' and module[action] then
+        require('fittencode.' .. module.name)[action]()
+    end
+end
+
 -- 初始化配置
 ---@param opts? FittenCode.Config
 function M.setup(opts)
@@ -12,18 +20,14 @@ function M.setup(opts)
     end
     assert(pipes == nil, 'fittencode.nvim has already been setup')
     pipes = {
-        { 'config',  setup = function(module) module.setup(opts) end, teardown = true },
-        { 'client',  setup = true,                                    teardown = true },
-        { 'command', setup = true,                                    teardown = true },
-        { 'chat',    setup = true,                                    teardown = true },
-        { 'inline',  setup = true,                                    teardown = true },
+        { name = 'config',  setup = function(module) module.setup(opts) end, teardown = true },
+        { name = 'client',  setup = true,                                    teardown = true },
+        { name = 'command', setup = true,                                    teardown = true },
+        { name = 'chat',    setup = true,                                    teardown = true },
+        { name = 'inline',  setup = true,                                    teardown = true },
     }
     for _, module in ipairs(pipes) do
-        if type(module.setup) == 'function' then
-            module.setup(require('fittencode.' .. module.name))
-        elseif type(module.setup) == 'boolean' and module.setup then
-            require('fittencode.' .. module.name).setup()
-        end
+        _execute(module, 'setup')
     end
 end
 
@@ -35,10 +39,7 @@ function M.teardown()
         return
     end
     for i = #pipes, 1, -1 do
-        local module = pipes[i]
-        if module.teardown then
-            require('fittencode.' .. module.name).teardown()
-        end
+        _execute(pipes[i], 'teardown')
     end
     pipes = nil
 end
