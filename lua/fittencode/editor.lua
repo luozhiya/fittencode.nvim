@@ -146,15 +146,14 @@ end
 -- Return the zero-based characters offset of the position in the buffer
 ---@param buf integer?
 ---@param position FittenCode.Position
----@return number?
+---@return FittenCode.Offset?
 function M.offset_at(buf, position)
     if not buf then
         return
     end
     local offset
     vim.api.nvim_buf_call(buf, function()
-        local roundpos = M.round_end(vim.fn.getline(position.row + 1), position)
-        local lines = vim.api.nvim_buf_get_text(buf, 0, 0, roundpos.row, roundpos.col, {})
+        local lines = assert(M.get_lines(buf, Range:new({ start = Position:new({ row = 0, col = 0 }), termination = position })))
         vim.tbl_map(function(line)
             local utf = vim.str_utf_pos(line)
             if not offset then
@@ -167,9 +166,10 @@ function M.offset_at(buf, position)
 end
 
 -- Return the position at the given zero-based characters offset in the buffer
+-- 返回的 position.col 是指向 UTF-8 序列的尾字节
 ---@param buf integer?
 ---@param offset number Character offset in the buffer.
----@return FittenCode.Position? col 是指向 UTF-8 序列的尾字节
+---@return FittenCode.Position?
 function M.position_at(buf, offset)
     if not buf then
         return
@@ -184,9 +184,11 @@ function M.position_at(buf, offset)
             if offset > #utf then
                 index = index + 1
             else
+                local col = vim.str_byteindex(line, 'utf-32', offset)
+                col = M.round_col_end(line, col)
                 pos = Position:new({
                     row = index,
-                    col = vim.str_byteindex(line, 'utf-8', offset),
+                    col = col,
                 })
             end
             offset = offset - #utf
@@ -209,6 +211,8 @@ function M.position(win)
     })
 end
 
+---@param line string
+---@param col number
 function M.round_col_start(line, col)
     if col == 0 then
         return col
@@ -223,25 +227,53 @@ function M.round_col_start(line, col)
     return col
 end
 
+---@param line string
+---@param col number
 function M.round_col_end(line, col)
     if col == -1 then
         return col
     end
-    local utf_index = vim.str_utfindex(line, 'utf-8', math.min(#line, col))
-    return vim.str_byteindex(line, 'utf-8', utf_index)
+    local utf = vim.str_utf_pos(line)
+    for i = 1, #utf - 1 do
+        if col > utf[i] and col < utf[i + 1] then
+            col = utf[i + 1] - 1
+            break
+        end
+    end
+    return col
 end
 
 -- 调整 postion 使得 col 指向 UTF-8 序列的首字节
-function M.round_start(line, position)
-    local roundpos = position.clone()
-    roundpos.col = M.round_col_start(line, roundpos.col)
+---@param buf number
+---@param position FittenCode.Position
+function M.round_start(buf, position)
+    assert(buf)
+    local roundpos = position:clone()
+    vim.api.nvim_buf_call(buf, function()
+        local row = roundpos.row
+        if position:islastline() then
+            row = assert(M.line_count(buf)) - 1
+        end
+        local line = vim.fn.getline(row + 1)
+        roundpos.col = M.round_col_start(line, roundpos.col)
+    end)
     return roundpos
 end
 
 -- 调整 postion 使得 col 指向 UTF-8 序列的尾字节
-function M.round_end(line, position)
-    local roundpos = position.clone()
-    roundpos.col = M.round_col_end(line, roundpos.col)
+---@param buf number
+---@param position FittenCode.Position
+function M.round_end(buf, position)
+    assert(buf)
+    local roundpos = position:clone()
+    vim.api.nvim_buf_call(buf, function()
+        local row = roundpos.row
+        if position:islastline() then
+            row = assert(M.line_count(buf)) - 1
+        end
+        local line = vim.fn.getline(row + 1)
+        roundpos.col = M.round_col_end(line, roundpos.col)
+    end)
     return roundpos
 end
 
@@ -252,8 +284,8 @@ function M.round_region(buf, range)
     assert(buf)
     local roundrange = range:clone()
     vim.api.nvim_buf_call(buf, function()
-        roundrange.start = M.round_start(vim.fn.getline(range.start.row + 1), range.start)
-        roundrange.termination = M.round_end(vim.fn.getline(range.termination.row + 1), range.termination)
+        roundrange.start = M.round_start(buf, range.start)
+        roundrange.termination = M.round_end(buf, range.termination)
     end)
     return roundrange
 end
@@ -268,11 +300,22 @@ function M.get_lines(buf, range)
     local lines
     vim.api.nvim_buf_call(buf, function()
         local roundrange = M.round_region(buf, range)
-        lines = vim.api.nvim_buf_get_text(buf, roundrange.start.row, roundrange.start.col, roundrange.termination.row, roundrange.termination.col, {})
+        -- Indexing is zero-based.
+        -- start_row inclusive
+        -- start_col inclusive
+        -- end_row   inclusive
+        -- end_col   exclusive
+        local end_col = roundrange.termination.col
+        if roundrange.termination:eol() then
+            end_col = end_col + 1
+        end
+        lines = vim.api.nvim_buf_get_text(buf, roundrange.start.row, roundrange.start.col, roundrange.termination.row, end_col, {})
     end)
     return lines
 end
 
+---@param buf number?
+---@param range FittenCode.Range
 ---@return string?
 function M.get_text(buf, range)
     if not buf then

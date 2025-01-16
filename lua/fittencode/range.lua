@@ -24,6 +24,12 @@ function Range:new(options)
     return obj
 end
 
+function Range:sort()
+    if self.start:is_after(self.termination) then
+        self.start, self.termination = self.termination, self.start
+    end
+end
+
 function Range.make(start, termination)
     return Range:new({
         start = start,
@@ -115,6 +121,7 @@ function Range:with(start, termination)
 end
 
 -- Create a copy of this range
+-- 返回是会自动 sort 顺序
 ---@return FittenCode.Range
 function Range:clone()
     return Range:new({

@@ -1,3 +1,16 @@
+-- 抽象的位置类，用于表示文件中的位置
+--
+-- 在 `UTF-8` 序列中， `col` 可能指向首字节，也可能指向末尾字节，要根据具体的上下文环境来加以判断
+-- * `vim.api.nvim_win_get_cursor` 返回的 `col` 指向首字节
+-- * `vim.api.str_byteindex` 返回的 `col` 指向末尾字节
+-- -1 是 row 和 col 的特殊值代表最后一行
+---@class FittenCode.Position
+---@field row number A zero-based row value.
+---@field col number A zero-based column value.
+
+-- UTF-32 编码 characters 序列
+---@alias FittenCode.Offset number
+
 -- 异步 IO 涉及 spawn 添加更多的事件回调方便来做性能计数
 ---@class FittenCode.AsyncIOCallbacks
 ---@field on_create? function 创建进程时回调

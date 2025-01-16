@@ -28,7 +28,10 @@ local last = {
     ciphertext = ''
 }
 
+---@param buf
 local function recalculate_prefix_suffix(buf, position)
+    -- VSCode 的 max_chars 是按 UTF-16 一个 16 位字节来计算的，如果是 emoji 占用一对代理对就会计算成两个
+    -- Neovim 的 max_chars 是 UTF-32
     local max_chars = 22e4
     local halfmax = max_chars / 2
     local sample_size = 2e3
@@ -80,19 +83,19 @@ end
 local function compare_bytes(x, y)
     local a = 0
     local b = 0
-    local lenX = #x
-    local lenY = #y
+    local lenx = #x
+    local leny = #y
     -- 找出从开头开始最长的相同子串
-    while a + 1 <= lenX and a + 1 <= lenY and x:sub(a + 1, a + 1) == y:sub(a + 1, a + 1) do
+    while a + 1 <= lenx and a + 1 <= leny and x:sub(a + 1, a + 1) == y:sub(a + 1, a + 1) do
         a = a + 1
     end
     -- 找出从结尾开始最长的相同子串
-    while b + 1 <= lenX and b + 1 <= lenY and x:sub(-b - 1, -b - 1) == y:sub(-b - 1, -b - 1) do
+    while b + 1 <= lenx and b + 1 <= leny and x:sub(-b - 1, -b - 1) == y:sub(-b - 1, -b - 1) do
         b = b + 1
     end
     -- 如果从结尾开始的相同子串长度超过了整个字符串的长度，可能两个字符串完全相同
     -- 此时需要特殊处理，将 b 调整为 0，因为 b 表示的是末尾相同字符的数量，而不是长度
-    if b == math.min(lenX, lenY) then
+    if b == math.min(lenx, leny) then
         b = 0
     end
     return a, b
@@ -101,20 +104,9 @@ end
 -- 对比两个字符串，返回 UTF-8 编码的字节索引，指向 UTF-8 编码的结束字节
 local function compare_bytes_order(prev, curr)
     local leq, req = compare_bytes(prev, curr)
-    local utf = vim.str_utf_pos(curr)
-    for i = 1, #utf - 1 do
-        if leq > utf[i] and leq < utf[i + 1] then
-            leq = utf[i + 1] - 1
-            break
-        end
-    end
+    leq = Editor.round_col_end(curr, leq)
     local rv = #curr - req
-    for i = #utf - 1, 1, -1 do
-        if rv > utf[i] and req < utf[i + 1] then
-            rv = utf[i + 1] - 1
-            break
-        end
-    end
+    rv = Editor.round_col_end(curr, rv)
     req = #curr - rv
     return leq, req
 end
