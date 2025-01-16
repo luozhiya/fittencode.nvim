@@ -28,7 +28,8 @@ local last = {
     ciphertext = ''
 }
 
----@param buf
+---@param buf number?
+---@param position FittenCode.Position
 local function recalculate_prefix_suffix(buf, position)
     -- VSCode 的 max_chars 是按 UTF-16 一个 16 位字节来计算的，如果是 emoji 占用一对代理对就会计算成两个
     -- Neovim 的 max_chars 是 UTF-32
@@ -226,6 +227,7 @@ function Prompt.generate(options)
             meta_datas = meta_datas
         })
         Fn.schedule_call(options.on_once, prompt)
+        Fn.schedule_call(options.on_exit)
     end)
 end
 
