@@ -36,6 +36,7 @@ local function setup()
     view:register_message_receiver(function(message)
         controller:receive_view_message(message)
     end)
+    require('fittencode.chat.active_editor')
 end
 
 local function show_chat()

@@ -2,43 +2,22 @@ local Editor = require('fittencode.editor')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 
-local ScopeTree = {}
-ScopeTree.__index = ScopeTree
+-- ProjectCompletionV1
+-- * V1 版本，老版本
+-- * 为代码补全提供项目级的感知与提示
+---@class FittenCode.Inline.ProjectCompletionV1
 
-function ScopeTree:new(opts)
-    local obj = {
-        lines = {},
-        current_prompt = new Ug,
-        locked = !1,
-        status = 0,
-        hasLSP = -2    
-    }
-    setmetatable(obj, ScopeTree)
-    return obj
-end
-
+---@class FittenCode.Inline.ProjectCompletionV1
 local ProjectCompletion = {}
 ProjectCompletion.__index = ProjectCompletion
 
+---@return FittenCode.Inline.ProjectCompletionV1
 function ProjectCompletion:new(opts)
     local obj = {
         files = {}
     }
     setmetatable(obj, ProjectCompletion)
     return obj
-end
-
-function ProjectCompletion:get_file_lsp(buf)
-    local fb, e = Editor.is_filebuf(buf)
-    if not fb or not e then
-        return
-    end
-    if not self.files[e] then
-        local rw = ScopeTree:new()
-        rw:update_has_lsp(e)
-        self.files[e] = rw
-    end
-    return self.files[e].has_lsp
 end
 
 function ProjectCompletion:get_prompt(buf, line)

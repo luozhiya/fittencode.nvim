@@ -12,6 +12,8 @@ local View = require('fittencode.inline.view')
 local Position = require('fittencode.position')
 local Prompt = require('fittencode.inline.prompt')
 local Response = require('fittencode.inline.response')
+local ProjectCompletionV1 = require('fittencode.inline.project_completion.v1')
+local ProjectCompletionV2 = require('fittencode.inline.project_completion.v2')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
@@ -28,7 +30,8 @@ function Controller:new(opts)
         augroups = {},
         ns_ids = {},
         keymaps = {},
-        filter_events = {}
+        filter_events = {},
+        project_completion = { v1 = nil, v2 = nil },
     }
     setmetatable(obj, self)
     return obj
@@ -38,6 +41,10 @@ function Controller:init_integration()
     self.status = Status:new()
     self:register_observer(self.status)
     self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
+    self.project_completion = {
+        v1 = ProjectCompletionV1:new(),
+        v2 = ProjectCompletionV2:new(),
+    }
     self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
     self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
     self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
@@ -84,11 +91,11 @@ end
 function Controller:generate_prompt(options)
     assert(options.position)
 
-    local u = Config.use_project_completion.open
-    local c = Config.server.fitten_version ~= 'default'
+    local open_pc = Config.use_project_completion.open
+    local fc_nodefault = Config.server.fitten_version ~= 'default'
     local h = -1
 
-    if ((u ~= 'off' and c) or (u == 'on' and not c)) and h == 0 then
+    if ((open_pc ~= 'off' and fc_nodefault) or (open_pc == 'on' and not fc_nodefault)) and h == 0 then
         -- notify install lsp
     end
 
