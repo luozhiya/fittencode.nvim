@@ -2,6 +2,7 @@ local Editor = require('fittencode.editor')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local ScopeTree = require('fittencode.inline.project_completion.scope_tree')
+local ProjectCompletionI = require('fittencode.inline.project_completion.interface')
 
 -- ProjectCompletion.V2
 -- * V2 版本
@@ -12,14 +13,16 @@ local ScopeTree = require('fittencode.inline.project_completion.scope_tree')
 
 ---@class FittenCode.Inline.ProjectCompletion.V2
 local ProjectCompletion = {}
-ProjectCompletion.__index = ProjectCompletion
+ProjectCompletion.__index = ProjectCompletionI
 
 ---@return FittenCode.Inline.ProjectCompletion.V2
 function ProjectCompletion:new(opts)
-    local obj = {
+    local obj = ProjectCompletionI:new()
+    vim.tbl_deep_extend('force', obj, {
         files = {}
-    }
+    })
     setmetatable(obj, self)
+    ---@diagnostic disable-next-line: return-type-mismatch
     return obj
 end
 

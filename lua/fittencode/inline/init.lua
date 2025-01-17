@@ -9,7 +9,7 @@ local controller = nil
 
 local function setup()
     controller = Controller:new()
-    controller:init_integration()
+    controller:init()
 end
 
 local function get_status()

@@ -1,6 +1,7 @@
 local Editor = require('fittencode.editor')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
+local ProjectCompletionI = require('fittencode.inline.project_completion.interface')
 
 -- ProjectCompletion.V1
 -- * V1 版本
@@ -9,34 +10,20 @@ local Log = require('fittencode.log')
 
 ---@class FittenCode.Inline.ProjectCompletion.V1
 local ProjectCompletion = {}
-ProjectCompletion.__index = ProjectCompletion
+ProjectCompletion.__index = ProjectCompletionI
 
 ---@return FittenCode.Inline.ProjectCompletion.V1
 function ProjectCompletion:new(opts)
-    local obj = {
+    local obj = ProjectCompletionI:new()
+    vim.tbl_deep_extend('force', obj, {
         files = {}
-    }
+    })
     setmetatable(obj, ProjectCompletion)
+    ---@diagnostic disable-next-line: return-type-mismatch
     return obj
 end
 
 function ProjectCompletion:get_prompt(buf, line)
-    local n = vim.uv.hrtime()
-    local fb, e = Editor.is_filebuf(buf)
-    if not fb or not e then
-        return
-    end
-    if not self.files[e] then
-        local rw = ScopeTree:new()
-        rw:update_has_lsp(e)
-        self.files[e] = rw
-    end
-    local s = self.files[e]:get_prompt(buf, line)
-    Log.dev_info('Get pc prompt for line: {} took {} ms', line, (vim.uv.hrtime() - n) / 1e6)
-    Log.dev_info('====== use project prompt ========')
-    Log.dev_info(s)
-    Log.dev_info('==================================')
-    return s
 end
 
 return ProjectCompletion

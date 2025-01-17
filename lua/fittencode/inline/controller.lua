@@ -36,19 +36,22 @@ function Controller:new(opts)
     return obj
 end
 
-function Controller:init_integration()
+function Controller:init(options)
+    local mode = options and options.mode or 'singleton'
     self.status = Status:new()
     self:register_observer(self.status)
-    self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
-    self.project_completion = {
-        v1 = ProjectCompletionFactory.create('V1'),
-        v2 = ProjectCompletionFactory.create('V2'),
-    }
-    self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
-    self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
-    self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
-    self.ns_ids.on_key = vim.api.nvim_create_namespace('Fittencode.Inline.OnKey')
-    self:enable(Config.inline_completion.enable)
+    if mode == 'singleton' then
+        self.project_completion = {
+            v1 = assert(ProjectCompletionFactory.create('V1')),
+            v2 = assert(ProjectCompletionFactory.create('V2')),
+        }
+        self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
+        self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
+        self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
+        self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
+        self.ns_ids.on_key = vim.api.nvim_create_namespace('Fittencode.Inline.OnKey')
+        self:enable(Config.inline_completion.enable)
+    end
 end
 
 function Controller:destory()

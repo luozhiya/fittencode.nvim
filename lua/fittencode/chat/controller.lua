@@ -22,18 +22,21 @@ function Controller:new(opts)
     return obj
 end
 
-function Controller:init_integration()
-    self.augroups.event = vim.api.nvim_create_augroup('Fittencode.Chat.Controller.Event', { clear = true })
-    vim.api.nvim_create_autocmd('User', {
-        pattern = 'Fittencode.SelectionChanged',
-        group = self.augroups.event,
-        once = false,
-        callback = function(args)
-            self:update_view()
-        end
-    })
+function Controller:init(options)
+    local mode = options and options.mode or 'singleton'
     self.status = Status:new()
     self:register_observer(self.status)
+    if mode == 'singleton' then
+        self.augroups.event = vim.api.nvim_create_augroup('Fittencode.Chat.Controller.Event', { clear = true })
+        vim.api.nvim_create_autocmd('User', {
+            pattern = 'Fittencode.SelectionChanged',
+            group = self.augroups.event,
+            once = false,
+            callback = function(args)
+                self:update_view()
+            end
+        })
+    end
 end
 
 function Controller:destory()

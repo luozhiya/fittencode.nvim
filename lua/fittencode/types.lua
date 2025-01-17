@@ -300,7 +300,7 @@
 ---@field augroups table
 ---@field ns_ids table
 ---@field request_handles table<FittenCode.HTTP.RequestHandle?>
----@field project_completion FittenCode.Inline.ProjectCompletion
+---@field project_completion table<string, FittenCode.Inline.ProjectCompletion>
 
 ---@class FittenCode.Chat.VM
 ---@field run function
