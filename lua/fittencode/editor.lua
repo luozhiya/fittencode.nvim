@@ -51,6 +51,19 @@ function M.is_dirty(buf)
     return dirty
 end
 
+-- The version number of this document (it will strictly increase after each change, including undo/redo).
+function M.version(buf)
+    if not buf then
+        return
+    end
+    local version
+    vim.api.nvim_buf_call(buf, function()
+        local info = vim.fn.getbufinfo(buf)
+        version = info[1].changedtick
+    end)
+    return version
+end
+
 function M.line_count(buf)
     if not buf then
         return
@@ -120,6 +133,19 @@ function M.is_filebuf(buf)
         end
     end
     return false
+end
+
+-- Return the URI of the buffer.
+---@param buf integer?
+---@return table?
+function M.uri(buf)
+    local _, path = M.is_filebuf(buf)
+    if not _ then
+        return
+    end
+    return {
+        fs_path = path
+    }
 end
 
 -- Return the word count of the buffer.

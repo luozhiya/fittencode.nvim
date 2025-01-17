@@ -23,7 +23,7 @@ local Promise = {}
 -- Promise() constructor, https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/Promise
 ---@param executor? function
 ---@return Promise?
-function Promise:new(executor)
+function Promise:new(executor, async)
     if type(executor) ~= 'function' then
         return
     end
@@ -51,7 +51,11 @@ function Promise:new(executor)
             end, obj.promise_reactions[PromiseState.REJECTED])
         end
     end
-    vim.schedule(function() executor(resolve, reject) end)
+    if async then
+        vim.schedule(function() executor(resolve, reject) end)
+    else
+        executor(resolve, reject)
+    end
     self.__index = self
     return setmetatable(obj, self)
 end

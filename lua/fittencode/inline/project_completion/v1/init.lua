@@ -32,26 +32,36 @@ end
 ---@param line string
 ---@param options FittenCode.Inline.ProjectCompletion.V1.GetPromptOptions
 function ProjectCompletion:get_prompt(buf, line, options)
-    local n = vim.uv.hrtime()
-    local fb, e = Editor.is_filebuf(buf)
-    if not fb or not e then
-        Fn.schedule_call(options.on_failure)
-        return
-    end
+    local start_time = vim.uv.hrtime()
+    local fs_path = assert(Editor.uri(buf)).fs_path
     Promise:new(function(resolve)
-        if not self.files[e] then
-            local rw = ScopeTree:new()
-            rw:update(e)
-            self.files[e] = rw
+        if not self.files[fs_path] then
+            local scope_tree = ScopeTree:new()
+            scope_tree:update(buf, {
+                on_success = function()
+                    self.files[fs_path] = scope_tree
+                    resolve()
+                end,
+                on_failure = function()
+                    Fn.schedule_call(options.on_failure)
+                end,
+            })
+        else
+            resolve()
         end
-        resolve()
     end):forward(function()
-        local s = self.files[e]:get_prompt(buf, line)
-        Fn.schedule_call(options.on_success, s)
-        Log.dev_info('Get pc prompt for line: {} took {} ms', line, (vim.uv.hrtime() - n) / 1e6)
-        Log.dev_info('====== use project prompt ========')
-        Log.dev_info(s)
-        Log.dev_info('==================================')
+        self.files[fs_path]:get_prompt(buf, line, {
+            on_success = function(prompt)
+                Fn.schedule_call(options.on_success, prompt)
+                Log.dev_info('Get pc prompt for line: {} took {} ms', line, (vim.uv.hrtime() - start_time) / 1e6)
+                Log.dev_info('====== use project prompt ========')
+                Log.dev_info(prompt)
+                Log.dev_info('==================================')
+            end,
+            on_failure = function()
+                Fn.schedule_call(options.on_failure)
+            end,
+        })
     end)
 end
 
