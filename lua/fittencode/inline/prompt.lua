@@ -1,5 +1,5 @@
 local Hash = require('fittencode.hash')
-local Promise = require('fittencode.promise')
+local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.fn')
 local Editor = require('fittencode.editor')
 local Log = require('fittencode.log')

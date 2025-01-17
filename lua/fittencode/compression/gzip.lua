@@ -1,6 +1,6 @@
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
-local Promise = require('fittencode.promise')
+local Promise = require('fittencode.concurrency.promise')
 local Config = require('fittencode.config')
 local Process = require('fittencode.process')
 

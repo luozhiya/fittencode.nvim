@@ -5,7 +5,7 @@ local Config = require('fittencode.config')
 local Client = require('fittencode.client')
 local Runtime = require('fittencode.chat.runtime')
 local VM = require('fittencode.chat.vm')
-local Promise = require('fittencode.promise')
+local Promise = require('fittencode.concurrency.promise')
 
 ---@class FittenCode.Chat.Conversation
 local Conversation = {}

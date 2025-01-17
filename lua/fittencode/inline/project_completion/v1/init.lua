@@ -3,7 +3,7 @@ local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local ProjectCompletionI = require('fittencode.inline.project_completion.interface')
 local ScopeTree = require('fittencode.inline.project_completion.v1.scope_tree')
-local Promise = require('fittencode.promise')
+local Promise = require('fittencode.concurrency.promise')
 
 -- ProjectCompletion.V1
 -- * V1 版本

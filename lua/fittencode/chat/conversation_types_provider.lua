@@ -1,7 +1,7 @@
 local TemplateResolver = require('fittencode.chat.template_resolver')
 local ConversationType = require('fittencode.chat.conversation_type')
 local Editor = require('fittencode.editor')
-local Promise = require('fittencode.promise')
+local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 
