@@ -9,14 +9,12 @@ local Promise = require('promise')
 local function async(executor, ...)
     local args = { ... }
     return Promise:new(function(resolve, reject)
-        vim.schedule(function()
-            local ok, result = pcall(executor, unpack(args))
-            if not ok then
-                reject(result)
-            else
-                resolve(result)
-            end
-        end)
+        local ok, result = pcall(executor, unpack(args))
+        if not ok then
+            reject(result)
+        else
+            resolve(result)
+        end
     end)
 end
 

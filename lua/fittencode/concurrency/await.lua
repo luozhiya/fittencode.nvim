@@ -9,17 +9,11 @@ local Promise = require('promise')
 ---@param promise Promise
 local function await(promise)
     local fulfilled, rejected
-    local co = coroutine.create(function()
-        promise:forward(function(result)
-            fulfilled = result
-        end, function(reason)
-            rejected = reason
-        end)
+    promise:execute():forward(function(result)
+        fulfilled = result
+    end, function(reason)
+        rejected = reason
     end)
-    while fulfilled == nil and rejected == nil do
-        print('await')
-        coroutine.resume(co)
-    end
     return fulfilled, rejected
 end
 
