@@ -1,6 +1,6 @@
-local await = require("await")
-local async = require("async")
-local promise = require("promise")
+local await = require('await')
+local async = require('async')
+local promise = require('promise')
 
 local p1 = async(function()
     vim.wait(100)

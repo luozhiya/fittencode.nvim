@@ -18,9 +18,6 @@ local PromiseState = {
 ---@field value any
 ---@field reason any
 ---@field promise_reactions table
----@field executor function
----@field resolve function
----@field reject function
 local Promise = {}
 
 -- Promise() constructor, https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/Promise
@@ -35,9 +32,8 @@ function Promise:new(executor)
         value = nil,
         reason = nil,
         promise_reactions = { {}, {} },
-        executor = executor,
     }
-    obj.resolve = function(value)
+    local function resolve(value)
         if obj.state == PromiseState.PENDING then
             obj.state = PromiseState.FULFILLED
             obj.value = value
@@ -46,7 +42,7 @@ function Promise:new(executor)
             end, obj.promise_reactions[PromiseState.FULFILLED])
         end
     end
-    obj.reject = function(reason)
+    local function reject(reason)
         if obj.state == PromiseState.PENDING then
             obj.state = PromiseState.REJECTED
             obj.reason = reason
@@ -55,19 +51,9 @@ function Promise:new(executor)
             end, obj.promise_reactions[PromiseState.REJECTED])
         end
     end
+    vim.schedule(function() executor(resolve, reject) end)
     self.__index = self
     return setmetatable(obj, self)
-end
-
-function Promise:execute(async)
-    assert(not self.executed, 'Promise can only be executed once')
-    self.executed = true
-    if async then
-        vim.schedule(function() self.executor(self.resolve, self.reject) end)
-    else
-        self.executor(self.resolve, self.reject)
-    end
-    return self
 end
 
 -- Promise.prototype.then(), https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
