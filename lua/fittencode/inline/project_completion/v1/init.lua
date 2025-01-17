@@ -28,6 +28,8 @@ end
 
 ---@class FittenCode.Inline.ProjectCompletion.V1.GetPromptOptions : FittenCode.AsyncResultCallbacks
 
+-- 先用 Promise 简单实现
+-- 待到 https://github.com/neovim/neovim/issues/19624 解决后再用 await/async 实现
 ---@param buf number
 ---@param line string
 ---@param options FittenCode.Inline.ProjectCompletion.V1.GetPromptOptions
@@ -36,7 +38,7 @@ function ProjectCompletion:get_prompt(buf, line, options)
     local fs_path = assert(Editor.uri(buf)).fs_path
     Promise:new(function(resolve)
         if not self.files[fs_path] then
-            local scope_tree = ScopeTree:new()
+            local scope_tree = ScopeTree:new(buf)
             scope_tree:update(buf, {
                 on_success = function()
                     self.files[fs_path] = scope_tree
