@@ -23,7 +23,8 @@ function Controller:new(opts)
 end
 
 function Controller:init(options)
-    local mode = options and options.mode or 'singleton'
+    options = options or {}
+    local mode = options.mode or 'singleton'
     self.status = Status:new()
     self:register_observer(self.status)
     if mode == 'singleton' then
