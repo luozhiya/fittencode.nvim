@@ -39,23 +39,19 @@ function ProjectCompletion:get_prompt(buf, line, options)
         return
     end
     Promise:new(function(resolve)
-        Fn.schedule_call(function()
-            if not self.files[e] then
-                local rw = ScopeTree:new()
-                rw:update(e)
-                self.files[e] = rw
-            end
-            resolve()
-        end)
+        if not self.files[e] then
+            local rw = ScopeTree:new()
+            rw:update(e)
+            self.files[e] = rw
+        end
+        resolve()
     end):forward(function()
-        Fn.schedule_call(function()
-            local s = self.files[e]:get_prompt(buf, line)
-            Log.dev_info('Get pc prompt for line: {} took {} ms', line, (vim.uv.hrtime() - n) / 1e6)
-            Log.dev_info('====== use project prompt ========')
-            Log.dev_info(s)
-            Log.dev_info('==================================')
-            Fn.schedule_call(options.on_success, s)
-        end)
+        local s = self.files[e]:get_prompt(buf, line)
+        Fn.schedule_call(options.on_success, s)
+        Log.dev_info('Get pc prompt for line: {} took {} ms', line, (vim.uv.hrtime() - n) / 1e6)
+        Log.dev_info('====== use project prompt ========')
+        Log.dev_info(s)
+        Log.dev_info('==================================')
     end)
 end
 

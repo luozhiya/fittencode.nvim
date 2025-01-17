@@ -44,13 +44,11 @@ function ConversationTypesProvider:load_conversation_types()
 end
 
 function ConversationTypesProvider:async_load_conversation_types(on_loaded)
-    Fn.schedule_call(function()
-        Promise:new(function(resolve, reject)
-            self:load_conversation_types()
-            resolve()
-        end):forward(function()
-            Fn.schedule_call(on_loaded)
-        end)
+    Promise:new(function(resolve, reject)
+        self:load_conversation_types()
+        resolve()
+    end):forward(function()
+        Fn.schedule_call(on_loaded)
     end)
 end
 

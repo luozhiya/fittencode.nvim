@@ -23,7 +23,6 @@ local function setup()
         local conversation_type = conversation_types_provider:get_conversation_type(basic_chat_template_id)
         if not conversation_type then
             Log.notify_error('Failed to load basic chat template')
-            return
         end
     end)
     controller = Controller:new({
