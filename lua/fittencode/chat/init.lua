@@ -9,7 +9,7 @@ local Config = require('fittencode.config')
 ---@type FittenCode.Chat.Controller
 local controller = nil
 
-local function setup()
+local function init()
     local model = Model:new()
     local view = View:new({
         model = model,
@@ -70,7 +70,7 @@ local function get_status()
 end
 
 return {
-    setup = setup,
+    init = init,
     reload_templates = reload_templates,
     show_chat = show_chat,
     hide_chat = hide_chat,

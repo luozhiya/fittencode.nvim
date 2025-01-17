@@ -7,7 +7,7 @@ local Fn = require('fittencode.fn')
 ---@type FittenCode.Inline.Controller
 local controller = nil
 
-local function setup()
+local function init()
     controller = Controller:new()
     controller:init()
 end
@@ -42,7 +42,7 @@ local function onlydisable(suffixes)
 end
 
 return {
-    setup = setup,
+    init = init,
     enable = enable,
     disable = disable,
     onlyenable = onlyenable,

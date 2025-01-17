@@ -20,14 +20,14 @@ function M.setup(opts)
     end
     assert(pipes == nil, 'fittencode.nvim has already been setup')
     pipes = {
-        { name = 'config',  setup = function(module) module.setup(opts) end, teardown = true },
-        { name = 'client',  setup = true,                                    teardown = true },
-        { name = 'command', setup = true,                                    teardown = true },
-        { name = 'chat',    setup = true,                                    teardown = true },
-        { name = 'inline',  setup = true,                                    teardown = true },
+        { name = 'config',  init = function(module) module.init(opts) end, destroy = true },
+        { name = 'client',  init = true,                                   destroy = true },
+        { name = 'command', init = true,                                   destroy = true },
+        { name = 'chat',    init = true,                                   destroy = true },
+        { name = 'inline',  init = true,                                   destroy = true },
     }
     for _, module in ipairs(pipes) do
-        _execute(module, 'setup')
+        _execute(module, 'init')
     end
 end
 
@@ -39,7 +39,7 @@ function M.teardown()
         return
     end
     for i = #pipes, 1, -1 do
-        _execute(pipes[i], 'teardown')
+        _execute(pipes[i], 'destroy')
     end
     pipes = nil
 end

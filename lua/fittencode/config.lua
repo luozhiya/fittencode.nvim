@@ -223,7 +223,7 @@ local defaults = {
 local options
 
 ---@param opts? FittenCode.Config
-function M.setup(opts)
+function M.init(opts)
     opts = opts or {}
     if opts.use_default_keymaps == false then
         defaults.keymaps.inline = {}
