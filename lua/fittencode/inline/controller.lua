@@ -321,6 +321,7 @@ end
 -- Lazy 模式，在输入字符与下一个字符相等时（ascii），不触发新的补全
 -- * 回车换行比较特殊，会触发 Neovim 的自动缩进，暂不支持
 ---@param key string
+---@return boolean
 function Controller:lazy_completion(key)
     if self.session then
         return self.session:lazy_completion(key)
@@ -371,6 +372,7 @@ function Controller:set_onkey(enable)
         '<Backspace>',
         '<Delete>',
     })
+    -- If {fn} returns an empty string, {key} is discarded/ignored.
     vim.on_key(function(key)
         local buf = vim.api.nvim_get_current_buf()
         if vim.api.nvim_get_mode().mode == 'i' and self:is_enabled(buf) then
@@ -380,8 +382,8 @@ function Controller:set_onkey(enable)
                 return
             end
             if self:lazy_completion(key) then
-                self.filter_events = { 'CursorMovedI', 'TextChangedI' }
-                return
+                -- 忽视输入，用户输入的字符由底层处理
+                return ''
             end
         end
         self.filter_events = {}

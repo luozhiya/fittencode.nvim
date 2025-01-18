@@ -8,9 +8,7 @@ ProjectCompletion.__index = ProjectCompletion
 
 ---@return FittenCode.Inline.ProjectCompletion
 function ProjectCompletion:new()
-    local obj = {}
-    setmetatable(obj, ProjectCompletion)
-    return obj
+    return setmetatable({}, ProjectCompletion)
 end
 
 function ProjectCompletion:get_prompt()
