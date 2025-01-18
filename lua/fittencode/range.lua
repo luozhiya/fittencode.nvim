@@ -30,13 +30,6 @@ function Range:sort()
     end
 end
 
-function Range.make(start, termination)
-    return Range:new({
-        start = start,
-        termination = termination,
-    })
-end
-
 -- Returns true if the range is empty, i.e., start and termination are equal
 ---@return boolean
 function Range:is_empty()
@@ -133,7 +126,7 @@ end
 -- 返回的 `range.termination.col` 指向末尾字节
 ---@param row number
 ---@param line string
-function Range.make_from_line(row, line)
+function Range.from_line(row, line)
     return Range:new({
         start = Position:new({
             row = row,
@@ -143,6 +136,13 @@ function Range.make_from_line(row, line)
             row = row,
             col = #line,
         }),
+    })
+end
+
+function Range.from_position(start, termination)
+    return Range:new({
+        start = start,
+        termination = termination,
     })
 end
 

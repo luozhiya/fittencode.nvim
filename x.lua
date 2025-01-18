@@ -1,31 +1,65 @@
-function compareStrings(x, y)
-    local a = 0
-    local b = 0
-    local lenX = #x
-    local lenY = #y
+local function Uri_parse(uri)
+    local components = {
+        scheme = nil,
+        authority = nil,
+        path = nil,
+        query = nil,
+        fragment = nil,
+        fs_path = nil,
+    }
 
-    -- 找出从开头开始最长的相同子串
-    while a + 1 <= lenX and a + 1 <= lenY and x:sub(a + 1, a + 1) == y:sub(a + 1, a + 1) do
-        a = a + 1
+    -- 使用正则表达式来匹配 URI 的各个部分
+    local pattern = "^([%w-+.]+)://([^/?#]*)?([^?#]*)(%??[^#]*)(#?.*)$"
+    local scheme, authority, path, query, fragment = uri:match(pattern)
+
+    if scheme then
+        components.scheme = scheme
+        components.authority = authority or ""
+        components.path = path or ""
+
+        -- 去掉问号和井号
+        if query and query ~= "" then
+            components.query = query:sub(2)
+        end
+
+        if fragment and fragment ~= "" then
+            components.fragment = fragment:sub(2)
+        end
+
+        -- 处理 file 协议的路径
+        if components.scheme == "file" then
+            -- 处理 Windows 风格的路径
+            if components.path:match("^%a:[\\/]") then
+                components.fs_path = components.path:gsub("^%/?", "")
+            else
+                -- 处理 Unix 风格的路径
+                components.fs_path = components.path
+            end
+        end
+    else
+        -- 如果没有 scheme，可能是相对路径
+        components.path = uri
     end
 
-    -- 找出从结尾开始最长的相同子串
-    while b + 1 <= lenX and b + 1 <= lenY and x:sub(-b - 1, -b - 1) == y:sub(-b - 1, -b - 1) do
-        b = b + 1
-    end
-
-    -- 如果从结尾开始的相同子串长度超过了整个字符串的长度，可能两个字符串完全相同
-    -- 此时需要特殊处理，将 b 调整为 0，因为 b 表示的是末尾相同字符的数量，而不是长度
-    if b == math.min(lenX, lenY) then
-        b = 0
-    end
-
-    return a, b
+    return components
 end
 
--- 测试示例
-local y = "hello world"
-local x = "hello lua world"
-local a, b = compareStrings(x, y)
-print("从开头开始最长相同子串长度: " .. a)
-print("从结尾开始最长相同子串长度: " .. b)
+-- 示例使用
+local uri = "http://user:pass@host:8080/path/to/resource?query=123#fragment"
+local components = Uri_parse(uri)
+
+for k, v in pairs(components) do
+    print(k, v)
+    print(' ')
+end
+
+print('---------')
+
+-- 示例 file 协议
+uri = "file:///C:/path/to/file.txt?query=123#fragment"
+components = Uri_parse(uri)
+
+for k, v in pairs(components) do
+    print(k, v)
+    print(' ')
+end

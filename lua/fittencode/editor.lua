@@ -90,7 +90,7 @@ function M.line_at(buf, row)
     return TextLine:new({
         text = text,
         line_number = row,
-        range = Range.make_from_line(row, text),
+        range = Range.from_line(row, text),
     })
 end
 
@@ -117,6 +117,8 @@ function M.workspace(buf)
     return ws
 end
 
+-- 检测一个 buffer 是否是一个文件，并且可读
+-- 并在满足这个条件下返回该文件的路径 (路径是和平台相关的)
 ---@return boolean, string?
 function M.is_filebuf(buf)
     local ok, r = pcall(vim.api.nvim_buf_is_valid, buf)
@@ -384,6 +386,11 @@ function M.within_the_line(buf, position)
         return false
     end
     return line.range.termination.col > position.col
+end
+
+-- 获取 line 中 index 个字符的 Char Code
+function M.char_code_at(line, index)
+    local u32 = vim.str_utfindex(line, 'utf-32', index)
 end
 
 return M
