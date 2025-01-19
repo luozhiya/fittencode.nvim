@@ -254,7 +254,6 @@ function Prompt.generate(options)
     local position = options.position
 
     Fn.schedule_call(options.on_create)
-
     if options.api_version == 'v2' then
         generate_prompt_v2(buf, position, options)
     elseif options.api_version == 'v1' then

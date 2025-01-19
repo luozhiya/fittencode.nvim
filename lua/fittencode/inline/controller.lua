@@ -92,7 +92,6 @@ function Controller:dismiss_suggestions(options)
 end
 
 ---@param options FittenCode.Inline.GeneratePromptOptions
----@return FittenCode.Inline.Prompt?
 function Controller:generate_prompt(options)
     assert(options.position)
     local prompt_options = Fn.tbl_keep_events(options, {
@@ -123,12 +122,13 @@ function Controller:cleanup_session()
 end
 
 -- 发送请求获取补全响应
--- 有响应且响应不为空则代表有补全，否则代表无补全
+-- * 有响应且响应不为空则代表有补全，否则代表无补全
 ---@param prompt FittenCode.Inline.Prompt
 ---@param options FittenCode.Inline.SendCompletionsOptions
 function Controller:send_completions(prompt, options)
     local session = options.session
     Promise:new(function(resolve, reject)
+        -- v1 版本不支持获取补全版本，直接返回 '0'
         if options.api_version == 'v1' then
             resolve('0')
             return

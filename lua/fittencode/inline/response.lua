@@ -29,6 +29,8 @@ local function make_context(buf, work_start, work_end, peek_range)
     return prefix .. '<fim_middle>' .. suffix
 end
 
+-- 这是 Vim 版本的代码补全数据
+-- * 只需要处理一个 generated_text
 local function from_generate_one_stage_v1(buf, position, raw, options)
     local generated_text = vim.fn.substitute(raw.generated_text, '<.endoftext.>', '', 'g') or ''
     if generated_text == '' then
