@@ -367,8 +367,10 @@ function M.generate_one_stage(options)
     end
     local headers = {
         ['Content-Type'] = 'application/json',
-        ['Content-Encoding'] = 'gzip',
     }
+    if options.api_version == 'v2' then
+        headers['Content-Encoding'] = 'gzip'
+    end
     local vu = {
         ['0'] = 'generate_one_stage',
         ['1'] = 'generate_one_stage2_1',
@@ -382,6 +384,10 @@ function M.generate_one_stage(options)
         return
     end
     Promise:new(function(resolve, reject)
+        if options.api_version == 'v1' then
+            resolve(body)
+            return
+        end
         Compression.compress('gzip', body, {
             on_once = function(compressed_stream)
                 resolve(compressed_stream)
@@ -390,11 +396,11 @@ function M.generate_one_stage(options)
                 Fn.schedule_call(options.on_error)
             end,
         })
-    end):forward(function(compressed_stream)
+    end):forward(function(processed_body)
         local fetch_options = Fn.tbl_keep_events(options, {
             method = 'POST',
             headers = headers,
-            body = compressed_stream,
+            body = processed_body,
             timeout = options.timeout,
         })
         assert(fetch_options)
