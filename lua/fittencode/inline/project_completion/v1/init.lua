@@ -29,41 +29,26 @@ end
 ---@class FittenCode.Inline.ProjectCompletion.V1.GetPromptOptions : FittenCode.AsyncResultCallbacks
 
 -- 先用 Promise 简单实现
--- 待到 https://github.com/neovim/neovim/issues/19624 解决后再用 await/async 实现
+-- * 在 get_prompt() 中使用异步，在底层使用同步，减低实现复杂度
+-- * 待到 https://github.com/neovim/neovim/issues/19624 解决后再用 await/async 实现
 ---@param buf number
 ---@param line string
 ---@param options FittenCode.Inline.ProjectCompletion.V1.GetPromptOptions
 function ProjectCompletion:get_prompt(buf, line, options)
     local start_time = vim.uv.hrtime()
     local fs_path = assert(Editor.uri(buf)).fs_path
-    Promise:new(function(resolve)
+    vim.schedule(function()
         if not self.files[fs_path] then
             local scope_tree = ScopeTree:new(buf)
-            scope_tree:update(buf, {
-                on_success = function()
-                    self.files[fs_path] = scope_tree
-                    resolve()
-                end,
-                on_failure = function()
-                    Fn.schedule_call(options.on_failure)
-                end,
-            })
-        else
-            resolve()
+            scope_tree:update(buf)
+            self.files[fs_path] = scope_tree
         end
-    end):forward(function()
-        self.files[fs_path]:get_prompt(buf, line, {
-            on_success = function(prompt)
-                Fn.schedule_call(options.on_success, prompt)
-                Log.dev_info('Get pc prompt for line: {} took {} ms', line, (vim.uv.hrtime() - start_time) / 1e6)
-                Log.dev_info('====== use project prompt ========')
-                Log.dev_info(prompt)
-                Log.dev_info('==================================')
-            end,
-            on_failure = function()
-                Fn.schedule_call(options.on_failure)
-            end,
-        })
+        local prompt = self.files[fs_path]:get_prompt(buf, line)
+        Fn.schedule_call(options.on_success, prompt)
+        Log.dev_info('Get pc prompt for line: {} took {} ms', line, (vim.uv.hrtime() - start_time) / 1e6)
+        Log.dev_info('====== use project prompt ========')
+        Log.dev_info(prompt)
+        Log.dev_info('==================================')
     end)
 end
 

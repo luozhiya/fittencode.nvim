@@ -54,6 +54,7 @@ function Controller:init(options)
         self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
         self.ns_ids.on_key = vim.api.nvim_create_namespace('Fittencode.Inline.OnKey')
         self:enable(Config.inline_completion.enable)
+        self:register_pc_listener()
     end
 end
 
