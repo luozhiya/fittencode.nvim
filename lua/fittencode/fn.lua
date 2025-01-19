@@ -1,4 +1,5 @@
 local Config = require('fittencode.config')
+local BIT = require('bit')
 
 local function schedule_call(fx, ...)
     if fx then
@@ -224,38 +225,10 @@ local function rng(len)
     return arr
 end
 
-local function bit_and(a, b)
-    local result = 0
-    local bit = 1
-    while a > 0 and b > 0 do
-        if a % 2 == 1 and b % 2 == 1 then
-            result = result + bit
-        end
-        a = math.floor(a / 2)
-        b = math.floor(b / 2)
-        bit = bit * 2
-    end
-    return result
-end
-
-local function bit_or(a, b)
-    local result = 0
-    local bit = 1
-    while a > 0 or b > 0 do
-        if a % 2 == 1 or b % 2 == 1 then
-            result = result + bit
-        end
-        a = math.floor(a / 2)
-        b = math.floor(b / 2)
-        bit = bit * 2
-    end
-    return result
-end
-
 local function uuid_v4()
     local rnds = rng(16)
-    rnds[6] = bit_or(bit_and(rnds[6], 15), 64)
-    rnds[8] = bit_or(bit_and(rnds[8], 63), 128)
+    rnds[6] = BIT.bor(BIT.band(rnds[6], 15), 64)
+    rnds[8] = BIT.bor(BIT.band(rnds[8], 63), 128)
     return stringify(rnds)
 end
 

@@ -2,6 +2,7 @@ local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')
 local TextLine = require('fittencode.text_line')
+local UTF8 = require('fittencode.utf8')
 
 -- Provide `TextDocument` interface for vim buffer.
 ---@class FittenCode.Editor
@@ -386,11 +387,6 @@ function M.within_the_line(buf, position)
         return false
     end
     return line.range.termination.col > position.col
-end
-
--- 获取 line 中 index 个字符的 Char Code
-function M.char_code_at(line, index)
-    local u32 = vim.str_utfindex(line, 'utf-32', index)
 end
 
 return M
