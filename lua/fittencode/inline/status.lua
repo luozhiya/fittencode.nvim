@@ -3,12 +3,13 @@ local Log = require('fittencode.log')
 
 ---@class fittencode.Inline.Status.Levels
 local Levels = {
-    DISABLED = 1,
-    IDLE = 2,
-    GENERATING = 3,
-    ERROR = 4,
-    NO_MORE_SUGGESTIONS = 5,
-    SUGGESTIONS_READY = 6,
+    DISABLED = 1,            -- 禁用状态
+    IDLE = 2,                -- 空闲状态
+    PROMPTING = 3,           -- 正在构建 Prompt
+    REQUESTING = 4,          -- 正在请求数据
+    ERROR = 5,               -- 错误状态
+    NO_MORE_SUGGESTIONS = 6, -- 没有更多 suggestions
+    SUGGESTIONS_READY = 7,   -- suggestions 已经准备就绪
 }
 
 ---@class fittencode.Inline.Status

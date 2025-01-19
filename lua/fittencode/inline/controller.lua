@@ -31,6 +31,7 @@ function Controller:new(opts)
         keymaps = {},
         filter_events = {},
         project_completion = { v1 = nil, v2 = nil },
+        api_version = 'v1',
     }
     setmetatable(obj, self)
     return obj
@@ -42,9 +43,10 @@ function Controller:init(options)
     self.status = Status:new()
     self:register_observer(self.status)
     if mode == 'singleton' then
+        self.api_version = 'v2'
         self.project_completion = {
-            v1 = assert(ProjectCompletionFactory.create('V1')),
-            v2 = assert(ProjectCompletionFactory.create('V2')),
+            v1 = assert(ProjectCompletionFactory.create('v1')),
+            v2 = assert(ProjectCompletionFactory.create('v2')),
         }
         self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
         self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
@@ -93,20 +95,12 @@ end
 ---@return FittenCode.Inline.Prompt?
 function Controller:generate_prompt(options)
     assert(options.position)
-
-    local open_pc = Config.use_project_completion.open
-    local fc_nodefault = Config.server.fitten_version ~= 'default'
-    local h = -1
-
-    if ((open_pc ~= 'off' and fc_nodefault) or (open_pc == 'on' and not fc_nodefault)) and h == 0 then
-        -- notify install lsp
-    end
-
     local prompt_options = Fn.tbl_keep_events(options, {
         buf = options.buf,
         filename = Editor.filename(options.buf),
         position = options.position,
         edit_mode = options.edit_mode,
+        api_version = options.api_version,
     })
     assert(prompt_options)
     Prompt.generate(prompt_options)
@@ -135,6 +129,10 @@ end
 function Controller:send_completions(prompt, options)
     local session = options.session
     Promise:new(function(resolve, reject)
+        if options.api_version == 'v1' then
+            resolve('0')
+            return
+        end
         local gcv_options = {
             on_create = function(handle)
                 if session then
@@ -167,6 +165,7 @@ function Controller:send_completions(prompt, options)
         return Promise:new(function(resolve, reject)
             -- Log.debug('Got completion version {}', version)
             local gos_options = {
+                api_version = options.api_version,
                 completion_version = version,
                 prompt = prompt,
                 on_create = function(handle)
@@ -185,7 +184,7 @@ function Controller:send_completions(prompt, options)
                         reject()
                         return
                     end
-                    local parsed_response = Response.from_generate_one_stage(response, { buf = options.buf, position = options.position })
+                    local parsed_response = Response.from_generate_one_stage(response, { buf = options.buf, position = options.position, api_version = options.api_version })
                     resolve(parsed_response)
                 end,
                 on_error = function()
@@ -249,11 +248,12 @@ function Controller:triggering_completion(options)
         buf = buf,
         reflect = function(_) self:reflect(_) end,
     })
-    self:inline_status_updated(Status.Levels.GENERATING)
+    self:inline_status_updated(Status.Levels.PROMPTING)
 
     Promise:new(function(resolve, reject)
         Log.debug('Triggering completion for position {}', position)
         self:generate_prompt({
+            api_version = self.api_version,
             buf = buf,
             position = position,
             edit_mode = options.edit_mode,
@@ -273,7 +273,9 @@ function Controller:triggering_completion(options)
         })
     end):forward(function(prompt)
         return Promise:new(function(resolve, reject)
+            self:inline_status_updated(Status.Levels.REQUESTING)
             self:send_completions(prompt, {
+                api_version = self.api_version,
                 buf = buf,
                 position = position,
                 session = self.session,

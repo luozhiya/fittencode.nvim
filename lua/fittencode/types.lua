@@ -46,6 +46,7 @@
 ---@field timeout? number
 
 ---@class FittenCode.Client.GenerateOneStageOptions : FittenCode.Client.APIOptions
+---@field api_version string 'v1' | 'v2'
 ---@field completion_version string
 
 ---@class FittenCode.Client.AcceptCompletionOptions : FittenCode.Client.APIOptions
@@ -354,6 +355,7 @@
 ---@field edit_mode_trigger_type string
 
 ---@class FittenCode.Inline.GeneratePromptOptions : FittenCode.AsyncIOCallbacks
+---@field api_version string 'v1' | 'v2' -- generate_one_stage 有两种组建方式
 ---@field buf number
 ---@field position FittenCode.Position
 ---@field edit_mode boolean
@@ -401,6 +403,7 @@
 ---@field edit_mode? boolean
 
 ---@class FittenCode.Inline.SendCompletionsOptions : FittenCode.AsyncResultCallbacks
+---@field api_version string 'v1' | 'v2' -- generate_one_stage 有两种组建方式
 ---@field on_no_more_suggestion? function
 ---@field session FittenCode.Inline.Session
 ---@field buf? number

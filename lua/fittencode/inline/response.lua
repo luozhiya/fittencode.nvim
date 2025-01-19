@@ -29,13 +29,22 @@ local function make_context(buf, work_start, work_end, peek_range)
     return prefix .. '<fim_middle>' .. suffix
 end
 
----@param raw FittenCode.Inline.RawGenerateOneStageResponse
----@return FittenCode.Inline.GenerateOneStageResponse?
-function Response.from_generate_one_stage(raw, options)
-    assert(raw)
-    local buf = options.buf
-    ---@type FittenCode.Position
-    local position = options.position
+local function from_generate_one_stage_v1(buf, position, raw, options)
+    local generated_text = vim.fn.substitute(raw.generated_text, '<.endoftext.>', '', 'g') or ''
+    if generated_text == '' then
+        return
+    end
+    local parsed_response = {
+        completions = {
+            {
+                generated_text = generated_text,
+            },
+        },
+    }
+    return parsed_response
+end
+
+local function from_generate_one_stage_v2(buf, position, raw, options)
     local generated_text = (vim.fn.substitute(raw.generated_text or '', '<|endoftext|>', '', 'g') or '') .. (raw.ex_msg or '')
     if generated_text == '' then
         return
@@ -55,6 +64,20 @@ function Response.from_generate_one_stage(raw, options)
         context = context,
     }
     return parsed_response
+end
+
+---@param raw FittenCode.Inline.RawGenerateOneStageResponse
+---@return FittenCode.Inline.GenerateOneStageResponse?
+function Response.from_generate_one_stage(raw, options)
+    assert(raw)
+    local buf = options.buf
+    ---@type FittenCode.Position
+    local position = options.position
+    if options.api_version == 'v1' then
+        return from_generate_one_stage_v1(buf, position, raw, options)
+    elseif options.api_version == 'v2' then
+        return from_generate_one_stage_v2(buf, position, raw, options)
+    end
 end
 
 return Response

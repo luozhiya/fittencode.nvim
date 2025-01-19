@@ -5,6 +5,7 @@ local Editor = require('fittencode.editor')
 local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')
+local Config = require('fittencode.config')
 
 ---@class FittenCode.Inline.Prompt
 local Prompt = {}
@@ -187,17 +188,14 @@ local function recalculate_meta_datas(options)
     end
 end
 
--- Make a prompt
--- 数据传输用 UTF-8 编码
----@param options FittenCode.Inline.GeneratePromptOptions
----@return FittenCode.Inline.Prompt?
-function Prompt.generate(options)
-    assert(options.buf)
-    assert(options.position)
-    local buf = options.buf
-    local position = options.position
+local function generate_prompt_v2(buf, position, options)
+    local open_pc = Config.use_project_completion.open
+    local fc_nodefault = Config.server.fitten_version ~= 'default'
+    local h = -1
 
-    Fn.schedule_call(options.on_create)
+    if ((open_pc ~= 'off' and fc_nodefault) or (open_pc == 'on' and not fc_nodefault)) and h == 0 then
+        -- notify install lsp
+    end
 
     local ctx = recalculate_prefix_suffix(buf, position)
     local text = ctx.prefix .. ctx.suffix
@@ -229,6 +227,39 @@ function Prompt.generate(options)
         Fn.schedule_call(options.on_once, prompt)
         Fn.schedule_call(options.on_exit)
     end)
+end
+
+local function generate_prompt_v1(buf, position, options)
+    local prefix = Editor.get_text(buf, Range:new({ start = Position:new({ row = 0, col = 0 }), termination = position }))
+    local suffix = Editor.get_text(buf, Range:new({ start = position, termination = Position:new({ row = -1, col = -1 }) }))
+    local inputs = '!FCPREFIX!' .. prefix .. '!FCSUFFIX!' .. suffix .. '!FCMIDDLE!'
+    local escaped_inputs = string.gsub(inputs, '"', '\\"')
+    local prompt = {
+        inputs = escaped_inputs,
+        meta_datas = {
+            filename = options.filename,
+        },
+    }
+    Fn.schedule_call(options.on_once, prompt)
+end
+
+-- Make a prompt
+-- 数据传输用 UTF-8 编码
+---@param options FittenCode.Inline.GeneratePromptOptions
+---@return FittenCode.Inline.Prompt?
+function Prompt.generate(options)
+    assert(options.buf)
+    assert(options.position)
+    local buf = options.buf
+    local position = options.position
+
+    Fn.schedule_call(options.on_create)
+
+    if options.api_version == 'v2' then
+        generate_prompt_v2(buf, position, options)
+    elseif options.api_version == 'v1' then
+        generate_prompt_v1(buf, position, options)
+    end
 end
 
 return Prompt
