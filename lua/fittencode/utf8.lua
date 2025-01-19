@@ -223,19 +223,19 @@ function M.u16_at(line, index)
     return M.utf8_to_utf16(u8s)
 end
 
+-- 获取 line 中 index 个字符的 UTF-32 码元
+function M.u32_at(line, index)
+    local u8s = M.u8_at(line, index)
+    local u32s = M.utf8_to_utf32(u8s)
+    return u32s and u32s[1] or nil
+end
+
 -- 兼容 js 版本的 charCodeAt
 -- * 可能返回单独代理项（lone surrogate）
 -- * 返回一个整数，表示给定索引处的 UTF-16 码元，其值介于 0 和 65535 之间
 function M.char_code_at(line, index)
     local u16s = M.utf8_to_utf16(line)
     return u16s and u16s[index] or nil
-end
-
--- 获取 line 中 index 个字符的 UTF-32 码元
-function M.u32_at(line, index)
-    local u8s = M.u8_at(line, index)
-    local u32s = M.utf8_to_utf32(u8s)
-    return u32s and u32s[1] or nil
 end
 
 -- 兼容 js 版本的 codePointAt
