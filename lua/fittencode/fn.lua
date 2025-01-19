@@ -163,34 +163,6 @@ local function sysname() return vim.uv.os_uname().sysname:lower() end
 local function is_windows() return sysname():find('windows') ~= nil end
 local function is_linux() return sysname():find('linux') ~= nil end
 
-local function utf8(decimal)
-    local bytemarkers = { { 0x7FF, 192 }, { 0xFFFF, 224 }, { 0x1FFFFF, 240 } }
-    if decimal < 128 then return string.char(decimal) end
-    local charbytes = {}
-    for bytes, vals in ipairs(bytemarkers) do
-        if decimal <= vals[1] then
-            for b = bytes + 1, 2, -1 do
-                local mod = decimal % 64
-                decimal = (decimal - mod) / 64
-                charbytes[b] = string.char(128 + mod)
-            end
-            charbytes[1] = string.char(vals[2] + decimal)
-            break
-        end
-    end
-    return table.concat(charbytes)
-end
-
-local function unicode_sequence_to_utf8(seq)
-    local v = vim.split(seq, '\\u', { trimempty = true })
-    local s = ''
-    for i, code in ipairs(v) do
-        local c = utf8(tonumber(code, 16))
-        s = s .. c
-    end
-    return s
-end
-
 local function validate(uuid)
     local pattern = '%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x'
     return uuid:match(pattern) ~= nil
@@ -232,13 +204,6 @@ local function uuid_v4()
     return stringify(rnds)
 end
 
-local function encode_uri(uri)
-    local function _encode_uri_char(char)
-        return string.format('%%%0X', string.byte(char))
-    end
-    return (string.gsub(uri, "[^%a%d%-_%.!~%*'%(%);/%?:@&=%+%$,#]", _encode_uri_char))
-end
-
 -- 复制 on_ 开头的事件到新的 table
 -- 禁止：不允许在 c 中添加 on_ 开头的事件
 -- 这个函数仅仅适用于不修改回调，但需要修改其他数据情况下使用
@@ -277,9 +242,7 @@ return {
     remove_special_token = remove_special_token,
     is_windows = is_windows,
     is_linux = is_linux,
-    unicode_sequence_to_utf8 = unicode_sequence_to_utf8,
     uuid_v4 = uuid_v4,
-    encode_uri = encode_uri,
     tbl_keep_events = tbl_keep_events,
     extension_uri = extension_uri,
 }

@@ -49,6 +49,13 @@ function Uri:new(scheme, authority, path, query, fragment)
     return obj
 end
 
+local function encode_uri(uri)
+    local function _encode_uri_char(char)
+        return string.format('%%%0X', string.byte(char))
+    end
+    return (string.gsub(uri, "[^%a%d%-_%.!~%*'%(%);/%?:@&=%+%$,#]", _encode_uri_char))
+end
+
 function Uri:fs_path()
 
 end
