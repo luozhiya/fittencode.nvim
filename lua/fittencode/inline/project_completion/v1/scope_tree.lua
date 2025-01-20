@@ -133,7 +133,7 @@ function ScopeTree:_perform_update_if_not_locked(buf, options)
             self:show_info('======== start update ==========')
             self:do_update(buf, {
                 on_success = function()
-                    self:show_info('-- update time: {} ms', vim.uv.hrtime() - start_time / 1e3)
+                    self:show_info('-- update time: {} ms', vim.uv.hrtime() - start_time / 1e6)
                     resolve()
                 end,
                 on_error = function(error)

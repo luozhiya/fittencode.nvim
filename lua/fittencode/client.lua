@@ -41,6 +41,7 @@ local preset_urls = {
     guide = 'https://code.fittentech.com/tutor_vim_zh',
     playground = 'https://code.fittentech.com/playground_zh',
     -- Completion
+    pc_check = '/codeuser/pc_check',                             -- ?ft_token
     accept = '/codeapi/completion/accept',
     get_completion_version = '/codeuser/get_completion_version', -- ?ft_token=
     generate_one_stage = '/codeapi/completion/generate_one_stage',
@@ -503,6 +504,31 @@ function M.word_segmentation(text, options)
     })
     assert(fetch_options)
     M.chat(fetch_options)
+end
+
+function M.pc_check(options)
+    local key = M.get_ft_token()
+    if not key then
+        Fn.schedule_call(options.on_error)
+        return
+    end
+    local headers = {
+        ['Content-Type'] = 'application/json',
+    }
+    local url = M.server_url() .. preset_urls.pc_check .. '?ft_token=' .. key .. '&' .. get_platform_info_as_url_params()
+    local _, body = pcall(vim.fn.json_encode, options.prompt)
+    if not _ then
+        Fn.schedule_call(options.on_error, { error = body })
+        return
+    end
+    local fetch_options = Fn.tbl_keep_events(options, {
+        method = 'GET',
+        headers = headers,
+        body = body,
+        timeout = options.timeout,
+    })
+    assert(fetch_options)
+    HTTP.fetch(url, fetch_options)
 end
 
 return M

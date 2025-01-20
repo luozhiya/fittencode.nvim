@@ -24,7 +24,8 @@ function Session:new(opts)
             word_segmentation = {},
         },
         request_handles = {},
-        keymaps = {}
+        keymaps = {},
+        timestamp = opts.timestamp
     }
     setmetatable(obj, Session)
     return obj
@@ -195,6 +196,9 @@ function Session:lazy_completion(key)
         return true
     end
     return false
+end
+
+function Session:get_status()
 end
 
 return Session

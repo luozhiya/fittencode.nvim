@@ -30,7 +30,11 @@ function Controller:new(opts)
         ns_ids = {},
         keymaps = {},
         filter_events = {},
-        project_completion = { v1 = nil, v2 = nil },
+        project_completion = {
+            last_chosen_prompt_type = '0',
+            v1 = nil,
+            v2 = nil
+        },
         api_version = 'v1',
     }
     setmetatable(obj, self)
@@ -54,7 +58,6 @@ function Controller:init(options)
         self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
         self.ns_ids.on_key = vim.api.nvim_create_namespace('Fittencode.Inline.OnKey')
         self:enable(Config.inline_completion.enable)
-        self:register_pc_listener()
     end
 end
 
@@ -244,10 +247,12 @@ function Controller:triggering_completion(options)
         return
     end
 
+    local timestamp = vim.uv.hrtime()
     self:cleanup_session()
     self.session = Session:new({
         buf = buf,
         reflect = function(_) self:reflect(_) end,
+        timestamp = timestamp,
     })
     self:inline_status_updated(Status.Levels.PROMPTING)
 
@@ -497,8 +502,26 @@ function Controller:inline_status_updated(data)
     self:notify_observers('inline.status.updated', data)
 end
 
+-- 显示当前补全状态
+-- { inline: 'idle', session: nil }
+-- { inline: 'running', session: 'generating_prompt' }
 function Controller:get_status()
-    return self.status.level
+    -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
+    if self.session then
+        return self.session:get_status()
+    end
+    if self:is_enabled(vim.api.nvim_get_current_buf()) then
+        return Status.Levels.IDLE
+    else
+        return Status.Levels.DISABLED
+    end
+end
+
+function Controller:get_pc_choose()
+end
+
+function Controller:check_project_completion_available()
+
 end
 
 return Controller
