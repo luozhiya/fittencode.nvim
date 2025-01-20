@@ -2,6 +2,10 @@
 --
 -- Names from https://blog.codinghorror.com/ascii-pronunciation-rules-for-programmers/
 -- An inlined enum containing useful character codes (to be used with String.charCodeAt).
+--
+-- 这些字符码都是基本多语言平面（BMP）中的字符，BMP包含了Unicode标准中前65536个字符（即U+0000到U+FFFF）
+-- 在UTF-16和UTF-32编码中，对于基本多语言平面（BMP）中的字符（即码点从U+0000到U+FFFF的字符），它们的表示方式是相同的。
+-- 对于超出BMP的字符（即码点大于U+FFFF的字符），UTF-16使用代理对（surrogate pair）来表示这些字符，而UTF-32使用单个32位的码点来表示。
 
 local CharCode = {
     Null = 0,                                                    -- NULL
