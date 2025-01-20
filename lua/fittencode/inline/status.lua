@@ -3,10 +3,8 @@ local Log = require('fittencode.log')
 
 ---@class fittencode.Inline.Status.Levels
 local Levels = {
-    -- Inline Engine
     DISABLED = 1,            -- 禁用状态
     IDLE = 2,                -- 空闲状态
-    -- Session
     PROMPTING = 3,           -- 正在构建 Prompt
     REQUESTING = 4,          -- 正在请求数据
     ERROR = 5,               -- 错误状态

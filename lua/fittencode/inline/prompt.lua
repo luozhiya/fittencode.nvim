@@ -186,8 +186,6 @@ local function recalculate_meta_datas(options)
         last.ciphertext = ciphertext
         return meta_datas
     end
-
-    -- Check PC available?
 end
 
 local function generate_prompt_v2(buf, position, options)
