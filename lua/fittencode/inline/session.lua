@@ -11,6 +11,51 @@ local Client = require('fittencode.client')
 local Session = {}
 Session.__index = Session
 
+---@class FittenCode.Inline.Session.Status
+---@field generating_prompt function
+---@field requesting_completions function
+---@field no_more_suggestions function
+---@field suggestions_ready function
+---@field error function
+local Status = {}
+Status.__index = Status
+
+function Status:new()
+    local obj = {
+        value = '',
+    }
+    setmetatable(obj, Status)
+    return obj
+end
+
+function Status:set(value)
+    self.value = value
+end
+
+function Status:get()
+    return self.value
+end
+
+function Status:generating_prompt()
+    self:set('generating_prompt')
+end
+
+function Status:requesting_completion()
+    self:set('requesting_completion')
+end
+
+function Status:no_more_suggestions()
+    self:set('no_more_suggestions')
+end
+
+function Status:suggesstions_ready()
+    self:set('suggesstions_ready')
+end
+
+function Status:error()
+    self:set('error')
+end
+
 ---@return FittenCode.Inline.Session
 function Session:new(opts)
     local obj = {
@@ -25,7 +70,10 @@ function Session:new(opts)
         },
         request_handles = {},
         keymaps = {},
-        timestamp = opts.timestamp
+        uuid = opts.uuid,
+        is_destroyed = false,
+        status = Status:new(),
+        gc_worker = nil,
     }
     setmetatable(obj, Session)
     return obj
@@ -181,10 +229,20 @@ function Session:clear_mv()
 end
 
 function Session:destroy()
-    self:abort_and_clear_requests()
-    self:clear_mv()
-    self:restore_keymaps()
-    self:clear_autocmds()
+    if not self.is_destroyed then
+        self:abort_and_clear_requests()
+        self:clear_mv()
+        self:restore_keymaps()
+        self:clear_autocmds()
+    end
+    self.is_destroyed = true
+end
+
+function Session:gc()
+    if not self.gc_worker then
+        self.gc_worker = Fn.debounce(function() self:destroy() end, 5000)
+    end
+    self.gc_worker()
 end
 
 ---@param key string
@@ -199,6 +257,11 @@ function Session:lazy_completion(key)
 end
 
 function Session:get_status()
+    return self.status:get()
+end
+
+function Session:update_status()
+    return self.status
 end
 
 return Session

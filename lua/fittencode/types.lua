@@ -315,6 +315,8 @@
 ---@field request_handles table<FittenCode.HTTP.RequestHandle?>
 ---@field timing FittenCode.Inline.Session.Timing
 ---@field keymaps table
+---@field uuid string
+---@field status FittenCode.Inline.Session.Status
 
 -- Timing 放在回调里计时，和真实时间差距一个main loop的间隔，可以用来衡量相对性能
 ---@class FittenCode.Inline.Session.Timing
