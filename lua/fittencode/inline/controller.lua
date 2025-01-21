@@ -254,8 +254,8 @@ function Controller:triggering_completion(options)
         uuid = assert(Fn.uuid_v4()),
         reflect = function(_) self:reflect(_) end,
     })
-    self.selected_session_id = session.uuid
     self.sessions[session.uuid] = session
+    self.selected_session_id = session.uuid
 
     Promise:new(function(resolve, reject)
         Log.debug('Triggering completion for position {}', position)
