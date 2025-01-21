@@ -2,7 +2,6 @@ local Client = require('fittencode.client')
 local Config = require('fittencode.config')
 local Fn = require('fittencode.fn')
 local Promise = require('fittencode.concurrency.promise')
-local Status = require('fittencode.inline.status')
 local Session = require('fittencode.inline.session')
 local Editor = require('fittencode.editor')
 local Translate = require('fittencode.translate')
@@ -21,7 +20,6 @@ Controller.__index = Controller
 ---@return FittenCode.Inline.Controller
 function Controller:new(opts)
     local obj = {
-        session = nil,
         observers = {},
         extmark_ids = {
             no_more_suggestion = {}
@@ -32,6 +30,8 @@ function Controller:new(opts)
         filter_events = {},
         project_completion = { v1 = nil, v2 = nil },
         api_version = 'v1',
+        sessions = {},
+        selected_session_id = nil,
     }
     setmetatable(obj, self)
     return obj
@@ -40,8 +40,6 @@ end
 function Controller:init(options)
     options = options or {}
     local mode = options.mode or 'singleton'
-    self.status = Status:new()
-    self:register_observer(self.status)
     if mode == 'singleton' then
         self.api_version = 'v2'
         self.project_completion = {
@@ -89,7 +87,7 @@ function Controller:dismiss_suggestions(options)
     if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
         return
     end
-    self:cleanup_session()
+    self:cleanup_sessions()
 end
 
 ---@param options FittenCode.Inline.GeneratePromptOptions
@@ -115,11 +113,11 @@ function Controller:is_filetype_excluded(buf)
     return vim.tbl_contains(Config.disable_specific_inline_completion.suffixes, ft)
 end
 
-function Controller:cleanup_session()
-    if self.session then
-        self.session:destroy()
-        self.session = nil
+function Controller:cleanup_sessions()
+    for k, v in pairs(self.sessions) do
+        v:destroy()
     end
+    self.selected_session_id = nil
 end
 
 -- 发送请求获取补全响应
@@ -136,15 +134,17 @@ function Controller:send_completions(prompt, options)
         end
         local gcv_options = {
             on_create = function(handle)
-                if session then
-                    session.timing.get_completion_version.on_create = vim.uv.hrtime()
-                    session.request_handles[#session.request_handles + 1] = handle
+                if not session or session:is_destoryed() then
+                    return
                 end
+                session.timing.get_completion_version.on_create = vim.uv.hrtime()
+                session.request_handles[#session.request_handles + 1] = handle
             end,
             on_once = function(stdout)
-                if session then
-                    session.timing.get_completion_version.on_once = vim.uv.hrtime()
+                if not session or session:is_destoryed() then
+                    return
                 end
+                session.timing.get_completion_version.on_once = vim.uv.hrtime()
                 local json = table.concat(stdout, '')
                 local _, version = pcall(vim.fn.json_decode, json)
                 if not _ or version == nil then
@@ -155,9 +155,10 @@ function Controller:send_completions(prompt, options)
                 end
             end,
             on_error = function()
-                if session then
-                    session.timing.get_completion_version.on_error = vim.uv.hrtime()
+                if not session or session:is_destoryed() then
+                    return
                 end
+                session.timing.get_completion_version.on_error = vim.uv.hrtime()
                 reject()
             end
         }
@@ -170,15 +171,17 @@ function Controller:send_completions(prompt, options)
                 completion_version = version,
                 prompt = prompt,
                 on_create = function(handle)
-                    if session then
-                        session.timing.generate_one_stage.on_create = vim.uv.hrtime()
-                        session.request_handles[#session.request_handles + 1] = handle
+                    if not session or session:is_destoryed() then
+                        return
                     end
+                    session.timing.generate_one_stage.on_create = vim.uv.hrtime()
+                    session.request_handles[#session.request_handles + 1] = handle
                 end,
                 on_once = function(stdout)
-                    if session then
-                        session.timing.generate_one_stage.on_once = vim.uv.hrtime()
+                    if not session or session:is_destoryed() then
+                        return
                     end
+                    session.timing.generate_one_stage.on_once = vim.uv.hrtime()
                     local _, response = pcall(vim.json.decode, table.concat(stdout, ''))
                     if not _ then
                         Log.error('Failed to decode completion raw response: {}', response)
@@ -189,9 +192,10 @@ function Controller:send_completions(prompt, options)
                     resolve(parsed_response)
                 end,
                 on_error = function()
-                    if session then
-                        session.timing.generate_one_stage.on_error = vim.uv.hrtime()
+                    if not session or session:is_destoryed() then
+                        return
                     end
+                    session.timing.generate_one_stage.on_error = vim.uv.hrtime()
                     reject()
                 end
             }
@@ -232,7 +236,7 @@ function Controller:triggering_completion(options)
             return
         end
         options.force = (options.force == nil) and false or options.force
-        if not options.force and self.session and self.session:is_cached(position) then
+        if not options.force and self.session() and self.session():is_cached(position) then
             return
         end
         return buf, position
@@ -244,12 +248,14 @@ function Controller:triggering_completion(options)
         return
     end
 
-    self:cleanup_session()
-    self.session = Session:new({
+    self:cleanup_sessions()
+    local session = Session:new({
         buf = buf,
+        uuid = assert(Fn.uuid_v4()),
         reflect = function(_) self:reflect(_) end,
     })
-    self:inline_status_updated(Status.Levels.PROMPTING)
+    self.selected_session_id = session.uuid
+    self.sessions[session.uuid] = session
 
     Promise:new(function(resolve, reject)
         Log.debug('Triggering completion for position {}', position)
@@ -259,33 +265,49 @@ function Controller:triggering_completion(options)
             position = position,
             edit_mode = options.edit_mode,
             on_create = function()
-                self.session.timing.generate_prompt.on_create = vim.uv.hrtime()
+                if not session or session:is_destoryed() then
+                    return
+                end
+                session.timing.generate_prompt.on_create = vim.uv.hrtime()
+                session:update_status():generating_prompt()
             end,
             on_once = function(prompt)
-                self.session.timing.generate_prompt.on_once = vim.uv.hrtime()
+                if not session or session:is_destoryed() then
+                    return
+                end
+                session.timing.generate_prompt.on_once = vim.uv.hrtime()
                 Log.debug('Generated prompt = {}', prompt)
                 resolve(prompt)
             end,
             on_error = function()
-                self.session.timing.generate_prompt.on_error = vim.uv.hrtime()
-                self:inline_status_updated(Status.Levels.ERROR)
+                if not session or session:is_destoryed() then
+                    return
+                end
+                session.timing.generate_prompt.on_error = vim.uv.hrtime()
+                session:update_status():error()
                 Fn.schedule_call(options.on_failure)
             end
         })
     end):forward(function(prompt)
         return Promise:new(function(resolve, reject)
-            self:inline_status_updated(Status.Levels.REQUESTING)
+            session:update_status():requesting_completions()
             self:send_completions(prompt, {
                 api_version = self.api_version,
                 buf = buf,
                 position = position,
-                session = self.session,
+                session = session,
                 on_no_more_suggestion = function()
-                    self:inline_status_updated(Status.Levels.NO_MORE_SUGGESTIONS)
+                    if not session or session:is_destoryed() then
+                        return
+                    end
+                    session:update_status():no_more_suggestions()
                     Fn.schedule_call(options.on_no_more_suggestion)
                 end,
                 on_success = function(parsed_response)
-                    self:inline_status_updated(Status.Levels.SUGGESTIONS_READY)
+                    if not session or session:is_destoryed() then
+                        return
+                    end
+                    session:update_status():suggestions_ready()
                     Fn.schedule_call(options.on_success, parsed_response)
                     ---@type FittenCode.Inline.Completion
                     local completion = {
@@ -298,10 +320,13 @@ function Controller:triggering_completion(options)
                         completion = completion,
                     })
                     local view = View:new({ buf = buf })
-                    self.session:init(model, view)
+                    session:init(model, view)
                 end,
                 on_failure = function()
-                    self:inline_status_updated(Status.Levels.ERROR)
+                    if not session or session:is_destoryed() then
+                        return
+                    end
+                    session:update_status():error()
                     Fn.schedule_call(options.on_failure)
                 end
             });
@@ -312,13 +337,8 @@ end
 function Controller:reflect(msg)
 end
 
-function Controller:on_enter_check_and_update_status()
-    local buf = vim.api.nvim_get_current_buf()
-    if self:is_enabled(buf) then
-        self:inline_status_updated(Status.Levels.DISABLED)
-    else
-        self:inline_status_updated(Status.Levels.IDLE)
-    end
+function Controller:session()
+    return self.sessions[self.selected_session_id]
 end
 
 -- Lazy 模式，在输入字符与下一个字符相等时（ascii），不触发新的补全
@@ -326,8 +346,8 @@ end
 ---@param key string
 ---@return boolean
 function Controller:lazy_completion(key)
-    if self.session then
-        return self.session:lazy_completion(key)
+    if self.session() then
+        return self.session():lazy_completion(key)
     end
     return false
 end
@@ -344,7 +364,6 @@ function Controller:set_autocmds(enable)
         { { 'CursorMovedI' },                    function(args) self:dismiss_suggestions({ event = args }) end },
         { { 'InsertLeave' },                     function(args) self:dismiss_suggestions({ event = args }) end },
         { { 'BufLeave' },                        function(args) self:dismiss_suggestions({ event = args }) end },
-        { { 'BufEnter' },                        function(args) self:on_enter_check_and_update_status() end },
     }
     if enable then
         self:set_autocmds(false)
@@ -493,12 +512,25 @@ function Controller:enable(enable, global, suffixes)
     end
 end
 
-function Controller:inline_status_updated(data)
-    self:notify_observers('inline.status.updated', data)
-end
-
+-- 显示当前补全状态
+-- * `{ inline: 'idle', session: nil }`
+-- * `{ inline: 'disabled', session: nil }`
+-- * `{ inline: 'running', session: 'generating_prompt' }`
+-- * `{ inline: 'running', session: 'requesting_completions }`
+-- * `{ inline: 'running', session: 'no_more_suggestion' }`
+-- * `{ inline: 'running', session: 'error' }`
+-- * `{ inline: 'running', session: 'suggestions_ready' }`
 function Controller:get_status()
-    return self.status.level
+    -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
+    local selected_session = self.sessions[self.selected_session_id]
+    if selected_session then
+        return { inline = 'running', session = selected_session:get_status() }
+    end
+    if self:is_enabled(vim.api.nvim_get_current_buf()) then
+        return { inline = 'idle', session = nil }
+    else
+        return { inline = 'disabled', session = nil }
+    end
 end
 
 return Controller

@@ -1,4 +1,5 @@
 local Controller = require('fittencode.inline.controller')
+local Session = require('fittencode.inline.session')
 
 ---@class FittenCode.Inline.Headless
 local Headless = {}
@@ -17,6 +18,13 @@ end
 ---@param prompt FittenCode.Inline.Prompt
 ---@param options FittenCode.Inline.SendCompletionsOptions
 function Headless:send_completions(prompt, options)
+    if not prompt or not options then
+        return
+    end
+    options = vim.tbl_deep_extend('force', options, {
+        api_version = 'v1',
+        session = Session:new(),
+    })
     self.controller:send_completions(prompt, options)
 end
 

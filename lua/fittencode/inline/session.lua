@@ -7,6 +7,53 @@ local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
 
+---@class FittenCode.Inline.Session.Status
+---@field value string
+---@field generating_prompt function
+---@field requesting_completions function
+---@field no_more_suggestions function
+---@field suggestions_ready function
+---@field error function
+local Status = {}
+Status.__index = Status
+
+---@return FittenCode.Inline.Session.Status
+function Status:new()
+    local obj = {
+        value = '',
+    }
+    setmetatable(obj, Status)
+    return obj
+end
+
+function Status:set(value)
+    self.value = value
+end
+
+function Status:get()
+    return self.value
+end
+
+function Status:generating_prompt()
+    self:set('generating_prompt')
+end
+
+function Status:requesting_completion()
+    self:set('requesting_completion')
+end
+
+function Status:no_more_suggestions()
+    self:set('no_more_suggestions')
+end
+
+function Status:suggesstions_ready()
+    self:set('suggesstions_ready')
+end
+
+function Status:error()
+    self:set('error')
+end
+
 ---@class FittenCode.Inline.Session
 local Session = {}
 Session.__index = Session
@@ -24,7 +71,9 @@ function Session:new(opts)
             word_segmentation = {},
         },
         request_handles = {},
-        keymaps = {}
+        keymaps = {},
+        destoryed = false,
+        status = Status:new(),
     }
     setmetatable(obj, Session)
     return obj
@@ -180,10 +229,13 @@ function Session:clear_mv()
 end
 
 function Session:destroy()
-    self:abort_and_clear_requests()
-    self:clear_mv()
-    self:restore_keymaps()
-    self:clear_autocmds()
+    if not self.destoryed then
+        self:abort_and_clear_requests()
+        self:clear_mv()
+        self:restore_keymaps()
+        self:clear_autocmds()
+    end
+    self.destoryed = true
 end
 
 ---@param key string
@@ -195,6 +247,21 @@ function Session:lazy_completion(key)
         return true
     end
     return false
+end
+
+-- 通过 is_destoryed
+-- * 判断是否已经销毁
+-- * 跳出 Promise
+function Session:is_destoryed()
+    return self.destoryed
+end
+
+function Session:get_status()
+    return self.status:get()
+end
+
+function Session:update_status()
+    return self.status
 end
 
 return Session

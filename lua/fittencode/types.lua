@@ -302,6 +302,9 @@
 ---@field ns_ids table
 ---@field request_handles table<FittenCode.HTTP.RequestHandle?>
 ---@field project_completion table<string, FittenCode.Inline.ProjectCompletion>
+---@field sessions table<string, FittenCode.Inline.Session>
+---@field session function
+---@field selected_session_id string
 
 ---@class FittenCode.Chat.VM
 ---@field run function
@@ -315,6 +318,9 @@
 ---@field request_handles table<FittenCode.HTTP.RequestHandle?>
 ---@field timing FittenCode.Inline.Session.Timing
 ---@field keymaps table
+---@field destoryed boolean
+---@field uuid string
+---@field status FittenCode.Inline.Session.Status
 
 -- Timing 放在回调里计时，和真实时间差距一个main loop的间隔，可以用来衡量相对性能
 ---@class FittenCode.Inline.Session.Timing
