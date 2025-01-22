@@ -305,6 +305,8 @@
 ---@field sessions table<string, FittenCode.Inline.Session>
 ---@field session function
 ---@field selected_session_id string
+---@field init function
+---@field destory function
 
 ---@class FittenCode.Chat.VM
 ---@field run function
