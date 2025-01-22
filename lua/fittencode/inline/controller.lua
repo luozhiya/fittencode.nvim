@@ -115,7 +115,7 @@ end
 
 function Controller:cleanup_sessions()
     for k, v in pairs(self.sessions) do
-        v:destroy()
+        v:terminate()
     end
     self.selected_session_id = nil
 end
@@ -134,14 +134,14 @@ function Controller:send_completions(prompt, options)
         end
         local gcv_options = {
             on_create = function(handle)
-                if not session or session:is_destoryed() then
+                if not session or session:is_terminated() then
                     return
                 end
                 session:record_timing('get_completion_version.on_create')
                 session:request_handles_push(handle)
             end,
             on_once = function(stdout)
-                if not session or session:is_destoryed() then
+                if not session or session:is_terminated() then
                     return
                 end
                 session:record_timing('get_completion_version.on_once')
@@ -155,7 +155,7 @@ function Controller:send_completions(prompt, options)
                 end
             end,
             on_error = function()
-                if not session or session:is_destoryed() then
+                if not session or session:is_terminated() then
                     return
                 end
                 session:record_timing('get_completion_version.on_error')
@@ -171,14 +171,14 @@ function Controller:send_completions(prompt, options)
                 completion_version = version,
                 prompt = prompt,
                 on_create = function(handle)
-                    if not session or session:is_destoryed() then
+                    if not session or session:is_terminated() then
                         return
                     end
                     session:record_timing('generate_one_stage.on_create')
                     session:request_handles_push(handle)
                 end,
                 on_once = function(stdout)
-                    if not session or session:is_destoryed() then
+                    if not session or session:is_terminated() then
                         return
                     end
                     session:record_timing('generate_one_stage.on_once')
@@ -192,7 +192,7 @@ function Controller:send_completions(prompt, options)
                     resolve(parsed_response)
                 end,
                 on_error = function()
-                    if not session or session:is_destoryed() then
+                    if not session or session:is_terminated() then
                         return
                     end
                     session:record_timing('generate_one_stage.on_error')
@@ -266,14 +266,14 @@ function Controller:triggering_completion(options)
             position = position,
             edit_mode = options.edit_mode,
             on_create = function()
-                if not session or session:is_destoryed() then
+                if not session or session:is_terminated() then
                     return
                 end
                 session:record_timing('generate_prompt.on_create')
                 session:update_status():generating_prompt()
             end,
             on_once = function(prompt)
-                if not session or session:is_destoryed() then
+                if not session or session:is_terminated() then
                     return
                 end
                 session:record_timing('generate_prompt.on_once')
@@ -281,7 +281,7 @@ function Controller:triggering_completion(options)
                 resolve(prompt)
             end,
             on_error = function()
-                if not session or session:is_destoryed() then
+                if not session or session:is_terminated() then
                     return
                 end
                 session:record_timing('generate_prompt.on_error')
@@ -298,14 +298,14 @@ function Controller:triggering_completion(options)
                 position = position,
                 session = session,
                 on_no_more_suggestion = function()
-                    if not session or session:is_destoryed() then
+                    if not session or session:is_terminated() then
                         return
                     end
                     session:update_status():no_more_suggestions()
                     Fn.schedule_call(options.on_no_more_suggestion)
                 end,
                 on_success = function(parsed_response)
-                    if not session or session:is_destoryed() then
+                    if not session or session:is_terminated() then
                         return
                     end
                     session:update_status():suggestions_ready()
@@ -324,7 +324,7 @@ function Controller:triggering_completion(options)
                     session:init(model, view)
                 end,
                 on_failure = function()
-                    if not session or session:is_destoryed() then
+                    if not session or session:is_terminated() then
                         return
                     end
                     session:update_status():error()

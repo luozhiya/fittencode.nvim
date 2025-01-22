@@ -175,7 +175,7 @@ end
 -- Return the zero-based characters offset of the position in the buffer
 ---@param buf integer?
 ---@param position FittenCode.Position
----@return FittenCode.Offset?
+---@return FittenCode.CharactersOffset?
 function M.offset_at(buf, position)
     if not buf then
         return

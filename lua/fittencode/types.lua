@@ -7,8 +7,8 @@
 ---@field row number A zero-based row value.
 ---@field col number A zero-based column value.
 
--- UTF-32 编码 characters 序列
----@alias FittenCode.Offset number
+-- 按字符位置偏移量
+---@alias FittenCode.CharactersOffset number
 
 -- 异步 IO 涉及 spawn 添加更多的事件回调方便来做性能计数
 ---@class FittenCode.AsyncIOCallbacks
@@ -320,7 +320,7 @@
 ---@field request_handles table<FittenCode.HTTP.RequestHandle?>
 ---@field timing FittenCode.Inline.Session.Timing
 ---@field keymaps table
----@field destoryed boolean
+---@field terminated boolean
 ---@field uuid string
 ---@field status FittenCode.Inline.Session.Status
 

@@ -14,13 +14,15 @@ local Client = require('fittencode.client')
 ---@field no_more_suggestions function
 ---@field suggestions_ready function
 ---@field error function
+---@field gc function
 local Status = {}
 Status.__index = Status
 
 ---@return FittenCode.Inline.Session.Status
-function Status:new()
+function Status:new(options)
     local obj = {
         value = '',
+        gc = options.gc,
     }
     setmetatable(obj, Status)
     return obj
@@ -44,6 +46,7 @@ end
 
 function Status:no_more_suggestions()
     self:set('no_more_suggestions')
+    self.gc()
 end
 
 function Status:suggesstions_ready()
@@ -52,6 +55,7 @@ end
 
 function Status:error()
     self:set('error')
+    self.gc()
 end
 
 ---@class FittenCode.Inline.Session
@@ -67,13 +71,13 @@ function Session:new(opts)
         request_handles = {},
         keymaps = {},
         destoryed = false,
-        status = Status:new(),
     }
     setmetatable(obj, Session)
     return obj
 end
 
 function Session:init(model, view)
+    self.status = Status:new({ gc = self:gc()})
     self.model = model
     self.model:recalculate()
     self.view = view
@@ -158,6 +162,11 @@ function Session:accept_word()
     self:update_view()
 end
 
+function Session:accept_char()
+    self.model:accept('forward', 'char')
+    self:update_view()
+end
+
 function Session:revoke_line()
     self.model:accept('backward', 'line')
     self:update_view()
@@ -165,6 +174,11 @@ end
 
 function Session:revoke_word()
     self.model:accept('backward', 'word')
+    self:update_view()
+end
+
+function Session:revoke_char()
+    self.model:accept('backward', 'char')
     self:update_view()
 end
 
@@ -223,14 +237,19 @@ function Session:clear_mv()
     end
 end
 
-function Session:destroy()
-    if not self.destoryed then
+-- 终止不会清除 timing 等信息，方便后续做性能统计分析
+function Session:terminate()
+    if not self.terminated then
         self:abort_and_clear_requests()
         self:clear_mv()
         self:restore_keymaps()
         self:clear_autocmds()
     end
-    self.destoryed = true
+    self.terminated = true
+end
+
+function Session:gc(timeout)
+    vim.defer_fn(function() self:terminate() end, timeout or 5000)
 end
 
 ---@param key string
@@ -238,17 +257,20 @@ end
 function Session:lazy_completion(key)
     if self.model:eq_peek(key) then
         self.model.accept('forward', 'char')
-        self:update_view()
+        -- 此时不能立即刷新，因为还处于 on_key 的回调中，要等到下一个 main loop
+        vim.schedule(function()
+            self:update_view()
+        end)
         return true
     end
     return false
 end
 
--- 通过 is_destoryed
--- * 判断是否已经销毁
+-- 通过 is_terminated
+-- * 判断是否已经终止
 -- * 跳出 Promise
-function Session:is_destoryed()
-    return self.destoryed
+function Session:is_terminated()
+    return self.terminated
 end
 
 function Session:get_status()
