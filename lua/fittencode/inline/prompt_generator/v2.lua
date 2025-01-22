@@ -10,6 +10,14 @@ local Config = require('fittencode.config')
 local fim_pattern = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
 ---@class FittenCode.Inline.PromptGenerator.V2
+---@field last FittenCode.Inline.PromptGenerator.V2.Last
+
+---@class FittenCode.Inline.PromptGenerator.V2.Last
+---@field filename string
+---@field text string
+---@field ciphertext string
+
+---@class FittenCode.Inline.PromptGenerator.V2
 local V2 = {}
 V2.__index = V2
 
