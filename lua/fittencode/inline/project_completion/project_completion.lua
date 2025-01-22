@@ -11,10 +11,15 @@ function ProjectCompletion:new()
     return setmetatable({}, ProjectCompletion)
 end
 
-function ProjectCompletion:get_prompt()
+---@param buf number
+---@param line number
+---@param options table
+function ProjectCompletion:get_prompt(buf, line, options)
 end
 
-function ProjectCompletion:get_file_lsp()
+---@param buf number
+---@param options table
+function ProjectCompletion:get_file_lsp(buf, options)
 end
 
 return ProjectCompletion

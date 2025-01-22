@@ -302,6 +302,7 @@
 ---@field selected_session_id string
 ---@field init function
 ---@field destory function
+---@field last_chosen_prompt_type string
 
 ---@class FittenCode.Chat.VM
 ---@field run function
@@ -316,7 +317,7 @@
 ---@field timing FittenCode.Inline.Session.Timing
 ---@field keymaps table
 ---@field terminated boolean
----@field uuid string
+---@field id string
 ---@field status FittenCode.Inline.Session.Status
 
 -- Timing 放在回调里计时，和真实时间差距一个main loop的间隔，可以用来衡量相对性能
@@ -356,6 +357,7 @@
 ---@field api_version string 'v1' | 'v2' -- generate_one_stage 有两种组建方式
 ---@field edit_mode boolean
 ---@field filename? string
+---@field project_completion table?
 
 ---@class FittenCode.Inline.Model
 ---@field mode 'lines' | 'multi_segments' | 'edit_completion'

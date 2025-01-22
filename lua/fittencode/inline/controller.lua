@@ -32,6 +32,7 @@ function Controller:new(opts)
         api_version = 'v1',
         sessions = {},
         selected_session_id = nil,
+        last_chosen_prompt_type = '0',
     }
     setmetatable(obj, self)
     return obj
@@ -98,9 +99,44 @@ function Controller:generate_prompt(buf, position, options)
         filename = Editor.filename(buf),
         edit_mode = options.edit_mode,
         api_version = options.api_version,
+        project_completion = self.project_completion,
+        last_chosen_prompt_type = self.last_chosen_prompt_type,
+        check_project_completion_available = function() self:check_project_completion_available() end,
     })
     assert(prompt_options)
     self.prompt_generator:generate(buf, position, prompt_options)
+end
+
+function Controller:get_pc_chosen(user_id, options)
+end
+
+function Controller:check_project_completion_available(user_id, lsp, options)
+    local available = false
+    local open = Config.use_project_completion.open
+    local heart = 1
+    Promise:new(function(resolve, reject)
+        self:get_pc_chosen(user_id, {
+            on_success = function(chosen)
+                resolve(chosen)
+            end,
+            on_failure = function()
+                Fn.schedule_call(options.on_failure)
+            end,
+        })
+    end):forward(function(chosen)
+        if open == 'auto' then
+            if chosen >= 1 and lsp == 1 and heart ~= 2 then
+                available = true
+            end
+        elseif open == 'on' then
+            if lsp == 1 and heart ~= 2 then
+                available = true
+            end
+        elseif open == 'off' then
+            available = false
+        end
+        Fn.schedule_call(options.on_success, available)
+    end)
 end
 
 ---@param buf number
@@ -250,12 +286,12 @@ function Controller:triggering_completion(options)
     self:cleanup_sessions()
     local session = Session:new({
         buf = buf,
-        uuid = assert(Fn.uuid_v4()),
+        id = assert(Fn.uuid_v4()),
         reflect = function(_) self:reflect(_) end,
     })
     session:record_timing('on_create')
-    self.sessions[session.uuid] = session
-    self.selected_session_id = session.uuid
+    self.sessions[session.id] = session
+    self.selected_session_id = session.id
 
     Promise:new(function(resolve, reject)
         Log.debug('Triggering completion for position {}', position)
@@ -291,8 +327,6 @@ function Controller:triggering_completion(options)
             session:update_status():requesting_completions()
             self:send_completions(prompt, {
                 api_version = self.api_version,
-                buf = buf,
-                position = position,
                 session = session,
                 on_no_more_suggestion = function()
                     if not session or session:is_terminated() then
@@ -515,13 +549,13 @@ end
 -- * `{ inline: 'disabled', session: nil }`
 -- * `{ inline: 'running', session: 'generating_prompt' }`
 -- * `{ inline: 'running', session: 'requesting_completions }`
+-- * `{ inline: 'running', session: 'suggestions_ready' }`
 -- * `{ inline: 'running', session: 'no_more_suggestion' }`
 -- * `{ inline: 'running', session: 'error' }`
--- * `{ inline: 'running', session: 'suggestions_ready' }`
 function Controller:get_status()
     -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
     local selected_session = self.sessions[self.selected_session_id]
-    if selected_session then
+    if selected_session and not selected_session:is_terminated() then
         return { inline = 'running', session = selected_session:get_status() }
     end
     if self:is_enabled(vim.api.nvim_get_current_buf()) then

@@ -27,7 +27,7 @@ function ProjectCompletion:new(opts)
 end
 
 -- 查询当前文件的 LSP 状态
-function ProjectCompletion:get_file_lsp(buf)
+function ProjectCompletion:get_file_lsp(buf, options)
     local fb, filename = Editor.is_filebuf(buf)
     if not fb or not filename then
         return
@@ -40,7 +40,7 @@ function ProjectCompletion:get_file_lsp(buf)
     return self.files[filename].has_lsp
 end
 
-function ProjectCompletion:get_prompt(buf, line)
+function ProjectCompletion:get_prompt(buf, line, options)
     local n = vim.uv.hrtime()
     local fb, e = Editor.is_filebuf(buf)
     if not fb or not e then

@@ -11,6 +11,7 @@ local fim_pattern = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
 ---@class FittenCode.Inline.PromptGenerator.V2
 ---@field last FittenCode.Inline.PromptGenerator.V2.Last
+---@field project_completion table<string, FittenCode.Inline.ProjectCompletion>
 
 ---@class FittenCode.Inline.PromptGenerator.V2.Last
 ---@field filename string
@@ -27,7 +28,8 @@ function V2:new()
             filename = '',
             text = '',
             ciphertext = ''
-        }
+        },
+        project_completion = { v1 = nil, v2 = nil },
     }
     setmetatable(obj, self)
     return obj
@@ -192,8 +194,13 @@ function V2:_recalculate_meta_datas(options)
     end
 end
 
+---@param buf number?
+---@param position FittenCode.Position
+---@param options table
 function V2:generate(buf, position, options)
     Fn.schedule_call(options.on_create)
+
+    local last_chosen_prompt_type = options.last_chosen_prompt_type
 
     local open_pc = Config.use_project_completion.open
     local fc_nodefault = Config.server.fitten_version ~= 'default'
@@ -216,20 +223,36 @@ function V2:generate(buf, position, options)
             end
         })
     end):forward(function(ciphertext)
-        local meta_datas = self:_recalculate_meta_datas({
-            text = text,
-            ciphertext = ciphertext,
-            prefix = ctx.prefix,
-            suffix = ctx.suffix,
-            edit_mode = options.edit_mode,
-            filename = options.filename,
-            prefixoffset = ctx.prefixoffset,
-            norangecount = ctx.norangecount
-        })
-        local prompt = {
-            inputs = '',
-            meta_datas = meta_datas
-        }
+        return Promise:new(function(resolve, reject)
+            local meta_datas = self:_recalculate_meta_datas({
+                text = text,
+                ciphertext = ciphertext,
+                prefix = ctx.prefix,
+                suffix = ctx.suffix,
+                edit_mode = options.edit_mode,
+                filename = options.filename,
+                prefixoffset = ctx.prefixoffset,
+                norangecount = ctx.norangecount
+            })
+            local prompt = {
+                inputs = '',
+                meta_datas = meta_datas
+            }
+            resolve(prompt)
+        end)
+    end):forward(function(prompt)
+        return Promise:new(function(resolve, reject)
+
+        end)
+    end):forward(function(prompt)
+        return Promise:new(function(resolve, reject)
+            if last_chosen_prompt_type == '5' then
+                self.project_completion.v1:get_prompt(buf, position.row)
+            else
+                self.project_completion.v2:get_prompt(buf, position.row)
+            end
+        end)
+    end):forward(function(prompt)
         Fn.schedule_call(options.on_once, prompt)
     end)
 end
