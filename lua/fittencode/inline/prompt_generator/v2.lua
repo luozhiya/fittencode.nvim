@@ -6,17 +6,28 @@ local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')
 local Config = require('fittencode.config')
+
 local fim_pattern = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
-local last = {
-    filename = '',
-    text = '',
-    ciphertext = ''
-}
+---@class FittenCode.Inline.PromptGenerator.V2
+local V2 = {}
+V2.__index = V2
+
+function V2:new()
+    local obj = {
+        last = {
+            filename = '',
+            text = '',
+            ciphertext = ''
+        }
+    }
+    setmetatable(obj, self)
+    return obj
+end
 
 ---@param buf number?
 ---@param position FittenCode.Position
-local function recalculate_prefix_suffix(buf, position)
+function V2:_recalculate_prefix_suffix(buf, position)
     -- VSCode 的 max_chars 是按 UTF-16 一个 16 位字节来计算的，如果是 emoji 占用一对代理对就会计算成两个
     -- Neovim 的 max_chars 是 UTF-32
     local max_chars = 22e4
@@ -98,7 +109,7 @@ local function compare_bytes_order(prev, curr)
     return leq, req
 end
 
-local function recalculate_meta_datas(options)
+function V2:_recalculate_meta_datas(options)
     assert(options)
     local text = options.text or ''
     local ciphertext = options.ciphertext or ''
@@ -137,10 +148,10 @@ local function recalculate_meta_datas(options)
         -- meta_datas.edit_mode_trigger_type = '0' -- 0: 手动触发 1：自动触发
     end
 
-    if filename ~= last.filename then
-        last.filename = filename
-        last.text = text
-        last.ciphertext = ciphertext
+    if filename ~= self.last.filename then
+        self.last.filename = filename
+        self.last.text = text
+        self.last.ciphertext = ciphertext
         meta_datas = vim.tbl_deep_extend('force', meta_datas, {
             plen = 0,
             slen = 0,
@@ -153,7 +164,7 @@ local function recalculate_meta_datas(options)
         })
         return meta_datas
     else
-        local lbytes, rbytes = compare_bytes_order(last.text, text)
+        local lbytes, rbytes = compare_bytes_order(self.last.text, text)
         local lchars = vim.str_utfindex(text, 'utf-16', lbytes)
         local rchars = vim.str_utfindex(text:sub(rbytes + 1, #text), 'utf-16')
         local diff = text:sub(lbytes + 1, #text - rbytes)
@@ -162,18 +173,20 @@ local function recalculate_meta_datas(options)
             slen = rchars,
             bplen = lbytes,
             bslen = rbytes,
-            pmd5 = last.ciphertext,
+            pmd5 = self.last.ciphertext,
             nmd5 = ciphertext,
             diff = diff,
             filename = filename
         })
-        last.text = text
-        last.ciphertext = ciphertext
+        self.last.text = text
+        self.last.ciphertext = ciphertext
         return meta_datas
     end
 end
 
-local function generate_prompt_v2(buf, position, options)
+function V2:generate(buf, position, options)
+    Fn.schedule_call(options.on_create)
+
     local open_pc = Config.use_project_completion.open
     local fc_nodefault = Config.server.fitten_version ~= 'default'
     local h = -1
@@ -182,7 +195,7 @@ local function generate_prompt_v2(buf, position, options)
         -- notify install lsp
     end
 
-    local ctx = recalculate_prefix_suffix(buf, position)
+    local ctx = self:_recalculate_prefix_suffix(buf, position)
     local text = ctx.prefix .. ctx.suffix
 
     Promise:new(function(resolve, reject)
@@ -195,7 +208,7 @@ local function generate_prompt_v2(buf, position, options)
             end
         })
     end):forward(function(ciphertext)
-        local meta_datas = recalculate_meta_datas({
+        local meta_datas = self:_recalculate_meta_datas({
             text = text,
             ciphertext = ciphertext,
             prefix = ctx.prefix,
@@ -213,6 +226,4 @@ local function generate_prompt_v2(buf, position, options)
     end)
 end
 
-return {
-    generate_prompt_v2 = generate_prompt_v2
-}
+return V2

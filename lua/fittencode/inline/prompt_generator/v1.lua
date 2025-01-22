@@ -4,7 +4,18 @@ local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')
 
-local function generate_prompt_v1(buf, position, options)
+---@class FittenCode.Inline.PromptGenerator.V1
+local V1 = {}
+V1.__index = V1
+
+function V1:new()
+    local obj = {}
+    setmetatable(obj, V1)
+    return obj
+end
+
+function V1:generate(buf, position, options)
+    Fn.schedule_call(options.on_create)
     local prefix = Editor.get_text(buf, Range:new({ start = Position:new({ row = 0, col = 0 }), termination = position }))
     local suffix = Editor.get_text(buf, Range:new({ start = position, termination = Position:new({ row = -1, col = -1 }) }))
     local inputs = '!FCPREFIX!' .. prefix .. '!FCSUFFIX!' .. suffix .. '!FCMIDDLE!'
@@ -18,6 +29,4 @@ local function generate_prompt_v1(buf, position, options)
     Fn.schedule_call(options.on_once, prompt)
 end
 
-return {
-    generate_prompt = generate_prompt_v1,
-}
+return V1

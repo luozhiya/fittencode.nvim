@@ -11,3 +11,5 @@ function Prompt:new(options)
     setmetatable(obj, Prompt)
     return obj
 end
+
+return Prompt
