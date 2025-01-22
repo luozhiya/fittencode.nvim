@@ -6,21 +6,6 @@ local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')
 local Config = require('fittencode.config')
-
----@class FittenCode.Inline.Prompt
-local Prompt = {}
-Prompt.__index = Prompt
-
----@return FittenCode.Inline.Prompt
-function Prompt:new(options)
-    local obj = {
-        inputs = options.inputs or '',
-        meta_datas = options.meta_datas or {}
-    }
-    setmetatable(obj, Prompt)
-    return obj
-end
-
 local fim_pattern = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
 local last = {
@@ -220,45 +205,14 @@ local function generate_prompt_v2(buf, position, options)
             prefixoffset = ctx.prefixoffset,
             norangecount = ctx.norangecount
         })
-        local prompt = Prompt:new({
+        local prompt = {
             inputs = '',
             meta_datas = meta_datas
-        })
+        }
         Fn.schedule_call(options.on_once, prompt)
-        Fn.schedule_call(options.on_exit)
     end)
 end
 
-local function generate_prompt_v1(buf, position, options)
-    local prefix = Editor.get_text(buf, Range:new({ start = Position:new({ row = 0, col = 0 }), termination = position }))
-    local suffix = Editor.get_text(buf, Range:new({ start = position, termination = Position:new({ row = -1, col = -1 }) }))
-    local inputs = '!FCPREFIX!' .. prefix .. '!FCSUFFIX!' .. suffix .. '!FCMIDDLE!'
-    local escaped_inputs = string.gsub(inputs, '"', '\\"')
-    local prompt = {
-        inputs = escaped_inputs,
-        meta_datas = {
-            filename = options.filename,
-        },
-    }
-    Fn.schedule_call(options.on_once, prompt)
-end
-
--- Make a prompt
--- 数据传输用 UTF-8 编码
----@param options FittenCode.Inline.GeneratePromptOptions
----@return FittenCode.Inline.Prompt?
-function Prompt.generate(options)
-    assert(options.buf)
-    assert(options.position)
-    local buf = options.buf
-    local position = options.position
-
-    Fn.schedule_call(options.on_create)
-    if options.api_version == 'v2' then
-        generate_prompt_v2(buf, position, options)
-    elseif options.api_version == 'v1' then
-        generate_prompt_v1(buf, position, options)
-    end
-end
-
-return Prompt
+return {
+    generate_prompt_v2 = generate_prompt_v2
+}

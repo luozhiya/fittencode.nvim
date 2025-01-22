@@ -257,7 +257,7 @@ end
 function Session:lazy_completion(key)
     if self.model:eq_peek(key) then
         self.model.accept('forward', 'char')
-        -- 此时不能立即刷新，因为还处于 on_key 的回调中，要等到下一个 main loop
+        -- 此时不能立即刷新，因为还处于 on_key 的回调中，要等到下一个 main loop?
         vim.schedule(function()
             self:update_view()
         end)

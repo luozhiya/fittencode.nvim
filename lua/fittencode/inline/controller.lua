@@ -9,7 +9,7 @@ local Log = require('fittencode.log')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local Position = require('fittencode.position')
-local Prompt = require('fittencode.inline.prompt')
+local PromptProcessor = require('fittencode.inline.prompt_processor')
 local Response = require('fittencode.inline.response')
 local ProjectCompletionFactory = require('fittencode.inline.project_completion')
 
@@ -46,13 +46,13 @@ function Controller:init(options)
             v1 = assert(ProjectCompletionFactory.create('v1')),
             v2 = assert(ProjectCompletionFactory.create('v2')),
         }
+        self.prompt_processor = PromptProcessor:new()
         self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
         self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
         self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
         self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
         self.ns_ids.on_key = vim.api.nvim_create_namespace('Fittencode.Inline.OnKey')
         self:enable(Config.inline_completion.enable)
-        self:register_pc_listener()
     end
 end
 
@@ -101,7 +101,7 @@ function Controller:generate_prompt(options)
         api_version = options.api_version,
     })
     assert(prompt_options)
-    Prompt.generate(prompt_options)
+    self.prompt_processor:generate(prompt_options)
 end
 
 ---@param buf number
