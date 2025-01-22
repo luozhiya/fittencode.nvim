@@ -137,14 +137,14 @@ function Controller:send_completions(prompt, options)
                 if not session or session:is_destoryed() then
                     return
                 end
-                session.timing.get_completion_version.on_create = vim.uv.hrtime()
-                session.request_handles[#session.request_handles + 1] = handle
+                session:record_timing('get_completion_version.on_create')
+                session:request_handles_push(handle)
             end,
             on_once = function(stdout)
                 if not session or session:is_destoryed() then
                     return
                 end
-                session.timing.get_completion_version.on_once = vim.uv.hrtime()
+                session:record_timing('get_completion_version.on_once')
                 local json = table.concat(stdout, '')
                 local _, version = pcall(vim.fn.json_decode, json)
                 if not _ or version == nil then
@@ -158,7 +158,7 @@ function Controller:send_completions(prompt, options)
                 if not session or session:is_destoryed() then
                     return
                 end
-                session.timing.get_completion_version.on_error = vim.uv.hrtime()
+                session:record_timing('get_completion_version.on_error')
                 reject()
             end
         }
@@ -174,14 +174,14 @@ function Controller:send_completions(prompt, options)
                     if not session or session:is_destoryed() then
                         return
                     end
-                    session.timing.generate_one_stage.on_create = vim.uv.hrtime()
-                    session.request_handles[#session.request_handles + 1] = handle
+                    session:record_timing('generate_one_stage.on_create')
+                    session:request_handles_push(handle)
                 end,
                 on_once = function(stdout)
                     if not session or session:is_destoryed() then
                         return
                     end
-                    session.timing.generate_one_stage.on_once = vim.uv.hrtime()
+                    session:record_timing('generate_one_stage.on_once')
                     local _, response = pcall(vim.json.decode, table.concat(stdout, ''))
                     if not _ then
                         Log.error('Failed to decode completion raw response: {}', response)
@@ -195,7 +195,7 @@ function Controller:send_completions(prompt, options)
                     if not session or session:is_destoryed() then
                         return
                     end
-                    session.timing.generate_one_stage.on_error = vim.uv.hrtime()
+                    session:record_timing('generate_one_stage.on_error')
                     reject()
                 end
             }
@@ -254,6 +254,7 @@ function Controller:triggering_completion(options)
         uuid = assert(Fn.uuid_v4()),
         reflect = function(_) self:reflect(_) end,
     })
+    session:record_timing('on_create')
     self.sessions[session.uuid] = session
     self.selected_session_id = session.uuid
 
@@ -268,14 +269,14 @@ function Controller:triggering_completion(options)
                 if not session or session:is_destoryed() then
                     return
                 end
-                session.timing.generate_prompt.on_create = vim.uv.hrtime()
+                session:record_timing('generate_prompt.on_create')
                 session:update_status():generating_prompt()
             end,
             on_once = function(prompt)
                 if not session or session:is_destoryed() then
                     return
                 end
-                session.timing.generate_prompt.on_once = vim.uv.hrtime()
+                session:record_timing('generate_prompt.on_once')
                 Log.debug('Generated prompt = {}', prompt)
                 resolve(prompt)
             end,
@@ -283,7 +284,7 @@ function Controller:triggering_completion(options)
                 if not session or session:is_destoryed() then
                     return
                 end
-                session.timing.generate_prompt.on_error = vim.uv.hrtime()
+                session:record_timing('generate_prompt.on_error')
                 session:update_status():error()
                 Fn.schedule_call(options.on_failure)
             end

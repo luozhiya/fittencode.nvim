@@ -63,13 +63,7 @@ function Session:new(opts)
     local obj = {
         buf = opts.buf,
         reflect = opts.reflect,
-        timing = {
-            on_create = vim.uv.hrtime(),
-            generate_prompt = {},
-            get_completion_version = {},
-            generate_one_stage = {},
-            word_segmentation = {},
-        },
+        timing = {},
         request_handles = {},
         keymaps = {},
         destoryed = false,
@@ -108,11 +102,12 @@ function Session:update_word_segments()
     end
     Promise:new(function(resolve, reject)
         local options = {
-            on_create = function()
-                self.timing.word_segmentation.on_create = vim.uv.hrtime()
+            on_create = function(handle)
+                self:record_timing('word_segmentation.on_create')
+                self:request_handles_push(handle)
             end,
             on_once = function(stdout)
-                self.timing.word_segmentation.on_once = vim.uv.hrtime()
+                self:record_timing('word_segmentation.on_once')
                 local delta = {}
                 for _, chunk in ipairs(stdout) do
                     local v = vim.split(chunk, '\n', { trimempty = true })
@@ -136,7 +131,7 @@ function Session:update_word_segments()
                 end
             end,
             on_error = function()
-                self.timing.word_segmentation.on_error = vim.uv.hrtime()
+                self:record_timing('word_segmentation.on_error')
                 Log.error('Failed to get word segmentation')
             end
         }
@@ -262,6 +257,17 @@ end
 
 function Session:update_status()
     return self.status
+end
+
+function Session:record_timing(event, timestamp)
+    if not timestamp then
+        timestamp = vim.uv.hrtime()
+    end
+    self.timing[#self.timing + 1] = { event = event, timestamp = timestamp }
+end
+
+function Session:request_handles_push(handle)
+    self.request_handles[#self.request_handles + 1] = handle
 end
 
 return Session
