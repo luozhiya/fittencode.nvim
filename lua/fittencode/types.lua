@@ -359,8 +359,6 @@
 
 ---@class FittenCode.Inline.GeneratePromptOptions : FittenCode.AsyncIOCallbacks
 ---@field api_version string 'v1' | 'v2' -- generate_one_stage 有两种组建方式
----@field buf number
----@field position FittenCode.Position
 ---@field edit_mode boolean
 ---@field filename? string
 

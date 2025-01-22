@@ -18,7 +18,7 @@ local PromptGenerator = {}
 PromptGenerator.__index = PromptGenerator
 
 ---@return FittenCode.Inline.PromptGenerator
-function PromptGenerator:new(options)
+function PromptGenerator:new()
     local obj = {
         v1 = V1:new(),
         v2 = V2:new()

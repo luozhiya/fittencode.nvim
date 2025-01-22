@@ -91,17 +91,16 @@ function Controller:dismiss_suggestions(options)
 end
 
 ---@param options FittenCode.Inline.GeneratePromptOptions
-function Controller:generate_prompt(options)
-    assert(options.position)
+function Controller:generate_prompt(buf, position, options)
+    assert(buf)
+    assert(position)
     local prompt_options = Fn.tbl_keep_events(options, {
-        buf = options.buf,
-        filename = Editor.filename(options.buf),
-        position = options.position,
+        filename = Editor.filename(buf),
         edit_mode = options.edit_mode,
         api_version = options.api_version,
     })
     assert(prompt_options)
-    self.prompt_generator:generate(prompt_options)
+    self.prompt_generator:generate(buf, position, prompt_options)
 end
 
 ---@param buf number
@@ -260,10 +259,8 @@ function Controller:triggering_completion(options)
 
     Promise:new(function(resolve, reject)
         Log.debug('Triggering completion for position {}', position)
-        self:generate_prompt({
+        self:generate_prompt(buf, position, {
             api_version = self.api_version,
-            buf = buf,
-            position = position,
             edit_mode = options.edit_mode,
             on_create = function()
                 if not session or session:is_terminated() then
