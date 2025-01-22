@@ -40,7 +40,7 @@ end
 function PromptProcessor:generate_prompt_v2(buf, position, options)
     -- 实现 v2 版本的提示生成逻辑
     -- 这里只是一个示例，实际逻辑需要根据具体需求编写
-    return { content = "Generated prompt for v2" }
+    return { content = 'Generated prompt for v2' }
 end
 
 ---@param buf number
@@ -50,7 +50,7 @@ end
 function PromptProcessor:generate_prompt_v1(buf, position, options)
     -- 实现 v1 版本的提示生成逻辑
     -- 这里只是一个示例，实际逻辑需要根据具体需求编写
-    return { content = "Generated prompt for v1" }
+    return { content = 'Generated prompt for v1' }
 end
 
 return PromptProcessor

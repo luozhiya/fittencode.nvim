@@ -398,10 +398,11 @@ function Controller:set_onkey(enable)
     -- If {fn} returns an empty string, {key} is discarded/ignored.
     vim.on_key(function(key)
         local buf = vim.api.nvim_get_current_buf()
+        self.filter_events = {}
         if vim.api.nvim_get_mode().mode == 'i' and self:is_enabled(buf) then
             Log.debug('on key = {}', key)
             if vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
-                self.filter_events = { 'CursorMovedI', 'TextChangedI', 'CursorHoldI' }
+                self.filter_events = { 'CursorMovedI', 'TextChangedI', }
                 return
             end
             if self:lazy_completion(key) then
@@ -409,7 +410,6 @@ function Controller:set_onkey(enable)
                 return ''
             end
         end
-        self.filter_events = {}
     end, self.ns_ids.on_key)
 end
 

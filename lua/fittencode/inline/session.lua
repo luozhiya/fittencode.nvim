@@ -77,7 +77,7 @@ function Session:new(opts)
 end
 
 function Session:init(model, view)
-    self.status = Status:new({ gc = self:gc()})
+    self.status = Status:new({ gc = self:gc() })
     self.model = model
     self.model:recalculate()
     self.view = view

@@ -1,7 +1,7 @@
 local Editor = require('fittencode.editor')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
-local ProjectCompletionI = require('fittencode.inline.project_completion.interface')
+local ProjectCompletionBase = require('fittencode.inline.project_completion.project_completion')
 local ScopeTree = require('fittencode.inline.project_completion.v1.scope_tree')
 local Promise = require('fittencode.concurrency.promise')
 
@@ -13,11 +13,11 @@ local Promise = require('fittencode.concurrency.promise')
 
 ---@class FittenCode.Inline.ProjectCompletion.V1
 local ProjectCompletion = {}
-ProjectCompletion.__index = ProjectCompletionI
+ProjectCompletion.__index = ProjectCompletionBase
 
 ---@return FittenCode.Inline.ProjectCompletion.V1
 function ProjectCompletion:new(opts)
-    local obj = ProjectCompletionI:new()
+    local obj = ProjectCompletionBase:new()
     vim.tbl_deep_extend('force', obj, {
         files = {}
     })
