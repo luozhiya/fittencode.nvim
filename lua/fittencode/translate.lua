@@ -1,4 +1,5 @@
 local Fn = require('fittencode.fn')
+local Language = require('fittencode.language')
 
 local translations = {
     ['  (Currently no completion options available)'] = '  （当前暂无补全项）',
@@ -194,7 +195,7 @@ local translations = {
 }
 
 local function translate(key, ...)
-    local lang = Fn.display_preference()
+    local lang = Language.display_preference()
     local v = key
     if Fn.startwith(lang, 'zh') then
         v = translations[key] or key

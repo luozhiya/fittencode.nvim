@@ -242,7 +242,7 @@ function V2:generate(buf, position, options)
         end)
     end):forward(function(prompt)
         return Promise:new(function(resolve, reject)
-
+            self.check_project_completion_available()
         end)
     end):forward(function(prompt)
         return Promise:new(function(resolve, reject)

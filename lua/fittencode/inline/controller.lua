@@ -47,7 +47,6 @@ function Controller:init(options)
             v2 = assert(ProjectCompletionFactory.create('v2')),
         }
         self.prompt_generator = PromptGenerator:new()
-        self.generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
         self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
         self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
         self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
@@ -97,7 +96,7 @@ function Controller:check_project_completion_available(user_id, lsp, options)
     local available = false
     local open = Config.use_project_completion.open
     local heart = 1
-    Promise:new(function(resolve, reject)
+    Promise:new(function(resolve)
         self:get_pc_chosen(user_id, {
             on_success = function(chosen)
                 resolve(chosen)
@@ -118,7 +117,11 @@ function Controller:check_project_completion_available(user_id, lsp, options)
         elseif open == 'off' then
             available = false
         end
-        Fn.schedule_call(options.on_success, available)
+        if available then
+            Fn.schedule_call(options.on_success)
+        else
+            Fn.schedule_call(options.on_failure)
+        end
     end)
 end
 
@@ -180,20 +183,20 @@ function Controller:triggering_completion(options)
         project_completion = self.project_completion,
         prompt_generator = self.prompt_generator,
         last_chosen_prompt_type = self.last_chosen_prompt_type,
+        check_project_completion_available = function(...) self:check_project_completion_available(...) end,
+        triggering_completion = function(...) self:triggering_completion(...) end,
     })
-    session:record_timing('on_create')
     self.sessions[session.id] = session
     self.selected_session_id = session.id
 
-    session:send_completions(buf, position, {
-        on_no_more_suggestion = options.on_no_more_suggestion,
-        on_success = options.on_success,
-        on_failure = options.on_failure,
-    })
+    session:send_completions(buf, position, assert(Fn.tbl_keep_events(options)))
 end
 
 function Controller:session()
-    return self.sessions[self.selected_session_id]
+    local session = self.sessions[self.selected_session_id]
+    if session and not session:is_terminated() then
+        return session
+    end
 end
 
 -- Lazy 模式，在输入字符与下一个字符相等时（ascii），不触发新的补全

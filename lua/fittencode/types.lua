@@ -321,9 +321,12 @@
 ---@field status FittenCode.Inline.Session.Status
 ---@field api_version string 'vim' | 'vscode'
 ---@field edit_mode? boolean
----@field project_completion FittenCode.Inline.ProjectCompletion
+---@field project_completion table<string, FittenCode.Inline.ProjectCompletion>
 ---@field prompt_generator FittenCode.Inline.PromptGenerator
 ---@field last_chosen_prompt_type string
+---@field generate_one_stage function
+---@field check_project_completion_available function
+---@field triggering_completion function
 
 -- Timing 放在回调里计时，和真实时间差距一个main loop的间隔，可以用来衡量相对性能
 ---@alias FittenCode.Inline.Session.Timing table<table<string, number>>
@@ -371,6 +374,7 @@
 ---@field accept function
 ---@field make_state function
 ---@field clear function
+---@field is_everything_accepted function
 
 ---@class FittenCode.Inline.Completion
 ---@field response FittenCode.Inline.GenerateOneStageResponse

@@ -16,15 +16,13 @@ end
 function Model:accept(direction, range)
 end
 
+function Model:is_everything_accepted()
+end
+
 function Model:make_state()
-    if self.generated_text == nil and self.ex_msg == nil then
-        return
-    end
 end
 
 function Model:clear()
-    self.generated_text = nil
-    self.ex_msg = nil
 end
 
 function Model:validate_word_segments(segments)

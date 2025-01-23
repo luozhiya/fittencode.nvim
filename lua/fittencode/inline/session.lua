@@ -8,6 +8,7 @@ local Log = require('fittencode.log')
 local Client = require('fittencode.client')
 local SessionStatus = require('fittencode.inline.session_status')
 local ParseResponse = require('fittencode.inline.parse_response')
+local Config = require('fittencode.config')
 
 ---@class FittenCode.Inline.Session
 local Session = {}
@@ -24,6 +25,8 @@ function Session:new(options)
         api_version = options.api_version,
         project_completion = options.project_completion,
         prompt_generator = options.prompt_generator,
+        triggering_completion = options.triggering_completion,
+        generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
     }
     setmetatable(obj, Session)
     return obj
@@ -100,24 +103,29 @@ function Session:update_view()
     self.view.update(State:new():get_state_from_model(self.model))
 end
 
-function Session:accept_all_suggestions()
-    self.model:accept('forward', 'all')
+function Session:_accept(direction, range)
+    self.model:accept(direction, range)
     self:update_view()
+    if self.model:is_everything_accepted() then
+        self:terminate()
+        vim.schedule(function() self.triggering_completion({ force = true }) end)
+    end
+end
+
+function Session:accept_all_suggestions()
+    self:_accept('forward', 'all')
 end
 
 function Session:accept_line()
-    self.model:accept('forward', 'line')
-    self:update_view()
+    self:_accept('forward', 'line')
 end
 
 function Session:accept_word()
-    self.model:accept('forward', 'word')
-    self:update_view()
+    self:_accept('forward', 'word')
 end
 
 function Session:accept_char()
-    self.model:accept('forward', 'char')
-    self:update_view()
+    self:_accept('forward', 'char')
 end
 
 function Session:revoke_line()
@@ -245,12 +253,15 @@ function Session:request_handles_push(handle)
     self.request_handles[#self.request_handles + 1] = handle
 end
 
+---@param buf number
+---@param position FittenCode.Position
 ---@param options FittenCode.Inline.SendCompletionsOptions
 function Session:send_completions(buf, position, options)
+    self:record_timing('send_completions.start')
     Promise:new(function(resolve, reject)
         Log.debug('Triggering completion for position {}', position)
         self.prompt_generator:generate(buf, position, {
-            filename = Editor.filename(buf),
+            filename = assert(Editor.filename(buf)),
             api_version = self.api_version,
             edit_mode = self.edit_mode,
             project_completion = self.project_completion,
@@ -283,7 +294,7 @@ function Session:send_completions(buf, position, options)
     end):forward(function(prompt)
         return Promise:new(function(resolve, reject)
             self:update_status():requesting_completions()
-            self:generate_one_stage(prompt, {
+            self:send_completions2(prompt, {
                 on_no_more_suggestion = function()
                     if self:is_terminated() then
                         return
@@ -323,7 +334,7 @@ function Session:send_completions(buf, position, options)
 end
 
 ---@param prompt FittenCode.Inline.Prompt
-function Session:generate_one_stage(prompt, options)
+function Session:send_completions2(prompt, options)
     Promise:new(function(resolve, reject)
         -- 不支持获取补全版本，直接返回 '0'
         if self.api_version == 'vim' then
@@ -396,7 +407,7 @@ function Session:generate_one_stage(prompt, options)
                     reject()
                 end
             }
-            Client.generate_one_stage(gos_options)
+            self.generate_one_stage(gos_options)
         end)
     end, function()
         Fn.schedule_call(options.on_failure)

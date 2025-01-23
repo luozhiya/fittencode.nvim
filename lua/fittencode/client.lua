@@ -30,6 +30,7 @@ local preset_urls = {
     register = 'https://fc.fittentech.com/',
     register_cvt = 'https://fc.fittentech.com/cvt/register',
     login = '/codeuser/login',
+    login_auth = '/codeuser/auth/login',         -- 新的登录接口
     fb_sign_in = '/codeuser/fb_sign_in',         -- ?client_token=
     fb_check_login = '/codeuser/fb_check_login', -- ?client_token=
     click_count = '/codeuser/click_count',

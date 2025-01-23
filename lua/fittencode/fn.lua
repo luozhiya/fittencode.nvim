@@ -1,4 +1,3 @@
-local Config = require('fittencode.config')
 local BIT = require('bit')
 
 local function schedule_call(fx, ...)
@@ -139,14 +138,6 @@ local function format(msg, ...)
     return msg
 end
 
-local function display_preference()
-    local dp = Config.language_preference.display_preference
-    if not dp or #dp == 0 or dp == 'auto' then
-        return timezone_language()
-    end
-    return dp
-end
-
 local function slice(t, start)
     local result = {}
     for i = start, #t do
@@ -236,7 +227,6 @@ return {
     startwith = startwith,
     fs_all_entries = fs_all_entries,
     timezone_language = timezone_language,
-    display_preference = display_preference,
     format = format,
     slice = slice,
     remove_special_token = remove_special_token,

@@ -2,13 +2,14 @@ local Controller = require('fittencode.chat.controller')
 local Fn = require('fittencode.fn')
 local Model = require('fittencode.chat.model')
 local ConversationTypesProvider = require('fittencode.chat.conversation_types_provider')
+local Language = require('fittencode.language')
 
 ---@class FittenCode.Chat.Headless
 local Headless = {}
 Headless.__index = Headless
 
 local function make_controller()
-    local basic_chat_template_id = 'chat-' .. Fn.display_preference()
+    local basic_chat_template_id = 'chat-' .. Language.display_preference()
     local conversation_types_provider = ConversationTypesProvider:new({ extension_uri = Fn.extension_uri() })
     conversation_types_provider:async_load_conversation_types()
     local controller = Controller:new({

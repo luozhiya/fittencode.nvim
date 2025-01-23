@@ -2,6 +2,7 @@ local Fn = require('fittencode.fn')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local ActiveEditor = require('fittencode.chat.active_editor')
+local Language = require('fittencode.language')
 
 local welcome_message = {
     ['zh-cn'] = {
@@ -189,7 +190,7 @@ function View:render_conversation(conversation)
     end
 
     if #lines == 0 then
-        lines = welcome_message[Fn.display_preference()]
+        lines = welcome_message[Language.display_preference()]
     end
 
     vim.api.nvim_buf_call(self.messages_exchange.buf, function()
