@@ -327,6 +327,8 @@
 ---@field generate_one_stage function
 ---@field check_project_completion_available function
 ---@field triggering_completion function
+---@field update_inline_status function
+---@field is_initialized function
 
 -- Timing 放在回调里计时，和真实时间差距一个main loop的间隔，可以用来衡量相对性能
 ---@alias FittenCode.Inline.Session.Timing table<table<string, number>>

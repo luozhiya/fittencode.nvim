@@ -18,6 +18,7 @@ Session.__index = Session
 function Session:new(options)
     local obj = {
         buf = options.buf,
+        id = options.id,
         timing = {},
         request_handles = {},
         keymaps = {},
@@ -26,14 +27,15 @@ function Session:new(options)
         project_completion = options.project_completion,
         prompt_generator = options.prompt_generator,
         triggering_completion = options.triggering_completion,
-        generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime)
+        update_inline_status = options.update_inline_status,
+        generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime),
     }
     setmetatable(obj, Session)
+    obj.status = SessionStatus:new({ gc = obj:gc(), on_update = function() obj.update_inline_status(obj.id) end })
     return obj
 end
 
 function Session:init(model, view)
-    self.status = SessionStatus:new({ gc = self:gc() })
     self.model = model
     self.model:recalculate()
     self.view = view
@@ -41,6 +43,10 @@ function Session:init(model, view)
     self:set_autocmds()
     self:update_word_segments()
     self:update_view()
+end
+
+function Session:is_initialized()
+    return self.model and self.view
 end
 
 function Session:update_model(update)
@@ -200,6 +206,9 @@ end
 
 -- 终止不会清除 timing 等信息，方便后续做性能统计分析
 function Session:terminate()
+    if self.terminated then
+        return
+    end
     if not self.terminated then
         self:abort_and_clear_requests()
         self:clear_mv()
@@ -207,6 +216,7 @@ function Session:terminate()
         self:clear_autocmds()
     end
     self.terminated = true
+    self.update_inline_status(self.id)
 end
 
 function Session:gc(timeout)

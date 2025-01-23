@@ -1,3 +1,5 @@
+local Fn = require('fittencode.fn')
+
 ---@class FittenCode.Inline.Session.Status
 ---@field value string
 ---@field generating_prompt function
@@ -6,14 +8,18 @@
 ---@field suggestions_ready function
 ---@field error function
 ---@field gc function
+---@field on_update function
+
+---@class FittenCode.Inline.Session.Status
 local Status = {}
 Status.__index = Status
 
 ---@return FittenCode.Inline.Session.Status
 function Status:new(options)
     local obj = {
-        value = '',
+        value = 'new',
         gc = options.gc,
+        on_update = options.on_update,
     }
     setmetatable(obj, Status)
     return obj
@@ -21,6 +27,7 @@ end
 
 function Status:set(value)
     self.value = value
+    Fn.schedule_call(self.on_update)
 end
 
 function Status:get()

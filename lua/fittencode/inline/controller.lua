@@ -11,6 +11,7 @@ local View = require('fittencode.inline.view')
 local Position = require('fittencode.position')
 local PromptGenerator = require('fittencode.inline.prompt_generator')
 local ProjectCompletionFactory = require('fittencode.inline.project_completion')
+local Status = require('fittencode.inline.status')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
@@ -63,6 +64,8 @@ function Controller:destory()
     self.augroups = {}
 end
 
+-- 外界可以通过注册观察者来监听 InlineController 的事件
+-- * `Inline.StatusUpdated`
 function Controller:register_observer(observer)
     table.insert(self.observers, observer)
 end
@@ -185,6 +188,7 @@ function Controller:triggering_completion(options)
         last_chosen_prompt_type = self.last_chosen_prompt_type,
         check_project_completion_available = function(...) self:check_project_completion_available(...) end,
         triggering_completion = function(...) self:triggering_completion(...) end,
+        update_inline_status = function(id) self:update_status(id) end,
     })
     self.sessions[session.id] = session
     self.selected_session_id = session.id
@@ -373,21 +377,29 @@ end
 -- 显示当前补全状态
 -- * `{ inline: 'idle', session: nil }`
 -- * `{ inline: 'disabled', session: nil }`
+-- * `{ inline: 'running', session: 'new' }`
 -- * `{ inline: 'running', session: 'generating_prompt' }`
 -- * `{ inline: 'running', session: 'requesting_completions }`
 -- * `{ inline: 'running', session: 'suggestions_ready' }`
 -- * `{ inline: 'running', session: 'no_more_suggestion' }`
 -- * `{ inline: 'running', session: 'error' }`
+---@return FittenCode.Inline.Status
 function Controller:get_status()
     -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
     local selected_session = self.sessions[self.selected_session_id]
     if selected_session and not selected_session:is_terminated() then
-        return { inline = 'running', session = selected_session:get_status() }
+        return Status:new({ inline = 'running', session = selected_session:get_status() })
     end
     if self:is_enabled(vim.api.nvim_get_current_buf()) then
-        return { inline = 'idle', session = nil }
+        return Status:new({ inline = 'idle', session = nil })
     else
-        return { inline = 'disabled', session = nil }
+        return Status:new({ inline = 'disabled', session = nil })
+    end
+end
+
+function Controller:update_status(id)
+    if id == self.selected_session_id then
+        self:notify_observers('Inline.StatusUpdated', { status = self:get_status() })
     end
 end
 
