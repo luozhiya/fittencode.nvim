@@ -41,7 +41,7 @@
 ---@field timeout? number
 
 ---@class FittenCode.Client.GenerateOneStageOptions : FittenCode.Client.APIOptions
----@field api_version string 'v1' | 'v2'
+---@field api_version string 'vim' | 'vscode'
 ---@field completion_version string
 
 ---@class FittenCode.Client.AcceptCompletionOptions : FittenCode.Client.APIOptions
@@ -319,6 +319,11 @@
 ---@field terminated boolean
 ---@field id string
 ---@field status FittenCode.Inline.Session.Status
+---@field api_version string 'vim' | 'vscode'
+---@field edit_mode? boolean
+---@field project_completion FittenCode.Inline.ProjectCompletion
+---@field prompt_generator FittenCode.Inline.PromptGenerator
+---@field last_chosen_prompt_type string
 
 -- Timing 放在回调里计时，和真实时间差距一个main loop的间隔，可以用来衡量相对性能
 ---@alias FittenCode.Inline.Session.Timing table<table<string, number>>
@@ -354,7 +359,7 @@
 ---@field edit_mode_trigger_type string
 
 ---@class FittenCode.Inline.GeneratePromptOptions : FittenCode.AsyncIOCallbacks
----@field api_version string 'v1' | 'v2' -- generate_one_stage 有两种组建方式
+---@field api_version string 'vim' | 'vscode' -- generate_one_stage 有两种组建方式
 ---@field edit_mode boolean
 ---@field filename? string
 ---@field project_completion table?
@@ -401,9 +406,7 @@
 ---@field edit_mode? boolean
 
 ---@class FittenCode.Inline.SendCompletionsOptions : FittenCode.AsyncResultCallbacks
----@field api_version string 'v1' | 'v2' -- generate_one_stage 有两种组建方式
 ---@field on_no_more_suggestion? function
----@field session FittenCode.Inline.Session
 ---@field buf? number
 ---@field position? FittenCode.Position
 

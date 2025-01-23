@@ -3,7 +3,7 @@ local Range = require('fittencode.range')
 local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 
-local Response = {}
+local M = {}
 
 local context_threshold = 100
 
@@ -31,7 +31,7 @@ end
 
 -- 这是 Vim 版本的代码补全数据
 -- * 只需要处理一个 generated_text
-local function from_generate_one_stage_v1(buf, position, raw, options)
+local function from_vim(buf, position, raw, options)
     local generated_text = vim.fn.substitute(raw.generated_text, '<.endoftext.>', '', 'g') or ''
     if generated_text == '' then
         return
@@ -46,7 +46,7 @@ local function from_generate_one_stage_v1(buf, position, raw, options)
     return parsed_response
 end
 
-local function from_generate_one_stage_v2(buf, position, raw, options)
+local function from_vscode(buf, position, raw, options)
     local generated_text = (vim.fn.substitute(raw.generated_text or '', '<|endoftext|>', '', 'g') or '') .. (raw.ex_msg or '')
     if generated_text == '' then
         return
@@ -70,16 +70,16 @@ end
 
 ---@param raw FittenCode.Inline.RawGenerateOneStageResponse
 ---@return FittenCode.Inline.GenerateOneStageResponse?
-function Response.from_generate_one_stage(raw, options)
+function M.from_generate_one_stage(raw, options)
     assert(raw)
     local buf = options.buf
     ---@type FittenCode.Position
     local position = options.position
-    if options.api_version == 'v1' then
-        return from_generate_one_stage_v1(buf, position, raw, options)
-    elseif options.api_version == 'v2' then
-        return from_generate_one_stage_v2(buf, position, raw, options)
+    if options.api_version == 'vim' then
+        return from_vim(buf, position, raw, options)
+    elseif options.api_version == 'vscode' then
+        return from_vscode(buf, position, raw, options)
     end
 end
 
-return Response
+return M

@@ -10,7 +10,6 @@ local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local Position = require('fittencode.position')
 local PromptGenerator = require('fittencode.inline.prompt_generator')
-local Response = require('fittencode.inline.response')
 local ProjectCompletionFactory = require('fittencode.inline.project_completion')
 
 ---@class FittenCode.Inline.Controller
@@ -29,7 +28,7 @@ function Controller:new(opts)
         keymaps = {},
         filter_events = {},
         project_completion = { v1 = nil, v2 = nil },
-        api_version = 'v1',
+        api_version = 'vim',
         sessions = {},
         selected_session_id = nil,
         last_chosen_prompt_type = '0',
@@ -42,7 +41,7 @@ function Controller:init(options)
     options = options or {}
     local mode = options.mode or 'singleton'
     if mode == 'singleton' then
-        self.api_version = 'v2'
+        self.api_version = 'vscode'
         self.project_completion = {
             v1 = assert(ProjectCompletionFactory.create('v1')),
             v2 = assert(ProjectCompletionFactory.create('v2')),
@@ -89,22 +88,6 @@ function Controller:dismiss_suggestions(options)
         return
     end
     self:cleanup_sessions()
-end
-
----@param options FittenCode.Inline.GeneratePromptOptions
-function Controller:generate_prompt(buf, position, options)
-    assert(buf)
-    assert(position)
-    local prompt_options = Fn.tbl_keep_events(options, {
-        filename = Editor.filename(buf),
-        edit_mode = options.edit_mode,
-        api_version = options.api_version,
-        project_completion = self.project_completion,
-        last_chosen_prompt_type = self.last_chosen_prompt_type,
-        check_project_completion_available = function() self:check_project_completion_available() end,
-    })
-    assert(prompt_options)
-    self.prompt_generator:generate(buf, position, prompt_options)
 end
 
 function Controller:get_pc_chosen(user_id, options)
@@ -155,101 +138,6 @@ function Controller:cleanup_sessions()
     self.selected_session_id = nil
 end
 
--- 发送请求获取补全响应
--- * 有响应且响应不为空则代表有补全，否则代表无补全
----@param prompt FittenCode.Inline.Prompt
----@param options FittenCode.Inline.SendCompletionsOptions
-function Controller:send_completions(prompt, options)
-    local session = options.session
-    Promise:new(function(resolve, reject)
-        -- v1 版本不支持获取补全版本，直接返回 '0'
-        if options.api_version == 'v1' then
-            resolve('0')
-            return
-        end
-        local gcv_options = {
-            on_create = function(handle)
-                if not session or session:is_terminated() then
-                    return
-                end
-                session:record_timing('get_completion_version.on_create')
-                session:request_handles_push(handle)
-            end,
-            on_once = function(stdout)
-                if not session or session:is_terminated() then
-                    return
-                end
-                session:record_timing('get_completion_version.on_once')
-                local json = table.concat(stdout, '')
-                local _, version = pcall(vim.fn.json_decode, json)
-                if not _ or version == nil then
-                    Log.error('Failed to get completion version: {}', json)
-                    reject()
-                else
-                    resolve(version)
-                end
-            end,
-            on_error = function()
-                if not session or session:is_terminated() then
-                    return
-                end
-                session:record_timing('get_completion_version.on_error')
-                reject()
-            end
-        }
-        Client.get_completion_version(gcv_options)
-    end):forward(function(version)
-        return Promise:new(function(resolve, reject)
-            -- Log.debug('Got completion version {}', version)
-            local gos_options = {
-                api_version = options.api_version,
-                completion_version = version,
-                prompt = prompt,
-                on_create = function(handle)
-                    if not session or session:is_terminated() then
-                        return
-                    end
-                    session:record_timing('generate_one_stage.on_create')
-                    session:request_handles_push(handle)
-                end,
-                on_once = function(stdout)
-                    if not session or session:is_terminated() then
-                        return
-                    end
-                    session:record_timing('generate_one_stage.on_once')
-                    local _, response = pcall(vim.json.decode, table.concat(stdout, ''))
-                    if not _ then
-                        Log.error('Failed to decode completion raw response: {}', response)
-                        reject()
-                        return
-                    end
-                    local parsed_response = Response.from_generate_one_stage(response, { buf = options.buf, position = options.position, api_version = options.api_version })
-                    resolve(parsed_response)
-                end,
-                on_error = function()
-                    if not session or session:is_terminated() then
-                        return
-                    end
-                    session:record_timing('generate_one_stage.on_error')
-                    reject()
-                end
-            }
-            self.generate_one_stage(gos_options)
-        end)
-    end, function()
-        Fn.schedule_call(options.on_failure)
-    end):forward(function(parsed_response)
-        if not parsed_response then
-            Log.info('No more suggestion')
-            Fn.schedule_call(options.on_no_more_suggestion)
-            return
-        end
-        Fn.schedule_call(options.on_success, parsed_response)
-    end, function()
-        Fn.schedule_call(options.on_failure)
-    end)
-end
-
 ---@param options FittenCode.Inline.TriggeringCompletionOptions
 function Controller:triggering_completion(options)
     Log.debug('Triggering completion')
@@ -287,86 +175,21 @@ function Controller:triggering_completion(options)
     local session = Session:new({
         buf = buf,
         id = assert(Fn.uuid_v4()),
-        reflect = function(_) self:reflect(_) end,
+        api_version = self.api_version,
+        edit_mode = options.edit_mode,
+        project_completion = self.project_completion,
+        prompt_generator = self.prompt_generator,
+        last_chosen_prompt_type = self.last_chosen_prompt_type,
     })
     session:record_timing('on_create')
     self.sessions[session.id] = session
     self.selected_session_id = session.id
 
-    Promise:new(function(resolve, reject)
-        Log.debug('Triggering completion for position {}', position)
-        self:generate_prompt(buf, position, {
-            api_version = self.api_version,
-            edit_mode = options.edit_mode,
-            on_create = function()
-                if not session or session:is_terminated() then
-                    return
-                end
-                session:record_timing('generate_prompt.on_create')
-                session:update_status():generating_prompt()
-            end,
-            on_once = function(prompt)
-                if not session or session:is_terminated() then
-                    return
-                end
-                session:record_timing('generate_prompt.on_once')
-                Log.debug('Generated prompt = {}', prompt)
-                resolve(prompt)
-            end,
-            on_error = function()
-                if not session or session:is_terminated() then
-                    return
-                end
-                session:record_timing('generate_prompt.on_error')
-                session:update_status():error()
-                Fn.schedule_call(options.on_failure)
-            end
-        })
-    end):forward(function(prompt)
-        return Promise:new(function(resolve, reject)
-            session:update_status():requesting_completions()
-            self:send_completions(prompt, {
-                api_version = self.api_version,
-                session = session,
-                on_no_more_suggestion = function()
-                    if not session or session:is_terminated() then
-                        return
-                    end
-                    session:update_status():no_more_suggestions()
-                    Fn.schedule_call(options.on_no_more_suggestion)
-                end,
-                on_success = function(parsed_response)
-                    if not session or session:is_terminated() then
-                        return
-                    end
-                    session:update_status():suggestions_ready()
-                    Fn.schedule_call(options.on_success, parsed_response)
-                    ---@type FittenCode.Inline.Completion
-                    local completion = {
-                        response = parsed_response,
-                        position = position,
-                    }
-                    Log.debug('Parsed completion = {}', completion)
-                    local model = Model:new({
-                        buf = buf,
-                        completion = completion,
-                    })
-                    local view = View:new({ buf = buf })
-                    session:init(model, view)
-                end,
-                on_failure = function()
-                    if not session or session:is_terminated() then
-                        return
-                    end
-                    session:update_status():error()
-                    Fn.schedule_call(options.on_failure)
-                end
-            });
-        end)
-    end)
-end
-
-function Controller:reflect(msg)
+    session:send_completions(buf, position, {
+        on_no_more_suggestion = options.on_no_more_suggestion,
+        on_success = options.on_success,
+        on_failure = options.on_failure,
+    })
 end
 
 function Controller:session()

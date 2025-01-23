@@ -22,10 +22,10 @@ function Headless:send_completions(prompt, options)
         return
     end
     options = vim.tbl_deep_extend('force', options, {
-        api_version = 'v1',
+        api_version = 'vim',
         session = Session:new(),
     })
-    self.controller:send_completions(prompt, options)
+    -- self.controller:send_completions(prompt, options)
 end
 
 return Headless

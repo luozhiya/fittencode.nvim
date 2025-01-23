@@ -31,9 +31,9 @@ end
 ---@param position FittenCode.Position
 ---@param options FittenCode.Inline.GeneratePromptOptions
 function PromptGenerator:generate(buf, position, options)
-    if options.api_version == 'v1' then
+    if options.api_version == 'vim' then
         return self.v1:generate(buf, position, options)
-    elseif options.api_version == 'v2' then
+    elseif options.api_version == 'vscode' then
         return self.v2:generate(buf, position, options)
     else
         Log.error('Invalid API version: ' .. options.api_version)

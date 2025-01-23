@@ -6,78 +6,31 @@ local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
-
----@class FittenCode.Inline.Session.Status
----@field value string
----@field generating_prompt function
----@field requesting_completions function
----@field no_more_suggestions function
----@field suggestions_ready function
----@field error function
----@field gc function
-local Status = {}
-Status.__index = Status
-
----@return FittenCode.Inline.Session.Status
-function Status:new(options)
-    local obj = {
-        value = '',
-        gc = options.gc,
-    }
-    setmetatable(obj, Status)
-    return obj
-end
-
-function Status:set(value)
-    self.value = value
-end
-
-function Status:get()
-    return self.value
-end
-
-function Status:generating_prompt()
-    self:set('generating_prompt')
-end
-
-function Status:requesting_completion()
-    self:set('requesting_completion')
-end
-
-function Status:no_more_suggestions()
-    self:set('no_more_suggestions')
-    self.gc()
-end
-
-function Status:suggesstions_ready()
-    self:set('suggesstions_ready')
-end
-
-function Status:error()
-    self:set('error')
-    self.gc()
-end
+local SessionStatus = require('fittencode.inline.session_status')
+local ParseResponse = require('fittencode.inline.parse_response')
 
 ---@class FittenCode.Inline.Session
 local Session = {}
 Session.__index = Session
 
 ---@return FittenCode.Inline.Session
-function Session:new(opts)
+function Session:new(options)
     local obj = {
-        buf = opts.buf,
-        reflect = opts.reflect,
+        buf = options.buf,
         timing = {},
         request_handles = {},
         keymaps = {},
         destoryed = false,
+        api_version = options.api_version,
+        project_completion = options.project_completion,
+        prompt_generator = options.prompt_generator,
     }
     setmetatable(obj, Session)
     return obj
 end
 
 function Session:init(model, view)
-    self.status = Status:new({ gc = self:gc() })
+    self.status = SessionStatus:new({ gc = self:gc() })
     self.model = model
     self.model:recalculate()
     self.view = view
@@ -290,6 +243,173 @@ end
 
 function Session:request_handles_push(handle)
     self.request_handles[#self.request_handles + 1] = handle
+end
+
+---@param options FittenCode.Inline.SendCompletionsOptions
+function Session:send_completions(buf, position, options)
+    Promise:new(function(resolve, reject)
+        Log.debug('Triggering completion for position {}', position)
+        self.prompt_generator:generate(buf, position, {
+            filename = Editor.filename(buf),
+            api_version = self.api_version,
+            edit_mode = self.edit_mode,
+            project_completion = self.project_completion,
+            last_chosen_prompt_type = self.last_chosen_prompt_type,
+            check_project_completion_available = self.check_project_completion_available,
+            on_create = function()
+                if self:is_terminated() then
+                    return
+                end
+                self:record_timing('generate_prompt.on_create')
+                self:update_status():generating_prompt()
+            end,
+            on_once = function(prompt)
+                if self:is_terminated() then
+                    return
+                end
+                self:record_timing('generate_prompt.on_once')
+                Log.debug('Generated prompt = {}', prompt)
+                resolve(prompt)
+            end,
+            on_error = function()
+                if self:is_terminated() then
+                    return
+                end
+                self:record_timing('generate_prompt.on_error')
+                self:update_status():error()
+                Fn.schedule_call(options.on_failure)
+            end
+        })
+    end):forward(function(prompt)
+        return Promise:new(function(resolve, reject)
+            self:update_status():requesting_completions()
+            self:generate_one_stage(prompt, {
+                on_no_more_suggestion = function()
+                    if self:is_terminated() then
+                        return
+                    end
+                    self:update_status():no_more_suggestions()
+                    Fn.schedule_call(options.on_no_more_suggestion)
+                end,
+                on_success = function(parsed_response)
+                    if self:is_terminated() then
+                        return
+                    end
+                    self:update_status():suggestions_ready()
+                    Fn.schedule_call(options.on_success, parsed_response)
+                    ---@type FittenCode.Inline.Completion
+                    local completion = {
+                        response = parsed_response,
+                        position = position,
+                    }
+                    Log.debug('Parsed completion = {}', completion)
+                    local model = Model:new({
+                        buf = buf,
+                        completion = completion,
+                    })
+                    local view = View:new({ buf = buf })
+                    self:init(model, view)
+                end,
+                on_failure = function()
+                    if self:is_terminated() then
+                        return
+                    end
+                    self:update_status():error()
+                    Fn.schedule_call(options.on_failure)
+                end
+            });
+        end)
+    end)
+end
+
+---@param prompt FittenCode.Inline.Prompt
+function Session:generate_one_stage(prompt, options)
+    Promise:new(function(resolve, reject)
+        -- 不支持获取补全版本，直接返回 '0'
+        if self.api_version == 'vim' then
+            resolve('0')
+            return
+        end
+        local gcv_options = {
+            on_create = function(handle)
+                if self:is_terminated() then
+                    return
+                end
+                self:record_timing('get_completion_version.on_create')
+                self:request_handles_push(handle)
+            end,
+            on_once = function(stdout)
+                if self:is_terminated() then
+                    return
+                end
+                self:record_timing('get_completion_version.on_once')
+                local json = table.concat(stdout, '')
+                local _, version = pcall(vim.fn.json_decode, json)
+                if not _ or version == nil then
+                    Log.error('Failed to get completion version: {}', json)
+                    reject()
+                else
+                    resolve(version)
+                end
+            end,
+            on_error = function()
+                if self:is_terminated() then
+                    return
+                end
+                self:record_timing('get_completion_version.on_error')
+                reject()
+            end
+        }
+        Client.get_completion_version(gcv_options)
+    end):forward(function(version)
+        return Promise:new(function(resolve, reject)
+            local gos_options = {
+                api_version = self.api_version,
+                completion_version = version,
+                prompt = prompt,
+                on_create = function(handle)
+                    if self:is_terminated() then
+                        return
+                    end
+                    self:record_timing('generate_one_stage.on_create')
+                    self:request_handles_push(handle)
+                end,
+                on_once = function(stdout)
+                    if self:is_terminated() then
+                        return
+                    end
+                    self:record_timing('generate_one_stage.on_once')
+                    local _, response = pcall(vim.json.decode, table.concat(stdout, ''))
+                    if not _ then
+                        Log.error('Failed to decode completion raw response: {}', response)
+                        reject()
+                        return
+                    end
+                    local parsed_response = ParseResponse.from_generate_one_stage(response, { buf = options.buf, position = options.position, api_version = options.api_version })
+                    resolve(parsed_response)
+                end,
+                on_error = function()
+                    if self:is_terminated() then
+                        return
+                    end
+                    self:record_timing('generate_one_stage.on_error')
+                    reject()
+                end
+            }
+            Client.generate_one_stage(gos_options)
+        end)
+    end, function()
+        Fn.schedule_call(options.on_failure)
+    end):forward(function(parsed_response)
+        if not parsed_response then
+            Log.info('No more suggestion')
+            Fn.schedule_call(options.on_no_more_suggestion)
+            return
+        end
+        Fn.schedule_call(options.on_success, parsed_response)
+    end, function()
+        Fn.schedule_call(options.on_failure)
+    end)
 end
 
 return Session
