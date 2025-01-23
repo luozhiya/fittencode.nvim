@@ -80,7 +80,9 @@ end
 
 function Controller:notify_observers(event, data)
     for _, observer in ipairs(self.observers) do
-        observer:update(event, data)
+        Fn.schedule_call(function()
+            observer:update(event, data)
+        end)
     end
 end
 

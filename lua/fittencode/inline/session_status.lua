@@ -17,11 +17,11 @@ Status.__index = Status
 ---@return FittenCode.Inline.Session.Status
 function Status:new(options)
     local obj = {
-        value = 'new',
         gc = options.gc,
         on_update = options.on_update,
     }
     setmetatable(obj, Status)
+    obj:set('new')
     return obj
 end
 
