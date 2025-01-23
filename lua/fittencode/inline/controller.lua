@@ -187,7 +187,7 @@ function Controller:triggering_completion(options)
         prompt_generator = self.prompt_generator,
         last_chosen_prompt_type = self.last_chosen_prompt_type,
         check_project_completion_available = function(...) self:check_project_completion_available(...) end,
-        triggering_completion = function(...) self:triggering_completion(...) end,
+        triggering_completion = function(...) self:triggering_completion_auto(...) end,
         update_inline_status = function(id) self:update_status(id) end,
     })
     self.sessions[session.id] = session
@@ -222,7 +222,7 @@ end
 -- 后续做撤销的话，还需注意撤销产生的事件，并进行过滤
 function Controller:set_autocmds(enable)
     local autocmds = {
-        { { 'TextChangedI', 'CompleteChanged' }, function(args) self:triggering_completion({ event = args }) end },
+        { { 'TextChangedI', 'CompleteChanged' }, function(args) self:triggering_completion_auto({ event = args }) end },
         { { 'CursorMovedI' },                    function(args) self:dismiss_suggestions({ event = args }) end },
         { { 'InsertLeave' },                     function(args) self:dismiss_suggestions({ event = args }) end },
         { { 'BufLeave' },                        function(args) self:dismiss_suggestions({ event = args }) end },
@@ -323,6 +323,14 @@ function Controller:triggering_completion_by_shortcut()
             self:_show_no_more_suggestion(Translate('  (Currently no completion options available)'), 2000)
         end
     })
+end
+
+function Controller:triggering_completion_auto(options)
+    if not Config.inline_completion.auto_triggering_completion then
+        Fn.schedule_call(options.on_failure)
+        return
+    end
+    self:triggering_completion(options)
 end
 
 function Controller:set_keymaps(enable)
