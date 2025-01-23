@@ -10,12 +10,16 @@ local defaults = {
         -- * 'default'
         -- * 'enterprise'
         fitten_version = 'default',
+        -- The version name of the Fitten Code server.
+        -- * '' (empty string)
+        -- * 'standard'
+        -- * 'enterprise'
         version_name = '',
-        enable_enterprise_code = false,
         -- The server URL for Fitten Code.
         -- You can also change it to your own server URL if you have a private server.
         -- Default server URL: 'https://fc.fittenlab.cn'
         server_url = '',
+        enable_enterprise_code = false,
         -- Local RAG
         local_rag = true,
         -- Notify login message on keyboard input
