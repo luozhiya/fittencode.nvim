@@ -72,7 +72,7 @@ local lang_preset_urls = {
 }
 
 local function merge_urls()
-    local tz = lang_preset_urls[Fn.timezone_language()]
+    local tz = lang_preset_urls[Fn.get_timezone_based_language()]
     for k, v in pairs(tz or {}) do
         preset_urls[k] = v
     end

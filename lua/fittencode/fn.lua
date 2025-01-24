@@ -90,19 +90,23 @@ local function fs_all_entries(path, prename)
     return res
 end
 
-local tzlangs = {
+-- 将时区偏移量映射到语言代码
+local timezone_language_mapping = {
     ['+0000'] = 'en',    -- Greenwich Mean Time
     ['+0800'] = 'zh-cn', -- China Standard Time
 }
 
-setmetatable(tzlangs, {
+setmetatable(timezone_language_mapping, {
     __index = function()
-        return tzlangs['+0000']
+        return timezone_language_mapping['+0000']
     end
 })
 
-local function timezone_language()
-    return tzlangs[os.date('%z')]
+-- 获取当前时区对应的语言
+-- * 返回的语言代码符合 ISO-639 / ISO-3166 标准
+-- * 如果无法获取到时区对应的语言，则返回默认语言 'en'
+local function get_timezone_based_language()
+    return timezone_language_mapping[os.date('%z')]
 end
 
 local function pack(...)
@@ -226,7 +230,7 @@ return {
     check_call = check_call,
     startwith = startwith,
     fs_all_entries = fs_all_entries,
-    timezone_language = timezone_language,
+    get_timezone_based_language = get_timezone_based_language,
     format = format,
     slice = slice,
     remove_special_token = remove_special_token,

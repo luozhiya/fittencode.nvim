@@ -1,8 +1,8 @@
 local Config = require('fittencode.config')
 
-local Server = {}
+local M = {}
 
-Server.get_server_url = function()
+function M.get_server_url()
     local server_url = Config.server.server_url
     local is_enterprise_or_standard = Config.server.version_name == 'enterprise' or Config.server.version_name == 'standard'
     if server_url and #server_url > 0 and is_enterprise_or_standard then
@@ -13,4 +13,4 @@ Server.get_server_url = function()
     return server_url
 end
 
-return Server
+return M

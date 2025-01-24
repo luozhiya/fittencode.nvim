@@ -1,17 +1,27 @@
+-- 协议定义文件
+-- * 包括 URLs 和 Methods 两部分
+-- * URLs 定义了一部分固定地址
+-- * Methods 定义了核心服务 API 接口及其参数
+-- * 对含有多语言版本的，采用 { en = '', zh = '' } 的形式
 ---@class FittenCode.Protocol
 local Protocol = {}
 
+---@alias FittenCode.Protocol.Element string|table<string, string>
+
+---@class FittenCode.Protocol.URLs
 Protocol.URLs = {
     -- Account
     register = 'https://fc.fittentech.com/',
     register_cvt = 'https://fc.fittentech.com/cvt/register',
     question = 'https://code.fittentech.com/assets/images/blog/QR.jpg',
-    guide = 'https://code.fittentech.com/tutor_vim_zh',
-    playground = 'https://code.fittentech.com/playground_zh',
+    tutor = 'https://code.fittentech.com/desc-vim',
+    try = 'https://code.fittentech.com/try',
 }
 
 -- 接口列表
--- * 注意在这里并没有区分语言
+-- * 参考版本：`fittentech.fitten-code 0.10.119`
+-- * 插件地址： https://marketplace.visualstudio.com/items?itemName=FittenTech.Fitten-Code
+---@class FittenCode.Protocol.Methods
 Protocol.Methods = {
     Account = {
         -- 帐号密码登录接口
@@ -48,6 +58,8 @@ Protocol.Methods = {
         --       }
         --   }
         --   ```
+        -- deprecated 接口：
+        -- * `login = '/codeuser/login'`
         login = '/codeuser/auth/login',
         -- 根据 ft_token 获取 access_token
         -- * `method = POST`
@@ -58,7 +70,7 @@ Protocol.Methods = {
         -- * `body = { 旧的 refresh_token }``
         refresh_refresh_token = '/codeuser/auth/refresh_refresh_toke',
         refresh_access_token = '/codeuser/auth/refresh_access_token',
-        fb_sign_in = '/codeuser/fb_sign_in',     -- ?client_token=
+        fb_sign_in = '/codeuser/fb_sign_in',         -- ?client_token=
         fb_check_login = '/codeuser/fb_check_login', -- ?client_token=
         -- 登录成功后的回调接口，用于后台统计用户登录次数
         -- * `method = GET`
@@ -68,13 +80,19 @@ Protocol.Methods = {
         -- * `query = ?user_id={}&username={}&type=login`
         click_count = '/codeuser/click_count',
         get_ft_token = '/codeuser/get_ft_token',
-        privacy = '/codeuser/privacy',
-        agreement = '/codeuser/agreement',
+        privacy = {
+            en = '/codeuser/privacy_en',
+            ['zh-cn'] = '/codeuser/privacy'
+        },
+        agreement = {
+            en = '/codeuser/agreement_en',
+            ['zh-cn'] = '/codeuser/agreement'
+        },
         statistic_log = '/codeuser/statistic_log',
-    },
-    Completion = {
         pc_check = '/codeuser/pc_check',                             -- ?ft_token
         get_completion_version = '/codeuser/get_completion_version', -- ?ft_token=
+    },
+    Completion = {
         accept = '/codeapi/completion/accept',
         generate_one_stage = '/codeapi/completion/generate_one_stage',
         generate_one_stage2_1 = '/codeapi/completion2_1/generate_one_stage',

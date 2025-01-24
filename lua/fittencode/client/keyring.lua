@@ -37,13 +37,13 @@
 ---@field client_time number
 ---@field company string
 
----@class FittenCode.KeyringInfo
+---@class FittenCode.Keyring.AuthInfo
 ---@field user_info FittenCode.Keyring.UserInfo
 ---@field access_token string
 ---@field refresh_token string
 
 ---@class FittenCode.Keyring
----@field fittencode FittenCode.KeyringInfo
+---@field fittencode FittenCode.Keyring.AuthInfo
 
 ---@class FittenCode.Keyring
 local Keyring = {}
