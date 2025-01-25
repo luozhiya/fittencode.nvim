@@ -1,43 +1,16 @@
 local Log = require('fittencode.log')
 
 ---@class FittenCode.APIKeyManager
----@field secret_storage FittenCode.SecretStorage
+---@field keyring FittenCode.Keyring
 
 ---@class FittenCode.APIKeyManager
 local APIKeyManager = {}
 APIKeyManager.__index = APIKeyManager
 
-local k8 = 'fittencode.fittenAI.apiKey'
-local NR = 'fittencode.fittenAccess.token'
-local LR = 'fittencode.fittenRefresh.token'
-local H0 = 'fittencode.fittenUser.id'
-
-function APIKeyManager:new(secret_storage)
-    local instance = setmetatable({}, APIKeyManager)
-    instance.secret_storage = secret_storage
-    return instance
-end
-
-function APIKeyManager:clear_fitten_ai_api_key()
-    return self.secret_storage:delete(k8)
-end
-
-function APIKeyManager:clear_fitten_access_token()
-    self.secret_storage:delete(NR)
-    self.message_emitter:fire('clear access token')
-    return commands:execute_command('fittencode.clear_access')
-end
-
-function APIKeyManager:clear_fitten_refresh_token()
-    self.secret_storage:delete(LR)
-    self.message_emitter:fire('clear refresh token')
-    return commands:execute_command('fittencode.clear_refresh')
-end
-
-function APIKeyManager:clear_fitten_user_id()
-    self.secret_storage:delete(H0)
-    self.message_emitter:fire('clear user id')
-    return commands:execute_command('fittencode.clear_user_id')
+function APIKeyManager:new()
+    local obj = {}
+    setmetatable(obj, APIKeyManager)
+    return obj
 end
 
 function APIKeyManager:check_refresh_token_available()
@@ -58,15 +31,15 @@ function APIKeyManager:check_refresh_token_available()
 end
 
 function APIKeyManager:get_fitten_access_token()
-    return self.secret_storage:get(NR)
+    return self.keyring.access_token
 end
 
 function APIKeyManager:get_fitten_refresh_token()
-    return self.secret_storage:get(LR)
+    return self.keyring.refresh_token
 end
 
 function APIKeyManager:get_fitten_user_id()
-    return self.secret_storage:get(H0)
+    return self.keyring.user_info.user_id
 end
 
 function APIKeyManager:has_fitten_access_token()

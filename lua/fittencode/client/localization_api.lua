@@ -4,7 +4,7 @@ local Fn = require('fittencode.fn')
 local M = {}
 
 -- 根据时区信息，提供对应的本地化接口
----@param method FittenCode.Protocol.Element
+---@param method FittenCode.Protocol.Element.URL
 function M.localize(method)
     if type(method) ~= 'table' then
         return method

@@ -37,13 +37,10 @@
 ---@field client_time number
 ---@field company string
 
----@class FittenCode.Keyring.AuthInfo
+---@class FittenCode.Keyring
 ---@field user_info FittenCode.Keyring.UserInfo
 ---@field access_token string
 ---@field refresh_token string
-
----@class FittenCode.Keyring
----@field fittencode FittenCode.Keyring.AuthInfo
 
 ---@class FittenCode.Keyring
 local Keyring = {}
@@ -52,11 +49,9 @@ Keyring.__index = Keyring
 ---@return FittenCode.Keyring
 function Keyring:new(options)
     local obj = {
-        fittencode = {
-            user_info = vim.deepcopy(options.user_info),
-            access_token = options.access_token,
-            refresh_token = options.refresh_token
-        }
+        user_info = vim.deepcopy(options.user_info),
+        access_token = options.access_token,
+        refresh_token = options.refresh_token
     }
     setmetatable(obj, self)
     return obj
