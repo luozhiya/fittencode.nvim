@@ -2,13 +2,27 @@
 -- * 包括 URLs 和 Methods 两部分
 -- * URLs 定义了一部分固定地址
 -- * Methods 定义了核心服务 API 接口及其参数
--- * 对含有多语言版本的，采用 { en = '', zh = '' } 的形式
--- * 参考版本：`fittentech.fitten-code 0.10.119`
+--   * method: HTTP 请求方法，如 GET、POST、PUT、DELETE, 以及自定义的 OPENLINK
+--   * url: 对含有多语言版本的，采用 { en = '', ['zh-cn'] = '' } 的形式
+--   * headers: HTTP 请求头，如 { 'Content-Type' = 'application/json' }
+--   * query: URL 查询参数，如 `?user_id={{user_id}}&{{platform_info}}`
+--   * body: 请求体，如 `@FittenCode.Protocol.Methods.Login.Body`
+--   * response: 响应体，如 `@FittenCode.Protocol.Methods.Login.Response`
+--   * 注：(`url`/`headers`/`query`) 均支持模版参数，可动态解析，如 `{{user_id}}`、`{{platform_info}}`、`{{access_token}}`、`{{refresh_token}}`、`{{client_token}}`、`{{source}}`
+--
+-- 引用资料
+-- * VSCode 插件版本：`fittentech.fitten-code 0.10.119`
 -- * 插件地址： https://marketplace.visualstudio.com/items?itemName=FittenTech.Fitten-Code
 ---@class FittenCode.Protocol
 local Protocol = {}
 
----@type FittenCode.Protocol.URLs
+---@class FittenCode.Protocol.URLs
+---@field register FittenCode.Protocol.Element.URL
+---@field register_cvt FittenCode.Protocol.Element.URL
+---@field question FittenCode.Protocol.Element.URL
+---@field tutor FittenCode.Protocol.Element.URL
+---@field try FittenCode.Protocol.Element.URL
+
 Protocol.URLs = {
     -- Account
     register = 'https://fc.fittentech.com/',
@@ -19,20 +33,54 @@ Protocol.URLs = {
     try = 'https://code.fittentech.com/try',
 }
 
+---@class FittenCode.Protocol.Methods
+---@field login FittenCode.Protocol.Element
+---@field auto_login FittenCode.Protocol.Element
+---@field refresh_refresh_token FittenCode.Protocol.Element
+---@field refresh_access_token FittenCode.Protocol.Element
+---@field fb_sign_in FittenCode.Protocol.Element
+---@field fb_check_login_auth FittenCode.Protocol.Element
+---@field click_count FittenCode.Protocol.Element
+---@field privacy FittenCode.Protocol.Element
+---@field agreement FittenCode.Protocol.Element
+---@field statistic_log FittenCode.Protocol.Element
+---@field gray_test FittenCode.Protocol.Element
+---@field pc_check_auth FittenCode.Protocol.Element
+---@field get_completion_version FittenCode.Protocol.Element
+---@field accept FittenCode.Protocol.Element
+---@field generate_one_stage_auth FittenCode.Protocol.Element
+---@field chat_auth FittenCode.Protocol.Element
+---@field feedback FittenCode.Protocol.Element
+---@field check_invite_code FittenCode.Protocol.Element
+---@field rag_chat FittenCode.Protocol.Element
+---@field knowledge_base_info FittenCode.Protocol.Element
+---@field get_local_knowledge_base_refs FittenCode.Protocol.Element
+---@field create_knowledge_base FittenCode.Protocol.Element
+---@field join_knowledge_base FittenCode.Protocol.Element
+---@field get_knowledge_base FittenCode.Protocol.Element
+---@field update_knowledge_base FittenCode.Protocol.Element
+---@field delete_knowledge_base FittenCode.Protocol.Element
+---@field files_name_list FittenCode.Protocol.Element
+---@field upload_large_file FittenCode.Protocol.Element
+---@field delete_file FittenCode.Protocol.Element
+---@field need_update_project FittenCode.Protocol.Element
+---@field update_project FittenCode.Protocol.Element
+---@field save_file_and_directory_names FittenCode.Protocol.Element
+---@field add_files_and_directories FittenCode.Protocol.Element
+
 -- 接口列表
----@type FittenCode.Protocol.Methods
+---@class FittenCode.Protocol.Methods
 Protocol.Methods = {
     -- 帐号密码登录接口
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `query = ?user_id={}&{platform_info}`
+    -- * `query = {}`
     -- * `body = @FittenCode.Protocol.Methods.Login.Body`
     -- * `response = @FittenCode.Protocol.Methods.Login.Response`
     login = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/auth/login',
-        query = '?user_id={{user_id}}&{{platform_info}}',
     },
     -- 根据 ft_token 获取 access_token
     -- * `method = POST`
@@ -69,12 +117,12 @@ Protocol.Methods = {
         url = '/codeuser/auth/refresh_access_token'
     },
     -- 第三方登录接口
-    -- * `method = OpenLink`
+    -- * `method = OPENLINK`
     -- * `query = ?source={}&client_token={}`
     fb_sign_in = {
-        method = 'OpenLink',
+        method = 'OPENLINK',
         url = '/codeuser/fb_sign_in',
-        query = '?source={{source}}&client_token={{client_token}}'
+        query = '?source={{sign_in_source}}&client_token={{client_token}}'
     },
     -- 监听第三方登录状态接口
     -- * `method = GET`
@@ -94,7 +142,7 @@ Protocol.Methods = {
     -- * `body = {}`
     -- * ```
     --    query = &type={}?user_id={}
-    --    支持的 type:
+    --    支持的 type (事实上不同的 type 对应不同的 query 参数，暂不支持):
     --    login
     --    register
     --    register_ide
@@ -116,14 +164,14 @@ Protocol.Methods = {
         query = '&type={{click_count_type}}?user_id={{user_id}}'
     },
     privacy = {
-        method = 'OpenLink',
+        method = 'OPENLINK',
         url = {
             en = '/codeuser/privacy_en',
             ['zh-cn'] = '/codeuser/privacy'
         }
     },
     agreement = {
-        method = 'OpenLink',
+        method = 'OPENLINK',
         url = {
             en = '/codeuser/agreement_en',
             ['zh-cn'] = '/codeuser/agreement'
@@ -166,7 +214,7 @@ Protocol.Methods = {
         url = '/codeuser/pc_check_auth',
         query = '?user_id={{user_id}}&{{platform_info}}'
     },
-    -- 获取用户的 Completion 版本号，该值影响 generate_one_stage 接口
+    -- 获取用户的 Completion 版本号，该值影响 generate_one_stage_auth 接口
     -- * `method = GET`
     -- * `headers = { 'Content-Type' = 'application/json' }`
     -- * `body = {}`

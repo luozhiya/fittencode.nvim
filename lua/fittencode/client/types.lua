@@ -9,11 +9,6 @@
 
 ---@alias FittenCode.Protocol.Element.URL string|table<string, string>
 
--- 固定地址
----@alias FittenCode.Protocol.URLs table<string, FittenCode.Protocol.Element.URL>
-
----@alias FittenCode.Protocol.Methods table<string, FittenCode.Protocol.Element>
-
 ---@class FittenCode.Protocol.Methods.Login.Body
 ---@field username string
 ---@field password string

@@ -36,19 +36,6 @@
 ---@field abort function
 ---@field is_active function
 
----@class FittenCode.Client.APIOptions : FittenCode.AsyncIOCallbacks
----@field prompt table
----@field timeout? number
-
----@class FittenCode.Client.GenerateOneStageOptions : FittenCode.Client.APIOptions
----@field api_version string 'vim' | 'vscode'
----@field completion_version string
-
----@class FittenCode.Client.AcceptCompletionOptions : FittenCode.Client.APIOptions
----@class FittenCode.Client.ChatOptions : FittenCode.Client.APIOptions
----@class FittenCode.Client.GetCompletionVersionOptions : FittenCode.Client.APIOptions
----@class FittenCode.Client.WordSegmentationOptions : FittenCode.Client.APIOptions
-
 ---@alias FittenCode.Version 'default' | 'enterprise'
 
 ---@class FittenCode.Chat.Message
@@ -304,7 +291,7 @@
 ---@field destory function
 ---@field last_chosen_prompt_type string
 
----@class FittenCode.Chat.VM
+---@class FittenCode.VM
 ---@field run function
 
 ---@class FittenCode.Inline.State
