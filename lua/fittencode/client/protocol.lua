@@ -242,7 +242,7 @@ Protocol.Methods = {
     -- * `body = @FittenCode.Protocol.Methods.GenerateOneStage.Body`
     -- * `query = ?{platform_info}`
     -- * `response = @FittenCode.Protocol.Methods.GenerateOneStage.Response`
-    -- * `version = { '', '2_1', '2_2', '2_3' }`
+    -- * `completion_version = { '', '2_1', '2_2', '2_3' }`
     generate_one_stage_auth = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json', ['Content-Encoding'] = 'gzip' },

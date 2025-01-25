@@ -149,7 +149,7 @@ end
 ---@param conversation FittenCode.Chat.State.Conversation
 function View:render_conversation(conversation)
     assert(self.messages_exchange.buf)
-    local user_id = Client.get_user_id()
+    local username = Client.get_username()
     local bot_id = 'Fitten Code'
     local lines = {}
 
@@ -170,7 +170,7 @@ function View:render_conversation(conversation)
     end
 
     if conversation.header.is_title_message then
-        feed(user_id, conversation.header.title)
+        feed(username, conversation.header.title)
     end
 
     local messages = conversation.content.messages
@@ -179,7 +179,7 @@ function View:render_conversation(conversation)
         local author = message.author
 
         if author == 'user' then
-            feed(user_id, content)
+            feed(username, content)
         elseif author == 'bot' then
             feed(bot_id, content)
         end

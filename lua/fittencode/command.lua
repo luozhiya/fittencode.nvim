@@ -1,24 +1,24 @@
-local Client = require('fittencode.client')
 local Chat = require('fittencode.chat')
 local Log = require('fittencode.log')
 local Translate = require('fittencode.translate')
 local Inline = require('fittencode.inline')
+local Session = require('fittencode.session.session')
 
 local commands = {
     -- Account
-    register = Client.register,
+    register = Session.register,
     login = {
         execute = function()
             local username = vim.fn.input(Translate('Username/Email/Phone(+CountryCode): '))
             local password = vim.fn.inputsecret(Translate('Password: '))
-            Client.login(username, password)
+            Session.login(username, password)
         end
     },
     login3rd = {
-        execute = function(source) Client.login3rd(source) end,
-        complete = Client.login_providers
+        execute = function(source) Session.login3rd(source) end,
+        complete = Session.login_providers
     },
-    logout = Client.logout,
+    logout = Session.logout,
     -- Inline
     enable_completions = { execute = function(ext) Inline.enable_completions(ext) end },
     disable_completions = { execute = function(ext) Inline.disable_completions(ext) end },
@@ -44,8 +44,8 @@ local commands = {
     share_conversation = Chat.share_conversation,
     regenerate_response = Chat.regenerate_response,
     -- Help
-    ask_question = Client.question,
-    user_guide = Client.guide,
+    ask_question = Session.question,
+    user_guide = Session.tutor,
 }
 
 local function execute(input)

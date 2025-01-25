@@ -9,6 +9,8 @@ local Client = require('fittencode.client')
 local SessionStatus = require('fittencode.inline.session_status')
 local ParseResponse = require('fittencode.inline.parse_response')
 local Config = require('fittencode.config')
+local Protocol = require('fittencode.client.protocol')
+local ChatPrompts = require('fittencode.session.chat_prompts')
 
 ---@class FittenCode.Inline.Session
 local Session = {}
@@ -28,7 +30,9 @@ function Session:new(options)
         prompt_generator = options.prompt_generator,
         triggering_completion = options.triggering_completion,
         update_inline_status = options.update_inline_status,
-        generate_one_stage = Fn.debounce(Client.generate_one_stage, Config.delay_completion.delaytime),
+        generate_one_stage = Fn.debounce(function(_)
+            Client.request(Protocol.Methods.generate_one_stage_auth, _)
+        end, Config.delay_completion.delaytime),
     }
     setmetatable(obj, Session)
     obj.status = SessionStatus:new({ gc = obj:gc(), on_update = function() obj.update_inline_status(obj.id) end })
@@ -67,20 +71,22 @@ function Session:update_word_segments()
         return
     end
     Promise:new(function(resolve, reject)
-        local options = {
+        Client.request(Protocol.Methods.chat_auth, {
+            body = ChatPrompts.segment_words(generated_text),
             on_create = function(handle)
-                self:record_timing('word_segmentation.on_create')
+                self:record_timing('segment_words.on_create')
                 self:request_handles_push(handle)
             end,
             on_once = function(stdout)
-                self:record_timing('word_segmentation.on_once')
+                self:record_timing('segment_words.on_once')
                 local delta = {}
-                for _, chunk in ipairs(stdout) do
-                    local v = vim.split(chunk, '\n', { trimempty = true })
+                for _, bundle in ipairs(stdout) do
+                    local v = vim.split(bundle, '\n', { trimempty = true })
                     for _, line in ipairs(v) do
-                        local _, json = pcall(vim.fn.json_decode, line)
+                        ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
+                        local _, chunk = pcall(vim.fn.json_decode, line)
                         if _ then
-                            delta[#delta + 1] = json.delta
+                            delta[#delta + 1] = chunk.delta
                         else
                             Log.error('Error while decoding chunk: {}', line)
                             reject(line)
@@ -97,11 +103,10 @@ function Session:update_word_segments()
                 end
             end,
             on_error = function()
-                self:record_timing('word_segmentation.on_error')
+                self:record_timing('segment_words.on_error')
                 Log.error('Failed to get word segmentation')
             end
-        }
-        Client.word_segmentation(generated_text, options)
+        })
     end)
 end
 
@@ -346,12 +351,7 @@ end
 ---@param prompt FittenCode.Inline.Prompt
 function Session:send_completions2(prompt, options)
     Promise:new(function(resolve, reject)
-        -- 不支持获取补全版本，直接返回 '0'
-        if self.api_version == 'vim' then
-            resolve('0')
-            return
-        end
-        local gcv_options = {
+        Client.request(Protocol.Methods.get_completion_version, {
             on_create = function(handle)
                 if self:is_terminated() then
                     return
@@ -365,12 +365,13 @@ function Session:send_completions2(prompt, options)
                 end
                 self:record_timing('get_completion_version.on_once')
                 local json = table.concat(stdout, '')
-                local _, version = pcall(vim.fn.json_decode, json)
-                if not _ or version == nil then
+                ---@type _, FittenCode.Protocol.Methods.GetCompletionVersion.Response
+                local _, response = pcall(vim.fn.json_decode, json)
+                if not _ or response == nil then
                     Log.error('Failed to get completion version: {}', json)
                     reject()
                 else
-                    resolve(version)
+                    resolve(response)
                 end
             end,
             on_error = function()
@@ -380,14 +381,14 @@ function Session:send_completions2(prompt, options)
                 self:record_timing('get_completion_version.on_error')
                 reject()
             end
-        }
-        Client.get_completion_version(gcv_options)
+        })
     end):forward(function(version)
         return Promise:new(function(resolve, reject)
-            local gos_options = {
-                api_version = self.api_version,
-                completion_version = version,
-                prompt = prompt,
+            self.generate_one_stage({
+                variables = {
+                    completion_version = version,
+                },
+                body = prompt,
                 on_create = function(handle)
                     if self:is_terminated() then
                         return
@@ -416,8 +417,7 @@ function Session:send_completions2(prompt, options)
                     self:record_timing('generate_one_stage.on_error')
                     reject()
                 end
-            }
-            self.generate_one_stage(gos_options)
+            })
         end)
     end, function()
         Fn.schedule_call(options.on_failure)

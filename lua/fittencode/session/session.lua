@@ -1,4 +1,4 @@
-local Protocol = require('fittencode.client.protocal')
+local Protocol = require('fittencode.client.protocol')
 local Server = require('fittencode.client.server')
 local LocalizationAPI = require('fittencode.client.localization_api')
 local HTTP = require('fittencode.http')
@@ -8,7 +8,7 @@ local Translate = require('fittencode.translate')
 local Fn = require('fittencode.fn')
 local Client = require('fittencode.client')
 
--- Implement Account APIs
+-- Implement Account Session APIs
 
 local M = {}
 
@@ -34,8 +34,15 @@ end
 
 ---@param username string
 ---@param password string
----@param options FittenCode.Session.LoginOptions
+---@param options? FittenCode.Session.LoginOptions
 function M.login(username, password, options)
+    options = options or {}
+
+    if not username or not password then
+        Fn.schedule_call(options.on_error)
+        return
+    end
+
     if Client.is_authorized() then
         Log.notify_info(Translate('[Fitten Code] You are already logged in'))
         Fn.schedule_call(options.on_success)

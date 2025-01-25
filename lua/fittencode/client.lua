@@ -12,6 +12,14 @@ function M.init()
     api_key_manager = APIKeyManager:new()
 end
 
+function M.get_user_id()
+    return api_key_manager.get_user_id()
+end
+
+function M.get_username()
+    return api_key_manager.get_username()
+end
+
 function M.is_authorized()
     return api_key_manager.get_user_id() ~= nil
 end

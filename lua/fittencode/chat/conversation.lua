@@ -6,6 +6,7 @@ local Client = require('fittencode.client')
 local Runtime = require('fittencode.chat.runtime')
 local VM = require('fittencode.vm')
 local Promise = require('fittencode.concurrency.promise')
+local Protocal = require('fittencode.client.protocol')
 
 ---@class FittenCode.Chat.Conversation
 local Conversation = {}
@@ -147,10 +148,10 @@ function Conversation:execute_chat(options)
     if options._workspace then
         options.workspace = true
     end
-    local chat_api = Client.chat
+    local protocol = Protocal.Methods.chat_auth
     if options.workspace then
         if not options.enterprise_workspace then
-            chat_api = Client.rag_chat
+            -- protocol = Protocal.Methods.rag_chat
             Log.error('RAG chat is not implemented yet')
         end
     else
@@ -167,27 +168,30 @@ function Conversation:execute_chat(options)
 
         Promise:new(function(resolve, reject)
             local completion = {}
-            local prompt = {
-                inputs = evaluated,
-                ft_token = Client.get_ft_token(),
-                meta_datas = {
-                    project_id = '',
-                }
-            }
-            local co = {
-                prompt = prompt,
+            Client.request(protocol, {
+                ---@type FittenCode.Protocol.Methods.ChatAuth.Body
+                body = {
+                    inputs = evaluated,
+                    ft_token = Client.get_user_id(),
+                    meta_datas = {
+                        project_id = '',
+                    }
+                },
+                ---@param handle FittenCode.HTTP.RequestHandle
                 on_create = function(handle)
                     self.request_handle = handle
                     self.update_status({ id = self.id, stream = true })
                 end,
-                on_stream = function(chunk)
-                    assert(chunk)
+                ---@param stdout string
+                on_stream = function(stdout)
+                    assert(stdout)
                     self.update_status({ id = self.id, stream = true })
-                    local v = vim.split(chunk, '\n', { trimempty = true })
+                    local v = vim.split(stdout, '\n', { trimempty = true })
                     for _, line in ipairs(v) do
-                        local _, json = pcall(vim.fn.json_decode, line)
+                        ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
+                        local _, chunk = pcall(vim.fn.json_decode, line)
                         if _ then
-                            completion[#completion + 1] = json.delta
+                            completion[#completion + 1] = chunk.delta
                             self:handle_partial_completion(completion)
                         else
                             Log.error('Error while decoding chunk: {}', line)
@@ -201,9 +205,7 @@ function Conversation:execute_chat(options)
                 on_exit = function()
                     resolve(completion)
                 end
-            }
-            Log.debug('Executing chat, conversation id = {}', self.id)
-            Client.chat(co)
+            })
         end):forward(function(completion)
             self.update_status({ id = self.id, stream = false })
             self:handle_completion(completion)
