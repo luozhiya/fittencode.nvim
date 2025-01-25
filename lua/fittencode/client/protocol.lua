@@ -236,6 +236,13 @@ Protocol.Methods = {
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeapi/completion/accept/{{user_id}}'
     },
+    -- 生成一阶段补全代码，兼容 Vim 的版本，以及为集成到其他插件提供最简接口
+    generate_one_stage = {
+        method = 'POST',
+        headers = { ['Content-Type'] = 'application/json' },
+        url = '/codeapi/completion/generate_one_stage/{{user_id}}',
+        query = '?{{platform_info}}',
+    },
     -- 生成一阶段补全代码，有多个版本
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json', 'Content-Encoding' = 'gzip' }`

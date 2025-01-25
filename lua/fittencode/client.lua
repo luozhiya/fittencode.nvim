@@ -29,7 +29,7 @@ function M.update_authentication(auth)
 end
 
 ---@class FittenCode.Client.RequestOptions : FittenCode.AsyncIOCallbacks
----@field body? table<string, any>
+---@field body? string
 ---@field timeout? number
 ---@field variables? table<string, any>
 
@@ -65,16 +65,10 @@ function M.request(protocol, options)
         return
     end
 
-    local _, jbody = pcall(vim.fn.json_encode, options.body)
-    if not _ then
-        Fn.schedule_call(options.on_error, { error = jbody })
-        return
-    end
-
     local fetch_options = Fn.tbl_keep_events(options, {
         method = protocol.method,
         headers = evaluated.headers,
-        body = jbody,
+        body = options.body,
         timeout = options.timeout,
     })
     assert(fetch_options)

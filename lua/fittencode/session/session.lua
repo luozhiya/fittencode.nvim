@@ -49,13 +49,15 @@ function M.login(username, password, options)
         return
     end
 
+    ---@type FittenCode.Protocol.Methods.Login.Body
+    local
+    body = {
+        username = username,
+        password = password,
+    }
     Promise:new(function(resolve, reject)
         Client.request(Protocol.Methods.login, {
-            ---@type FittenCode.Protocol.Methods.Login.Body
-            body = {
-                username = username,
-                password = password,
-            },
+            body = assert(vim.fn.json_encode(body)),
             on_error = vim.schedule_wrap(function()
                 reject()
             end),

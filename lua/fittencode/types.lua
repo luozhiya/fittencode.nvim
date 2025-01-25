@@ -311,7 +311,7 @@
 ---@field project_completion table<string, FittenCode.Inline.ProjectCompletion>
 ---@field prompt_generator FittenCode.Inline.PromptGenerator
 ---@field last_chosen_prompt_type string
----@field generate_one_stage function
+---@field generate_one_stage_auth function
 ---@field check_project_completion_available function
 ---@field triggering_completion function
 ---@field update_inline_status function

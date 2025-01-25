@@ -168,15 +168,16 @@ function Conversation:execute_chat(options)
 
         Promise:new(function(resolve, reject)
             local completion = {}
+            ---@type FittenCode.Protocol.Methods.ChatAuth.Body
+            local body = {
+                inputs = evaluated,
+                ft_token = Client.get_user_id(),
+                meta_datas = {
+                    project_id = '',
+                }
+            }
             Client.request(protocol, {
-                ---@type FittenCode.Protocol.Methods.ChatAuth.Body
-                body = {
-                    inputs = evaluated,
-                    ft_token = Client.get_user_id(),
-                    meta_datas = {
-                        project_id = '',
-                    }
-                },
+                body = assert(vim.fn.json_encode(body)),
                 ---@param handle FittenCode.HTTP.RequestHandle
                 on_create = function(handle)
                     self.request_handle = handle
