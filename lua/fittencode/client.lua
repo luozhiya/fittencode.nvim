@@ -12,8 +12,12 @@ function M.init()
     api_key_manager = APIKeyManager:new()
 end
 
-function M.has_key()
+function M.is_authorized()
     return api_key_manager.get_user_id() ~= nil
+end
+
+function M.update_authentication(auth)
+    api_key_manager.update(auth)
 end
 
 ---@class FittenCode.Client.RequestOptions : FittenCode.AsyncIOCallbacks

@@ -36,7 +36,7 @@ end
 ---@param password string
 ---@param options FittenCode.Session.LoginOptions
 function M.login(username, password, options)
-    if Client.has_key() then
+    if Client.is_authorized() then
         Log.notify_info(Translate('[Fitten Code] You are already logged in'))
         Fn.schedule_call(options.on_success)
         return
@@ -74,6 +74,116 @@ function M.login(username, password, options)
     end, function()
         Fn.schedule_call(options.on_error)
     end)
+end
+
+local start_check_login_timer = nil
+local login_providers = {
+    'google',
+    'github',
+    'twitter',
+    'microsoft'
+}
+
+function M.login3rd(source, options)
+    if Client.is_authorized() then
+        Log.notify_info(Translate('[Fitten Code] You are already logged in'))
+        Fn.schedule_call(options.on_success)
+        return
+    end
+
+    if not source or vim.tbl_contains(login_providers, source) == false then
+        Log.notify_error(Translate('[Fitten Code] Invalid 3rd-party login source'))
+        Fn.schedule_call(options.on_error)
+        return
+    end
+
+    local is_login_fb_running = false;
+    Fn.clear_interval(start_check_login_timer)
+
+    local total_time_limit = 600;
+    local time_delta = 3;
+    local total_time = 0;
+    local start_check = false;
+
+    local client_token = Fn.uuid_v4()
+    if not client_token then
+        Log.error('Failed to generate client token')
+        Fn.schedule_call(options.on_error)
+        return
+    end
+
+    Client.request(Protocol.Methods.fb_sign_in, {
+        variables = {
+            sign_in_source = source,
+            client_token = client_token,
+        }
+    })
+
+    start_check = true;
+    local function start_check_login()
+        if is_login_fb_running then
+            return
+        end
+        is_login_fb_running = true
+        local function check_login()
+            if not start_check then
+                return
+            end
+            total_time = total_time + time_delta
+            if total_time > total_time_limit then
+                start_check = false
+                Log.info('Login in timeout.')
+                Fn.schedule_call(options.on_error)
+            end
+            Promise:new(function(resolve, reject)
+                Client.request(Protocol.Methods.fb_check_login_auth, {
+                    variables = {
+                        client_token = client_token,
+                    },
+                    on_error = function()
+                        reject()
+                    end,
+                    on_once = function(stdout)
+                        ---@type _, FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
+                        local _, response = pcall(vim.fn.json_decode, stdout)
+                        if response and response.access_token and response.refresh_token and response.user_info then
+                            resolve(response)
+                        else
+                            reject()
+                        end
+                    end
+                })
+            end):forward(function(response)
+                Fn.clear_interval(start_check_login_timer)
+                is_login_fb_running = false
+                Client.update_account(response)
+                Log.notify_info(Translate('[Fitten Code] Login successful'))
+                Fn.schedule_call(options.on_success)
+
+                Client.request(Protocol.Methods.click_count, {
+                    variables = {
+                        click_count_type = response.create and 'register_fb' or 'login_fb'
+                    }
+                })
+                if response.create then
+                    HTTP.fetch(LocalizationAPI.localize(Protocol.URLs.register_cvt), {
+                        method = 'GET',
+                    })
+                end
+            end)
+        end
+        start_check_login_timer = Fn.set_interval(time_delta * 1e3, check_login)
+    end
+    start_check_login()
+end
+
+function M.logout()
+    if not Client.is_authorized() then
+        Log.notify_info(Translate('[Fitten Code] You are already logged out'))
+        return
+    end
+    Client.update_authentication()
+    Log.notify_info(Translate('[Fitten Code] Logout successful'))
 end
 
 return M
