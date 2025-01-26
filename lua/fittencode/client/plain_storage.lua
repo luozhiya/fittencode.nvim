@@ -1,15 +1,5 @@
 local Fn = require('fittencode.fn')
 
----@class FittenCode.KeyStorage
----@field store function
----@field delete function
----@field get function
----@field purge_storage function
-
----@class FittenCode.PlainStorage
----@field _storage_dir string
----@field _data_file string
-
 ---@class FittenCode.PlainStorage
 local PlainStorage = {}
 local file_header = 'FITTENCODE_PLAIN_v1\n'

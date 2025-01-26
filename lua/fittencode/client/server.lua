@@ -15,14 +15,6 @@ end
 
 local platform_info = nil
 
----@class FittenCode.PlatformInfo
----@field ide string
----@field ide_name string
----@field ide_version string
----@field os string
----@field os_version string
----@field extension_version string
-
 -- `/codeuser/pc_check_auth?user_id=${n}&ide=vsc&ide_name=vscode&ide_version=${Xe.version}&extension_version=${A}`
 function M.get_platform_info_as_url_params()
     if not platform_info then

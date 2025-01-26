@@ -46,15 +46,11 @@ function M.is_authorized()
     return api_key_manager:has_fitten_user_id()
 end
 
+---@param keyring? FittenCode.Keyring
 function M.update_keyring(keyring)
     assert(api_key_manager, 'APIKeyManager not initialized')
     api_key_manager:update(keyring)
 end
-
----@class FittenCode.Client.RequestOptions : FittenCode.AsyncIOCallbacks
----@field body? string
----@field timeout? number
----@field variables? table<string, any>
 
 local function openlink(url, options)
     local cmd, err = vim.ui.open(url)

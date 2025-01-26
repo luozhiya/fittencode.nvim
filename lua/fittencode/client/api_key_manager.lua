@@ -25,6 +25,7 @@ function APIKeyManager.new(options)
     return setmetatable(self, { __index = APIKeyManager })
 end
 
+---@return string?
 function APIKeyManager:get_fitten_access_token()
     local _, access_token = pcall(function() return self.keyring.access_token end)
     if _ then
@@ -32,6 +33,7 @@ function APIKeyManager:get_fitten_access_token()
     end
 end
 
+---@return string?
 function APIKeyManager:get_fitten_refresh_token()
     local _, refresh_token = pcall(function() return self.keyring.refresh_token end)
     if _ then
@@ -39,6 +41,7 @@ function APIKeyManager:get_fitten_refresh_token()
     end
 end
 
+---@return string?
 function APIKeyManager:get_fitten_user_id()
     local _, user_id = pcall(function() return self.keyring.user_info.user_id end)
     if _ then
@@ -46,6 +49,7 @@ function APIKeyManager:get_fitten_user_id()
     end
 end
 
+---@return string?
 function APIKeyManager:get_username()
     local _, username = pcall(function() return self.keyring.user_info.username end)
     if _ then
@@ -64,10 +68,12 @@ function APIKeyManager:update(keyring)
     end
 end
 
+---@return boolean
 function APIKeyManager:has_fitten_access_token()
     local _, access_token = pcall(function() return self.keyring.access_token end)
     if not _ then
         -- No login
+        return false
     elseif access_token == nil then
         -- Data Error
         vim.ui.select(
@@ -80,15 +86,17 @@ function APIKeyManager:has_fitten_access_token()
                 end
             end
         )
-        return
+        return false
     end
     return access_token ~= nil
 end
 
+---@return boolean
 function APIKeyManager:has_fitten_refresh_token()
     local _, refresh_token = pcall(function() return self.keyring.refresh_token end)
     if not _ then
         -- No login
+        return false
     elseif refresh_token == nil then
         -- Data Error
         vim.ui.select(
@@ -101,15 +109,17 @@ function APIKeyManager:has_fitten_refresh_token()
                 end
             end
         )
-        return
+        return false
     end
     return refresh_token ~= nil
 end
 
+---@return boolean
 function APIKeyManager:has_fitten_user_id()
     local _, user_id = pcall(function() return self.keyring.user_info.user_id end)
     if not _ then
         -- No login
+        return false
     elseif user_id == nil then
         -- Data Error
         vim.ui.select(
@@ -122,7 +132,7 @@ function APIKeyManager:has_fitten_user_id()
                 end
             end
         )
-        return
+        return false
     end
     return user_id ~= nil
 end
