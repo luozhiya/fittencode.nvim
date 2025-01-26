@@ -6,50 +6,37 @@ local Server = require('fittencode.client.server')
 local PlainStorage = require('fittencode.client.plain_storage')
 local Config = require('fittencode.config')
 
+---@class FittenCode.Client
+---@field api_key_manager fun(): FittenCode.APIKeyManager?
+---@field request fun(protocol: FittenCode.Protocol.Element, options: FittenCode.Client.RequestOptions): nil
+
+---@class FittenCode.Client
 local M = {}
 
 ---@type FittenCode.APIKeyManager?
-local api_key_manager
-
----@type FittenCode.KeyStorage?
-local storage
+local _api_key_manager
 
 function M.init()
+    ---@type FittenCode.KeyStorage?
+    local storage
     -- storage_location = {
     --     directory = vim.fn.stdpath('data') .. '/fittencode/secret_storage',
     --     filename = 'secrets.dat'
     -- }
     storage = PlainStorage.new({
         storage_location = {
-            directory = vim.fn.stdpath('data') .. '/fittencode/plain_storage',
+            directory = vim.fn.stdpath('data') .. '/fittencode/storage',
             filename = 'secrets.dat'
         }
     })
-    api_key_manager = APIKeyManager.new({
+    _api_key_manager = APIKeyManager.new({
         key = 'FittenCode',
         storage = storage,
     })
 end
 
-function M.get_user_id()
-    assert(api_key_manager, 'APIKeyManager not initialized')
-    return api_key_manager:get_fitten_user_id()
-end
-
-function M.get_username()
-    assert(api_key_manager, 'APIKeyManager not initialized')
-    return api_key_manager:get_username()
-end
-
-function M.is_authorized()
-    assert(api_key_manager, 'APIKeyManager not initialized')
-    return api_key_manager:has_fitten_user_id()
-end
-
----@param keyring? FittenCode.Keyring
-function M.update_keyring(keyring)
-    assert(api_key_manager, 'APIKeyManager not initialized')
-    api_key_manager:update(keyring)
+function M.api_key_manager()
+    return _api_key_manager
 end
 
 local function openlink(url, options)
@@ -64,13 +51,13 @@ end
 ---@param protocol FittenCode.Protocol.Element
 ---@param options FittenCode.Client.RequestOptions
 function M.request(protocol, options)
-    assert(api_key_manager, 'APIKeyManager not initialized')
-    local user_id = api_key_manager:get_fitten_user_id()
+    assert(_api_key_manager, 'APIKeyManager not initialized')
+    local user_id = _api_key_manager:get_fitten_user_id()
     local variables = vim.tbl_extend('force', options.variables or {}, {
         user_id = user_id,
         ft_token = user_id,
-        username = api_key_manager:get_username(),
-        access_token = api_key_manager:get_fitten_access_token(),
+        username = _api_key_manager:get_username(),
+        access_token = _api_key_manager:get_fitten_access_token(),
         platform_info = Server.get_platform_info_as_url_params(),
     })
 
