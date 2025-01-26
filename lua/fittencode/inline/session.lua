@@ -13,6 +13,9 @@ local Protocol = require('fittencode.client.protocol')
 local ChatPrompts = require('fittencode.session.chat_prompts')
 local Compression = require('fittencode.compression')
 
+-- 一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
+-- * 一个会话的生命周期为：创建 -> 开始（交互模式） -> 结束
+-- * 通过配置交互模式来实现延时补全 (delay_completion)
 ---@class FittenCode.Inline.Session
 local Session = {}
 Session.__index = Session
@@ -331,14 +334,14 @@ function Session:send_completions(buf, position, options)
                 self:update_status():no_more_suggestions()
                 Fn.schedule_call(options.on_no_more_suggestion)
             end,
-            on_success = function(_)
+            on_success = function(response)
                 if self:is_terminated() then
                     return
                 end
-                self:set_model(_.response)
+                self:set_model(response)
                 self:update_status():suggestions_ready()
-                Fn.schedule_call(options.on_success, _.response)
-                self.set_interactive_session_debounced(_.session)
+                Fn.schedule_call(options.on_success, response)
+                self.set_interactive_session_debounced(self)
             end,
             on_failure = function()
                 if self:is_terminated() then
@@ -378,7 +381,7 @@ function Session:_request_completions_v1(prompt, options)
                     position = options.position,
                     gos_version = '2'
                 })
-                resolve({ session = self, response = parsed_response })
+                resolve(parsed_response)
             end,
             on_error = function()
                 if self:is_terminated() then
@@ -487,7 +490,7 @@ function Session:_request_completions_v2(prompt, options)
                         position = options.position,
                         gos_version = '2'
                     })
-                    resolve({ session = self, response = parsed_response })
+                    resolve(parsed_response)
                 end,
                 on_error = function()
                     if self:is_terminated() then
