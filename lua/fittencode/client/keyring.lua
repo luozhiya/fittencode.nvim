@@ -2,35 +2,6 @@
 local Keyring = {}
 Keyring.__index = Keyring
 
----@class FittenCode.Keyring.UserInfo
----@field user_id string
----@field username string
----@field phone string
----@field nickname string
----@field email string
----@field token string
----@field registration_time string
----@field user_type string
----@field account_status string
----@field register_username string
----@field wechat_info FittenCode.Keyring.UserInfo.WechatInfo
----@field firebase_info FittenCode.Keyring.UserInfo.FirebaseInfo
----@field client_token string
----@field client_time number
----@field company string
-
----@class FittenCode.Keyring
----@field user_info FittenCode.Keyring.UserInfo
----@field access_token string
----@field refresh_token string
-
----@class FittenCode.Keyring.UserInfo.WechatInfo
----@field nickname string
-
----@class FittenCode.Keyring.UserInfo.FirebaseInfo
----@field display_name string
----@field email string
-
 ---@return FittenCode.Keyring
 function Keyring:new()
     local obj = {
