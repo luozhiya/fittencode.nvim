@@ -48,6 +48,11 @@ function Controller:init(options)
             v1 = assert(ProjectCompletionFactory.create('v1')),
             v2 = assert(ProjectCompletionFactory.create('v2')),
         }
+        self.set_interactive_session_debounced = Fn.debounce(function(session)
+            if self.selected_session_id == session.id then
+                self.session():set_interactive()
+            end
+        end, Config.delay_completion.delaytime)
         self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
         self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
         self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
@@ -180,14 +185,15 @@ function Controller:triggering_completion(options)
     end
 
     self:cleanup_sessions()
-    local session = self:start_session(buf, position, options)
+    local session = self:send_completions(buf, position, options)
     self.sessions[session.id] = session
     self.selected_session_id = session.id
 end
 
-function Controller:start_session(buf, position, options)
+function Controller:send_completions(buf, position, options)
     local session = Session:new({
         buf = buf,
+        position = position,
         id = assert(Fn.uuid_v4()),
         gos_version = self.gos_version,
         edit_mode = options.edit_mode,
@@ -197,6 +203,7 @@ function Controller:start_session(buf, position, options)
         check_project_completion_available = function(...) self:check_project_completion_available(...) end,
         triggering_completion = function(...) self:triggering_completion_auto(...) end,
         update_inline_status = function(id) self:update_status(id) end,
+        set_interactive_session_debounced = self.set_interactive_session_debounced
     })
     session:send_completions(buf, position, assert(Fn.tbl_keep_events(options)))
     return session
@@ -204,7 +211,7 @@ end
 
 function Controller:session()
     local session = self.sessions[self.selected_session_id]
-    if session and not session:is_terminated() then
+    if session and not session:is_terminated() and session:is_interactive() then
         return session
     end
 end

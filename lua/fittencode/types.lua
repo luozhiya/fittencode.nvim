@@ -300,6 +300,7 @@
 ---@field model FittenCode.Inline.Model
 ---@field view FittenCode.Inline.View
 ---@field buf number
+---@field position FittenCode.Position
 ---@field request_handles table<FittenCode.HTTP.RequestHandle?>
 ---@field timing FittenCode.Inline.Session.Timing
 ---@field keymaps table
@@ -316,6 +317,7 @@
 ---@field triggering_completion function
 ---@field update_inline_status function
 ---@field is_initialized function
+---@field set_interactive_session_debounced function
 
 -- Timing 放在回调里计时，和真实时间差距一个main loop的间隔，可以用来衡量相对性能
 ---@alias FittenCode.Inline.Session.Timing table<table<string, number>>

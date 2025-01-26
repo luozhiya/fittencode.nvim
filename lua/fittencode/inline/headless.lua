@@ -18,7 +18,7 @@ end
 -- ih:send_completions()
 ---@param options FittenCode.Inline.SendCompletionsOptions
 function Headless:send_completions(buf, position, options)
-    self.controller:start_session(buf, position, options)
+    self.controller:send_completions(buf, position, options)
 end
 
 return Headless

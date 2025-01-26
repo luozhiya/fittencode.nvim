@@ -21,48 +21,58 @@ Session.__index = Session
 function Session:new(options)
     local obj = {
         buf = options.buf,
+        position = options.position,
         id = options.id,
         timing = {},
         request_handles = {},
         keymaps = {},
         terminated = false,
+        interactive = false,
         gos_version = options.gos_version,
         project_completion = options.project_completion,
         prompt_generator = options.prompt_generator,
         triggering_completion = options.triggering_completion,
         update_inline_status = options.update_inline_status,
+        set_interactive_session_debounced = options.set_interactive_session_debounced,
     }
     setmetatable(obj, Session)
     obj.status = SessionStatus:new({ gc = obj:gc(), on_update = function() obj.update_inline_status(obj.id) end })
-    obj.generate_one_stage_auth = Fn.debounce(function(_)
-        local protocal = Protocol.Methods.generate_one_stage_auth
-        if obj.gos_version == '1' then
-            protocal = Protocol.Methods.generate_one_stage
-        end
-        Client.request(protocal, _)
-    end, Config.delay_completion.delaytime)
     return obj
 end
 
-function Session:init(model, view)
-    self.model = model
+-- 设置 Model，计算补全数据
+function Session:set_model(parsed_response)
+    ---@type FittenCode.Inline.Completion
+    local completion = {
+        response = parsed_response,
+        position = self.position,
+    }
+    self.model = Model:new({
+        buf = self.buf,
+        completion = completion,
+    })
     self.model:recalculate()
-    self.view = view
-    self:set_keymaps()
-    self:set_autocmds()
-    self:update_word_segments()
-    self:update_view()
+    self:async_update_word_segments()
 end
 
-function Session:is_initialized()
-    return self.model and self.view
+-- 设置交互模式
+function Session:set_interactive()
+    self.view = View:new({ buf = self.buf })
+    self:set_keymaps()
+    self:set_autocmds()
+    self:update_view()
+    self.interactive = true
+end
+
+function Session:is_interactive()
+    return self.interactive
 end
 
 function Session:update_model(update)
     self.model:update(update)
 end
 
-function Session:update_word_segments()
+function Session:async_update_word_segments()
     local computed = self.model.completion.computed
     if not computed then
         return
@@ -321,24 +331,14 @@ function Session:send_completions(buf, position, options)
                 self:update_status():no_more_suggestions()
                 Fn.schedule_call(options.on_no_more_suggestion)
             end,
-            on_success = function(parsed_response)
+            on_success = function(_)
                 if self:is_terminated() then
                     return
                 end
+                self:set_model(_.response)
                 self:update_status():suggestions_ready()
-                Fn.schedule_call(options.on_success, parsed_response)
-                ---@type FittenCode.Inline.Completion
-                local completion = {
-                    response = parsed_response,
-                    position = position,
-                }
-                Log.debug('Parsed completion = {}', completion)
-                local model = Model:new({
-                    buf = buf,
-                    completion = completion,
-                })
-                local view = View:new({ buf = buf })
-                self:init(model, view)
+                Fn.schedule_call(options.on_success, _.response)
+                self.set_interactive_session_debounced(_.session)
             end,
             on_failure = function()
                 if self:is_terminated() then
@@ -351,15 +351,57 @@ function Session:send_completions(buf, position, options)
     end)
 end
 
--- 兼容了 vim 版本的接口
----@param prompt FittenCode.Inline.Prompt
-function Session:request_completions(prompt, options)
+function Session:_request_completions_v1(prompt, options)
     Promise:new(function(resolve, reject)
-        -- Vim 版本的接口没有 completion_version
-        if self.gos_version == '1' then
-            resolve()
+        Client.request(Protocol.Methods.generate_one_stage, {
+            body = vim.fn.json_encode(prompt),
+            on_create = function(handle)
+                if self:is_terminated() then
+                    return
+                end
+                self:record_timing('generate_one_stage_auth.on_create')
+                self:request_handles_push(handle)
+            end,
+            on_once = function(stdout)
+                if self:is_terminated() then
+                    return
+                end
+                self:record_timing('generate_one_stage_auth.on_once')
+                local _, response = pcall(vim.json.decode, table.concat(stdout, ''))
+                if not _ then
+                    Log.error('Failed to decode completion raw response: {}', response)
+                    reject()
+                    return
+                end
+                local parsed_response = ParseResponse.from_generate_one_stage(response, {
+                    buf = options.buf,
+                    position = options.position,
+                    gos_version = '2'
+                })
+                resolve({ session = self, response = parsed_response })
+            end,
+            on_error = function()
+                if self:is_terminated() then
+                    return
+                end
+                self:record_timing('generate_one_stage_auth.on_error')
+                reject()
+            end
+        })
+    end):forward(function(parsed_response)
+        if not parsed_response then
+            Log.info('No more suggestion')
+            Fn.schedule_call(options.on_no_more_suggestion)
             return
         end
+        Fn.schedule_call(options.on_success, parsed_response)
+    end, function()
+        Fn.schedule_call(options.on_failure)
+    end)
+end
+
+function Session:_request_completions_v2(prompt, options)
+    Promise:new(function(resolve, reject)
         Client.request(Protocol.Methods.get_completion_version, {
             on_create = function(handle)
                 if self:is_terminated() then
@@ -393,11 +435,6 @@ function Session:request_completions(prompt, options)
         })
     end):forward(function(version)
         return Promise:new(function(resolve, reject)
-            -- Vim 版本的接口没有压缩
-            if self.gos_version == '1' then
-                resolve({ body = prompt })
-                return
-            end
             local _, json = pcall(vim.fn.json_encode, prompt)
             if not _ then
                 reject()
@@ -422,7 +459,7 @@ function Session:request_completions(prompt, options)
                 ['2'] = '2_2',
                 ['3'] = '2_3',
             }
-            self.generate_one_stage_auth(self.gos_version, {
+            Client.request(Protocol.Methods.generate_one_stage_auth, {
                 variables = {
                     completion_version = vu[_.completion_version],
                 },
@@ -445,8 +482,12 @@ function Session:request_completions(prompt, options)
                         reject()
                         return
                     end
-                    local parsed_response = ParseResponse.from_generate_one_stage(response, { buf = options.buf, position = options.position, gos_version = options.gos_version })
-                    resolve(parsed_response)
+                    local parsed_response = ParseResponse.from_generate_one_stage(response, {
+                        buf = options.buf,
+                        position = options.position,
+                        gos_version = '2'
+                    })
+                    resolve({ session = self, response = parsed_response })
                 end,
                 on_error = function()
                     if self:is_terminated() then
@@ -467,6 +508,15 @@ function Session:request_completions(prompt, options)
     end, function()
         Fn.schedule_call(options.on_failure)
     end)
+end
+
+---@param prompt FittenCode.Inline.Prompt
+function Session:request_completions(prompt, options)
+    if self.gos_version == '1' then
+        self:_request_completions_v1(prompt, options)
+    else
+        self:_request_completions_v2(prompt, options)
+    end
 end
 
 return Session
