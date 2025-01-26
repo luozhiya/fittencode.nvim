@@ -25,7 +25,7 @@ function Session:new(options)
         timing = {},
         request_handles = {},
         keymaps = {},
-        destoryed = false,
+        terminated = false,
         api_version = options.api_version,
         project_completion = options.project_completion,
         prompt_generator = options.prompt_generator,
@@ -273,13 +273,13 @@ function Session:request_handles_push(handle)
     self.request_handles[#self.request_handles + 1] = handle
 end
 
+-- 根据当前编辑器状态生成 Prompt，并发送补全请求
 ---@param buf number
 ---@param position FittenCode.Position
 ---@param options FittenCode.Inline.SendCompletionsOptions
 function Session:send_completions(buf, position, options)
     self:record_timing('send_completions.start')
     Promise:new(function(resolve, reject)
-        Log.debug('Triggering completion for position {}', position)
         self.prompt_generator:generate(buf, position, {
             filename = assert(Editor.filename(buf)),
             api_version = self.api_version,
@@ -312,50 +312,48 @@ function Session:send_completions(buf, position, options)
             end
         })
     end):forward(function(prompt)
-        return Promise:new(function(resolve, reject)
-            self:update_status():requesting_completions()
-            self:send_completions2(prompt, {
-                on_no_more_suggestion = function()
-                    if self:is_terminated() then
-                        return
-                    end
-                    self:update_status():no_more_suggestions()
-                    Fn.schedule_call(options.on_no_more_suggestion)
-                end,
-                on_success = function(parsed_response)
-                    if self:is_terminated() then
-                        return
-                    end
-                    self:update_status():suggestions_ready()
-                    Fn.schedule_call(options.on_success, parsed_response)
-                    ---@type FittenCode.Inline.Completion
-                    local completion = {
-                        response = parsed_response,
-                        position = position,
-                    }
-                    Log.debug('Parsed completion = {}', completion)
-                    local model = Model:new({
-                        buf = buf,
-                        completion = completion,
-                    })
-                    local view = View:new({ buf = buf })
-                    self:init(model, view)
-                end,
-                on_failure = function()
-                    if self:is_terminated() then
-                        return
-                    end
-                    self:update_status():error()
-                    Fn.schedule_call(options.on_failure)
+        self:update_status():requesting_completions()
+        self:request_completions(prompt, {
+            on_no_more_suggestion = function()
+                if self:is_terminated() then
+                    return
                 end
-            });
-        end)
+                self:update_status():no_more_suggestions()
+                Fn.schedule_call(options.on_no_more_suggestion)
+            end,
+            on_success = function(parsed_response)
+                if self:is_terminated() then
+                    return
+                end
+                self:update_status():suggestions_ready()
+                Fn.schedule_call(options.on_success, parsed_response)
+                ---@type FittenCode.Inline.Completion
+                local completion = {
+                    response = parsed_response,
+                    position = position,
+                }
+                Log.debug('Parsed completion = {}', completion)
+                local model = Model:new({
+                    buf = buf,
+                    completion = completion,
+                })
+                local view = View:new({ buf = buf })
+                self:init(model, view)
+            end,
+            on_failure = function()
+                if self:is_terminated() then
+                    return
+                end
+                self:update_status():error()
+                Fn.schedule_call(options.on_failure)
+            end
+        });
     end)
 end
 
 -- 兼容了 vim 版本的接口
 ---@param prompt FittenCode.Inline.Prompt
-function Session:send_completions2(prompt, options)
+function Session:request_completions(prompt, options)
     Promise:new(function(resolve, reject)
         -- Vim 版本的接口没有 completion_version
         if self.api_version == 'vim' then

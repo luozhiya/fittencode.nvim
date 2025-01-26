@@ -277,7 +277,7 @@
 
 ---@class FittenCode.Inline.Controller
 ---@field model FittenCode.Inline.Model
----@field status fittencode.Inline.Status
+---@field status FittenCode.Inline.Status
 ---@field observers table
 ---@field extmark_ids table
 ---@field augroups table

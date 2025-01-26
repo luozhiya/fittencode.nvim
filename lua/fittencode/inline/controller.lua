@@ -41,13 +41,13 @@ end
 function Controller:init(options)
     options = options or {}
     local mode = options.mode or 'singleton'
+    self.prompt_generator = PromptGenerator:new()
     if mode == 'singleton' then
         self.api_version = 'vscode'
         self.project_completion = {
             v1 = assert(ProjectCompletionFactory.create('v1')),
             v2 = assert(ProjectCompletionFactory.create('v2')),
         }
-        self.prompt_generator = PromptGenerator:new()
         self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
         self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
         self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
@@ -151,7 +151,7 @@ function Controller:triggering_completion(options)
     Log.debug('Triggering completion')
     options = options or {}
 
-    local function preflight_check()
+    local function _preflight_check()
         local buf = vim.api.nvim_get_current_buf()
         if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
             return
@@ -173,13 +173,19 @@ function Controller:triggering_completion(options)
         return buf, position
     end
 
-    local buf, position = preflight_check()
+    local buf, position = _preflight_check()
     if not buf or not position then
         Fn.schedule_call(options.on_failure)
         return
     end
 
     self:cleanup_sessions()
+    local session = self:start_session(buf, position, options)
+    self.sessions[session.id] = session
+    self.selected_session_id = session.id
+end
+
+function Controller:start_session(buf, position, options)
     local session = Session:new({
         buf = buf,
         id = assert(Fn.uuid_v4()),
@@ -192,10 +198,8 @@ function Controller:triggering_completion(options)
         triggering_completion = function(...) self:triggering_completion_auto(...) end,
         update_inline_status = function(id) self:update_status(id) end,
     })
-    self.sessions[session.id] = session
-    self.selected_session_id = session.id
-
     session:send_completions(buf, position, assert(Fn.tbl_keep_events(options)))
+    return session
 end
 
 function Controller:session()
