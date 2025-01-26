@@ -306,7 +306,7 @@
 ---@field terminated boolean
 ---@field id string
 ---@field status FittenCode.Inline.Session.Status
----@field api_version string 'vim' | 'vscode'
+---@field api_version string '1' | '2'
 ---@field edit_mode? boolean
 ---@field project_completion table<string, FittenCode.Inline.ProjectCompletion>
 ---@field prompt_generator FittenCode.Inline.PromptGenerator
@@ -351,7 +351,7 @@
 ---@field edit_mode_trigger_type string
 
 ---@class FittenCode.Inline.GeneratePromptOptions : FittenCode.AsyncIOCallbacks
----@field api_version string 'vim' | 'vscode' -- generate_one_stage 有两种组建方式
+---@field api_version string '1' | '2'
 ---@field edit_mode boolean
 ---@field filename? string
 ---@field project_completion table?

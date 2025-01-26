@@ -29,7 +29,7 @@ function Controller:new(opts)
         keymaps = {},
         filter_events = {},
         project_completion = { v1 = nil, v2 = nil },
-        api_version = 'vim',
+        api_version = '1',
         sessions = {},
         selected_session_id = nil,
         last_chosen_prompt_type = '0',
@@ -43,7 +43,7 @@ function Controller:init(options)
     local mode = options.mode or 'singleton'
     self.prompt_generator = PromptGenerator:new()
     if mode == 'singleton' then
-        self.api_version = 'vscode'
+        self.api_version = '2'
         self.project_completion = {
             v1 = assert(ProjectCompletionFactory.create('v1')),
             v2 = assert(ProjectCompletionFactory.create('v2')),

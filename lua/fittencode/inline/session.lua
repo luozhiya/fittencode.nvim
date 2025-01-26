@@ -36,7 +36,7 @@ function Session:new(options)
     obj.status = SessionStatus:new({ gc = obj:gc(), on_update = function() obj.update_inline_status(obj.id) end })
     obj.generate_one_stage_auth = Fn.debounce(function(_)
         local protocal = Protocol.Methods.generate_one_stage_auth
-        if obj.api_version == 'vim' then
+        if obj.api_version == '1' then
             protocal = Protocol.Methods.generate_one_stage
         end
         Client.request(protocal, _)
@@ -356,7 +356,7 @@ end
 function Session:request_completions(prompt, options)
     Promise:new(function(resolve, reject)
         -- Vim 版本的接口没有 completion_version
-        if self.api_version == 'vim' then
+        if self.api_version == '1' then
             resolve()
             return
         end
@@ -394,7 +394,7 @@ function Session:request_completions(prompt, options)
     end):forward(function(version)
         return Promise:new(function(resolve, reject)
             -- Vim 版本的接口没有压缩
-            if self.api_version == 'vim' then
+            if self.api_version == '1' then
                 resolve({ body = prompt })
                 return
             end
