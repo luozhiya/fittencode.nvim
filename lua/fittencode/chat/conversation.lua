@@ -119,9 +119,9 @@ function Conversation:answer(content)
     content = Fn.remove_special_token(content)
     self:add_user_message(content)
     self:execute_chat({
-        workspace = Fn.startwith(content, '@workspace'),
-        _workspace = Fn.startwith(content, '@_workspace'),
-        enterprise_workspace = (Fn.startwith(content, '@_workspace(') or Fn.startwith(content, '@workspace(')) and Config.fitten.version == 'enterprise',
+        workspace = Fn.startswith(content, '@workspace'),
+        _workspace = Fn.startswith(content, '@_workspace'),
+        enterprise_workspace = (Fn.startswith(content, '@_workspace(') or Fn.startswith(content, '@workspace(')) and Config.fitten.version == 'enterprise',
         content = content,
     })
 end

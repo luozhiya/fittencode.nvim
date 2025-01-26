@@ -191,7 +191,7 @@ function M.logout()
         Log.notify_info(Translate('[Fitten Code] You are already logged out'))
         return
     end
-    Client.update_authentication()
+    Client.update_keyring()
     Log.notify_info(Translate('[Fitten Code] Logout successful'))
 end
 

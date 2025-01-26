@@ -65,7 +65,7 @@ end
 ---@param s string
 ---@param prefix string
 ---@return boolean
-local function startwith(s, prefix)
+local function startswith(s, prefix)
     return string.sub(s, 1, string.len(prefix)) == prefix
 end
 
@@ -204,13 +204,13 @@ end
 -- 这个函数仅仅适用于不修改回调，但需要修改其他数据情况下使用
 local function tbl_keep_events(a, c)
     for k, v in pairs(c) do
-        if startwith(k, 'on_') then
+        if startswith(k, 'on_') then
             return
         end
     end
     local b = {}
     for k, v in pairs(a) do
-        if startwith(k, 'on_') then
+        if startswith(k, 'on_') then
             b[k] = v
         end
     end
@@ -222,13 +222,17 @@ local function extension_uri()
     return current_dir:gsub('/lua$', '') .. '../../'
 end
 
+local function normalize_path(path)
+    return is_windows() and path:gsub('/', '\\') or path:gsub('\\', '/')
+end
+
 return {
     debounce = debounce,
     schedule_call = schedule_call,
     schedule_call_wrap_fn = schedule_call_wrap_fn,
     schedule_call_foreach = schedule_call_foreach,
     check_call = check_call,
-    startwith = startwith,
+    startswith = startswith,
     fs_all_entries = fs_all_entries,
     get_timezone_based_language = get_timezone_based_language,
     format = format,
@@ -239,4 +243,5 @@ return {
     uuid_v4 = uuid_v4,
     tbl_keep_events = tbl_keep_events,
     extension_uri = extension_uri,
+    normalize_path = normalize_path,
 }

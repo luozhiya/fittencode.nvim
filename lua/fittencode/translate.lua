@@ -197,7 +197,7 @@ local translations = {
 local function translate(key, ...)
     local lang = Language.display_preference()
     local v = key
-    if Fn.startwith(lang, 'zh') then
+    if Fn.startswith(lang, 'zh') then
         v = translations[key] or key
     end
     return Fn.format(v, ...)

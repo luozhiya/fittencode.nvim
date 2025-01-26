@@ -220,7 +220,12 @@ local defaults = {
             panel = {},
             float = {}
         }
-    }
+    },
+    -- The storage method for Fitten Code's API key.
+    -- Avaiable options:
+    -- * `plain` (plain text)
+    -- * `secret` (encrypted with a secret key, need `openssl` and `master-password`)
+    key_storage = 'plain'
 }
 
 ---@type FittenCode.Config
