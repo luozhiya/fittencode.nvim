@@ -21,7 +21,7 @@ function M.get_username()
 end
 
 function M.is_authorized()
-    return api_key_manager.get_fitten_user_id() ~= nil
+    return api_key_manager.has_fitten_user_id()
 end
 
 function M.update_authentication(auth)

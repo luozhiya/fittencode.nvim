@@ -7,6 +7,7 @@ local Log = require('fittencode.log')
 local APIKeyManager = {}
 APIKeyManager.__index = APIKeyManager
 
+---@return FittenCode.APIKeyManager
 function APIKeyManager:new()
     local obj = {}
     setmetatable(obj, APIKeyManager)
@@ -117,50 +118,6 @@ function APIKeyManager:has_fitten_user_id()
         return false
     end
     return e ~= nil
-end
-
-function APIKeyManager:get_fitten_ai_api_key()
-    return self.secret_storage:get(k8)
-end
-
-function APIKeyManager:store_access_token(token)
-    return self.secret_storage:store(NR, token)
-end
-
-function APIKeyManager:store_refresh_token(token)
-    return self.secret_storage:store(LR, token)
-end
-
-function APIKeyManager:store_user_id(user_id)
-    return self.secret_storage:store(H0, user_id)
-end
-
-function APIKeyManager:del_fitten_user_id()
-    self.secret_storage:delete(H0)
-end
-
-function APIKeyManager:enter_auth_info(access_token, refresh_token, user_id)
-    self:store_access_token(access_token)
-    self:store_refresh_token(refresh_token)
-    self:store_user_id(user_id)
-end
-
-function APIKeyManager:enter_fitten_access_token(token)
-    self:store_access_token(token)
-    self.message_emitter:fire('set access token')
-    return commands:execute_command('fittencode.get_access')
-end
-
-function APIKeyManager:enter_fitten_refresh_token(token)
-    self:store_refresh_token(token)
-    self.message_emitter:fire('set refresh token')
-    return commands:execute_command('fittencode.get_refresh')
-end
-
-function APIKeyManager:enter_fitten_user_id(user_id)
-    self:store_user_id(user_id)
-    self.message_emitter:fire('set user id')
-    return commands:execute_command('fittencode.get_user_id')
 end
 
 return APIKeyManager

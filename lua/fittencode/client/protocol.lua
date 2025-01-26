@@ -77,9 +77,11 @@ Protocol.Methods = {
     -- * `query = ?username={}&phone={}&email={}&lang={}&timezone={}`
     -- * `body = @FittenCode.Protocol.Methods.Signup.Body`
     -- * `response = @FittenCode.Protocol.Methods.Signup.Response`
-    -- "en-US,en,en"
-    -- "asia/shanghai"
-    -- "?_=0&username=1&phone=1&email=&lang=en-US%2Cen%2Cen&timezone=asia%2Fshanghai"
+    --
+    -- 注: lang 和 timezone 需使用 uri 编码，如
+    -- * "en-US,en,en"
+    -- * "asia/shanghai"
+    -- * "?_=0&username=1&phone=1&email=&lang=en-US%2Cen%2Cen&timezone=asia%2Fshanghai"
     signup = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
@@ -145,13 +147,13 @@ Protocol.Methods = {
     },
     -- 获取用户信息接口
     -- * `method = GET`
-    -- * `headers = {}`
+    -- * `headers = { 'Authorization' = 'Bearer {{access_token}}' }`
     -- * `body = {}`
     -- * `query = {}`
     -- * `response = @FittenCode.Protocol.Methods.UserInfo.Response`
     user_info = {
         method = 'GET',
-        headers = {},
+        headers = { ['Authorization'] = 'Bearer {{access_token}}' },
         url = '/codeuser/user_info',
     },
     -- 根据 ft_token 获取 access_token
