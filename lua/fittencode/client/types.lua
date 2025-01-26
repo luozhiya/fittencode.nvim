@@ -9,6 +9,16 @@
 
 ---@alias FittenCode.Protocol.Element.URL string|table<string, string>
 
+---@class FittenCode.Protocol.Methods.Signup.Body
+---@field username string
+---@field password string
+---@field phone string
+---@field email string
+---@field code string
+
+---@class FittenCode.Protocol.Methods.Signup.Response.UserInfo
+---@field status_code number
+
 ---@class FittenCode.Protocol.Methods.Login.Body
 ---@field username string
 ---@field password string
@@ -24,16 +34,47 @@
 ---@field user_type string
 ---@field account_status string
 ---@field register_username string
----@field wechat_info? table<string, any>
----@field firebase_info? table<string, any>
+---@field wechat_info? FittenCode.Protocol.Methods.Login.Response.UserInfo.WechatInfo
+---@field firebase_info? FittenCode.Protocol.Methods.Login.Response.UserInfo.FirebaseInfo
 ---@field client_token string
 ---@field client_time number
 ---@field company string
+
+---@class FittenCode.Protocol.Methods.Login.Response.UserInfo.WechatInfo
+---@field nickname string
+
+---@class FittenCode.Protocol.Methods.Login.Response.UserInfo.FirebaseInfo
+---@field display_name string
+---@field email string
 
 ---@class FittenCode.Protocol.Methods.Login.Response
 ---@field access_token string
 ---@field refresh_token string
 ---@field user_info FittenCode.Protocol.Methods.Login.Response.UserInfo
+
+---@class FittenCode.Protocol.Methods.UpdatePassword.Body
+---@field username string
+---@field password string
+---@field phone string
+---@field email string
+---@field code string
+
+---@class FittenCode.Protocol.Methods.UpdatePassword.Response
+---@field status_code number
+---@field msg string
+
+---@class FittenCode.Protocol.Methods.UpdatePasswordEmail.Body
+---@field username string
+---@field password string
+---@field phone string
+---@field code string
+---@field email string
+
+---@class FittenCode.Protocol.Methods.UpdatePasswordEmail.Response
+---@field status_code number
+---@field msg string
+
+---@class FittenCode.Protocol.Methods.UserInfo.Response : FittenCode.Protocol.Methods.Login.Response.UserInfo
 
 ---@class FittenCode.Protocol.Methods.FBCheckLoginAuth.Response : FittenCode.Protocol.Methods.Login.Response
 ---@field create boolean

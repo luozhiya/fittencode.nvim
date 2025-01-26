@@ -71,6 +71,21 @@ Protocol.URLs = {
 -- 接口列表
 ---@class FittenCode.Protocol.Methods
 Protocol.Methods = {
+    -- 注册接口
+    -- * `method = POST`
+    -- * `headers = { 'Content-Type' = 'application/json' }`
+    -- * `query = ?username={}&phone={}&email={}&lang={}&timezone={}`
+    -- * `body = @FittenCode.Protocol.Methods.Signup.Body`
+    -- * `response = @FittenCode.Protocol.Methods.Signup.Response`
+    -- "en-US,en,en"
+    -- "asia/shanghai"
+    -- "?_=0&username=1&phone=1&email=&lang=en-US%2Cen%2Cen&timezone=asia%2Fshanghai"
+    signup = {
+        method = 'POST',
+        headers = { ['Content-Type'] = 'application/json' },
+        url = '/codeuser/signup',
+        query = '?_=0&username={{signup_username}}&phone={{signup_phone}}&email={{signup_email}}&lang={{langs}}&timezone={{timezone}}'
+    },
     -- 帐号密码登录接口
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
@@ -81,6 +96,39 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/auth/login',
+    },
+    -- 通过手机号更改密码接口
+    -- * `method = POST`
+    -- * `headers = { 'Content-Type' = 'application/json' }`
+    -- * `body = @FittenCode.Protocol.Methods.UpdatePassword.Body`
+    -- * `query = {}`
+    -- * `response = @FittenCode.Protocol.Methods.UpdatePassword.Response`
+    update_password = {
+        method = 'POST',
+        headers = { ['Content-Type'] = 'application/json' },
+        url = '/codeuser/update_password',
+    },
+    -- 通过邮箱更改密码接口
+    -- * `method = POST`
+    -- * `headers = { 'Content-Type' = 'application/json' }`
+    -- * `body = @FittenCode.Protocol.Methods.UpdatePasswordEmail.Body`
+    -- * `query = {}`
+    -- * `response = @FittenCode.Protocol.Methods.UpdatePasswordEmail.Response`
+    update_password_email = {
+        method = 'POST',
+        headers = { ['Content-Type'] = 'application/json' },
+        url = '/codeuser/update_password_email',
+    },
+    -- 获取用户信息接口
+    -- * `method = GET`
+    -- * `headers = {}`
+    -- * `body = {}`
+    -- * `query = {}`
+    -- * `response = @FittenCode.Protocol.Methods.UserInfo.Response`
+    user_info = {
+        method = 'GET',
+        headers = {},
+        url = '/codeuser/user_info',
     },
     -- 根据 ft_token 获取 access_token
     -- * `method = POST`

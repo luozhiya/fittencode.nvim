@@ -42,6 +42,10 @@ function APIKeyManager:get_fitten_user_id()
     return self.keyring.user_info.user_id
 end
 
+function APIKeyManager:get_username()
+    return self.keyring.user_info.username
+end
+
 function APIKeyManager:has_fitten_access_token()
     local e
     local success = pcall(function() e = self:get_fitten_access_token() end)

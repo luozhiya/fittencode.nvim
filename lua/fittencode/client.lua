@@ -13,7 +13,7 @@ function M.init()
 end
 
 function M.get_user_id()
-    return api_key_manager.get_user_id()
+    return api_key_manager.get_fitten_user_id()
 end
 
 function M.get_username()
@@ -21,7 +21,7 @@ function M.get_username()
 end
 
 function M.is_authorized()
-    return api_key_manager.get_user_id() ~= nil
+    return api_key_manager.get_fitten_user_id() ~= nil
 end
 
 function M.update_authentication(auth)
@@ -45,7 +45,7 @@ end
 ---@param protocol FittenCode.Protocol.Element
 ---@param options FittenCode.Client.RequestOptions
 function M.request(protocol, options)
-    local user_id = api_key_manager.get_user_id()
+    local user_id = api_key_manager.get_fitten_user_id()
     local variables = vim.tbl_extend('force', options.variables or {}, {
         user_id = user_id,
         ft_token = user_id,
