@@ -29,7 +29,7 @@ function Controller:new(opts)
         keymaps = {},
         filter_events = {},
         project_completion = { v1 = nil, v2 = nil },
-        api_version = '1',
+        gos_version = '1',
         sessions = {},
         selected_session_id = nil,
         last_chosen_prompt_type = '0',
@@ -43,7 +43,7 @@ function Controller:init(options)
     local mode = options.mode or 'singleton'
     self.prompt_generator = PromptGenerator:new()
     if mode == 'singleton' then
-        self.api_version = '2'
+        self.gos_version = '2'
         self.project_completion = {
             v1 = assert(ProjectCompletionFactory.create('v1')),
             v2 = assert(ProjectCompletionFactory.create('v2')),
@@ -189,7 +189,7 @@ function Controller:start_session(buf, position, options)
     local session = Session:new({
         buf = buf,
         id = assert(Fn.uuid_v4()),
-        api_version = self.api_version,
+        gos_version = self.gos_version,
         edit_mode = options.edit_mode,
         project_completion = self.project_completion,
         prompt_generator = self.prompt_generator,

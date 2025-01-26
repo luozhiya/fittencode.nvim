@@ -75,9 +75,9 @@ function M.from_generate_one_stage(raw, options)
     local buf = options.buf
     ---@type FittenCode.Position
     local position = options.position
-    if options.api_version == '1' then
+    if options.gos_version == '1' then
         return from_v1(buf, position, raw, options)
-    elseif options.api_version == '2' then
+    elseif options.gos_version == '2' then
         return from_v2(buf, position, raw, options)
     end
 end

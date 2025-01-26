@@ -31,12 +31,12 @@ end
 ---@param position FittenCode.Position
 ---@param options FittenCode.Inline.GeneratePromptOptions
 function PromptGenerator:generate(buf, position, options)
-    if options.api_version == '1' then
+    if options.gos_version == '1' then
         return self.v1:generate(buf, position, options)
-    elseif options.api_version == '2' then
+    elseif options.gos_version == '2' then
         return self.v2:generate(buf, position, options)
     else
-        Log.error('Invalid API version: ' .. options.api_version)
+        Log.error('Invalid API version: ' .. options.gos_version)
         return
     end
 end

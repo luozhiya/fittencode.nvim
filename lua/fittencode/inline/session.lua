@@ -26,7 +26,7 @@ function Session:new(options)
         request_handles = {},
         keymaps = {},
         terminated = false,
-        api_version = options.api_version,
+        gos_version = options.gos_version,
         project_completion = options.project_completion,
         prompt_generator = options.prompt_generator,
         triggering_completion = options.triggering_completion,
@@ -36,7 +36,7 @@ function Session:new(options)
     obj.status = SessionStatus:new({ gc = obj:gc(), on_update = function() obj.update_inline_status(obj.id) end })
     obj.generate_one_stage_auth = Fn.debounce(function(_)
         local protocal = Protocol.Methods.generate_one_stage_auth
-        if obj.api_version == '1' then
+        if obj.gos_version == '1' then
             protocal = Protocol.Methods.generate_one_stage
         end
         Client.request(protocal, _)
@@ -282,7 +282,7 @@ function Session:send_completions(buf, position, options)
     Promise:new(function(resolve, reject)
         self.prompt_generator:generate(buf, position, {
             filename = assert(Editor.filename(buf)),
-            api_version = self.api_version,
+            gos_version = self.gos_version,
             edit_mode = self.edit_mode,
             project_completion = self.project_completion,
             last_chosen_prompt_type = self.last_chosen_prompt_type,
@@ -356,7 +356,7 @@ end
 function Session:request_completions(prompt, options)
     Promise:new(function(resolve, reject)
         -- Vim 版本的接口没有 completion_version
-        if self.api_version == '1' then
+        if self.gos_version == '1' then
             resolve()
             return
         end
@@ -394,7 +394,7 @@ function Session:request_completions(prompt, options)
     end):forward(function(version)
         return Promise:new(function(resolve, reject)
             -- Vim 版本的接口没有压缩
-            if self.api_version == '1' then
+            if self.gos_version == '1' then
                 resolve({ body = prompt })
                 return
             end
@@ -422,7 +422,7 @@ function Session:request_completions(prompt, options)
                 ['2'] = '2_2',
                 ['3'] = '2_3',
             }
-            self.generate_one_stage_auth(self.api_version, {
+            self.generate_one_stage_auth(self.gos_version, {
                 variables = {
                     completion_version = vu[_.completion_version],
                 },
@@ -445,7 +445,7 @@ function Session:request_completions(prompt, options)
                         reject()
                         return
                     end
-                    local parsed_response = ParseResponse.from_generate_one_stage(response, { buf = options.buf, position = options.position, api_version = options.api_version })
+                    local parsed_response = ParseResponse.from_generate_one_stage(response, { buf = options.buf, position = options.position, gos_version = options.gos_version })
                     resolve(parsed_response)
                 end,
                 on_error = function()
