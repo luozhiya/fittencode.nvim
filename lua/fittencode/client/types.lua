@@ -1,3 +1,7 @@
+------------------------------------------------
+-- Common Types for FittenCode.Protocol
+------------------------------------------------
+
 ---@class FittenCode.Protocol.Element
 ---@field method string
 ---@field mode? string
@@ -9,21 +13,7 @@
 
 ---@alias FittenCode.Protocol.Element.URL string|table<string, string>
 
----@class FittenCode.Protocol.Methods.Signup.Body
----@field username string
----@field password string
----@field phone string
----@field email string
----@field code string
-
----@class FittenCode.Protocol.Methods.Signup.Response.UserInfo
----@field status_code number
-
----@class FittenCode.Protocol.Methods.Login.Body
----@field username string
----@field password string
-
----@class FittenCode.Protocol.Methods.Login.Response.UserInfo
+---@class FittenCode.Protocol.Types.UserInfo
 ---@field user_id string
 ---@field username string
 ---@field phone string
@@ -34,23 +24,53 @@
 ---@field user_type string
 ---@field account_status string
 ---@field register_username string
----@field wechat_info? FittenCode.Protocol.Methods.Login.Response.UserInfo.WechatInfo
----@field firebase_info? FittenCode.Protocol.Methods.Login.Response.UserInfo.FirebaseInfo
+---@field wechat_info? FittenCode.Protocol.Types.UserInfo.WechatInfo
+---@field firebase_info? FittenCode.Protocol.Types.UserInfo.FirebaseInfo
 ---@field client_token string
 ---@field client_time number
 ---@field company string
 
----@class FittenCode.Protocol.Methods.Login.Response.UserInfo.WechatInfo
+---@class FittenCode.Protocol.Types.UserInfo.WechatInfo
 ---@field nickname string
 
----@class FittenCode.Protocol.Methods.Login.Response.UserInfo.FirebaseInfo
+---@class FittenCode.Protocol.Types.UserInfo.FirebaseInfo
 ---@field display_name string
 ---@field email string
 
----@class FittenCode.Protocol.Methods.Login.Response
+---@class FittenCode.Protocol.Types.Authorization
 ---@field access_token string
 ---@field refresh_token string
----@field user_info FittenCode.Protocol.Methods.Login.Response.UserInfo
+---@field user_info FittenCode.Protocol.Types.UserInfo
+
+------------------------------------------------
+-- Signup
+------------------------------------------------
+
+---@class FittenCode.Protocol.Methods.Signup.Body
+---@field username string
+---@field password string
+---@field phone string
+---@field email string
+---@field code string
+---@field company string
+
+---@class FittenCode.Protocol.Methods.Signup.Response
+---@field status_code number
+---@field msg string
+
+------------------------------------------------
+-- Login
+------------------------------------------------
+
+---@class FittenCode.Protocol.Methods.Login.Body
+---@field username string
+---@field password string
+
+---@class FittenCode.Protocol.Methods.Login.Response : FittenCode.Protocol.Types.Authorization
+
+------------------------------------------------
+-- UpdatePassword
+------------------------------------------------
 
 ---@class FittenCode.Protocol.Methods.UpdatePassword.Body
 ---@field username string
@@ -63,6 +83,10 @@
 ---@field status_code number
 ---@field msg string
 
+------------------------------------------------
+-- UpdatePasswordEmail
+------------------------------------------------
+
 ---@class FittenCode.Protocol.Methods.UpdatePasswordEmail.Body
 ---@field username string
 ---@field password string
@@ -74,22 +98,72 @@
 ---@field status_code number
 ---@field msg string
 
----@class FittenCode.Protocol.Methods.UserInfo.Response : FittenCode.Protocol.Methods.Login.Response.UserInfo
+------------------------------------------------
+-- EmailCode
+------------------------------------------------
 
----@class FittenCode.Protocol.Methods.FBCheckLoginAuth.Response : FittenCode.Protocol.Methods.Login.Response
+---@class FittenCode.Protocol.Methods.EmailCode.Body
+---@field phone string
+
+---@class FittenCode.Protocol.Methods.EmailCode.Response
+---@field status_code number
+---@field msg string
+
+------------------------------------------------
+-- PhoneCode
+------------------------------------------------
+
+---@class FittenCode.Protocol.Methods.PhoneCode.Body
+---@field phone string
+
+---@class FittenCode.Protocol.Methods.PhoneCode.Response
+---@field status_code number
+---@field msg string
+
+------------------------------------------------
+-- UserInfo
+------------------------------------------------
+
+---@class FittenCode.Protocol.Methods.UserInfo.Response : FittenCode.Protocol.Types.UserInfo
+
+------------------------------------------------
+-- FBCheckLoginAuth
+------------------------------------------------
+
+---@class FittenCode.Protocol.Methods.FBCheckLoginAuth.Response : FittenCode.Protocol.Types.Authorization
 ---@field create boolean
+
+------------------------------------------------
+-- FCCheckAuth
+------------------------------------------------
 
 -- 相应示例：`yes-4`
 ---@alias FittenCode.Protocol.Methods.PCCheckAuth.Response string
 
+------------------------------------------------
+-- GetCompletionVersion
+------------------------------------------------
+
 -- 相应示例：`"1"`
 ---@alias FittenCode.Protocol.Methods.GetCompletionVersion.Response string
+
+------------------------------------------------
+-- Accept
+------------------------------------------------
 
 ---@class FittenCode.Protocol.Methods.Accept.Body
 ---@field request_id string
 
+------------------------------------------------
+-- RefreshRefreshToken
+------------------------------------------------
+
 ---@class FittenCode.Protocol.Methods.RefreshRefreshToken.Body
 ---@field refresh_token string
+
+------------------------------------------------
+-- ChatAuth
+------------------------------------------------
 
 ---@class FittenCode.Protocol.Methods.ChatAuth.Body
 ---@field inputs string
@@ -105,9 +179,17 @@
 
 ---@alias FittenCode.Protocol.Methods.ChatAuth.Response table<FittenCode.Protocol.Methods.ChatAuth.Response.Chunk>
 
+------------------------------------------------
+-- RagChat
+------------------------------------------------
+
 ---@class FittenCode.Protocol.Methods.RagChat.Body : FittenCode.Protocol.Methods.ChatAuth.Body
 ---@class FittenCode.Protocol.Methods.RagChat.Response.Chunk : FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
 ---@alias FittenCode.Protocol.Methods.RagChat.Response table<FittenCode.Protocol.Methods.RagChat.Response.Chunk>
+
+------------------------------------------------
+-- KnowledgeBaseInfo
+------------------------------------------------
 
 ---@class FittenCode.Protocol.Methods.KnowledgeBaseInfo.Response.KnowledgeBase
 ---@field dirName string
@@ -115,6 +197,10 @@
 ---@field userId string
 
 ---@alias FittenCode.Protocol.Methods.KnowledgeBaseInfo.Response table<FittenCode.Protocol.Methods.KnowledgeBaseInfo.Response.KnowledgeBase>
+
+------------------------------------------------
+-- DeleteKnowledgeBase
+------------------------------------------------
 
 ---@class FittenCode.Protocol.Methods.DeleteKnowledgeBase.Body
 ---@field inputs string
@@ -124,6 +210,10 @@
 ---@field knowledgeBaseName string
 ---@field FT_Token string
 ---@field KB_ID string
+
+------------------------------------------------
+-- CreateKnowledgeBase
+------------------------------------------------
 
 ---@class FittenCode.Protocol.Methods.CreateKnowledgeBase.Body
 ---@field inputs string
@@ -135,9 +225,17 @@
 ---@field description string
 ---@field creatorName string
 
+------------------------------------------------
+-- GetFilesList
+------------------------------------------------
+
 ---@class FittenCode.Protocol.Methods.GetFilesList.Response
 ---@field time string
 ---@field filesName table<string>
+
+------------------------------------------------
+-- DeleteFile
+------------------------------------------------
 
 ---@class FittenCode.Protocol.Methods.DeleteFile.Body
 ---@field inputs string
@@ -148,6 +246,10 @@
 ---@field fileName string
 ---@field FT_Token string
 ---@field knowledgeBaseId string
+
+------------------------------------------------
+-- UploadLargeFile
+------------------------------------------------
 
 -- FormData
 ---@class FittenCode.Protocol.Methods.UploadLargeFile.Body
@@ -161,6 +263,10 @@
 ---@class FittenCode.Protocol.Methods.UploadLargeFile.Response
 ---@field message string
 
+------------------------------------------------
+-- UpdateProject
+------------------------------------------------
+
 ---@class FittenCode.Protocol.Methods.UpdateProject.Body
 ---@field ft_token string
 ---@field meta_datas FittenCode.Protocol.Methods.UpdateProject.Body.MetaDatas
@@ -168,6 +274,10 @@
 ---@class FittenCode.Protocol.Methods.UpdateProject.Body.MetaDatas
 ---@field project_id string
 ---@field project_name string
+
+------------------------------------------------
+-- SaveFileAndDirectoryNames
+------------------------------------------------
 
 ---@class FittenCode.Protocol.Methods.SaveFileAndDirectoryNames.Body
 ---@field inputs string
@@ -178,6 +288,10 @@
 ---@field file_dir_names table
 ---@field file_hash table
 
+------------------------------------------------
+-- AddFilesAndDirectories
+------------------------------------------------
+
 ---@class FittenCode.Protocol.Methods.AddFilesAndDirectories.Body
 ---@field inputs string
 ---@field ft_token string
@@ -186,6 +300,10 @@
 ---@class FittenCode.Protocol.Methods.AddFilesAndDirectories.Body.MetaDatas
 ---@field file_name string
 ---@field file_paths table
+
+------------------------------------------------
+-- GetLocalKnowledgeBaseRefs
+------------------------------------------------
 
 ---@class FittenCode.Protocol.Methods.GetLocalKnowledgeBaseRefs.Body
 ---@field inputs string
@@ -197,6 +315,10 @@
 ---@field FT_Token string
 ---@field keywords table
 
+------------------------------------------------
+-- JoinKnowledgeBase
+------------------------------------------------
+
 ---@class FittenCode.Protocol.Methods.JoinKnowledgeBase.Body
 ---@field inputs string
 ---@field meta_datas FittenCode.Protocol.Methods.JoinKnowledgeBase.Body.MetaDatas
@@ -206,6 +328,10 @@
 ---@field description string
 ---@field FT_Token string
 ---@field ID string
+
+------------------------------------------------
+-- GetKnowledgeBase
+------------------------------------------------
 
 ---@class FittenCode.Protocol.Methods.GetKnowledgeBase.Body
 ---@field inputs string
@@ -218,6 +344,10 @@
 ---@field knowledgeBaseName string
 ---@field description string
 
+------------------------------------------------
+-- UpdateKnowledgeBase
+------------------------------------------------
+
 ---@class FittenCode.Protocol.Methods.UpdateKnowledgeBase.Body
 ---@field inputs string
 ---@field meta_datas FittenCode.Protocol.Methods.UpdateKnowledgeBase.Body.MetaDatas
@@ -228,6 +358,10 @@
 ---@field FT_Token string
 ---@field ID string
 
+------------------------------------------------
+-- Feedback
+------------------------------------------------
+
 ---@class FittenCode.Protocol.Methods.Feedback.Body
 ---@field inputs string
 ---@field ft_token string
@@ -236,10 +370,18 @@
 ---@class FittenCode.Protocol.Methods.Feedback.Body.MetaDatas
 ---@field feedback_type string
 
+------------------------------------------------
+-- CheckInviteCode
+------------------------------------------------
+
 ---@class FittenCode.Protocol.Methods.CheckInviteCode.Body
 ---@field inputs string
 
 ---@class FittenCode.Protocol.Methods.CheckInviteCode.Response
 ---@field status string
+
+------------------------------------------------
+-- GrayTest
+------------------------------------------------
 
 ---@alias FittenCode.Protocol.Methods.GrayTest.Response number

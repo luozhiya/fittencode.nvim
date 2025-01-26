@@ -119,6 +119,30 @@ Protocol.Methods = {
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/update_password_email',
     },
+    -- 发送邮箱验证码接口
+    -- * `method = POST`
+    -- * `headers = { 'Content-Type' = 'application/json' }`
+    -- * `body = @FittenCode.Protocol.Methods.EmailCode.Body`
+    -- * `query = ?email={}`
+    -- * `response = @FittenCode.Protocol.Methods.EmailCode.Response`
+    email_code = {
+        method = 'POST',
+        headers = { ['Content-Type'] = 'application/json' },
+        url = '/codeuser/email_code',
+        query = '?email={{email}}'
+    },
+    -- 发送手机验证码接口
+    -- * `method = POST`
+    -- * `headers = { 'Content-Type' = 'application/json' }`
+    -- * `body = @FittenCode.Protocol.Methods.PhoneCode.Body`
+    -- * `query = ?phone={}`
+    -- * `response = @FittenCode.Protocol.Methods.PhoneCode.Response`
+    phone_code = {
+        method = 'POST',
+        headers = { ['Content-Type'] = 'application/json' },
+        url = '/codeuser/phone_code',
+        query = '?phone={{phone}}'
+    },
     -- 获取用户信息接口
     -- * `method = GET`
     -- * `headers = {}`
