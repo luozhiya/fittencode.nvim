@@ -167,11 +167,14 @@ function Conversation:execute_chat(options)
         local evaluated = self:evaluate_template(ir.template, variables)
 
         Promise:new(function(resolve, reject)
+            local api_key_manager = Client.get_api_key_manager()
+            assert(api_key_manager, 'APIKeyManager not initialized')
+
             local completion = {}
             ---@type FittenCode.Protocol.Methods.ChatAuth.Body
             local body = {
                 inputs = evaluated,
-                ft_token = Client.get_user_id(),
+                ft_token = api_key_manager:get_fitten_user_id(),
                 meta_datas = {
                     project_id = '',
                 }

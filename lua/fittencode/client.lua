@@ -7,7 +7,7 @@ local PlainStorage = require('fittencode.client.plain_storage')
 local Config = require('fittencode.config')
 
 ---@class FittenCode.Client
----@field api_key_manager fun(): FittenCode.APIKeyManager?
+---@field get_api_key_manager fun(): FittenCode.APIKeyManager?
 ---@field request fun(protocol: FittenCode.Protocol.Element, options: FittenCode.Client.RequestOptions): nil
 
 ---@class FittenCode.Client
@@ -35,7 +35,9 @@ function M.init()
     })
 end
 
-function M.api_key_manager()
+---@return FittenCode.APIKeyManager
+function M.get_api_key_manager()
+    assert(_api_key_manager, 'APIKeyManager not initialized')
     return _api_key_manager
 end
 

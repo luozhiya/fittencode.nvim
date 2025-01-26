@@ -149,7 +149,9 @@ end
 ---@param conversation FittenCode.Chat.State.Conversation
 function View:render_conversation(conversation)
     assert(self.messages_exchange.buf)
-    local username = Client.get_username()
+    local api_key_manager = Client.get_api_key_manager()
+    assert(api_key_manager, 'APIKeyManager not initialized')
+    local username = api_key_manager:get_username()
     local bot_id = 'Fitten Code'
     local lines = {}
 

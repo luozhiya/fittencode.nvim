@@ -7,6 +7,7 @@ local Log = require('fittencode.log')
 local Translate = require('fittencode.translate')
 local Fn = require('fittencode.fn')
 local Client = require('fittencode.client')
+local Keyring = require('fittencode.client.keyring')
 
 -- Implement Account Session APIs
 
@@ -43,7 +44,10 @@ function M.login(username, password, options)
         return
     end
 
-    if Client.is_authorized() then
+    local api_key_manager = Client.get_api_key_manager()
+    assert(api_key_manager, 'APIKeyManager not initialized')
+
+    if api_key_manager:get_fitten_user_id() then
         Log.notify_info(Translate('[Fitten Code] You are already logged in'))
         Fn.schedule_call(options.on_success)
         return
@@ -71,8 +75,9 @@ function M.login(username, password, options)
                 end
             end)
         })
+        ---@param response FittenCode.Protocol.Methods.Login.Response
     end):forward(function(response)
-        Client.update_account(response)
+        api_key_manager:update(Keyring.make(response))
         Log.notify_info(Translate('[Fitten Code] Login successful'))
         Client.request(Protocol.Methods.click_count, {
             variables = {
@@ -94,7 +99,10 @@ local login_providers = {
 }
 
 function M.login3rd(source, options)
-    if Client.is_authorized() then
+    local api_key_manager = Client.get_api_key_manager()
+    assert(api_key_manager, 'APIKeyManager not initialized')
+
+    if api_key_manager:get_fitten_user_id() then
         Log.notify_info(Translate('[Fitten Code] You are already logged in'))
         Fn.schedule_call(options.on_success)
         return
@@ -162,10 +170,11 @@ function M.login3rd(source, options)
                         end
                     end
                 })
+                ---@param response FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
             end):forward(function(response)
                 Fn.clear_interval(start_check_login_timer)
                 is_login_fb_running = false
-                Client.update_account(response)
+                api_key_manager:update(Keyring.make(response))
                 Log.notify_info(Translate('[Fitten Code] Login successful'))
                 Fn.schedule_call(options.on_success)
 
@@ -187,11 +196,13 @@ function M.login3rd(source, options)
 end
 
 function M.logout()
-    if not Client.is_authorized() then
+    local api_key_manager = Client.get_api_key_manager()
+    assert(api_key_manager, 'APIKeyManager not initialized')
+    if not api_key_manager:get_fitten_user_id() then
         Log.notify_info(Translate('[Fitten Code] You are already logged out'))
         return
     end
-    Client.update_keyring()
+    api_key_manager:update()
     Log.notify_info(Translate('[Fitten Code] Logout successful'))
 end
 
