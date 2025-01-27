@@ -50,19 +50,29 @@ local function openlink(url, options)
     Fn.schedule_call(options.on_success)
 end
 
--- 请求协议接口
----@param protocol FittenCode.Protocol.Element
----@param options FittenCode.Client.RequestOptions
-function M.request(protocol, options)
+local function encode_variables(variables)
     assert(api_key_manager, 'APIKeyManager not initialized')
     local user_id = api_key_manager:get_fitten_user_id()
-    local variables = vim.tbl_extend('force', options.variables or {}, {
+    variables = vim.tbl_extend('force', variables or {}, {
         user_id = user_id,
         ft_token = user_id,
         username = api_key_manager:get_username(),
         access_token = api_key_manager:get_fitten_access_token(),
+    })
+    variables = vim.tbl_map(function(v)
+        return Fn.encode_uri_component(v)
+    end, variables)
+    variables = vim.tbl_extend('force', variables, {
         platform_info = PlatformInfo.get_platform_info_as_url_params(),
     })
+    return variables
+end
+
+-- 请求协议接口
+---@param protocol FittenCode.Protocol.Element
+---@param options FittenCode.Client.RequestOptions
+function M.request(protocol, options)
+    local variables = encode_variables(options.variables)
 
     local _, evaluated = pcall(EvaluateRequest.reevaluate_method, protocol, variables)
     if not evaluated then

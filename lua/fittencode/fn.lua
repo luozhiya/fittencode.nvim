@@ -226,6 +226,34 @@ local function normalize_path(path)
     return is_windows() and path:gsub('/', '\\') or path:gsub('\\', '/')
 end
 
+local function encode_uri_component(uri)
+    local result = {}
+    for i = 1, #uri do
+        local char = uri:sub(i, i)
+        local byte = char:byte()
+        -- 检查是否为保留字符（字母、数字或特定符号）
+        if (byte >= 0x30 and byte <= 0x39) or -- 0-9
+            (byte >= 0x41 and byte <= 0x5A) or -- A-Z
+            (byte >= 0x61 and byte <= 0x7A) or -- a-z
+            byte == 0x2D or                   -- -
+            byte == 0x5F or                   -- _
+            byte == 0x2E or                   -- .
+            byte == 0x21 or                   -- !
+            byte == 0x7E or                   -- ~
+            byte == 0x2A or                   -- *
+            byte == 0x27 or                   -- '
+            byte == 0x28 or                   -- (
+            byte == 0x29                      -- )
+        then
+            result[#result + 1] = char
+        else
+            -- 转换为百分比编码（大写十六进制）
+            result[#result + 1] = string.format('%%%02X', byte)
+        end
+    end
+    return table.concat(result)
+end
+
 return {
     debounce = debounce,
     schedule_call = schedule_call,
@@ -244,4 +272,5 @@ return {
     tbl_keep_events = tbl_keep_events,
     extension_uri = extension_uri,
     normalize_path = normalize_path,
+    encode_uri_component = encode_uri_component,
 }

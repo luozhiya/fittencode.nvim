@@ -1,8 +1,10 @@
 local Meta = require('fittencode.client.meta')
+local Fn = require('fittencode.fn')
 
 local M = {}
 
-local platform_info = nil
+---@type string?
+local platform_info_url_params = nil
 
 local function get_os_info()
     local uname = vim.uv.os_uname()
@@ -10,9 +12,10 @@ local function get_os_info()
 end
 
 -- `/codeuser/pc_check_auth?user_id=${n}&ide=vsc&ide_name=vscode&ide_version=${Xe.version}&extension_version=${A}`
+---@return string
 function M.get_platform_info_as_url_params()
-    if platform_info then
-        return platform_info
+    if platform_info_url_params then
+        return platform_info_url_params
     end
 
     -- 获取动态信息
@@ -32,11 +35,11 @@ function M.get_platform_info_as_url_params()
     -- 生成URL参数字符串
     local parts = {}
     for key, value in pairs(params) do
-        table.insert(parts, string.format('%s=%s', key, value))
+        table.insert(parts, string.format('%s=%s', key, Fn.encode_uri_component(value)))
     end
-    platform_info = table.concat(parts, '&')
+    platform_info_url_params = table.concat(parts, '&')
 
-    return platform_info
+    return platform_info_url_params
 end
 
 return M
