@@ -12,6 +12,7 @@ local Position = require('fittencode.position')
 local PromptGenerator = require('fittencode.inline.prompt_generator')
 local ProjectCompletionFactory = require('fittencode.inline.project_completion')
 local Status = require('fittencode.inline.status')
+local NotifyLogin = require('fittencode.client.notify_login')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
@@ -157,6 +158,16 @@ function Controller:triggering_completion(options)
     options = options or {}
 
     local function _preflight_check()
+        local api_key_manager = Client.get_api_key_manager()
+        assert(api_key_manager, 'APIKeyManager not initialized')
+
+        if not api_key_manager:has_fitten_access_token() then
+            if Config.server.toggle_login_message_on_keyboard_input then
+                NotifyLogin.notify_login()
+            end
+            return
+        end
+
         local buf = vim.api.nvim_get_current_buf()
         if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
             return

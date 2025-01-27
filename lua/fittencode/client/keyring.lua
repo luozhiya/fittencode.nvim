@@ -4,7 +4,13 @@ Keyring.__index = Keyring
 
 ---@return FittenCode.Keyring
 function Keyring:new()
-    local obj = {
+    local obj = {}
+    setmetatable(obj, self)
+    return obj
+end
+
+function Keyring.dummy()
+    return vim.tbl_deep_extend('force', Keyring:new(), {
         user_info = {
             user_id = '',
             username = '',
@@ -29,15 +35,13 @@ function Keyring:new()
         },
         access_token = '',
         refresh_token = ''
-    }
-    setmetatable(obj, self)
-    return obj
+    })
 end
 
 ---@param response? FittenCode.Protocol.Methods.Login.Response|FittenCode.Protocol.Types.Authorization|FittenCode.Protocol.Methods.Login.Response|FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
 ---@return FittenCode.Keyring?
 function Keyring.make(response)
-    local obj = Keyring:new()
+    local obj = Keyring.dummy()
     if not response then
         return
     end

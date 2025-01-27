@@ -69,26 +69,28 @@ function APIKeyManager:update(keyring)
 end
 
 ---@return boolean
-function APIKeyManager:has_fitten_access_token()
+function APIKeyManager:has_fitten_access_token(throw)
     local _, access_token = pcall(function() return self.keyring.access_token end)
     if not _ then
         -- No login
         return false
-    elseif access_token == nil then
+    elseif access_token == nil or access_token == '' then
         -- Data Error
-        vim.ui.select(
-            { 'Re-login', 'Cancel' },
-            { prompt = '[Fitten Code] Get access token error, please report to developer and re-login.' },
-            function(choice)
-                if choice == 'Re-login' then
-                    self:update()
-                    Log.notify_info('Logout successfully, please re-login.')
+        if throw then
+            vim.ui.select(
+                { 'Re-login', 'Cancel' },
+                { prompt = '[Fitten Code] Get access token error, please report to developer and re-login.' },
+                function(choice)
+                    if choice == 'Re-login' then
+                        self:update()
+                        Log.notify_info('Logout successfully, please re-login.')
+                    end
                 end
-            end
-        )
+            )
+        end
         return false
     end
-    return access_token ~= nil
+    return true
 end
 
 ---@return boolean
