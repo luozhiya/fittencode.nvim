@@ -275,6 +275,8 @@
 ---@field end_row number
 ---@field end_col number
 
+-- 设计成一个类，并不是为了实例化，而是为了方便管理数据与资源
+-- * 事实上因为一些 augroups 等资源存在冲突，使得该类只能有一个实例
 ---@class FittenCode.Inline.Controller
 ---@field model FittenCode.Inline.Model
 ---@field status FittenCode.Inline.Status
@@ -290,6 +292,7 @@
 ---@field init function
 ---@field destory function
 ---@field last_chosen_prompt_type string
+---@field private __initialize function
 
 ---@class FittenCode.VM
 ---@field run function
@@ -402,9 +405,6 @@
 
 ---@class FittenCode.Inline.SendCompletionsOptions : FittenCode.AsyncResultCallbacks
 ---@field on_no_more_suggestion? function
----@field buf? number
----@field position? FittenCode.Position
 
 -- Inline 的 headless 模式，允许在没有 UI 和不干扰原来 Inline 引擎的情况下，发送补全请求，用于二次开发
 ---@class FittenCode.Inline.Headless
----@field controller FittenCode.Inline.Controller

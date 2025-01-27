@@ -16,50 +16,51 @@ local NotifyLogin = require('fittencode.client.notify_login')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
-Controller.__index = Controller
 
+---@class FittenCode.Inline.Controller.Options
+---@field headless? boolean 未实现，暂不清楚 Controller 要如何设计 headless 模式
+
+---@param options? FittenCode.Inline.Controller.Options
 ---@return FittenCode.Inline.Controller
-function Controller:new(opts)
-    local obj = {
-        observers = {},
-        extmark_ids = {
-            no_more_suggestion = {}
-        },
-        augroups = {},
-        ns_ids = {},
-        keymaps = {},
-        filter_events = {},
-        project_completion = { v1 = nil, v2 = nil },
-        gos_version = '1',
-        sessions = {},
-        selected_session_id = nil,
-        last_chosen_prompt_type = '0',
-    }
-    setmetatable(obj, self)
+function Controller:new(options)
+    ---@class FittenCode.Inline.Controller
+    local obj = {}
+    setmetatable(obj, { __index = self })
+    obj:__initialize(options)
     return obj
 end
 
-function Controller:init(options)
+---@param options? FittenCode.Inline.Controller.Options
+function Controller:__initialize(options)
     options = options or {}
-    local mode = options.mode or 'singleton'
     self.prompt_generator = PromptGenerator:new()
-    if mode == 'singleton' then
-        self.gos_version = '2'
-        self.project_completion = {
-            v1 = assert(ProjectCompletionFactory.create('v1')),
-            v2 = assert(ProjectCompletionFactory.create('v2')),
-        }
-        self.set_interactive_session_debounced = Fn.debounce(function(session)
-            if session and self.selected_session_id == session.id and not session:is_terminated() then
-                session:set_interactive()
-            end
-        end, Config.delay_completion.delaytime)
-        self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
-        self.augroups.no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
-        self.ns_ids.virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText')
-        self.ns_ids.on_key = vim.api.nvim_create_namespace('Fittencode.Inline.OnKey')
-        self:enable(Config.inline_completion.enable)
-    end
+    self.observers = {}
+    self.sessions = {}
+    self.filter_events = {}
+    self.gos_version = '2'
+    self.last_chosen_prompt_type = '0'
+    self.project_completion = {
+        v1 = assert(ProjectCompletionFactory.create('v1')),
+        v2 = assert(ProjectCompletionFactory.create('v2')),
+    }
+    self.set_interactive_session_debounced = Fn.debounce(function(session)
+        if session and self.selected_session_id == session.id and not session:is_terminated() then
+            session:set_interactive()
+        end
+    end, Config.delay_completion.delaytime)
+    self.keymaps = {}
+    self.extmark_ids = {
+        no_more_suggestion = {}
+    }
+    self.augroups = {
+        completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true }),
+        no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
+    }
+    self.ns_ids = {
+        virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText'),
+        on_key = vim.api.nvim_create_namespace('Fittencode.Inline.OnKey')
+    }
+    self:enable(Config.inline_completion.enable)
 end
 
 function Controller:destory()
@@ -381,27 +382,26 @@ function Controller:enable(enable, global, suffixes)
     enable = enable == nil and true or enable
     global = global == nil and true or global
     suffixes = suffixes or {}
-    local prev = Config.inline_completion.enable
     if enable then
         Config.inline_completion.enable = true
+        global = true
     elseif global then
         Config.inline_completion.enable = false
     end
+    local _merge = function(tbl, filters)
+        if enable then
+            return vim.tbl_filter(function(ft)
+                return not vim.tbl_contains(filters, ft)
+            end, tbl)
+        else
+            return vim.tbl_extend('force', tbl, filters)
+        end
+    end
+    Config.disable_specific_inline_completion.suffixes = _merge(Config.disable_specific_inline_completion.suffixes, suffixes)
     if global then
         self:set_autocmds(enable)
         self:set_keymaps(enable)
         self:set_onkey(enable)
-    else
-        local merge = function(tbl, filters)
-            if enable then
-                return vim.tbl_filter(function(ft)
-                    return not vim.tbl_contains(filters, ft)
-                end, tbl)
-            else
-                return vim.tbl_extend('force', tbl, filters)
-            end
-        end
-        Config.disable_specific_inline_completion.suffixes = merge(Config.disable_specific_inline_completion.suffixes, suffixes)
     end
 end
 

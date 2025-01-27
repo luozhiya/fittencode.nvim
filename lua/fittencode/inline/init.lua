@@ -4,15 +4,16 @@ local Log = require('fittencode.log')
 local Translate = require('fittencode.translate')
 local Fn = require('fittencode.fn')
 
+-- 唯一的 Controller 对象
 ---@type FittenCode.Inline.Controller?
-local controller = nil
+local controller
 
 local function init()
     assert(not controller, 'Controller already initialized, should be singleton')
     controller = Controller:new()
-    controller:init({ mode = 'singleton' })
 end
 
+---@return FittenCode.Inline.Status
 local function get_status()
     assert(controller, 'Controller not initialized')
     return controller:get_status()
@@ -30,6 +31,7 @@ local function disable()
     Log.notify_info(Translate('Gloabl completions are deactivated'))
 end
 
+---@param suffixes string[]
 local function onlyenable(suffixes)
     assert(controller, 'Controller not initialized')
     local prev = Config.inline_completion.enable
@@ -41,6 +43,7 @@ local function onlyenable(suffixes)
     end
 end
 
+---@param suffixes string[]
 local function onlydisable(suffixes)
     assert(controller, 'Controller not initialized')
     controller:enable(false, false, suffixes)
