@@ -70,8 +70,10 @@ function APIKeyManager:clear()
     self.storage.delete(self.key)
 end
 
+---@param throw? boolean
 ---@return boolean
 function APIKeyManager:has_fitten_access_token(throw)
+    throw = (throw == nil) and false or throw
     local _, access_token = pcall(function() return self.keyring.access_token end)
     if not _ then
         -- No login
@@ -84,8 +86,12 @@ function APIKeyManager:has_fitten_access_token(throw)
                 { prompt = '[Fitten Code] Get access token error, please report to developer and re-login.' },
                 function(choice)
                     if choice == 'Re-login' then
-                        self:update()
+                        self:clear()
                         Log.notify_info('Logout successfully, please re-login.')
+                        vim.schedule(function()
+                            -- 普通登录还是第三方登录，如何选择？这是一个问题
+                            vim.cmd('FittenCode login')
+                        end)
                     end
                 end
             )
@@ -96,49 +102,63 @@ function APIKeyManager:has_fitten_access_token(throw)
 end
 
 ---@return boolean
-function APIKeyManager:has_fitten_refresh_token()
+function APIKeyManager:has_fitten_refresh_token(throw)
+    throw = (throw == nil) and false or throw
     local _, refresh_token = pcall(function() return self.keyring.refresh_token end)
     if not _ then
         -- No login
         return false
-    elseif refresh_token == nil then
+    elseif refresh_token == nil or refresh_token == '' then
         -- Data Error
-        vim.ui.select(
-            { 'Re-login', 'Cancel' },
-            { prompt = '[Fitten Code] Get refresh token error, please report to developer and re-login.' },
-            function(choice)
-                if choice == 'Re-login' then
-                    self:update()
-                    Log.notify_info('Logout successfully, please re-login.')
+        if throw then
+            vim.ui.select(
+                { 'Re-login', 'Cancel' },
+                { prompt = '[Fitten Code] Get refresh token error, please report to developer and re-login.' },
+                function(choice)
+                    if choice == 'Re-login' then
+                        self:clear()
+                        Log.notify_info('Logout successfully, please re-login.')
+                        vim.schedule(function()
+                            -- 普通登录还是第三方登录，如何选择？这是一个问题
+                            vim.cmd('FittenCode login')
+                        end)
+                    end
                 end
-            end
-        )
+            )
+        end
         return false
     end
-    return refresh_token ~= nil
+    return true
 end
 
 ---@return boolean
-function APIKeyManager:has_fitten_user_id()
+function APIKeyManager:has_fitten_user_id(throw)
+    throw = (throw == nil) and false or throw
     local _, user_id = pcall(function() return self.keyring.user_info.user_id end)
     if not _ then
         -- No login
         return false
-    elseif user_id == nil then
+    elseif user_id == nil or user_id == '' then
         -- Data Error
-        vim.ui.select(
-            { 'Re-login', 'Cancel' },
-            { prompt = '[Fitten Code] Get user id error, please report to developer and re-login.' },
-            function(choice)
-                if choice == 'Re-login' then
-                    self:update()
-                    Log.notify_info('Logout successfully, please re-login.')
+        if throw then
+            vim.ui.select(
+                { 'Re-login', 'Cancel' },
+                { prompt = '[Fitten Code] Get user id error, please report to developer and re-login.' },
+                function(choice)
+                    if choice == 'Re-login' then
+                        self:clear()
+                        Log.notify_info('Logout successfully, please re-login.')
+                        vim.schedule(function()
+                            -- 普通登录还是第三方登录，如何选择？这是一个问题
+                            vim.cmd('FittenCode login')
+                        end)
+                    end
                 end
-            end
-        )
+            )
+        end
         return false
     end
-    return user_id ~= nil
+    return true
 end
 
 return APIKeyManager

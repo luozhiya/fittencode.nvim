@@ -15,6 +15,7 @@ function M.notify_login()
         }, function(choice)
             if choice == 'Login' then
                 vim.schedule(function()
+                    -- 普通登录还是第三方登录，如何选择？这是一个问题
                     vim.cmd('FittenCode login')
                 end)
             elseif choice == 'Dismiss' then
