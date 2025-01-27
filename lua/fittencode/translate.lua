@@ -192,6 +192,7 @@ local translations = {
     ["Go to 'Extensions' to install"] = '前往“扩展”安装',
     ["Password must be at least 8 characters long and contain at least two of the following: one uppercase letter, one lowercase letter, one number, and one special character. Special characters include: ~`!@#$%^&*()_-+={[}]|:;\"'<,>.?/"] = "密码必须至少8个字符，且包含以下至少两种字符类型：大写字母、小写字母、数字和特殊字符。特殊字符包括：~`!@#$%^&*()_-+={[}]|:;\"'<,>.?/",
     ["Reply same language as the user's input."] = '请完全使用中文回答。',
+    ['Enter master password: '] = '请输入主密码：',
 }
 
 local function translate(key, ...)

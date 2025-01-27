@@ -222,6 +222,8 @@ local function extension_uri()
     return current_dir:gsub('/lua$', '') .. '../../'
 end
 
+---@param path string
+---@return string
 local function normalize_path(path)
     return is_windows() and path:gsub('/', '\\') or path:gsub('\\', '/')
 end
@@ -232,18 +234,18 @@ local function encode_uri_component(uri)
         local char = uri:sub(i, i)
         local byte = char:byte()
         -- 检查是否为保留字符（字母、数字或特定符号）
-        if (byte >= 0x30 and byte <= 0x39) or -- 0-9
+        if (byte >= 0x30 and byte <= 0x39) or  -- 0-9
             (byte >= 0x41 and byte <= 0x5A) or -- A-Z
             (byte >= 0x61 and byte <= 0x7A) or -- a-z
-            byte == 0x2D or                   -- -
-            byte == 0x5F or                   -- _
-            byte == 0x2E or                   -- .
-            byte == 0x21 or                   -- !
-            byte == 0x7E or                   -- ~
-            byte == 0x2A or                   -- *
-            byte == 0x27 or                   -- '
-            byte == 0x28 or                   -- (
-            byte == 0x29                      -- )
+            byte == 0x2D or                    -- -
+            byte == 0x5F or                    -- _
+            byte == 0x2E or                    -- .
+            byte == 0x21 or                    -- !
+            byte == 0x7E or                    -- ~
+            byte == 0x2A or                    -- *
+            byte == 0x27 or                    -- '
+            byte == 0x28 or                    -- (
+            byte == 0x29                       -- )
         then
             result[#result + 1] = char
         else

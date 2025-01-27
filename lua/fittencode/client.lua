@@ -4,6 +4,7 @@ local APIKeyManager = require('fittencode.client.api_key_manager')
 local EvaluateRequest = require('fittencode.client.evaluate_request')
 local Server = require('fittencode.client.server')
 local PlainStorage = require('fittencode.client.plain_storage')
+local SecretStorage = require('fittencode.client.secret_storage')
 local Config = require('fittencode.config')
 local PlatformInfo = require('fittencode.client.platform_info')
 
@@ -20,16 +21,21 @@ local api_key_manager
 function M.init()
     ---@type FittenCode.KeyStorage?
     local storage
-    -- storage_location = {
-    --     directory = vim.fn.stdpath('data') .. '/fittencode/secret_storage',
-    --     filename = 'secrets.dat'
-    -- }
-    storage = PlainStorage.new({
-        storage_location = {
-            directory = vim.fn.stdpath('data') .. '/fittencode/storage',
-            filename = 'secrets.dat'
-        }
-    })
+    if Config.key_storage == 'plain' then
+        storage = PlainStorage.new({
+            storage_location = {
+                directory = vim.fn.stdpath('data') .. '/fittencode/storage',
+                filename = 'secrets.dat'
+            }
+        })
+    elseif Config.key_storage == 'secret' then
+        storage = SecretStorage.new({
+            storage_location = {
+                directory = vim.fn.stdpath('data') .. '/fittencode/secret_storage',
+                filename = 'secrets.dat'
+            }
+        })
+    end
     api_key_manager = APIKeyManager.new({
         key = 'FittenCode',
         storage = storage,

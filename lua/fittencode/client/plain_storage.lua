@@ -8,8 +8,10 @@ local file_header = 'FITTENCODE_PLAIN_v1\n'
 function PlainStorage.new(options)
     local self = {
         _storage_dir = options.storage_location.directory,
-        _data_file = options.storage_location.filename
+        _filename = options.storage_location.filename,
     }
+
+    self._data_file = Fn.normalize_path(self._storage_dir .. '/' .. self._filename)
 
     -- 创建存储目录
     local ok, err = pcall(vim.uv.fs_mkdir, self._storage_dir, 448, true)

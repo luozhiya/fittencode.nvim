@@ -1,4 +1,11 @@
 local Fn = require('fittencode.fn')
+local Translate = require('fittencode.translate')
+
+---@class FittenCode.SecretStorage
+---@field _storage_dir string
+---@field _filename string
+---@field _master_password string
+---@field _data_file string
 
 ---@class FittenCode.SecretStorage
 local SecretStorage = {}
@@ -15,16 +22,7 @@ local openssl_config = {
     }
 }
 
-local function normalize_path(path)
-    return (vim.fn.has('win32') == 1)
-        and path:gsub('/', '\\')
-        or path:gsub('\\', '/')
-end
-
-local function get_storage_base()
-    return normalize_path(vim.fn.stdpath('data') .. '/fittencode/secret_storage')
-end
-
+---@return boolean, string
 local function openssl(action, input, password)
     local pass_env = 'FITTEN_OPENSSL_PASS_' .. math.random(10000, 99999)
     local temp_in = vim.fn.tempname()
@@ -75,23 +73,29 @@ local function openssl(action, input, password)
         return false, 'Open output failed: ' .. out_err
     end
     local stat = vim.uv.fs_fstat(fd_out)
+    assert(stat)
     local output = vim.uv.fs_read(fd_out, stat.size, 0)
+    assert(output)
     vim.uv.fs_close(fd_out)
     vim.uv.fs_unlink(temp_out)
 
     return true, output
 end
 
----@param master_password string 主密码（至少12字符）
-function SecretStorage.new(master_password)
+---@return FittenCode.KeyStorage
+function SecretStorage.new(options)
+    local master_password = vim.fn.inputsecret(Translate('Enter master password: '))
+
     assert(type(master_password) == 'string', 'Password must be string')
     assert(#master_password >= 12, 'Password too short (min 12 chars)')
 
     local self = {
-        _storage_dir = get_storage_base(),
-        _data_file = normalize_path(get_storage_base() .. '/secrets.dat'),
+        _storage_dir = options.storage_location.directory,
+        _filename = options.storage_location.filename,
         _master_password = master_password
     }
+
+    self._data_file = Fn.normalize_path(self._storage_dir .. '/' .. self._filename)
 
     -- 创建存储目录
     local ok, err = pcall(vim.uv.fs_mkdir, self._storage_dir, 448, true)
@@ -99,6 +103,7 @@ function SecretStorage.new(master_password)
         error('Create directory failed: ' .. err)
     end
 
+    ---@diagnostic disable-next-line: return-type-mismatch
     return setmetatable(self, { __index = SecretStorage })
 end
 
@@ -116,8 +121,9 @@ local function operate_data(self, operation)
 
         local ok, decrypted = openssl('decrypt', encrypted, self._master_password)
         if not ok then return false, 'Decrypt failed: ' .. decrypted end
+        assert(decrypted)
 
-        if not decrypted:startswith(file_header) then
+        if not Fn.startswith(decrypted, file_header) then
             return false, 'Invalid file format'
         end
         secrets = vim.json.decode(decrypted:sub(#file_header + 1)) or {}
@@ -131,6 +137,7 @@ local function operate_data(self, operation)
     local data = file_header .. vim.json.encode(secrets)
     local ok, encrypted = openssl('encrypt', data, self._master_password)
     if not ok then return false, encrypted end
+    assert(encrypted)
 
     local fd, create_err = vim.uv.fs_open(self._data_file, 'w', 384)
     if not fd then return false, 'File create failed: ' .. create_err end
