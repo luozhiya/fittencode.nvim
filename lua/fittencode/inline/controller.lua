@@ -60,15 +60,18 @@ function Controller:__initialize(options)
         virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText'),
         on_key = vim.api.nvim_create_namespace('Fittencode.Inline.OnKey')
     }
-    self:enable(Config.inline_completion.enable)
+    local global_enable = Config.inline_completion.enable
+    self:set_suffix_permissions(false)
+    self:set_suffix_permissions(global_enable)
 end
 
 function Controller:destory()
-    self:enable(false)
+    self:set_suffix_permissions(false)
     for _, id in pairs(self.augroups) do
         vim.api.nvim_del_augroup(id)
     end
     self.augroups = {}
+    self:cleanup_sessions()
 end
 
 -- 外界可以通过注册观察者来监听 InlineController 的事件
@@ -159,8 +162,12 @@ function Controller:triggering_completion(options)
     options = options or {}
 
     local function _preflight_check()
-        local api_key_manager = Client.get_api_key_manager()
+        local buf = vim.api.nvim_get_current_buf()
+        if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
+            return
+        end
 
+        local api_key_manager = Client.get_api_key_manager()
         if not api_key_manager:has_fitten_access_token() then
             if Config.server.toggle_login_message_on_keyboard_input then
                 NotifyLogin.notify_login()
@@ -168,10 +175,6 @@ function Controller:triggering_completion(options)
             return
         end
 
-        local buf = vim.api.nvim_get_current_buf()
-        if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
-            return
-        end
         if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
             return
         end
@@ -378,31 +381,47 @@ function Controller:set_keymaps(enable)
     end
 end
 
-function Controller:enable(enable, global, suffixes)
-    enable = enable == nil and true or enable
-    global = global == nil and true or global
-    suffixes = suffixes or {}
-    if enable then
-        Config.inline_completion.enable = true
-        global = true
-    elseif global then
-        Config.inline_completion.enable = false
+-- 这个比 VSCode 的情况更复杂，suffixes 支持多个（非当前 buf filetype 也可以）
+function Controller:set_suffix_permissions(enable, suffixes)
+    local suffix_map = {}
+    for _, suffix in ipairs(Config.disable_specific_inline_completion.suffixes or {}) do
+        suffix_map[suffix] = true
     end
-    local merge_or_filter = function(tbl, filters)
-        if enable then
-            return vim.tbl_filter(function(ft)
-                return not vim.tbl_contains(filters, ft)
-            end, tbl)
+    -- 初始化状态：默认全局启用，禁用列表为空
+    if enable == false then
+        -- 关闭操作
+        if not suffixes or #suffixes == 0 then
+            -- 情况1.1: 全局禁用所有类型
+            Config.inline_completion.enable = false
         else
-            return vim.tbl_extend('force', tbl, filters)
+            -- 情况1.2: 当前处于全局启用状态时，添加指定后缀到禁用列表
+            if Config.inline_completion.enable then
+                for _, suffix in ipairs(suffixes) do
+                    suffix_map[suffix] = true
+                end
+                -- 若当前已全局禁用，则无需操作（全局禁用优先级更高）
+            end
+        end
+    else
+        -- 开启操作
+        if not suffixes or #suffixes == 0 then
+            -- 情况2.1: 仅设置全局启用，保留现有禁用列表
+            Config.inline_completion.enable = true
+        else
+            -- 情况2.2: 处理指定后缀
+            -- * 在 VSCode 中如果开启了特定文件类型的权限，则默认设置全局启用
+            -- * 在 Neovim 中也沿用这种操作习惯，即使 Neovim 允许同时操作多个任意类型
+            if not Config.inline_completion.enable then
+                -- 若当前是全局禁用状态，先开启全局
+                Config.inline_completion.enable = true
+            end
+            -- 从禁用列表中移除指定后缀
+            for _, suffix in ipairs(suffixes) do
+                suffix_map[suffix] = nil
+            end
         end
     end
-    Config.disable_specific_inline_completion.suffixes = merge_or_filter(Config.disable_specific_inline_completion.suffixes, suffixes)
-    if global then
-        self:set_autocmds(enable)
-        self:set_keymaps(enable)
-        self:set_onkey(enable)
-    end
+    Config.disable_specific_inline_completion.suffixes = vim.tbl_keys(suffix_map)
 end
 
 -- 显示当前补全状态

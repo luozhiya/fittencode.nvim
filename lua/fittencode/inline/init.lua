@@ -21,13 +21,13 @@ end
 
 local function enable()
     assert(controller, 'Controller not initialized')
-    controller:enable()
+    controller:set_suffix_permissions(true)
     Log.notify_info(Translate('Global completions are activated'))
 end
 
 local function disable()
     assert(controller, 'Controller not initialized')
-    controller:enable(false)
+    controller:set_suffix_permissions(false)
     Log.notify_info(Translate('Gloabl completions are deactivated'))
 end
 
@@ -35,7 +35,7 @@ end
 local function onlyenable(suffixes)
     assert(controller, 'Controller not initialized')
     local prev = Config.inline_completion.enable
-    controller:enable(true, false, suffixes)
+    controller:set_suffix_permissions(true, suffixes)
     if not prev then
         Log.notify_info(Translate('Completions for files with the extensions of {} are enabled, global completions have been automatically activated'), suffixes)
     else
@@ -46,7 +46,7 @@ end
 ---@param suffixes string[]
 local function onlydisable(suffixes)
     assert(controller, 'Controller not initialized')
-    controller:enable(false, false, suffixes)
+    controller:set_suffix_permissions(false, suffixes)
     Log.notify_info(Translate('Completions for files with the extensions of {} are disabled'), suffixes)
 end
 
