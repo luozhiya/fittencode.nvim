@@ -60,9 +60,7 @@ function Controller:__initialize(options)
         virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText'),
         on_key = vim.api.nvim_create_namespace('Fittencode.Inline.OnKey')
     }
-    local global_enable = Config.inline_completion.enable
-    self:set_suffix_permissions(false)
-    self:set_suffix_permissions(global_enable)
+    self:set_suffix_permissions(Config.inline_completion.enable)
 end
 
 function Controller:destory()
@@ -74,24 +72,27 @@ function Controller:destory()
     self:cleanup_sessions()
 end
 
+---@class FittenCode.Inline.Controller.Observer
+---@field update function
+---@field id string
+
 -- 外界可以通过注册观察者来监听 InlineController 的事件
 -- * `Inline.StatusUpdated`
+---@param observer FittenCode.Inline.Controller.Observer
 function Controller:register_observer(observer)
-    table.insert(self.observers, observer)
+    self.observers[observer.id] = observer
 end
 
+---@param observer FittenCode.Inline.Controller.Observer
 function Controller:unregister_observer(observer)
-    for i = #self.observers, 1, -1 do
-        if self.observers[i] == observer then
-            table.remove(self.observers, i)
-        end
-    end
+    self.observers[observer.id] = nil
 end
 
-function Controller:notify_observers(event, data)
-    for _, observer in ipairs(self.observers) do
+---@param payload table
+function Controller:notify_observers(payload)
+    for _, observer in pairs(self.observers) do
         Fn.schedule_call(function()
-            observer:update(event, data)
+            observer:update(payload)
         end)
     end
 end
@@ -449,7 +450,12 @@ end
 
 function Controller:update_status(id)
     if id == self.selected_session_id then
-        self:notify_observers('Inline.StatusUpdated', { status = self:get_status() })
+        self:notify_observers({
+            event = 'Inline.StatusUpdated',
+            data = {
+                status = self:get_status()
+            }
+        })
     end
 end
 
