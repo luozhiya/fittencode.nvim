@@ -388,7 +388,7 @@ function Controller:enable(enable, global, suffixes)
     elseif global then
         Config.inline_completion.enable = false
     end
-    local _merge = function(tbl, filters)
+    local merge_or_filter = function(tbl, filters)
         if enable then
             return vim.tbl_filter(function(ft)
                 return not vim.tbl_contains(filters, ft)
@@ -397,7 +397,7 @@ function Controller:enable(enable, global, suffixes)
             return vim.tbl_extend('force', tbl, filters)
         end
     end
-    Config.disable_specific_inline_completion.suffixes = _merge(Config.disable_specific_inline_completion.suffixes, suffixes)
+    Config.disable_specific_inline_completion.suffixes = merge_or_filter(Config.disable_specific_inline_completion.suffixes, suffixes)
     if global then
         self:set_autocmds(enable)
         self:set_keymaps(enable)
