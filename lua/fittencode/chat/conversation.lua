@@ -168,7 +168,6 @@ function Conversation:execute_chat(options)
 
         Promise:new(function(resolve, reject)
             local api_key_manager = Client.get_api_key_manager()
-            assert(api_key_manager, 'APIKeyManager not initialized')
 
             local completion = {}
             ---@type FittenCode.Protocol.Methods.ChatAuth.Body

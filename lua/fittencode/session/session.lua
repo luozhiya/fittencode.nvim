@@ -45,7 +45,6 @@ function M.login(username, password, options)
     end
 
     local api_key_manager = Client.get_api_key_manager()
-    assert(api_key_manager, 'APIKeyManager not initialized')
 
     if api_key_manager:get_fitten_user_id() then
         Log.notify_info(Translate('[Fitten Code] You are already logged in'))
@@ -100,7 +99,6 @@ local login_providers = {
 
 function M.login3rd(source, options)
     local api_key_manager = Client.get_api_key_manager()
-    assert(api_key_manager, 'APIKeyManager not initialized')
 
     if api_key_manager:get_fitten_user_id() then
         Log.notify_info(Translate('[Fitten Code] You are already logged in'))
@@ -197,12 +195,11 @@ end
 
 function M.logout()
     local api_key_manager = Client.get_api_key_manager()
-    assert(api_key_manager, 'APIKeyManager not initialized')
     if not api_key_manager:get_fitten_user_id() then
         Log.notify_info(Translate('[Fitten Code] You are already logged out'))
         return
     end
-    api_key_manager:update()
+    api_key_manager:clear()
     Log.notify_info(Translate('[Fitten Code] Logout successful'))
 end
 

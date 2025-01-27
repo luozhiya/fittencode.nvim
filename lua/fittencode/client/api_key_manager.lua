@@ -59,13 +59,15 @@ end
 
 ---@param keyring? FittenCode.Keyring
 function APIKeyManager:update(keyring)
-    -- validate keyring?
-    self.keyring = keyring
     if keyring then
+        self.keyring = keyring
         self.storage.store(self.key, vim.fn.json_encode(keyring))
-    else
-        self.storage.delete(self.key)
     end
+end
+
+function APIKeyManager:clear()
+    self.keyring = nil
+    self.storage.delete(self.key)
 end
 
 ---@return boolean

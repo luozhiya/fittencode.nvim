@@ -341,7 +341,7 @@ function Session:send_completions(buf, position, options)
                 self:set_model(response)
                 self:update_status():suggestions_ready()
                 Fn.schedule_call(options.on_success, response)
-                self.set_interactive_session_debounced(self)
+                Fn.schedule_call(self.set_interactive_session_debounced, self)
             end,
             on_failure = function()
                 if self:is_terminated() then

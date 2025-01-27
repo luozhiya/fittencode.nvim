@@ -24,7 +24,4 @@ function M.notify_login()
     end
 end
 
-function M.register_service()
-end
-
 return M

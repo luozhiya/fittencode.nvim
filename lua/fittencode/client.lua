@@ -9,7 +9,7 @@ local Config = require('fittencode.config')
 local PlatformInfo = require('fittencode.client.platform_info')
 
 ---@class FittenCode.Client
----@field get_api_key_manager fun(): FittenCode.APIKeyManager?
+---@field get_api_key_manager fun(): FittenCode.APIKeyManager
 ---@field request fun(protocol: FittenCode.Protocol.Element, options: FittenCode.Client.RequestOptions): nil
 
 ---@class FittenCode.Client

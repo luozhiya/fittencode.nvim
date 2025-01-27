@@ -50,8 +50,8 @@ function Controller:init(options)
             v2 = assert(ProjectCompletionFactory.create('v2')),
         }
         self.set_interactive_session_debounced = Fn.debounce(function(session)
-            if self.selected_session_id == session.id then
-                self.session():set_interactive()
+            if session and self.selected_session_id == session.id and not session:is_terminated() then
+                session:set_interactive()
             end
         end, Config.delay_completion.delaytime)
         self.augroups.completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true })
@@ -159,7 +159,6 @@ function Controller:triggering_completion(options)
 
     local function _preflight_check()
         local api_key_manager = Client.get_api_key_manager()
-        assert(api_key_manager, 'APIKeyManager not initialized')
 
         if not api_key_manager:has_fitten_access_token() then
             if Config.server.toggle_login_message_on_keyboard_input then
