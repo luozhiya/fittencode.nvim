@@ -70,95 +70,62 @@ function APIKeyManager:clear()
     self.storage.delete(self.key)
 end
 
+---@param token_type string
+---@param throw? boolean
+---@return boolean
+local function _check_token(self, token_type, throw)
+    throw = (throw == nil) and false or throw
+    local _, token
+    if token_type == 'access_token' then
+        _, token = pcall(function() return self.keyring.access_token end)
+    elseif token_type == 'refresh_token' then
+        _, token = pcall(function() return self.keyring.refresh_token end)
+    elseif token_type == 'user_id' then
+        _, token = pcall(function() return self.keyring.user_info.user_id end)
+    end
+
+    if not _ then
+        -- No login
+        return false
+    elseif token == nil or token == '' then
+        -- Data Error
+        if throw then
+            vim.ui.select(
+                { 'Re-login', 'Cancel' },
+                { prompt = string.format('[Fitten Code] Get %s error, please report to developer and re-login.', token_type) },
+                function(choice)
+                    if choice == 'Re-login' then
+                        self:clear()
+                        Log.notify_info('Logout successfully, please re-login.')
+                        vim.schedule(function()
+                            -- 普通登录还是第三方登录，如何选择？这是一个问题
+                            vim.cmd('FittenCode login')
+                        end)
+                    end
+                end
+            )
+        end
+        return false
+    end
+    return true
+end
+
 ---@param throw? boolean
 ---@return boolean
 function APIKeyManager:has_fitten_access_token(throw)
-    throw = (throw == nil) and false or throw
-    local _, access_token = pcall(function() return self.keyring.access_token end)
-    if not _ then
-        -- No login
-        return false
-    elseif access_token == nil or access_token == '' then
-        -- Data Error
-        if throw then
-            vim.ui.select(
-                { 'Re-login', 'Cancel' },
-                { prompt = '[Fitten Code] Get access token error, please report to developer and re-login.' },
-                function(choice)
-                    if choice == 'Re-login' then
-                        self:clear()
-                        Log.notify_info('Logout successfully, please re-login.')
-                        vim.schedule(function()
-                            -- 普通登录还是第三方登录，如何选择？这是一个问题
-                            vim.cmd('FittenCode login')
-                        end)
-                    end
-                end
-            )
-        end
-        return false
-    end
-    return true
+    return _check_token(self, 'access_token', throw)
 end
 
+---@param throw? boolean
 ---@return boolean
 function APIKeyManager:has_fitten_refresh_token(throw)
-    throw = (throw == nil) and false or throw
-    local _, refresh_token = pcall(function() return self.keyring.refresh_token end)
-    if not _ then
-        -- No login
-        return false
-    elseif refresh_token == nil or refresh_token == '' then
-        -- Data Error
-        if throw then
-            vim.ui.select(
-                { 'Re-login', 'Cancel' },
-                { prompt = '[Fitten Code] Get refresh token error, please report to developer and re-login.' },
-                function(choice)
-                    if choice == 'Re-login' then
-                        self:clear()
-                        Log.notify_info('Logout successfully, please re-login.')
-                        vim.schedule(function()
-                            -- 普通登录还是第三方登录，如何选择？这是一个问题
-                            vim.cmd('FittenCode login')
-                        end)
-                    end
-                end
-            )
-        end
-        return false
-    end
-    return true
+    return _check_token(self, 'refresh_token', throw)
 end
 
+---@param throw? boolean
 ---@return boolean
 function APIKeyManager:has_fitten_user_id(throw)
-    throw = (throw == nil) and false or throw
-    local _, user_id = pcall(function() return self.keyring.user_info.user_id end)
-    if not _ then
-        -- No login
-        return false
-    elseif user_id == nil or user_id == '' then
-        -- Data Error
-        if throw then
-            vim.ui.select(
-                { 'Re-login', 'Cancel' },
-                { prompt = '[Fitten Code] Get user id error, please report to developer and re-login.' },
-                function(choice)
-                    if choice == 'Re-login' then
-                        self:clear()
-                        Log.notify_info('Logout successfully, please re-login.')
-                        vim.schedule(function()
-                            -- 普通登录还是第三方登录，如何选择？这是一个问题
-                            vim.cmd('FittenCode login')
-                        end)
-                    end
-                end
-            )
-        end
-        return false
-    end
-    return true
+    return _check_token(self, 'user_id', throw)
 end
 
 return APIKeyManager
