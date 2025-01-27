@@ -2,35 +2,53 @@ local Config = require('fittencode.config')
 
 local M = {}
 
-function M.get_server_url()
-    local server_url = Config.server.server_url
-    local is_enterprise_or_standard = Config.server.version_name == 'enterprise' or Config.server.version_name == 'standard'
-    if server_url and #server_url > 0 and is_enterprise_or_standard then
-        server_url = server_url:gsub('%s+', ''):gsub('/+', '/')
-    else
-        server_url = 'https://fc.fittenlab.cn'
+-- 辅助函数：验证URL格式
+local function is_valid_url(url)
+    if type(url) ~= 'string' then return false end
+
+    -- 检查协议部分（http或https）
+    local protocol, rest = url:match('^(https?)://([^/]+)')
+    if not protocol then return false end
+
+    -- 提取主机和端口部分（如"example.com:8080"）
+    local host_port = rest:match('^([^:/]+)')
+    if not host_port then return false end
+
+    -- 分割主机和端口（如分离"example.com"和"8080"）
+    local host, port = host_port:match('^([^:]+):?(%d*)$')
+    if not host or #host == 0 then return false end
+
+    -- 检查主机名有效性（允许字母、数字、连字符、点号）
+    if host:find('[^%w%-%.]') then return false end
+
+    -- 检查端口号有效性（若存在）
+    if port ~= '' then
+        local port_num = tonumber(port)
+        if not port_num or port_num < 1 or port_num > 65535 then
+            return false
+        end
     end
-    return server_url
+
+    return true
 end
 
-local platform_info = nil
+function M.get_server_url()
+    local is_enterprise = Config.server.version_name == 'enterprise'
+    local is_standard = Config.server.version_name == 'standard'
+    local raw_url = Config.server.server_url
 
--- `/codeuser/pc_check_auth?user_id=${n}&ide=vsc&ide_name=vscode&ide_version=${Xe.version}&extension_version=${A}`
-function M.get_platform_info_as_url_params()
-    if not platform_info then
-        local ide = 'nvim'
-        local ide_name = 'neovim'
-        local extension_version = '0.2.0'
-        platform_info = table.concat({
-            'ide=' .. ide,
-            'ide_name=' .. ide_name,
-            'ide_version=' .. tostring(vim.version()),
-            -- 'os=' .. vim.uv.os_uname().sysname,
-            -- 'os_version=' .. vim.uv.os_uname().release,
-            'extension_version=' .. extension_version,
-        }, '&')
+    -- 初始化默认值
+    local final_url = 'https://fc.fittenlab.cn'
+
+    -- 仅在企业版/标准版时尝试自定义URL
+    if (is_enterprise or is_standard) and raw_url and #raw_url > 0 then
+        local cleaned = raw_url:gsub('%s+', ''):gsub('/+', '/')
+        if is_valid_url(cleaned) then
+            final_url = cleaned
+        end
     end
-    return platform_info
+
+    return final_url
 end
 
 return M

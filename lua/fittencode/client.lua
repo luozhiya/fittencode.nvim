@@ -5,6 +5,7 @@ local EvaluateRequest = require('fittencode.client.evaluate_request')
 local Server = require('fittencode.client.server')
 local PlainStorage = require('fittencode.client.plain_storage')
 local Config = require('fittencode.config')
+local PlatformInfo = require('fittencode.client.platform_info')
 
 ---@class FittenCode.Client
 ---@field get_api_key_manager fun(): FittenCode.APIKeyManager?
@@ -14,7 +15,7 @@ local Config = require('fittencode.config')
 local M = {}
 
 ---@type FittenCode.APIKeyManager?
-local _api_key_manager
+local api_key_manager
 
 function M.init()
     ---@type FittenCode.KeyStorage?
@@ -29,7 +30,7 @@ function M.init()
             filename = 'secrets.dat'
         }
     })
-    _api_key_manager = APIKeyManager.new({
+    api_key_manager = APIKeyManager.new({
         key = 'FittenCode',
         storage = storage,
     })
@@ -37,8 +38,8 @@ end
 
 ---@return FittenCode.APIKeyManager
 function M.get_api_key_manager()
-    assert(_api_key_manager, 'APIKeyManager not initialized')
-    return _api_key_manager
+    assert(api_key_manager, 'APIKeyManager not initialized')
+    return api_key_manager
 end
 
 local function openlink(url, options)
@@ -53,14 +54,14 @@ end
 ---@param protocol FittenCode.Protocol.Element
 ---@param options FittenCode.Client.RequestOptions
 function M.request(protocol, options)
-    assert(_api_key_manager, 'APIKeyManager not initialized')
-    local user_id = _api_key_manager:get_fitten_user_id()
+    assert(api_key_manager, 'APIKeyManager not initialized')
+    local user_id = api_key_manager:get_fitten_user_id()
     local variables = vim.tbl_extend('force', options.variables or {}, {
         user_id = user_id,
         ft_token = user_id,
-        username = _api_key_manager:get_username(),
-        access_token = _api_key_manager:get_fitten_access_token(),
-        platform_info = Server.get_platform_info_as_url_params(),
+        username = api_key_manager:get_username(),
+        access_token = api_key_manager:get_fitten_access_token(),
+        platform_info = PlatformInfo.get_platform_info_as_url_params(),
     })
 
     local _, evaluated = pcall(EvaluateRequest.reevaluate_method, protocol, variables)
