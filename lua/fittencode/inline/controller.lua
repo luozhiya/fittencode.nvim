@@ -105,7 +105,7 @@ function Controller:dismiss_suggestions(options)
     self:cleanup_sessions()
 end
 
-function Controller:get_pc_chosen(user_id, options)
+function Controller:get_project_completion_chosen(user_id, options)
 end
 
 function Controller:check_project_completion_available(user_id, lsp, options)
@@ -113,7 +113,7 @@ function Controller:check_project_completion_available(user_id, lsp, options)
     local open = Config.use_project_completion.open
     local heart = 1
     Promise:new(function(resolve)
-        self:get_pc_chosen(user_id, {
+        self:get_project_completion_chosen(user_id, {
             on_success = function(chosen)
                 resolve(chosen)
             end,
