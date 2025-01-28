@@ -1,3 +1,3 @@
-local Promise = require("promise")
+local Promise = require('promise')
 
-Promise:new(function(resolve, reject) reject("Error") end):forward(function(value) print(value) end, function(reason) print(111) end):catch(function(reason) print(222) end)
+Promise:new(function(resolve, reject) reject('Error') end):forward(function(value) print(value) end, function(reason) print(111) end):catch(function(reason) print(222) end)

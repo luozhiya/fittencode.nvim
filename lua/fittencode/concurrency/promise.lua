@@ -61,9 +61,10 @@ end
 -- Promise.prototype.then(), https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
 -- * The then() method of Promise instances takes up to two arguments: callback functions for the fulfilled and rejected cases of the Promise.
 -- * It immediately returns an equivalent Promise object, allowing you to chain calls to other promise methods.
+-- 当 `原Promise` 被 `拒绝` 且未提供 `on_rejected` 时，`新Promise` 会以相同的原因被 `拒绝`，确保后续的 `catch` 能捕获到 `原始错误`。
 ---@param on_fulfilled? function
 ---@param on_rejected? function
----@return Promise?
+---@return Promise
 function Promise:forward(on_fulfilled, on_rejected)
     return Promise:new(function(resolve, reject)
         if self.state == PromiseState.PENDING then
@@ -154,6 +155,10 @@ function Promise:is_rejected()
     return self.state == PromiseState.REJECTED
 end
 
+-- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all
+-- * The Promise.all() method returns a new Promise that resolves when all of the promises in the iterable argument have resolved.
+-- * It rejects with the reason of the first promise that rejects
+-- * It resolves with an array of the results of the resolved promises in the same order as the iterable.
 ---@param promises Promise[]
 ---@return Promise
 function Promise.all(promises)
@@ -191,6 +196,10 @@ function Promise.all(promises)
     end)
 end
 
+-- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/allSettled
+-- * The Promise.allSettled() method returns a new Promise that resolves when all of the promises in the iterable argument have either resolved or rejected
+-- * It resolves with an array of objects, each containing a status property indicating whether the promise resolved or rejected, and a value or reason property depending on the outcome.
+-- * It behaves like Promise.all() in that it waits for all promises to settle, but it does not reject the new Promise if any of the promises reject.
 ---@param promises Promise[]
 ---@return Promise
 function Promise.all_settled(promises)
@@ -228,7 +237,10 @@ function Promise.all_settled(promises)
     end)
 end
 
---- 实现 Promise.any()
+-- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/any
+-- * The Promise.any() method returns a new Promise that resolves when any of the promises in the iterable argument have resolved or rejected.
+-- * It rejects with an array of the reasons of the rejected promises in the same order as the iterable.
+-- * It resolves with the value of the first resolved promise in the iterable.
 ---@param promises Promise[]
 ---@return Promise?
 function Promise.any(promises)
@@ -274,7 +286,10 @@ function Promise.any(promises)
     end)
 end
 
---- 实现 Promise.race()
+-- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/race
+-- * The Promise.race() method returns a new Promise that resolves or rejects as soon as one of the promises in the iterable argument resolves or rejects, with the value or reason from that promise.
+-- * It resolves with the value of the first resolved promise in the iterable.
+-- * It rejects with the reason of the first promise that rejects.
 ---@param promises Promise[]
 ---@return Promise
 function Promise.race(promises)
@@ -310,7 +325,8 @@ function Promise.race(promises)
     end)
 end
 
---- 实现 Promise.reject() 静态方法
+-- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/reject
+-- * The Promise.reject() method returns a new Promise object that is rejected with the given reason.
 ---@param reason any
 ---@return Promise
 function Promise.reject(reason)
@@ -319,7 +335,8 @@ function Promise.reject(reason)
     end)
 end
 
---- 实现 Promise.resolve() 静态方法
+-- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/resolve
+-- * The Promise.resolve() method returns a new Promise object that is resolved with the given value.
 ---@param value any
 ---@return Promise
 function Promise.resolve(value)
@@ -334,7 +351,9 @@ function Promise.resolve(value)
     end)
 end
 
---- 实现 Promise.try() 方法
+-- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/try
+-- * The Promise.try() method returns a new Promise that resolves to the return value of the provided function.
+-- * If the function throws an error, the returned Promise will be rejected with that error.
 ---@param fn function
 ---@return Promise
 function Promise.try(fn)
