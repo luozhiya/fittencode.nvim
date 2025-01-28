@@ -24,7 +24,7 @@ local Promise = {}
 ---@param executor? function
 ---@return Promise
 function Promise:new(executor, async)
-    assert(type(executor) == 'function', "Promise executor must be a function")
+    assert(type(executor) == 'function', 'Promise executor must be a function')
     local obj = {
         state = PromiseState.PENDING,
         value = nil,
@@ -188,23 +188,23 @@ function Promise.all_settled(promises)
         local remaining = count
         for i = 1, count do
             local p = promises[i]
-            if type(p) == "table" and getmetatable(p) == Promise then
+            if type(p) == 'table' and getmetatable(p) == Promise then
                 -- 处理 Promise 对象
                 p:forward(
                     function(value)
-                        results[i] = { status = "fulfilled", value = value }
+                        results[i] = { status = 'fulfilled', value = value }
                         remaining = remaining - 1
                         if remaining == 0 then resolve(results) end
                     end,
                     function(reason)
-                        results[i] = { status = "rejected", reason = reason }
+                        results[i] = { status = 'rejected', reason = reason }
                         remaining = remaining - 1
                         if remaining == 0 then resolve(results) end
                     end
                 )
             else
                 -- 处理非 Promise 值（直接视为 fulfilled）
-                results[i] = { status = "fulfilled", value = p }
+                results[i] = { status = 'fulfilled', value = p }
                 remaining = remaining - 1
                 if remaining == 0 then resolve(results) end
             end
@@ -219,7 +219,7 @@ function Promise.any(promises)
     return Promise:new(function(resolve, reject)
         -- 处理空数组的特殊情况
         if #promises == 0 then
-            return reject({ errors = {}, message = "All promises were rejected" })
+            return reject({ errors = {}, message = 'All promises were rejected' })
         end
 
         local errors = {}
@@ -227,7 +227,7 @@ function Promise.any(promises)
         local has_resolved = false
 
         for i, p in ipairs(promises) do
-            if type(p) == "table" and getmetatable(p) == Promise then
+            if type(p) == 'table' and getmetatable(p) == Promise then
                 -- 处理 Promise 对象
                 p:forward(
                     function(value)
@@ -242,7 +242,7 @@ function Promise.any(promises)
                         if error_count == #promises then
                             reject({
                                 errors = errors,
-                                message = "All promises were rejected"
+                                message = 'All promises were rejected'
                             })
                         end
                     end
@@ -267,7 +267,7 @@ function Promise.race(promises)
         local has_settled = false
 
         for _, p in ipairs(promises) do
-            if type(p) == "table" and getmetatable(p) == Promise then
+            if type(p) == 'table' and getmetatable(p) == Promise then
                 -- 处理 Promise 对象
                 p:forward(
                     function(value)
@@ -308,10 +308,10 @@ end
 ---@return Promise
 function Promise.resolve(value)
     -- 如果参数是 Promise 实例则直接返回
-    if type(value) == "table" and getmetatable(value) == Promise then
+    if type(value) == 'table' and getmetatable(value) == Promise then
         return value
     end
-    
+
     -- 创建立即解决的 Promise
     return Promise:new(function(resolve)
         resolve(value) -- 同步触发解决
@@ -325,13 +325,13 @@ function Promise.try(fn)
     return Promise:new(function(resolve, reject)
         -- 使用 pcall 捕获同步错误
         local ok, result = pcall(fn)
-        
+
         if not ok then
             -- 同步错误直接触发拒绝
             reject(result)
         else
             -- 处理返回值类型
-            if type(result) == "table" and getmetatable(result) == Promise then
+            if type(result) == 'table' and getmetatable(result) == Promise then
                 -- Promise 实例：转发状态
                 result:forward(resolve, reject)
             else

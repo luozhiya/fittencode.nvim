@@ -1,5 +1,5 @@
 -- local Promise = require("fittencode.concurrency.promise")
-local Promise = require("promise")
+local Promise = require('promise')
 
 -- async 函数，将普通函数包装成返回 Promise 的异步函数
 ---@param func function
@@ -18,13 +18,13 @@ local function async(func)
                 return
             end
             -- 检查协程状态
-            if coroutine.status(co) == "dead" then
+            if coroutine.status(co) == 'dead' then
                 -- 协程执行完毕，解决 Promise
                 resolve(result)
                 return
             end
             -- 处理结果（可能是一个 Promise 或普通值）
-            if type(result) == "table" and getmetatable(result) == Promise then
+            if type(result) == 'table' and getmetatable(result) == Promise then
                 -- 等待 Promise 完成
                 result:forward(
                     function(value)
@@ -48,7 +48,7 @@ end
 ---@param promise Promise
 ---@return any
 local function await(promise)
-    if not promise or type(promise) ~= "table" or getmetatable(promise) ~= Promise then
+    if not promise or type(promise) ~= 'table' or getmetatable(promise) ~= Promise then
         -- 如果参数不是 Promise，直接返回值
         return promise
     end
@@ -76,7 +76,7 @@ local function await(promise)
         local ok, value, reason = coroutine.yield()
         if not ok then
             -- 拒绝情况，抛出错误
-            error(reason or "await rejected")
+            error(reason or 'await rejected')
         end
         return value
     end
