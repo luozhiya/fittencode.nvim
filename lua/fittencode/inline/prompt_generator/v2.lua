@@ -6,6 +6,7 @@ local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')
 local Config = require('fittencode.config')
+local LspService = require('fittencode.lsp_service')
 
 local fim_pattern = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
@@ -194,22 +195,50 @@ function V2:_recalculate_meta_datas(options)
     end
 end
 
----@param buf number?
----@param position FittenCode.Position
----@param options table
-function V2:generate(buf, position, options)
-    Fn.schedule_call(options.on_create)
+function V2:_generate_project_completion_prompt(buf, position, project_completion_service, options)
+    Promise:new(function(resolve, reject)
+        self.project_completion.v2:get_file_lsp(buf, {
+            on_success = function(lsp)
+                resolve(lsp)
+            end,
+            on_error = function()
+                Fn.schedule_call(options.on_error)
+            end
+        })
+    end):forward(function(lsp)
+        return Promise:new(function(resolve, reject)
+            project_completion_service:check_project_completion_available(lsp, {
+                on_success = function(available)
+                    resolve()
+                end,
+                on_error = function()
+                    Fn.schedule_call(options.on_error)
+                end,
+            })
+        end)
+    end):forward(function()
+        return Promise:new(function(resolve, reject)
+            local function get_prompt(callbacks)
+                if project_completion_service:get_last_chosen_prompt_type() == '5' then
+                    self.project_completion.v1:get_prompt(buf, position.row, callbacks)
+                else
+                    self.project_completion.v2:get_prompt(buf, position.row, callbacks)
+                end
+            end
+            local callbacks = {
+                on_success = function(prompt)
+                    resolve(prompt)
+                end,
+                on_error = function()
+                    Fn.schedule_call(options.on_error)
+                end
+            }
+            get_prompt(callbacks)
+        end)
+    end)
+end
 
-    local last_chosen_prompt_type = options.last_chosen_prompt_type
-
-    local open_pc = Config.use_project_completion.open
-    local fc_nodefault = Config.server.fitten_version ~= 'default'
-    local h = -1
-
-    if ((open_pc ~= 'off' and fc_nodefault) or (open_pc == 'on' and not fc_nodefault)) and h == 0 then
-        -- notify install lsp
-    end
-
+function V2:_generate_prompt(buf, position, options)
     local ctx = self:_recalculate_prefix_suffix(buf, position)
     local text = ctx.prefix .. ctx.suffix
 
@@ -241,19 +270,56 @@ function V2:generate(buf, position, options)
             resolve(prompt)
         end)
     end):forward(function(prompt)
-        return Promise:new(function(resolve, reject)
-            self.check_project_completion_available()
-        end)
-    end):forward(function(prompt)
-        return Promise:new(function(resolve, reject)
-            if last_chosen_prompt_type == '5' then
-                self.project_completion.v1:get_prompt(buf, position.row)
-            else
-                self.project_completion.v2:get_prompt(buf, position.row)
-            end
-        end)
-    end):forward(function(prompt)
         Fn.schedule_call(options.on_once, prompt)
+    end)
+end
+
+---@param buf number?
+---@param position FittenCode.Position
+---@param options table
+function V2:generate(buf, position, options)
+    Fn.schedule_call(options.on_create)
+
+    ---@type FittenCode.Inline.ProjectCompletionService
+    local project_completion_service = options.project_completion_service
+    local open_pc = Config.use_project_completion.open
+    local fc_nodefault = Config.server.fitten_version ~= 'default'
+    local h = -1
+
+    if ((open_pc ~= 'off' and fc_nodefault) or (open_pc == 'on' and not fc_nodefault)) and h == 0 then
+        LspService.notify_install_lsp(buf)
+        Fn.schedule_call(options.on_error)
+        return
+    end
+
+    Promise.all({
+        Promise:new(function(resolve, reject)
+            self:_generate_prompt(buf, position, {
+                on_once = function(prompt)
+                    resolve(prompt)
+                end,
+                on_error = function()
+                    Fn.schedule_call(options.on_error)
+                end
+            })
+        end),
+        Promise:new(function(resolve, reject)
+            self:_generate_project_completion_prompt(buf, position, project_completion_service, {
+                on_once = function(prompt)
+                    resolve(prompt)
+                end,
+                on_error = function()
+                    Fn.schedule_call(options.on_error)
+                end
+            })
+        end),
+    }):forward(function(results)
+        local prompt = results[1]
+        local project_completion_prompt = results[2]
+        prompt = vim.tbl_deep_extend('force', prompt, project_completion_prompt or {})
+        Fn.schedule_call(options.on_success, prompt)
+    end, function()
+        Fn.schedule_call(options.on_error)
     end)
 end
 

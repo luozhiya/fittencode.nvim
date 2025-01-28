@@ -18,7 +18,6 @@ local Compression = require('fittencode.compression')
 -- * 通过配置交互模式来实现延时补全 (delay_completion)
 ---@class FittenCode.Inline.Session
 local Session = {}
-Session.__index = Session
 
 ---@return FittenCode.Inline.Session
 function Session:new(options)
@@ -32,15 +31,19 @@ function Session:new(options)
         terminated = false,
         interactive = false,
         gos_version = options.gos_version,
-        project_completion = options.project_completion,
         prompt_generator = options.prompt_generator,
+        project_completion_service = options.project_completion_service,
         triggering_completion = options.triggering_completion,
         update_inline_status = options.update_inline_status,
         set_interactive_session_debounced = options.set_interactive_session_debounced,
     }
-    setmetatable(obj, Session)
-    obj.status = SessionStatus:new({ gc = obj:gc(), on_update = function() obj.update_inline_status(obj.id) end })
+    setmetatable(obj, { __index = self })
+    obj:__initialize(options)
     return obj
+end
+
+function Session:__initialize(options)
+    self.status = SessionStatus:new({ gc = self:gc(), on_update = function() self.update_inline_status(self.id) end })
 end
 
 -- 设置 Model，计算补全数据
@@ -297,9 +300,7 @@ function Session:send_completions(buf, position, options)
             filename = assert(Editor.filename(buf)),
             gos_version = self.gos_version,
             edit_mode = self.edit_mode,
-            project_completion = self.project_completion,
-            last_chosen_prompt_type = self.last_chosen_prompt_type,
-            check_project_completion_available = self.check_project_completion_available,
+            project_completion_service = self.project_completion_service,
             on_create = function()
                 if self:is_terminated() then
                     return

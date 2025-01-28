@@ -10,7 +10,7 @@ local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local Position = require('fittencode.position')
 local PromptGenerator = require('fittencode.inline.prompt_generator')
-local ProjectCompletionFactory = require('fittencode.inline.project_completion')
+local ProjectCompletionService = require('fittencode.inline.project_completion_service')
 local Status = require('fittencode.inline.status')
 local NotifyLogin = require('fittencode.client.notify_login')
 
@@ -33,16 +33,12 @@ end
 ---@param options? FittenCode.Inline.Controller.Options
 function Controller:__initialize(options)
     options = options or {}
+    self.project_completion_service = ProjectCompletionService:new()
     self.prompt_generator = PromptGenerator:new()
     self.observers = {}
     self.sessions = {}
     self.filter_events = {}
     self.gos_version = '2'
-    self.last_chosen_prompt_type = '0'
-    self.project_completion = {
-        v1 = assert(ProjectCompletionFactory.create('v1')),
-        v2 = assert(ProjectCompletionFactory.create('v2')),
-    }
     self.set_interactive_session_debounced = Fn.debounce(function(session)
         if session and self.selected_session_id == session.id and not session:is_terminated() then
             session:set_interactive()
@@ -103,42 +99,6 @@ function Controller:dismiss_suggestions(options)
         return
     end
     self:cleanup_sessions()
-end
-
-function Controller:get_project_completion_chosen(user_id, options)
-end
-
-function Controller:check_project_completion_available(user_id, lsp, options)
-    local available = false
-    local open = Config.use_project_completion.open
-    local heart = 1
-    Promise:new(function(resolve)
-        self:get_project_completion_chosen(user_id, {
-            on_success = function(chosen)
-                resolve(chosen)
-            end,
-            on_failure = function()
-                Fn.schedule_call(options.on_failure)
-            end,
-        })
-    end):forward(function(chosen)
-        if open == 'auto' then
-            if chosen >= 1 and lsp == 1 and heart ~= 2 then
-                available = true
-            end
-        elseif open == 'on' then
-            if lsp == 1 and heart ~= 2 then
-                available = true
-            end
-        elseif open == 'off' then
-            available = false
-        end
-        if available then
-            Fn.schedule_call(options.on_success)
-        else
-            Fn.schedule_call(options.on_failure)
-        end
-    end)
 end
 
 ---@param buf number
@@ -212,10 +172,8 @@ function Controller:send_completions(buf, position, options)
         id = assert(Fn.uuid_v4()),
         gos_version = self.gos_version,
         edit_mode = options.edit_mode,
-        project_completion = self.project_completion,
+        project_completion_service = self.project_completion_service,
         prompt_generator = self.prompt_generator,
-        last_chosen_prompt_type = self.last_chosen_prompt_type,
-        check_project_completion_available = function(...) self:check_project_completion_available(...) end,
         triggering_completion = function(...) self:triggering_completion_auto(...) end,
         update_inline_status = function(id) self:update_status(id) end,
         set_interactive_session_debounced = self.set_interactive_session_debounced

@@ -285,13 +285,12 @@
 ---@field augroups table
 ---@field ns_ids table
 ---@field request_handles table<FittenCode.HTTP.RequestHandle?>
----@field project_completion table<string, FittenCode.Inline.ProjectCompletion>
+---@field project_completion_service FittenCode.Inline.ProjectCompletionService
 ---@field sessions table<string, FittenCode.Inline.Session>
 ---@field session function
 ---@field selected_session_id string
 ---@field init function
 ---@field destory function
----@field last_chosen_prompt_type string
 ---@field private __initialize function
 
 ---@class FittenCode.VM
@@ -312,11 +311,9 @@
 ---@field status FittenCode.Inline.Session.Status
 ---@field gos_version string '1' | '2'
 ---@field edit_mode? boolean
----@field project_completion table<string, FittenCode.Inline.ProjectCompletion>
+---@field project_completion_service FittenCode.Inline.ProjectCompletionService
 ---@field prompt_generator FittenCode.Inline.PromptGenerator
----@field last_chosen_prompt_type string
 ---@field generate_one_stage_auth function
----@field check_project_completion_available function
 ---@field triggering_completion function
 ---@field update_inline_status function
 ---@field is_initialized function
@@ -359,7 +356,7 @@
 ---@field gos_version string '1' | '2'
 ---@field edit_mode boolean
 ---@field filename? string
----@field project_completion table?
+---@field project_completion_service FittenCode.Inline.ProjectCompletionService?
 
 ---@class FittenCode.Inline.Model
 ---@field mode 'lines' | 'multi_segments' | 'edit_completion'
