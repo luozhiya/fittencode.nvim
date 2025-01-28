@@ -14,7 +14,7 @@ function PlainStorage.new(options)
     self._data_file = Fn.normalize_path(self._storage_dir .. '/' .. self._filename)
 
     -- 创建存储目录
-    local ok, err = pcall(vim.uv.fs_mkdir, self._storage_dir, 448, true)
+    local ok, err = pcall(vim.uv.fs_mkdir, self._storage_dir, 448)
     if not ok and err ~= 'EEXIST' then
         error('Create directory failed: ' .. err)
     end

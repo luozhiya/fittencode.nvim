@@ -1,5 +1,5 @@
 local Config = require('fittencode.config')
-local ProjectCompletionFactory = require('fittencode.inline.project_completion_factory')
+local ProjectCompletionFactory = require('fittencode.inline.project_completion')
 local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.fn')
 local Client = require('fittencode.client')

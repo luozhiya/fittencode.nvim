@@ -17,7 +17,7 @@ function APIKeyManager.new(options)
         key = options.key,
         storage = options.storage,
     }
-    local _, keyring = pcall(vim.fn.json_decode, self.storage.get(self.key))
+    local _, keyring = pcall(vim.fn.json_decode, self.storage:get(self.key))
     if keyring then
         self.keyring = keyring
     end
@@ -61,13 +61,13 @@ end
 function APIKeyManager:update(keyring)
     if keyring then
         self.keyring = keyring
-        self.storage.store(self.key, vim.fn.json_encode(keyring))
+        self.storage:store(self.key, vim.fn.json_encode(keyring))
     end
 end
 
 function APIKeyManager:clear()
     self.keyring = nil
-    self.storage.delete(self.key)
+    self.storage:delete(self.key)
 end
 
 ---@param token_type string
