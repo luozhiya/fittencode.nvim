@@ -10,20 +10,20 @@ local LspService = require('fittencode.lsp_service')
 
 local fim_pattern = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
----@class FittenCode.Inline.PromptGenerator.ProjectAwareGenerator
----@field last FittenCode.Inline.PromptGenerator.ProjectAwareGenerator.Last
+---@class FittenCode.Inline.PromptGenerator
+---@field last FittenCode.Inline.PromptGenerator.Last
 ---@field project_completion_service FittenCode.Inline.ProjectCompletionService
 
----@class FittenCode.Inline.PromptGenerator.ProjectAwareGenerator.Last
+---@class FittenCode.Inline.PromptGenerator.Last
 ---@field filename string
 ---@field text string
 ---@field ciphertext string
 
----@class FittenCode.Inline.PromptGenerator.ProjectAwareGenerator
-local ProjectAwareGenerator = {}
-ProjectAwareGenerator.__index = ProjectAwareGenerator
+---@class FittenCode.Inline.PromptGenerator
+local PromptGenerator = {}
+PromptGenerator.__index = PromptGenerator
 
-function ProjectAwareGenerator:new(options)
+function PromptGenerator:new(options)
     local obj = {
         last = {
             filename = '',
@@ -38,7 +38,7 @@ end
 
 ---@param buf number?
 ---@param position FittenCode.Position
-function ProjectAwareGenerator:_recalculate_prefix_suffix(buf, position)
+function PromptGenerator:_recalculate_prefix_suffix(buf, position)
     -- VSCode 的 max_chars 是按 UTF-16 一个 16 位字节来计算的，如果是 emoji 占用一对代理对就会计算成两个
     -- Neovim 的 max_chars 是 UTF-32
     local max_chars = 22e4
@@ -120,7 +120,7 @@ local function compare_bytes_order(prev, curr)
     return leq, req
 end
 
-function ProjectAwareGenerator:_recalculate_meta_datas(options)
+function PromptGenerator:_recalculate_meta_datas(options)
     assert(options)
     local text = options.text or ''
     local ciphertext = options.ciphertext or ''
@@ -195,7 +195,7 @@ function ProjectAwareGenerator:_recalculate_meta_datas(options)
     end
 end
 
-function ProjectAwareGenerator:_generate_project_completion_prompt(buf, position, options)
+function PromptGenerator:_generate_project_completion_prompt(buf, position, options)
     Promise:new(function(resolve, reject)
         self.project_completion_service.project_completion.v2:get_file_lsp(buf, {
             on_success = function(lsp)
@@ -238,7 +238,7 @@ function ProjectAwareGenerator:_generate_project_completion_prompt(buf, position
     end)
 end
 
-function ProjectAwareGenerator:_generate_prompt(buf, position, options)
+function PromptGenerator:_generate_prompt(buf, position, options)
     local ctx = self:_recalculate_prefix_suffix(buf, position)
     local text = ctx.prefix .. ctx.suffix
 
@@ -277,7 +277,7 @@ end
 ---@param buf number?
 ---@param position FittenCode.Position
 ---@param options table
-function ProjectAwareGenerator:generate(buf, position, options)
+function PromptGenerator:generate(buf, position, options)
     Fn.schedule_call(options.on_create)
 
     local open_pc = Config.use_project_completion.open
@@ -321,4 +321,4 @@ function ProjectAwareGenerator:generate(buf, position, options)
     end)
 end
 
-return ProjectAwareGenerator
+return PromptGenerator

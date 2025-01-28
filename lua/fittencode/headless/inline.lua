@@ -7,13 +7,13 @@ local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
 local Log = require('fittencode.log')
 
----@class FittenCode.Inline.Headless
+---@class FittenCode.Headless.Inline
 local Headless = {}
 Headless.__index = Headless
 
----@class FittenCode.Inline.Headless.Options
+---@class FittenCode.Headless.Inline.Options
 
----@param options FittenCode.Inline.Headless.Options
+---@param options FittenCode.Headless.Inline.Options
 function Headless:new(options)
     local obj = {}
     setmetatable(obj, self)

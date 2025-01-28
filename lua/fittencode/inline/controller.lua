@@ -9,10 +9,10 @@ local Log = require('fittencode.log')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local Position = require('fittencode.position')
-local PromptGenerator = require('fittencode.inline.prompt_generator')
 local ProjectCompletionService = require('fittencode.inline.project_completion_service')
 local Status = require('fittencode.inline.status')
 local NotifyLogin = require('fittencode.client.notify_login')
+local PromptGenerator = require('fittencode.inline.prompt_generator')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
@@ -171,7 +171,6 @@ function Controller:send_completions(buf, position, options)
         buf = buf,
         position = position,
         id = assert(Fn.uuid_v4()),
-        gos_version = self.gos_version,
         edit_mode = options.edit_mode,
         prompt_generator = self.prompt_generator,
         triggering_completion = function(...) self:triggering_completion_auto(...) end,

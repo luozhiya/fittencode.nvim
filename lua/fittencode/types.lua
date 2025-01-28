@@ -402,4 +402,4 @@
 ---@field on_no_more_suggestion? function
 
 -- Inline 的 headless 模式，允许在没有 UI 和不干扰原来 Inline 引擎的情况下，发送补全请求，用于二次开发
----@class FittenCode.Inline.Headless
+---@class FittenCode.Headless.Inline
