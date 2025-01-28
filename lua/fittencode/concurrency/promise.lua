@@ -68,34 +68,50 @@ function Promise:forward(on_fulfilled, on_rejected)
     return Promise:new(function(resolve, reject)
         if self.state == PromiseState.PENDING then
             table.insert(self.promise_reactions[PromiseState.FULFILLED], function(promise)
-                local last_promise = on_fulfilled and on_fulfilled(promise.value)
+                if on_fulfilled then
+                    local last_promise = on_fulfilled(promise.value)
+                    if type(last_promise) == 'table' and getmetatable(last_promise) == Promise then
+                        last_promise:forward(resolve, reject)
+                    else
+                        resolve(last_promise)
+                    end
+                else
+                    resolve(promise.value)
+                end
+            end)
+            table.insert(self.promise_reactions[PromiseState.REJECTED], function(promise)
+                if on_rejected then
+                    local last_promise = on_rejected(promise.reason)
+                    if type(last_promise) == 'table' and getmetatable(last_promise) == Promise then
+                        last_promise:forward(resolve, reject)
+                    else
+                        resolve(last_promise)
+                    end
+                else
+                    reject(promise.reason)
+                end
+            end)
+        elseif self.state == PromiseState.FULFILLED then
+            if on_fulfilled then
+                local last_promise = on_fulfilled(self.value)
                 if type(last_promise) == 'table' and getmetatable(last_promise) == Promise then
                     last_promise:forward(resolve, reject)
                 else
                     resolve(last_promise)
                 end
-            end)
-            table.insert(self.promise_reactions[PromiseState.REJECTED], function(promise)
-                local last_promise = on_rejected and on_rejected(promise.reason)
+            else
+                resolve(self.value)
+            end
+        elseif self.state == PromiseState.REJECTED then
+            if on_rejected then
+                local last_promise = on_rejected(self.reason)
                 if type(last_promise) == 'table' and getmetatable(last_promise) == Promise then
                     last_promise:forward(resolve, reject)
                 else
-                    reject(last_promise)
+                    resolve(last_promise)
                 end
-            end)
-        elseif self.state == PromiseState.FULFILLED then
-            local last_promise = on_fulfilled and on_fulfilled(self.value)
-            if type(last_promise) == 'table' and getmetatable(last_promise) == Promise then
-                last_promise:forward(resolve, reject)
             else
-                resolve(last_promise)
-            end
-        elseif self.state == PromiseState.REJECTED then
-            local last_promise = on_rejected and on_rejected(self.reason)
-            if type(last_promise) == 'table' and getmetatable(last_promise) == Promise then
-                last_promise:forward(resolve, reject)
-            else
-                reject(last_promise)
+                reject(self.reason)
             end
         end
     end)
