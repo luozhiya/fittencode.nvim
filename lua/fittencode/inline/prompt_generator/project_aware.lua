@@ -10,27 +10,27 @@ local LspService = require('fittencode.lsp_service')
 
 local fim_pattern = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
----@class FittenCode.Inline.PromptGenerator.V2
----@field last FittenCode.Inline.PromptGenerator.V2.Last
----@field project_completion table<string, FittenCode.Inline.ProjectCompletion>
+---@class FittenCode.Inline.PromptGenerator.ProjectAwareGenerator
+---@field last FittenCode.Inline.PromptGenerator.ProjectAwareGenerator.Last
+---@field project_completion_service FittenCode.Inline.ProjectCompletionService
 
----@class FittenCode.Inline.PromptGenerator.V2.Last
+---@class FittenCode.Inline.PromptGenerator.ProjectAwareGenerator.Last
 ---@field filename string
 ---@field text string
 ---@field ciphertext string
 
----@class FittenCode.Inline.PromptGenerator.V2
-local V2 = {}
-V2.__index = V2
+---@class FittenCode.Inline.PromptGenerator.ProjectAwareGenerator
+local ProjectAwareGenerator = {}
+ProjectAwareGenerator.__index = ProjectAwareGenerator
 
-function V2:new()
+function ProjectAwareGenerator:new(options)
     local obj = {
         last = {
             filename = '',
             text = '',
             ciphertext = ''
         },
-        project_completion = { v1 = nil, v2 = nil },
+        project_completion_service = options.project_completion_service,
     }
     setmetatable(obj, self)
     return obj
@@ -38,7 +38,7 @@ end
 
 ---@param buf number?
 ---@param position FittenCode.Position
-function V2:_recalculate_prefix_suffix(buf, position)
+function ProjectAwareGenerator:_recalculate_prefix_suffix(buf, position)
     -- VSCode 的 max_chars 是按 UTF-16 一个 16 位字节来计算的，如果是 emoji 占用一对代理对就会计算成两个
     -- Neovim 的 max_chars 是 UTF-32
     local max_chars = 22e4
@@ -120,7 +120,7 @@ local function compare_bytes_order(prev, curr)
     return leq, req
 end
 
-function V2:_recalculate_meta_datas(options)
+function ProjectAwareGenerator:_recalculate_meta_datas(options)
     assert(options)
     local text = options.text or ''
     local ciphertext = options.ciphertext or ''
@@ -195,9 +195,9 @@ function V2:_recalculate_meta_datas(options)
     end
 end
 
-function V2:_generate_project_completion_prompt(buf, position, project_completion_service, options)
+function ProjectAwareGenerator:_generate_project_completion_prompt(buf, position, options)
     Promise:new(function(resolve, reject)
-        self.project_completion.v2:get_file_lsp(buf, {
+        self.project_completion_service.project_completion.v2:get_file_lsp(buf, {
             on_success = function(lsp)
                 resolve(lsp)
             end,
@@ -207,7 +207,7 @@ function V2:_generate_project_completion_prompt(buf, position, project_completio
         })
     end):forward(function(lsp)
         return Promise:new(function(resolve, reject)
-            project_completion_service:check_project_completion_available(lsp, {
+            self.project_completion_service:check_project_completion_available(lsp, {
                 on_success = function(available)
                     resolve()
                 end,
@@ -219,10 +219,10 @@ function V2:_generate_project_completion_prompt(buf, position, project_completio
     end):forward(function()
         return Promise:new(function(resolve, reject)
             local function get_prompt(callbacks)
-                if project_completion_service:get_last_chosen_prompt_type() == '5' then
-                    self.project_completion.v1:get_prompt(buf, position.row, callbacks)
+                if self.project_completion_service:get_last_chosen_prompt_type() == '5' then
+                    self.project_completion_service.project_completion.v1:get_prompt(buf, position.row, callbacks)
                 else
-                    self.project_completion.v2:get_prompt(buf, position.row, callbacks)
+                    self.project_completion_service.project_completion.v2:get_prompt(buf, position.row, callbacks)
                 end
             end
             local callbacks = {
@@ -238,7 +238,7 @@ function V2:_generate_project_completion_prompt(buf, position, project_completio
     end)
 end
 
-function V2:_generate_prompt(buf, position, options)
+function ProjectAwareGenerator:_generate_prompt(buf, position, options)
     local ctx = self:_recalculate_prefix_suffix(buf, position)
     local text = ctx.prefix .. ctx.suffix
 
@@ -277,11 +277,9 @@ end
 ---@param buf number?
 ---@param position FittenCode.Position
 ---@param options table
-function V2:generate(buf, position, options)
+function ProjectAwareGenerator:generate(buf, position, options)
     Fn.schedule_call(options.on_create)
 
-    ---@type FittenCode.Inline.ProjectCompletionService
-    local project_completion_service = options.project_completion_service
     local open_pc = Config.use_project_completion.open
     local fc_nodefault = Config.server.fitten_version ~= 'default'
     local h = -1
@@ -304,7 +302,7 @@ function V2:generate(buf, position, options)
             })
         end),
         Promise:new(function(resolve, reject)
-            self:_generate_project_completion_prompt(buf, position, project_completion_service, {
+            self:_generate_project_completion_prompt(buf, position, {
                 on_once = function(prompt)
                     resolve(prompt)
                 end,
@@ -323,4 +321,4 @@ function V2:generate(buf, position, options)
     end)
 end
 
-return V2
+return ProjectAwareGenerator

@@ -11,7 +11,7 @@ local ProjectCompletionService = {}
 
 ---@class FittenCode.Inline.ProjectCompletionService.Options
 
----@param options FittenCode.Inline.ProjectCompletionService.Options
+---@param options? FittenCode.Inline.ProjectCompletionService.Options
 ---@return FittenCode.Inline.ProjectCompletionService
 function ProjectCompletionService:new(options)
     ---@class FittenCode.Inline.ProjectCompletionService
@@ -21,7 +21,7 @@ function ProjectCompletionService:new(options)
     return obj
 end
 
----@param options FittenCode.Inline.ProjectCompletionService.Options
+---@param options? FittenCode.Inline.ProjectCompletionService.Options
 function ProjectCompletionService:__initialize(options)
     self.project_completion = {
         v1 = assert(ProjectCompletionFactory.create('v1')),

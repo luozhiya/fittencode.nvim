@@ -4,17 +4,17 @@ local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')
 
----@class FittenCode.Inline.PromptGenerator.V1
-local V1 = {}
-V1.__index = V1
+---@class FittenCode.Inline.PromptGenerator.ImmediateContextGenerator
+local ImmediateContextGenerator = {}
+ImmediateContextGenerator.__index = ImmediateContextGenerator
 
-function V1:new()
+function ImmediateContextGenerator:new()
     local obj = {}
-    setmetatable(obj, V1)
+    setmetatable(obj, ImmediateContextGenerator)
     return obj
 end
 
-function V1:generate(buf, position, options)
+function ImmediateContextGenerator:generate(buf, position, options)
     Fn.schedule_call(options.on_create)
     local prefix = Editor.get_text(buf, Range:new({ start = Position:new({ row = 0, col = 0 }), termination = position }))
     local suffix = Editor.get_text(buf, Range:new({ start = position, termination = Position:new({ row = -1, col = -1 }) }))
@@ -29,4 +29,4 @@ function V1:generate(buf, position, options)
     Fn.schedule_call(options.on_once, prompt)
 end
 
-return V1
+return ImmediateContextGenerator

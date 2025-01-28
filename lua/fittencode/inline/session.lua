@@ -32,7 +32,6 @@ function Session:new(options)
         interactive = false,
         gos_version = options.gos_version,
         prompt_generator = options.prompt_generator,
-        project_completion_service = options.project_completion_service,
         triggering_completion = options.triggering_completion,
         update_inline_status = options.update_inline_status,
         set_interactive_session_debounced = options.set_interactive_session_debounced,
@@ -300,7 +299,6 @@ function Session:send_completions(buf, position, options)
             filename = assert(Editor.filename(buf)),
             gos_version = self.gos_version,
             edit_mode = self.edit_mode,
-            project_completion_service = self.project_completion_service,
             on_create = function()
                 if self:is_terminated() then
                     return

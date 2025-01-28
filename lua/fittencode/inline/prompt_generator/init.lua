@@ -6,22 +6,28 @@ local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')
 local Config = require('fittencode.config')
-local V1 = require('fittencode.inline.prompt_generator.v1')
-local V2 = require('fittencode.inline.prompt_generator.v2')
+local ImmediateContext = require('fittencode.inline.prompt_generator.immediate_context')
+local ProjectAware = require('fittencode.inline.prompt_generator.project_aware')
 
 ---@class FittenCode.Inline.PromptGenerator
----@field v1 FittenCode.Inline.PromptGenerator.V1
----@field v2 FittenCode.Inline.PromptGenerator.V2
+---@field generators table<string, FittenCode.Inline.PromptGenerator.ImmediateContextGenerator|FittenCode.Inline.PromptGenerator.ProjectAwareGenerator>
 
 ---@class FittenCode.Inline.PromptGenerator
 local PromptGenerator = {}
 PromptGenerator.__index = PromptGenerator
 
+---@param options {project_completion_service?: any}
 ---@return FittenCode.Inline.PromptGenerator
-function PromptGenerator:new()
+function PromptGenerator:new(options)
+    local generators = {
+        ['1'] = ImmediateContext:new(),
+        ['2'] = ProjectAware:new({
+            project_completion_service = options.project_completion_service,
+        })
+        -- 添加新版本时在此注册
+    }
     local obj = {
-        v1 = V1:new(),
-        v2 = V2:new()
+        generators = generators
     }
     setmetatable(obj, self)
     return obj
@@ -31,14 +37,15 @@ end
 ---@param position FittenCode.Position
 ---@param options FittenCode.Inline.GeneratePromptOptions
 function PromptGenerator:generate(buf, position, options)
-    if options.gos_version == '1' then
-        return self.v1:generate(buf, position, options)
-    elseif options.gos_version == '2' then
-        return self.v2:generate(buf, position, options)
-    else
-        Log.error('Invalid API version: ' .. options.gos_version)
+    local version = options.gos_version or '1'
+    local generator = self.generators[version]
+
+    if not generator then
+        Log.error('Invalid API version: ' .. version)
         return
     end
+
+    return generator:generate(buf, position, options)
 end
 
 return PromptGenerator

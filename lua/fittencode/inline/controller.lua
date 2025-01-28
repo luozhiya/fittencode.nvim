@@ -34,7 +34,9 @@ end
 function Controller:__initialize(options)
     options = options or {}
     self.project_completion_service = ProjectCompletionService:new()
-    self.prompt_generator = PromptGenerator:new()
+    self.prompt_generator = PromptGenerator:new({
+        project_completion_service = self.project_completion_service
+    })
     self.observers = {}
     self.sessions = {}
     self.filter_events = {}
@@ -172,7 +174,6 @@ function Controller:send_completions(buf, position, options)
         id = assert(Fn.uuid_v4()),
         gos_version = self.gos_version,
         edit_mode = options.edit_mode,
-        project_completion_service = self.project_completion_service,
         prompt_generator = self.prompt_generator,
         triggering_completion = function(...) self:triggering_completion_auto(...) end,
         update_inline_status = function(id) self:update_status(id) end,
