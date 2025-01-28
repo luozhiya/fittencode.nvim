@@ -309,7 +309,6 @@
 ---@field terminated boolean
 ---@field id string
 ---@field status FittenCode.Inline.Session.Status
----@field gos_version string '1' | '2'
 ---@field edit_mode? boolean
 ---@field project_completion_service FittenCode.Inline.ProjectCompletionService
 ---@field prompt_generator FittenCode.Inline.PromptGenerator
@@ -353,7 +352,6 @@
 ---@field edit_mode_trigger_type string
 
 ---@class FittenCode.Inline.GeneratePromptOptions : FittenCode.AsyncIOCallbacks
----@field gos_version string '1' | '2'
 ---@field edit_mode boolean
 ---@field filename? string
 ---@field project_completion_service FittenCode.Inline.ProjectCompletionService?

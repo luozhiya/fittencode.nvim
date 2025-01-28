@@ -30,7 +30,6 @@ function Session:new(options)
         keymaps = {},
         terminated = false,
         interactive = false,
-        gos_version = options.gos_version,
         prompt_generator = options.prompt_generator,
         triggering_completion = options.triggering_completion,
         update_inline_status = options.update_inline_status,
@@ -297,7 +296,6 @@ function Session:send_completions(buf, position, options)
     Promise:new(function(resolve, reject)
         self.prompt_generator:generate(buf, position, {
             filename = assert(Editor.filename(buf)),
-            gos_version = self.gos_version,
             edit_mode = self.edit_mode,
             on_create = function()
                 if self:is_terminated() then
@@ -353,56 +351,7 @@ function Session:send_completions(buf, position, options)
     end)
 end
 
-function Session:_request_completions_v1(prompt, options)
-    Promise:new(function(resolve, reject)
-        Client.request(Protocol.Methods.generate_one_stage, {
-            body = vim.fn.json_encode(prompt),
-            on_create = function(handle)
-                if self:is_terminated() then
-                    return
-                end
-                self:record_timing('generate_one_stage_auth.on_create')
-                self:request_handles_push(handle)
-            end,
-            on_once = function(stdout)
-                if self:is_terminated() then
-                    return
-                end
-                self:record_timing('generate_one_stage_auth.on_once')
-                local _, response = pcall(vim.json.decode, table.concat(stdout, ''))
-                if not _ then
-                    Log.error('Failed to decode completion raw response: {}', response)
-                    reject()
-                    return
-                end
-                local parsed_response = ParseResponse.from_generate_one_stage(response, {
-                    buf = options.buf,
-                    position = options.position,
-                    gos_version = '2'
-                })
-                resolve(parsed_response)
-            end,
-            on_error = function()
-                if self:is_terminated() then
-                    return
-                end
-                self:record_timing('generate_one_stage_auth.on_error')
-                reject()
-            end
-        })
-    end):forward(function(parsed_response)
-        if not parsed_response then
-            Log.info('No more suggestion')
-            Fn.schedule_call(options.on_no_more_suggestion)
-            return
-        end
-        Fn.schedule_call(options.on_success, parsed_response)
-    end, function()
-        Fn.schedule_call(options.on_failure)
-    end)
-end
-
-function Session:_request_completions_v2(prompt, options)
+function Session:request_completions(prompt, options)
     Promise:new(function(resolve, reject)
         Client.request(Protocol.Methods.get_completion_version, {
             on_create = function(handle)
@@ -487,7 +436,6 @@ function Session:_request_completions_v2(prompt, options)
                     local parsed_response = ParseResponse.from_generate_one_stage(response, {
                         buf = options.buf,
                         position = options.position,
-                        gos_version = '2'
                     })
                     resolve(parsed_response)
                 end,
@@ -510,15 +458,6 @@ function Session:_request_completions_v2(prompt, options)
     end, function()
         Fn.schedule_call(options.on_failure)
     end)
-end
-
----@param prompt FittenCode.Inline.Prompt
-function Session:request_completions(prompt, options)
-    if self.gos_version == '1' then
-        self:_request_completions_v1(prompt, options)
-    else
-        self:_request_completions_v2(prompt, options)
-    end
 end
 
 return Session

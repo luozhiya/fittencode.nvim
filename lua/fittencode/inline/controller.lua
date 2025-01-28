@@ -40,7 +40,6 @@ function Controller:__initialize(options)
     self.observers = {}
     self.sessions = {}
     self.filter_events = {}
-    self.gos_version = '2'
     self.set_interactive_session_debounced = Fn.debounce(function(session)
         if session and self.selected_session_id == session.id and not session:is_terminated() then
             session:set_interactive()
