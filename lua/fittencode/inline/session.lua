@@ -7,7 +7,7 @@ local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
 local SessionStatus = require('fittencode.inline.session_status')
-local ParseResponse = require('fittencode.inline.parse_response')
+local GenerationResponseParser = require('fittencode.inline.parse_response').GenerationResponseParser
 local Config = require('fittencode.config')
 local Protocol = require('fittencode.client.protocol')
 local ChatPrompts = require('fittencode.session.chat_prompts')
@@ -436,7 +436,7 @@ function Session:request_completions(prompt, options)
                         reject(stdout)
                         return
                     end
-                    local parsed_response = ParseResponse.from_generate_one_stage(response, {
+                    local parsed_response = GenerationResponseParser.parse(response, {
                         buf = options.buf,
                         position = options.position,
                     })

@@ -278,7 +278,12 @@ local function encode_uri_component(uri)
     return table.concat(result)
 end
 
+local function clamp(value, min, max)
+    return math.max(min, math.min(value, max))
+end
+
 return {
+    clamp = clamp,
     debounce = debounce,
     schedule_call = schedule_call,
     schedule_call_wrap_fn = schedule_call_wrap_fn,
