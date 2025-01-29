@@ -1,66 +1,98 @@
 local Editor = require('fittencode.editor')
 local Range = require('fittencode.range')
-local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 
--- 协议固定常量
-local END_OF_TEXT_TOKEN = '<|endoftext|>'
-local FIM_MIDDLE_TOKEN = '<fim_middle>'
-local DEFAULT_CONTEXT_THRESHOLD = 100
+-- 协议常量 (不可修改)
+local DEFAULT_CONTEXT_THRESHOLD = 100  -- 默认上下文阈值
+local FIM_MIDDLE_TOKEN = '<fim_middle>'  -- FIM中间标记
+local END_OF_TEXT_TOKEN = '<|endoftext|>'  -- 文本结束标记
 
-local ResponseParser = {}
-ResponseParser.__index = ResponseParser
+---@class FittenCode.ContextBuilder
+---@field private _context_threshold number
+local ContextBuilder = {}
+ContextBuilder.__index = ContextBuilder
 
-function ResponseParser.new(options)
-    options = options or {}
-    local self = setmetatable({}, ResponseParser)
-    self.context_threshold = options.context_threshold or DEFAULT_CONTEXT_THRESHOLD
-    return self
+---@class FittenCode.ContextBuilder.Config
+---@field context_threshold? number 可自定义的上下文阈值
+
+function ContextBuilder:new(config)
+    local instance = setmetatable({}, self)
+    config = config or {}
+    
+    -- 仅允许自定义上下文阈值
+    instance._context_threshold = config.context_threshold or DEFAULT_CONTEXT_THRESHOLD
+    
+    return instance
 end
 
-function ResponseParser:_generate_fim_context(buf, reference_pos_start, reference_pos_end)
-    local total_chars = Editor.wordcount(buf).chars
-    local ref_start_offset = Editor.offset_at(buf, reference_pos_start) or 0
-    local ref_end_offset = Editor.offset_at(buf, reference_pos_end) or 0
-
-    local ctx_start_offset = math.max(0, ref_start_offset - self.context_threshold)
-    local ctx_end_offset = math.min(total_chars, ref_end_offset + self.context_threshold)
-
-    local ctx_start_pos = Editor.position_at(buf, ctx_start_offset) or Position:new()
-    local ctx_end_pos = Editor.position_at(buf, ctx_end_offset) or Position:new()
-
-    local prefix_range = Range:new({ start = ctx_start_pos, termination = reference_pos_start })
-    local suffix_range = Range:new({ start = reference_pos_end, termination = ctx_end_pos })
-
-    return Editor.get_text(buf, prefix_range)
-        .. FIM_MIDDLE_TOKEN
-        .. Editor.get_text(buf, suffix_range)
+---@param buf number
+---@param range_start FittenCode.Position
+---@param range_end FittenCode.Position
+---@return string 符合FIM协议的上下文
+function ContextBuilder:build_fim_context(buf, range_start, range_end)
+    local prefix, suffix = self:_retrieve_context_fragments(buf, range_start, range_end)
+    return table.concat({ prefix, FIM_MIDDLE_TOKEN, suffix })
 end
 
-function ResponseParser:_build_completion_item(generated_text, delta_char, delta_line)
+-- 以下为私有方法 --
+---@private
+function ContextBuilder:_retrieve_context_fragments(buf, start_pos, end_pos)
+    local start_offset = assert(Editor.offset_at(buf, start_pos), "Invalid start position")
+    local end_offset = assert(Editor.offset_at(buf, end_pos), "Invalid end position")
+    
+    local prefix_range = self:_create_peek_range(buf, start_offset, -1)
+    local suffix_range = self:_create_peek_range(buf, end_offset, 1)
+
     return {
-        generated_text = generated_text,
-        character_delta = delta_char or 0,
-        line_delta = delta_line or 0,
+        prefix = Editor.get_text(buf, Range:new(prefix_range)),
+        suffix = Editor.get_text(buf, Range:new(suffix_range))
     }
 end
 
-function ResponseParser:parse(raw, options)
-    local processed_text = (raw.generated_text or ''):gsub(END_OF_TEXT_TOKEN, '') .. (raw.ex_msg or '')
-    if processed_text == '' then
-        return
+---@private
+function ContextBuilder:_create_peek_range(buf, base_offset, direction)
+    local total_chars = Editor.wordcount(buf).chars
+    local peek_offset = math.clamp(
+        base_offset + (direction * self._context_threshold),
+        0,
+        total_chars
+    )
+    
+    local peek_pos = Editor.position_at(buf, peek_offset) or Position:new()
+    return {
+        start = (direction == -1) and peek_pos or Position:new(base_offset),
+        termination = (direction == -1) and Position:new(base_offset) or peek_pos
+    }
+end
+
+---@class FittenCode.GenerationResponseParser
+local GenerationResponseParser = {
+    _context_builder = ContextBuilder:new()
+}
+
+function GenerationResponseParser:parse(raw_response, options)
+    if not raw_response then return end
+
+    -- 使用协议常量清理文本
+    local clean_text = vim.fn.substitute(
+        raw_response.generated_text or '',
+        END_OF_TEXT_TOKEN,
+        '',
+        'g'
+    )
+    
+    if clean_text == '' and not raw_response.ex_msg then
+        return nil
     end
 
     return {
-        request_id = raw.server_request_id,
-        completions = {
-            self:_build_completion_item(
-                processed_text,
-                raw.delta_char,
-                raw.delta_line
-            )
-        },
-        context = self:_generate_fim_context(
+        request_id = raw_response.server_request_id or '',
+        completions = {{
+            generated_text = clean_text .. (raw_response.ex_msg or ''),
+            character_delta = raw_response.delta_char or 0,
+            line_delta = raw_response.delta_line or 0
+        }},
+        context = self._context_builder:build_fim_context(
             options.buf,
             options.ref_start:clone(),
             options.ref_end:clone()
@@ -68,15 +100,13 @@ function ResponseParser:parse(raw, options)
     }
 end
 
--- 仅保留阈值配置方法
-function ResponseParser:set_context_threshold(threshold)
-    if type(threshold) == 'number' then
-        self.context_threshold = threshold
-    end
-end
-
-function ResponseParser:get_context_threshold()
-    return self.context_threshold
-end
-
-return ResponseParser
+return {
+    ContextBuilder = ContextBuilder,
+    GenerationResponseParser = GenerationResponseParser,
+    -- 导出常量供外部查询（不建议修改）
+    PROTOCOL_CONSTANTS = {
+        FIM_MIDDLE = FIM_MIDDLE_TOKEN,
+        END_OF_TEXT = END_OF_TEXT_TOKEN,
+        DEFAULT_THRESHOLD = DEFAULT_CONTEXT_THRESHOLD
+    }
+}
