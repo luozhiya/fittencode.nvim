@@ -31,7 +31,8 @@ end
 
 ---@class FittenCode.Inline.GenerateOneStageOptions
 ---@field buf number
----@field position FittenCode.Position
+---@field ref_start FittenCode.Position
+---@field ref_end FittenCode.Position
 
 ---@param raw FittenCode.Inline.RawGenerateOneStageResponse
 ---@param options FittenCode.Inline.GenerateOneStageOptions
@@ -42,7 +43,6 @@ function M.from_generate_one_stage(raw, options)
     if generated_text == '' then
         return
     end
-    local position = options.position
     local parsed_response = {
         request_id = raw.server_request_id,
         completions = {
@@ -52,7 +52,7 @@ function M.from_generate_one_stage(raw, options)
                 line_delta = raw.delta_line or 0,
             },
         },
-        context = make_context(options.buf, position:clone(), position:clone(), context_threshold),
+        context = make_context(options.buf, options.ref_start:clone(), options.ref_end:clone(), context_threshold),
     }
     return parsed_response
 end
