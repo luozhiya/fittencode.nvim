@@ -58,6 +58,7 @@ end
 
 return {
     init = init,
+    get_status = get_status,
     destory = destory,
     enable = enable,
     disable = disable,

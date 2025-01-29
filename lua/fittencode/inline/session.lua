@@ -107,7 +107,6 @@ function Session:async_update_word_segments()
                         if _ then
                             delta[#delta + 1] = chunk.delta
                         else
-                            Log.error('Error while decoding chunk: {}', line)
                             reject(line)
                             return
                         end
@@ -118,14 +117,18 @@ function Session:async_update_word_segments()
                     Log.debug('Word segmentation: {}', word_segments)
                     self:update_model({ word_segments = word_segments })
                 else
-                    Log.error('Error while decoding delta: {}', delta)
+                    reject(delta)
+                    return
                 end
             end,
-            on_error = function()
+            on_error = function(err)
                 self:record_timing('segment_words.on_error')
-                Log.error('Failed to get word segmentation')
+                reject(err)
+                return
             end
         })
+    end):catch(function(err)
+        Log.error('Error while segmenting words {}', err)
     end)
 end
 
@@ -388,20 +391,20 @@ function Session:request_completions(prompt, options)
         return Promise:new(function(resolve, reject)
             local _, json = pcall(vim.fn.json_encode, prompt)
             if not _ then
-                reject()
+                reject(prompt)
                 return
             end
+            assert(json)
             Compression.compress('gzip', json, {
                 on_once = function(compressed_stream)
                     resolve({ body = compressed_stream, completion_version = version })
                 end,
                 on_error = function()
                     Fn.schedule_call(options.on_error)
+                    reject(json)
                 end,
             })
         end)
-    end, function()
-        Fn.schedule_call(options.on_failure)
     end):forward(function(_)
         return Promise:new(function(resolve, reject)
             local vu = {
@@ -430,7 +433,7 @@ function Session:request_completions(prompt, options)
                     local _, response = pcall(vim.json.decode, table.concat(stdout, ''))
                     if not _ then
                         Log.error('Failed to decode completion raw response: {}', response)
-                        reject()
+                        reject(stdout)
                         return
                     end
                     local parsed_response = ParseResponse.from_generate_one_stage(response, {
@@ -455,8 +458,9 @@ function Session:request_completions(prompt, options)
             return
         end
         Fn.schedule_call(options.on_success, parsed_response)
-    end, function()
+    end):catch(function(err)
         Fn.schedule_call(options.on_failure)
+        Log.error('Error while requesting completions: {}', err)
     end)
 end
 

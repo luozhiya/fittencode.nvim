@@ -22,7 +22,7 @@ end
 
 -- 这是 Vim 版本的代码补全数据
 -- * 只需要处理一个 generated_text
-local function from_v1(buf, position, raw)
+local function parse_response(raw)
     local generated_text = vim.fn.substitute(raw.generated_text, '<.endoftext.>', '', 'g') or ''
     if generated_text == '' then
         return
@@ -51,8 +51,7 @@ function Headless:send_completions(prompt, options)
                     reject()
                     return
                 end
-                local parsed_response = from_v1(options.buf, options.position, response)
-                resolve(parsed_response)
+                resolve(parse_response(response))
             end,
             on_error = function()
                 reject()
@@ -65,7 +64,7 @@ function Headless:send_completions(prompt, options)
             return
         end
         Fn.schedule_call(options.on_success, parsed_response)
-    end, function()
+    end):catch(function()
         Fn.schedule_call(options.on_failure)
     end)
 end

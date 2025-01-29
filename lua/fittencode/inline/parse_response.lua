@@ -29,14 +29,20 @@ local function make_context(buf, work_start, work_end, peek_range)
     return prefix .. '<fim_middle>' .. suffix
 end
 
-local function from_v2(buf, position, raw, options)
+---@class FittenCode.Inline.GenerateOneStageOptions
+---@field buf number
+---@field position FittenCode.Position
+
+---@param raw FittenCode.Inline.RawGenerateOneStageResponse
+---@param options FittenCode.Inline.GenerateOneStageOptions
+---@return FittenCode.Inline.GenerateOneStageResponse?
+function M.from_generate_one_stage(raw, options)
+    assert(raw)
     local generated_text = (vim.fn.substitute(raw.generated_text or '', '<|endoftext|>', '', 'g') or '') .. (raw.ex_msg or '')
     if generated_text == '' then
         return
     end
-    local a = position:clone()
-    local b = position:clone()
-    local context = make_context(buf, a, b, context_threshold)
+    local position = options.position
     local parsed_response = {
         request_id = raw.server_request_id,
         completions = {
@@ -46,19 +52,9 @@ local function from_v2(buf, position, raw, options)
                 line_delta = raw.delta_line or 0,
             },
         },
-        context = context,
+        context = make_context(options.buf, position:clone(), position:clone(), context_threshold),
     }
     return parsed_response
-end
-
----@param raw FittenCode.Inline.RawGenerateOneStageResponse
----@return FittenCode.Inline.GenerateOneStageResponse?
-function M.from_generate_one_stage(raw, options)
-    assert(raw)
-    local buf = options.buf
-    ---@type FittenCode.Position
-    local position = options.position
-    return from_v2(buf, position, raw, options)
 end
 
 return M

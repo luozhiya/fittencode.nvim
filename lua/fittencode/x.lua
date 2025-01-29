@@ -13,6 +13,6 @@ print(fmt.format('{}', false))           -- false
 
 print(fmt.format('{}', function()
     return 1
-end))                             -- <function 1>
+end))                              -- <function 1>
 
 print(fmt.format('{}', { v = 1 })) --
