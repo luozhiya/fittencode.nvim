@@ -1,5 +1,5 @@
 local Config = require('fittencode.config')
-local Fn = require('fittencode.fn')
+local Format = require('fittencode.format')
 
 ---@class FittenCode.Log
 ---@field error function
@@ -54,6 +54,7 @@ end
 
 local function neovim_version()
     local version = vim.fn.execute('version')
+    assert(version)
 
     local function find_part(offset, part)
         local start = version:find(part, offset)
@@ -109,7 +110,7 @@ end
 
 local function log(level, msg, ...)
     if level >= Config.log.level and Config.log.level ~= levels.OFF then
-        msg = Fn.format(msg, ...)
+        msg = Format.safe_format(msg, ...)
         local ms = string.format('%03d', math.floor((vim.uv.hrtime() / 1e6) % 1000))
         local timestamp = os.date('%Y-%m-%d %H:%M:%S') .. '.' .. ms
         local tag = string.format('[%-5s %s] ', level_name(level), timestamp)
@@ -119,7 +120,7 @@ local function log(level, msg, ...)
 end
 
 local function notify(level, msg, ...)
-    msg = Fn.format(msg, ...)
+    msg = Format.safe_format(msg, ...)
     vim.schedule(function()
         vim.notify(msg, level, { title = 'FittenCode' })
     end)

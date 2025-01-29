@@ -113,7 +113,7 @@ local function pack(...)
     return { n = select('#', ...), ... }
 end
 
-local function format(msg, ...)
+local function simple_format(msg, ...)
     ---@type string
     msg = msg or ''
     local args = pack(...)
@@ -140,6 +140,28 @@ local function format(msg, ...)
         return vfmt
     end
     return msg
+end
+
+local function math_type(num)
+    if type(num) ~= 'number' then
+        return nil -- 非数值类型返回 nil
+    end
+
+    -- 检查是否为整数值（兼容 5.1 的浮点数存储方式）
+    if num == math.floor(num) then
+        -- 进一步区分 5.3 风格的整数表示
+        if tostring(num):find('%.') then -- 包含小数点的视为浮点数
+            return 'float'
+        else
+            return 'integer'
+        end
+    else
+        return 'float'
+    end
+end
+
+local function simple_math_type(num)
+    return (type(num) == 'number' and (num == math.floor(num)) and 'integer' or 'float')
 end
 
 local function slice(t, start)
@@ -265,7 +287,8 @@ return {
     startswith = startswith,
     fs_all_entries = fs_all_entries,
     get_timezone_based_language = get_timezone_based_language,
-    format = format,
+    pack = pack,
+    format = simple_format,
     slice = slice,
     remove_special_token = remove_special_token,
     is_windows = is_windows,
@@ -275,4 +298,6 @@ return {
     extension_uri = extension_uri,
     normalize_path = normalize_path,
     encode_uri_component = encode_uri_component,
+    math_type = math_type,
+    simple_math_type = simple_math_type,
 }
