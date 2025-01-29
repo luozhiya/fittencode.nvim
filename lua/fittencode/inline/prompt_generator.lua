@@ -202,7 +202,7 @@ function PromptGenerator:_generate_project_completion_prompt(buf, position, opti
                 resolve(lsp)
             end,
             on_error = function()
-                Fn.schedule_call(options.on_error)
+                reject()
             end
         })
     end):forward(function(lsp)
@@ -212,7 +212,7 @@ function PromptGenerator:_generate_project_completion_prompt(buf, position, opti
                     resolve()
                 end,
                 on_error = function()
-                    Fn.schedule_call(options.on_error)
+                    reject()
                 end,
             })
         end)
@@ -230,11 +230,13 @@ function PromptGenerator:_generate_project_completion_prompt(buf, position, opti
                     resolve(prompt)
                 end,
                 on_error = function()
-                    Fn.schedule_call(options.on_error)
+                    reject()
                 end
             }
             get_prompt(callbacks)
         end)
+    end):catch(function()
+        Fn.schedule_call(options.on_error)
     end)
 end
 
@@ -297,7 +299,7 @@ function PromptGenerator:generate(buf, position, options)
                     resolve(prompt)
                 end,
                 on_error = function()
-                    Fn.schedule_call(options.on_error)
+                    reject()
                 end
             })
         end),
@@ -307,7 +309,7 @@ function PromptGenerator:generate(buf, position, options)
                     resolve(prompt)
                 end,
                 on_error = function()
-                    Fn.schedule_call(options.on_error)
+                    reject()
                 end
             })
         end),
@@ -316,7 +318,7 @@ function PromptGenerator:generate(buf, position, options)
         local project_completion_prompt = results[2]
         prompt = vim.tbl_deep_extend('force', prompt, project_completion_prompt or {})
         Fn.schedule_call(options.on_success, prompt)
-    end, function()
+    end):catch(function()
         Fn.schedule_call(options.on_error)
     end)
 end
