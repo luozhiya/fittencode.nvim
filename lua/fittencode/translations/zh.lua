@@ -1,7 +1,5 @@
-local Fn = require('fittencode.fn')
-local Language = require('fittencode.language')
 
-local translations = {
+return {
     ['  (Currently no completion options available)'] = '  （当前暂无补全项）',
     ['(Contact customer service for invitation code)'] = '（联系客服获取邀请码）：',
     ['[Fitten Code] Invalid 3rd-party login source'] = '[Fitten Code] 无效第三方登录源',
@@ -194,14 +192,3 @@ local translations = {
     ["Reply same language as the user's input."] = '请完全使用中文回答。',
     ['Enter master password: '] = '请输入主密码：',
 }
-
-local function translate(key, ...)
-    local lang = Language.display_preference()
-    local v = key
-    if Fn.startswith(lang, 'zh') then
-        v = translations[key] or key
-    end
-    return Fn.simple_format(v, ...)
-end
-
-return translate

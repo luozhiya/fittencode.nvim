@@ -172,9 +172,9 @@ local defaults = {
             ['<A-\\>'] = 'triggering_completion',
         },
     },
+    developer_mode = true,
     log = {
         level = vim.log.levels.WARN,
-        developer_mode = true,
         -- Notify when log errors occur.
         enable_notifications = false,
     },

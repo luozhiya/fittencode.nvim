@@ -293,7 +293,7 @@ return {
     fs_all_entries = fs_all_entries,
     get_timezone_based_language = get_timezone_based_language,
     pack = pack,
-    format = simple_format,
+    simple_format = simple_format,
     slice = slice,
     remove_special_token = remove_special_token,
     is_windows = is_windows,
