@@ -17,51 +17,124 @@
 --       urn:example:animal:ferret:nose
 -- ```
 
----@alias FittenCode.Uri string
+local M = {}
 
-local Uri = {}
-Uri.__index = Uri
-
--- nvim\share\nvim\runtime\lua\vim\uri.lua
-local URI_SCHEME_PATTERN = '^([a-zA-Z]+[a-zA-Z0-9.+-]*):.*'
-local WINDOWS_URI_SCHEME_PATTERN = '^([a-zA-Z]+[a-zA-Z0-9.+-]*):[a-zA-Z]:.*'
-local PATTERNS = {
-    -- RFC 2396
-    -- https://tools.ietf.org/html/rfc2396#section-2.2
-    rfc2396 = "^A-Za-z0-9%-_.!~*'()",
-    -- RFC 2732
-    -- https://tools.ietf.org/html/rfc2732
-    rfc2732 = "^A-Za-z0-9%-_.!~*'()%[%]",
-    -- RFC 3986
-    -- https://tools.ietf.org/html/rfc3986#section-2.2
-    rfc3986 = "^A-Za-z0-9%-._~!$&'()*+,;=:@/",
-}
-
-function Uri:new(scheme, authority, path, query, fragment)
-    local obj = {
-        scheme = scheme,
-        authority = authority,
-        path = path,
-        query = query,
-        fragment = fragment,
-    }
-    setmetatable(obj, Uri)
-    return obj
+---@param str string
+local function uri_encode(str)
+    return str:gsub(
+        '([^%w%-%.%_%~])',
+        function(c) return string.format('%%%02X', string.byte(c)) end
+    )
 end
 
-local function encode_uri(uri)
-    local function _encode_uri_char(char)
-        return string.format('%%%0X', string.byte(char))
+---@param str string
+local function uri_decode(str)
+    return str:gsub(
+        '%%(%x%x)',
+        function(hex) return string.char(tonumber(hex, 16)) end
+    )
+end
+
+local URI = {}
+URI.__index = URI
+
+function URI:parse(input)
+    local pattern = '^([^:]+):(?://([^/]*))?(/[^#%?]*)?([^#]*)?(#.*)?$'
+    local scheme, authority, path, query, fragment = input:match(pattern)
+
+    if not scheme then
+        error('Invalid URI format: ' .. input)
     end
-    return (string.gsub(uri, "[^%a%d%-_%.!~%*'%(%);/%?:@&=%+%$,#]", _encode_uri_char))
+
+    self.scheme = scheme:lower()
+    self.authority = authority or ''
+    self.path = uri_decode(path or '')
+    self.query = uri_decode((query or ''):sub(2))     -- remove leading ?
+    self.fragment = uri_decode((fragment or ''):sub(2)) -- remove leading #
 end
 
-function Uri:fs_path()
+function URI:toString()
+    local parts = { self.scheme, ':' }
 
+    if self.authority ~= '' then
+        table.insert(parts, '//' .. self.authority)
+    end
+
+    local path = uri_encode(self.path)
+    if path == '' and self.scheme == 'file' then
+        path = '/'
+    end
+    table.insert(parts, path)
+
+    if self.query ~= '' then
+        table.insert(parts, '?' .. uri_encode(self.query))
+    end
+
+    if self.fragment ~= '' then
+        table.insert(parts, '#' .. uri_encode(self.fragment))
+    end
+
+    return table.concat(parts, '')
 end
 
--- Parses a URI string into its components.
-function Uri.parse(value)
+function URI:toFilepath()
+    if self.scheme ~= 'file' then
+        error("URI scheme is not 'file'")
+    end
+
+    local path = self.path
+    -- Windows 路径处理
+    if path:match('^/[A-Za-z]:') then
+        path = path:sub(2):gsub('/', '\\')
+    end
+    return path
 end
 
-return Uri
+function M.parse(value)
+    local uri = setmetatable({}, URI)
+    uri:parse(value)
+    return uri
+end
+
+function M.file(path)
+    local uri = setmetatable({}, URI)
+    uri.scheme = 'file'
+    uri.authority = ''
+
+    -- 标准化路径
+    if vim.fn.has('win32') == 1 then
+        path = path:gsub('\\', '/')
+        if path:match('^%a:') then
+            path = '/' .. path
+        end
+    end
+    uri.path = path
+    return uri
+end
+
+function M.join_path(uri, ...)
+    local components = { ... }
+    local new_path = uri.path
+
+    for _, component in ipairs(components) do
+        new_path = new_path:gsub('/+$', '') .. '/' .. component:gsub('^/+', '')
+    end
+
+    return M.parse(uri:toString():gsub(uri.path, new_path))
+end
+
+-- 使用示例：
+local uri = M.parse('vscode://user@domain.com:8080/path/to/file.txt?query=1#frag')
+print(uri.scheme)    --> vscode
+print(uri.authority) --> user@domain.com:8080
+print(uri.path)      --> /path/to/file.txt
+print(uri.query)     --> query=1
+print(uri.fragment)  --> frag
+
+local file_uri = M.file('/path/to/file.txt')
+print(file_uri:toString()) --> file:///path/to/file.txt
+
+local win_file = M.file('C:\\Users\\test.txt')
+print(win_file:toFilepath()) --> C:\Users\test.txt
+
+return M
