@@ -2,143 +2,136 @@ local Config = require('fittencode.config')
 local Format = require('fittencode.format')
 
 ---@class FittenCode.Log
----@field error function
----@field warn function
----@field info function
----@field debug function
----@field trace function
----@field notify_error function
----@field notify_warn function
----@field notify_info function
----@field notify_debug function
----@field notify_trace function
----@field dev_error function
----@field dev_warn function
----@field dev_info function
----@field dev_debug function
----@field dev_trace function
-
----@class FittenCode.Log
 local M = {}
 
--- See `help vim.log.levels`
--- Refs: `neovim/runtime/lua/vim/_editor.lua`
---[[
-  ```lua
-  vim.log = {
-    levels = {
-      TRACE = 0,
-      DEBUG = 1,
-      INFO = 2,
-      WARN = 3,
-      ERROR = 4,
-      OFF = 5,
-    },
-  }
-  ```
-]]
-local levels = vim.deepcopy(vim.log.levels)
+-- 常量定义
+local LOG_LEVELS = vim.deepcopy(vim.log.levels)
+local LOG_LEVEL_NAMES = { 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR' }
+local LOG_FILE = vim.fn.stdpath('log') .. '/fittencode/fittencode.log'
+local MAX_LOG_SIZE = 2 * 1024 * 1024 -- 2MB
+local DEVELOPER_DOCUMENT = 'FittenDocument-FT-ozlpsknq83720108429'
 
-local logfile = vim.fn.stdpath('log') .. '/fittencode' .. '/fittencode.log'
-local max_size = 2 * 1024 * 1024 -- 2MB
+-- 状态变量
+local needs_preface = true
 
-local preface = true
-
-local names = { 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR' }
-
----@param level number
----@return string
-local function level_name(level)
-    return names[level + 1] or '----'
+--[[ 辅助函数 ]] --
+local function get_level_name(level)
+    return LOG_LEVEL_NAMES[level + 1] or 'UNKNOWN'
 end
 
-local function neovim_version()
-    local version = vim.fn.execute('version')
-    assert(version)
+local function format_timestamp()
+    local ms = string.format('%03d', math.floor((vim.uv.hrtime() / 1e6) % 1000))
+    return os.date('%Y-%m-%d %H:%M:%S') .. '.' .. ms
+end
 
-    local function find_part(offset, part)
-        local start = version:find(part, offset)
-        if not start then
-            return nil
-        end
-        local end_ = version:find('\n', start + #part) or #version
-        return start + #part, end_, version:sub(start + #part, end_ - 1)
-    end
-
-    local nvim_start, nvim_end, nvim = find_part(0, 'NVIM ')
-    local buildtype_start, buildtype_end, buildtype = find_part(nvim_end, 'Build type: ')
-    local luajit_start, luajit_end, luajit = find_part(buildtype_end, 'LuaJIT ')
-
-    return {
-        nvim = nvim,
-        buildtype = buildtype,
-        luajit = luajit,
+local function collect_neovim_info()
+    local version_info = vim.fn.execute('version')
+    local info = {
+        nvim = version_info:match('NVIM v(%d+%.%d+%.%d+)'),
+        build_type = version_info:match('Build type: (%S+)'),
+        luajit = version_info:match('LuaJIT (%d+%.%d+%.%d+)'),
+        os_info = vim.uv.os_uname(),
     }
+    return info
 end
 
-local function async_log(msg)
-    vim.schedule(function()
-        local content = {}
-        if preface then
-            preface = false
-            vim.fn.mkdir(vim.fn.fnamemodify(logfile, ':h'), 'p')
-            if Config.log.developer_mode or vim.fn.getfsize(logfile) > max_size then
-                vim.fn.delete(logfile)
-            end
-            local edge = string.rep('=', 80)
-            local info = {
-                { 'Verbose logging started', os.date('%Y-%m-%d %H:%M:%S') },
-                { 'Log level',               level_name(Config.log.level) },
-                { 'Calling process',         vim.uv.exepath() },
-                { 'Neovim',                  vim.inspect(neovim_version()) },
-                { 'Process ID',              vim.uv.os_getpid() },
-                { 'Parent process ID',       vim.uv.os_getppid() },
-                { 'OS',                      vim.inspect(vim.uv.os_uname()) }
-            }
-            content[#content + 1] = edge
-            for _, entry in ipairs(info) do
-                content[#content + 1] = string.format('%s: %s', entry[1], entry[2])
-            end
-            content[#content + 1] = edge
-        end
-        local f = assert(io.open(logfile, 'a'))
-        content[#content + 1] = string.format('%s', msg)
-        f:write(table.concat(content, '\n') .. '\n')
-        f:close()
-    end)
+local function prepare_log_header()
+    local edge = string.rep('=', 80)
+    local header = {
+        edge,
+        string.format('Verbose logging started: %s', os.date('%Y-%m-%d %H:%M:%S')),
+        string.format('Log level: %s', get_level_name(Config.log.level)),
+        string.format('Neovim version: %s', collect_neovim_info().nvim),
+        string.format('Process ID: %d', vim.uv.os_getpid()),
+        string.format('OS: %s', vim.inspect(vim.uv.os_uname())),
+        edge
+    }
+    return table.concat(header, '\n')
 end
 
-local function log(level, msg, ...)
-    if level >= Config.log.level and Config.log.level ~= levels.OFF then
-        msg = Format.safe_format(msg, ...)
-        local ms = string.format('%03d', math.floor((vim.uv.hrtime() / 1e6) % 1000))
-        local timestamp = os.date('%Y-%m-%d %H:%M:%S') .. '.' .. ms
-        local tag = string.format('[%-5s %s] ', level_name(level), timestamp)
-        msg = tag .. (msg or '')
-        async_log(msg)
+local function ensure_log_directory()
+    local log_dir = vim.fn.fnamemodify(LOG_FILE, ':h')
+    if vim.fn.isdirectory(log_dir) == 0 then
+        vim.fn.mkdir(log_dir, 'p')
     end
 end
 
-local function notify(level, msg, ...)
-    msg = Format.safe_format(msg, ...)
-    vim.schedule(function()
-        vim.notify(msg, level, { title = 'FittenCode' })
+local function rotate_log_if_needed()
+    if Config.log.developer_mode or vim.fn.getfsize(LOG_FILE) > MAX_LOG_SIZE then
+        vim.fn.delete(LOG_FILE)
+    end
+end
+
+--[[ 核心日志功能 ]] --
+local function write_to_log(content)
+    local ok, err = pcall(function()
+        local file = io.open(LOG_FILE, 'a')
+        if not file then return end
+
+        file:write(content .. '\n')
+        file:close()
     end)
-    log(level, msg)
+
+    if not ok and Config.log.enable_notifications then
+        vim.notify('Log write failed: ' .. err, LOG_LEVELS.ERROR)
+    end
 end
 
+local function async_log(level, message)
+    if level < Config.log.level or Config.log.level == LOG_LEVELS.OFF then
+        return
+    end
+
+    vim.schedule(function()
+        -- 初始化检查
+        if needs_preface then
+            ensure_log_directory()
+            rotate_log_if_needed()
+            write_to_log(prepare_log_header())
+            needs_preface = false
+        end
+
+        -- 格式化日志条目
+        local log_entry = string.format('[%-5s %s] %s',
+            get_level_name(level),
+            format_timestamp(),
+            message
+        )
+
+        write_to_log(log_entry)
+    end)
+end
+
+--[[ 公共接口 ]] --
 function M.set_level(level)
-    Config.log.level = level
+    if type(level) == 'string' then
+        level = LOG_LEVELS[level:upper()]
+    end
+    Config.log.level = level or LOG_LEVELS.INFO
 end
 
-local developer = 'FittenDocument-FT-ozlpsknq83720108429'
+function M.init()
+    for _, level_name in ipairs(LOG_LEVEL_NAMES) do
+        local level = LOG_LEVELS[level_name]
+        local method_name = level_name:lower()
 
-for level, name in pairs(names) do
-    M[name:lower()] = function(...) log(levels[name], ...) end
-    M['notify_' .. name:lower()] = function(...) notify(levels[name], ...) end
-    M['dev_' .. name:lower()] = function(...)
-        if Config.document_file == developer then
-            log(levels[name], ...)
+        -- 标准日志方法
+        M[method_name] = function(msg, ...)
+            async_log(level, Format.safe_format(msg, ...))
+        end
+
+        -- 通知方法
+        M['notify_' .. method_name] = function(msg, ...)
+            local formatted = Format.safe_format(msg, ...)
+            vim.notify(formatted, level, { title = 'FittenCode' })
+            async_log(level, formatted)
+        end
+
+        -- 开发者方法
+        M['dev_' .. method_name] = function(msg, ...)
+            if Config.document_file == DEVELOPER_DOCUMENT then
+                async_log(level, Format.safe_format(msg, ...))
+            end
         end
     end
 end
