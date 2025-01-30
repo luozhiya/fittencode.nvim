@@ -76,7 +76,7 @@ function M.line_count(buf)
     return count
 end
 
--- 返回的 `range.termination.col` 指向末尾字节
+-- 返回的 `range.end_.col` 指向末尾字节
 ---@param buf integer?
 ---@param row number A zero-based row value.
 ---@return FittenCode.TextLine?
@@ -182,7 +182,7 @@ function M.offset_at(buf, position)
     end
     local offset
     vim.api.nvim_buf_call(buf, function()
-        local lines = assert(M.get_lines(buf, Range:new({ start = Position:new({ row = 0, col = 0 }), termination = position })))
+        local lines = assert(M.get_lines(buf, Range:new({ start = Position:new({ row = 0, col = 0 }), end_ = position })))
         vim.tbl_map(function(line)
             local utf = vim.str_utf_pos(line)
             if not offset then
@@ -314,7 +314,7 @@ function M.round_region(buf, range)
     local roundrange = range:clone()
     vim.api.nvim_buf_call(buf, function()
         roundrange.start = M.round_start(buf, range.start)
-        roundrange.termination = M.round_end(buf, range.termination)
+        roundrange.end_ = M.round_end(buf, range.end_)
     end)
     return roundrange
 end
@@ -334,11 +334,11 @@ function M.get_lines(buf, range)
         -- start_col inclusive
         -- end_row   inclusive
         -- end_col   exclusive
-        local end_col = roundrange.termination.col
-        if roundrange.termination:eol() then
+        local end_col = roundrange.end_.col
+        if roundrange.end_:eol() then
             end_col = end_col + 1
         end
-        lines = vim.api.nvim_buf_get_text(buf, roundrange.start.row, roundrange.start.col, roundrange.termination.row, end_col, {})
+        lines = vim.api.nvim_buf_get_text(buf, roundrange.start.row, roundrange.start.col, roundrange.end_.row, end_col, {})
     end)
     return lines
 end
@@ -386,7 +386,7 @@ function M.within_the_line(buf, position)
     if not line then
         return false
     end
-    return line.range.termination.col > position.col
+    return line.range.end_.col > position.col
 end
 
 return M

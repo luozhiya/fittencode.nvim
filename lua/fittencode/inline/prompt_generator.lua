@@ -60,7 +60,7 @@ end
 local function _get_full_text(buf)
     local full_range = Range:new({
         start = Position:new({ row = 0, col = 0 }),
-        termination = Position:new({ row = -1, col = -1 })
+        end_ = Position:new({ row = -1, col = -1 })
     })
     return _clean_fim_pattern(Editor.get_text(buf, full_range))
 end
@@ -68,7 +68,7 @@ end
 local function _get_text_segment(buf, start_pos, end_pos)
     return _clean_fim_pattern(Editor.get_text(buf, Range:new({
         start = start_pos,
-        termination = end_pos
+        end_ = end_pos
     })))
 end
 

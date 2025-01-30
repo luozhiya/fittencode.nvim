@@ -2,7 +2,7 @@ local Position = require('fittencode.position')
 
 ---@class FittenCode.Range
 ---@field start FittenCode.Position
----@field termination FittenCode.Position
+---@field end_ FittenCode.Position
 
 -- A range represents an ordered pair of two positions. It is guaranteed that `start:is_before_or_equal(end)`
 ---@class FittenCode.Range
@@ -14,32 +14,32 @@ function Range:new(options)
     ---@class FittenCode.Range
     local obj = {
         start = options.start,
-        termination = options.termination,
+        end_ = options.end_,
     }
     -- If start is not before or equal to end, the values will be swapped.
-    if obj.start:is_after(obj.termination) then
-        obj.start, obj.termination = obj.termination, obj.start
+    if obj.start:is_after(obj.end_) then
+        obj.start, obj.end_ = obj.end_, obj.start
     end
     setmetatable(obj, self)
     return obj
 end
 
 function Range:sort()
-    if self.start:is_after(self.termination) then
-        self.start, self.termination = self.termination, self.start
+    if self.start:is_after(self.end_) then
+        self.start, self.end_ = self.end_, self.start
     end
 end
 
--- Returns true if the range is empty, i.e., start and termination are equal
+-- Returns true if the range is empty, i.e., start and end_ are equal
 ---@return boolean
 function Range:is_empty()
-    return self.start:is_equal(self.termination)
+    return self.start:is_equal(self.end_)
 end
 
--- Returns true if the range is a single line, i.e., start and termination are on the same line
+-- Returns true if the range is a single line, i.e., start and end_ are on the same line
 ---@return boolean
 function Range:is_single_line()
-    return self.start.row == self.termination.row
+    return self.start.row == self.end_.row
 end
 
 -- Returns true if the range contains the given position or range
@@ -48,10 +48,10 @@ end
 function Range:contains(position_or_range)
     assert(type(position_or_range) == 'table' and getmetatable(position_or_range) == Position or getmetatable(position_or_range) == Range, 'Invalid argument')
     if getmetatable(position_or_range) == Range then
-        return self.start:is_before_or_equal(position_or_range.start) and self.termination:is_after_or_equal(position_or_range.termination)
+        return self.start:is_before_or_equal(position_or_range.start) and self.end_:is_after_or_equal(position_or_range.end_)
     else
         ---@diagnostic disable-next-line: param-type-mismatch
-        return self.start:is_before_or_equal(position_or_range) and self.termination:is_after_or_equal(position_or_range)
+        return self.start:is_before_or_equal(position_or_range) and self.end_:is_after_or_equal(position_or_range)
     end
 end
 
@@ -59,7 +59,7 @@ end
 ---@param other FittenCode.Range
 ---@return boolean
 function Range:is_equal(other)
-    return self.start:is_equal(other.start) and self.termination:is_equal(other.termination)
+    return self.start:is_equal(other.start) and self.end_:is_equal(other.end_)
 end
 
 -- Returns the intersection of the range with the given range, or nil if they do not intersect
@@ -71,7 +71,7 @@ function Range:intersects(other)
     elseif other:contains(self) then
         return self:clone()
     end
-    if self.start:is_after_or_equal(other.termination) or self.termination:is_before_or_equal(other.start) then
+    if self.start:is_after_or_equal(other.end_) or self.end_:is_before_or_equal(other.start) then
         return
     end
     return Range:new({
@@ -79,9 +79,9 @@ function Range:intersects(other)
             row = math.max(self.start.row, other.start.row),
             col = math.max(self.start.col, other.start.col),
         }),
-        termination = Position:new({
-            row = math.min(self.termination.row, other.termination.row),
-            col = math.min(self.termination.col, other.termination.col),
+        end_ = Position:new({
+            row = math.min(self.end_.row, other.end_.row),
+            col = math.min(self.end_.col, other.end_.col),
         }),
     })
 end
@@ -95,21 +95,21 @@ function Range:union(other)
             row = math.min(self.start.row, other.start.row),
             col = math.min(self.start.col, other.start.col),
         }),
-        termination = Position:new({
-            row = math.max(self.termination.row, other.termination.row),
-            col = math.max(self.termination.col, other.termination.col),
+        end_ = Position:new({
+            row = math.max(self.end_.row, other.end_.row),
+            col = math.max(self.end_.col, other.end_.col),
         }),
     })
 end
 
--- Returns a new range with the given start and termination positions
+-- Returns a new range with the given start and end_ positions
 ---@param start? FittenCode.Position
----@param termination? FittenCode.Position
+---@param end_? FittenCode.Position
 ---@return FittenCode.Range
-function Range:with(start, termination)
+function Range:with(start, end_)
     return Range:new({
         start = start or self.start,
-        termination = termination or self.termination,
+        end_ = end_ or self.end_,
     })
 end
 
@@ -119,11 +119,11 @@ end
 function Range:clone()
     return Range:new({
         start = self.start:clone(),
-        termination = self.termination:clone(),
+        end_ = self.end_:clone(),
     })
 end
 
--- 返回的 `range.termination.col` 指向末尾字节
+-- 返回的 `range.end_.col` 指向末尾字节
 ---@param row number
 ---@param line string
 function Range.from_line(row, line)
@@ -132,17 +132,17 @@ function Range.from_line(row, line)
             row = row,
             col = 0,
         }),
-        termination = Position:new({
+        end_ = Position:new({
             row = row,
             col = #line,
         }),
     })
 end
 
-function Range.from_position(start, termination)
+function Range.from_position(start, end_)
     return Range:new({
         start = start,
-        termination = termination,
+        end_ = end_,
     })
 end
 

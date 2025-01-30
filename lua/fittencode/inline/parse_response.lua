@@ -61,7 +61,7 @@ function ContextBuilder:_create_peek_range(buf, base_offset, direction)
     local peek_pos = Editor.position_at(buf, peek_offset) or Position:new()
     return {
         start = (direction == -1) and peek_pos or Position:new(base_offset),
-        termination = (direction == -1) and Position:new(base_offset) or peek_pos
+        end_ = (direction == -1) and Position:new(base_offset) or peek_pos
     }
 end
 

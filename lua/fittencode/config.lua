@@ -175,6 +175,8 @@ local defaults = {
     log = {
         level = vim.log.levels.WARN,
         developer_mode = true,
+        -- Notify when log errors occur.
+        enable_notifications = false,
     },
     hash = {
         md5 = {
