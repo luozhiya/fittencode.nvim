@@ -1,4 +1,3 @@
-
 return {
     ['  (Currently no completion options available)'] = '  （当前暂无补全项）',
     ['(Contact customer service for invitation code)'] = '（联系客服获取邀请码）：',

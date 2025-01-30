@@ -83,12 +83,14 @@ local defaults = {
     },
     language_preference = {
         -- Language preference when using function "Fitten Code - Document Code".
+        -- Lower case of the BCP 47 language tag.
         -- Avaiable options:
         -- * 'en'
         -- * 'zh-cn'
         -- * 'auto'
         comment_preference = 'auto',
         -- Language preference for display and responses in Fitten Code (excluding "Fitten Code - Document Code" function).
+        -- Lower case of the BCP 47 language tag.
         -- Avaiable options:
         -- * 'en'
         -- * 'zh-cn'

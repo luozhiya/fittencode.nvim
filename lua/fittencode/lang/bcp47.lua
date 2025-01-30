@@ -102,37 +102,34 @@ local function get_timezone_offset()
     return os.date('%z') -- 格式为 +HHMM 或 -HHMM
 end
 
--- 时区偏移量到地区的映射表（示例数据）
+-- 时区偏移量到地区的映射表
 local timezone_map = {
     ['+0800'] = 'zh-CN', -- 中国
-    ['+0900'] = 'ja-JP', -- 日本
     ['-0500'] = 'en-US', -- 美国东部
     ['+0000'] = 'en-GB', -- 英国
 }
 
--- 主逻辑
-local function main()
+setmetatable(timezone_map, {
+    __index = function()
+        return 'en'
+    end
+})
+
+-- For example, `en-US` is the BCP 47 format of the US English locale.
+---@return string
+local function get_locale()
     -- 1. 尝试获取系统语言设置
     local locale = get_system_locale()
 
     -- 2. 直接输出结果
     if locale then
-        print('BCP 47 地区代码: ' .. locale)
-        return
+        return locale
     end
 
     -- 3. 若失败，尝试通过时区推断
-    local offset = get_timezone_offset()
-    if offset then
-        locale = timezone_map[offset]
-        if locale then
-            print('BCP 47 地区代码（通过时区推断）: ' .. locale)
-            return
-        end
-    end
-
-    -- 4. 最终回退
-    print('无法获取地区信息')
+    return timezone_map[get_timezone_offset()]
 end
 
-main()
+return {
+    get_locale = get_locale,
+}

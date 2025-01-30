@@ -1,5 +1,4 @@
--- local Fn = require('fittencode.fn')
-local Fn = require('fn')
+local Fn = require('fittencode.fn')
 
 local M = {}
 

@@ -1,75 +1,64 @@
-local Fn = require('fittencode.fn')
-local Language = require('fittencode.language')
-local Config = require('fittencode.config')
+local LangPreference = require('fittencode.lang.preference')
+local LangFallback = require('fittencode.lang.fallback')
 local Log = require('fittencode.log')
+local Fmt = require('fittencode.fmt')
+local Config = require('fittencode.config')
+local Fn = require('fittencode.fn')
 
 local M = {}
 
--- 分层翻译存储结构
-local translation_layers = {
-    system = {}, -- 系统核心翻译
-    user = {}    -- 用户自定义翻译
+local cache = {
+    loaded = {},      -- 已加载的翻译文件
+    translations = {} -- 合并后的翻译表
 }
 
--- 注册翻译层
-function M.register_translations(layer, lang, translations)
-    if not translation_layers[layer] then
-        Log.warn('Invalid translation layer: ' .. layer)
-        return
+-- 动态加载翻译文件
+local function load_translations(lang_code)
+    if cache.loaded[lang_code] then return true end
+
+    local ok, trans = pcall(require, 'translations.' .. lang_code)
+    if ok then
+        cache.translations[lang_code] = trans
+        cache.loaded[lang_code] = true
+        return true
     end
 
-    translation_layers[layer][lang] = translations
+    Log.warn('Translation for {} not found', lang_code)
+    return false
 end
 
--- 获取当前语言
-local function get_target_lang()
-    local raw_lang = Language.display_preference()
-    return raw_lang:gsub('_', '-'):lower() -- 统一格式为 en-us 形式
-end
-
--- 生成翻译查找链
-local function get_lang_chain(target_lang)
-    local parts = vim.split(target_lang, '-')
-    return {
-        target_lang, -- 完整语言代码
-        parts[1],    -- 主语言代码
-        'default'    -- 最终回退
-    }
-end
-
--- 合并翻译结果
-local function merge_translations(lang_chain)
+-- 获取合并翻译表
+local function get_merged_translations(lang)
     local merged = {}
-    for _, layer in ipairs({ 'system', 'user' }) do
-        for _, lang in ipairs(lang_chain) do
-            if translation_layers[layer][lang] then
-                merged = vim.tbl_extend('force', merged, translation_layers[layer][lang])
-            end
+    local fallbacks = LangFallback.generate_chain(lang)
+    for _, lang_code in ipairs(fallbacks) do
+        load_translations(lang_code)
+        if cache.translations[lang_code] then
+            merged = vim.tbl_deep_extend('force', merged, cache.translations[lang_code])
         end
     end
     return merged
 end
 
--- 核心翻译逻辑
+-- 核心翻译方法
 function M.translate(key, ...)
-    local target_lang = get_target_lang()
-    local lang_chain = get_lang_chain(target_lang)
-    local translations = merge_translations(lang_chain)
+    local lang = LangPreference.display_preference()
+    local translations = get_merged_translations(lang)
+    local value = translations[key] or key
 
-    -- 查找翻译
-    local result = translations[key] or key
-
-    -- 开发环境警告缺失翻译
-    if Config.developer_mode and result == key then
-        Log.debug(('Missing translation: [%s] %s'):format(target_lang, key))
+    -- 开发模式警告缺失翻译
+    if Config.developer_mode and lang ~= 'en' and value == key then
+        Log.debug('Missing translation: {}', key)
     end
 
-    -- 格式化处理
-    return Fn.simple_format(result, ...)
+    return Fmt.format(value, ...)
 end
 
--- 初始化核心系统翻译
-M.register_translations('system', 'zh', require('translations.zh'))
-M.register_translations('system', 'en', require('translations.en'))
+-- 手动添加翻译
+function M.add_translations(lang_code, new_trans)
+    lang_code = lang_code:gsub('_', '-'):lower()
+    load_translations(lang_code)
+    cache.translations[lang_code] = vim.tbl_extend('force', cache.translations[lang_code] or {}, new_trans)
+end
 
 return M
