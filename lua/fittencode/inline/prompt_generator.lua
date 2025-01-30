@@ -2,325 +2,293 @@ local Hash = require('fittencode.hash')
 local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.fn')
 local Editor = require('fittencode.editor')
-local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')
 local Config = require('fittencode.config')
 local LspService = require('fittencode.lsp_service')
 
-local fim_pattern = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
-
----@class FittenCode.Inline.PromptGenerator
----@field last FittenCode.Inline.PromptGenerator.Last
----@field project_completion_service FittenCode.Inline.ProjectCompletionService
-
----@class FittenCode.Inline.PromptGenerator.Last
----@field filename string
----@field text string
----@field ciphertext string
+-- 常量定义
+local MAX_CHARS = 220000 -- ~200KB
+local HALF_MAX = MAX_CHARS / 2
+local SAMPLE_SIZE = 2000
+local FIM_PATTERN = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
 ---@class FittenCode.Inline.PromptGenerator
 local PromptGenerator = {}
 PromptGenerator.__index = PromptGenerator
 
 function PromptGenerator:new(options)
-    local obj = {
+    return setmetatable({
         last = {
             filename = '',
             text = '',
             ciphertext = ''
         },
         project_completion_service = options.project_completion_service,
-    }
-    setmetatable(obj, self)
-    return obj
+    }, self)
 end
 
----@param buf number?
----@param position FittenCode.Position
-function PromptGenerator:_recalculate_prefix_suffix(buf, position)
-    -- VSCode 的 max_chars 是按 UTF-16 一个 16 位字节来计算的，如果是 emoji 占用一对代理对就会计算成两个
-    -- Neovim 的 max_chars 是 UTF-32
-    local max_chars = 22e4
-    local halfmax = max_chars / 2
-    local sample_size = 2e3
-    local wordcount = Editor.wordcount(buf)
-    assert(wordcount)
-    local charscount = wordcount.chars
-    local prefix
-    local suffix
-    local roundprefixoffset
-    local norangecount
+-- region Helper Functions
 
-    if charscount <= max_chars then
-        prefix = Editor.get_text(buf, Range:new({ start = Position:new({ row = 0, col = 0 }), termination = position }))
-        suffix = Editor.get_text(buf, Range:new({ start = position, termination = Position:new({ row = -1, col = -1 }) }))
-    else
-        local curoffset = Editor.offset_at(buf, position) or 0
-
-        local curround = math.floor(curoffset / sample_size) * sample_size
-        local curmax = charscount - math.floor((charscount - curoffset) / sample_size) * sample_size
-        local suffixoffset = math.min(charscount, math.max(curmax + halfmax, halfmax * 2))
-        local prefixoffset = math.max(0, math.min(curround - halfmax, charscount - halfmax * 2))
-
-        local prefixpos = Editor.position_at(buf, prefixoffset) or Position:new()
-        local curpos = Editor.position_at(buf, curoffset) or Position:new()
-        local suffixpos = Editor.position_at(buf, suffixoffset) or Position:new()
-
-        -- [prefixpos, curpos]
-        -- [curpos, suffixpos]
-        prefix = Editor.get_text(buf, Range:new({ start = prefixpos, termination = curpos }))
-        suffix = Editor.get_text(buf, Range:new({ start = curpos, termination = suffixpos }))
-
-        roundprefixoffset = Editor.offset_at(buf, prefixpos) or 0
-        norangecount = charscount - (Editor.offset_at(buf, suffixpos) or 0)
-    end
-
-    assert(prefix and suffix)
-    prefix = vim.fn.substitute(prefix, fim_pattern, '', 'g')
-    suffix = vim.fn.substitute(suffix, fim_pattern, '', 'g')
-
-    return {
-        prefix = prefix,
-        suffix = suffix,
-        prefixoffset = roundprefixoffset,
-        norangecount = norangecount
-    }
-end
-
--- 对比两个字符串，返回 UTF-8 编码的字节索引
 local function compare_bytes(x, y)
+    local len = math.min(#x, #y)
     local a = 0
-    local b = 0
-    local lenx = #x
-    local leny = #y
-    -- 找出从开头开始最长的相同子串
-    while a + 1 <= lenx and a + 1 <= leny and x:sub(a + 1, a + 1) == y:sub(a + 1, a + 1) do
+    while a < len and x:byte(a + 1) == y:byte(a + 1) do
         a = a + 1
     end
-    -- 找出从结尾开始最长的相同子串
-    while b + 1 <= lenx and b + 1 <= leny and x:sub(-b - 1, -b - 1) == y:sub(-b - 1, -b - 1) do
+
+    local b = 0
+    while b < len and x:byte(-b - 1) == y:byte(-b - 1) do
         b = b + 1
     end
-    -- 如果从结尾开始的相同子串长度超过了整个字符串的长度，可能两个字符串完全相同
-    -- 此时需要特殊处理，将 b 调整为 0，因为 b 表示的是末尾相同字符的数量，而不是长度
-    if b == math.min(lenx, leny) then
-        b = 0
-    end
-    return a, b
+
+    return a, (b == len and 0 or b)
 end
 
--- 对比两个字符串，返回 UTF-8 编码的字节索引，指向 UTF-8 编码的结束字节
 local function compare_bytes_order(prev, curr)
     local leq, req = compare_bytes(prev, curr)
     leq = Editor.round_col_end(curr, leq)
     local rv = #curr - req
     rv = Editor.round_col_end(curr, rv)
-    req = #curr - rv
-    return leq, req
+    return leq, #curr - rv
+end
+
+local function _clean_fim_pattern(text)
+    return text and vim.fn.substitute(text, FIM_PATTERN, '', 'g') or ''
+end
+
+local function _get_full_text(buf)
+    local full_range = Range:new({
+        start = Position:new({ row = 0, col = 0 }),
+        termination = Position:new({ row = -1, col = -1 })
+    })
+    return _clean_fim_pattern(Editor.get_text(buf, full_range))
+end
+
+local function _get_text_segment(buf, start_pos, end_pos)
+    return _clean_fim_pattern(Editor.get_text(buf, Range:new({
+        start = start_pos,
+        termination = end_pos
+    })))
+end
+
+local function _calculate_large_file_positions(buf, curoffset, charscount)
+    local curround = math.floor(curoffset / SAMPLE_SIZE) * SAMPLE_SIZE
+    local curmax = charscount - math.floor((charscount - curoffset) / SAMPLE_SIZE) * SAMPLE_SIZE
+    local suffixoffset = math.min(charscount, math.max(curmax + HALF_MAX, HALF_MAX * 2))
+    local prefixoffset = math.max(0, math.min(curround - HALF_MAX, charscount - HALF_MAX * 2))
+
+    return {
+        prefix_pos = Editor.position_at(buf, prefixoffset) or Position:new(),
+        cur_pos = Editor.position_at(buf, curoffset) or Position:new(),
+        suffix_pos = Editor.position_at(buf, suffixoffset) or Position:new(),
+        prefixoffset = prefixoffset,
+        suffixoffset = suffixoffset
+    }
+end
+
+-- endregion
+
+-- region Context Computation
+
+function PromptGenerator:_small_file_context(buf, position)
+    local full_text = _get_full_text(buf)
+    local prefix_end = Editor.offset_at(buf, position) or #full_text
+    return {
+        prefix = full_text:sub(1, prefix_end),
+        suffix = full_text:sub(prefix_end + 1),
+        prefixoffset = 0,
+        norangecount = 0
+    }
+end
+
+function PromptGenerator:_large_file_context(buf, position, charscount)
+    local curoffset = Editor.offset_at(buf, position) or 0
+    local positions = _calculate_large_file_positions(buf, curoffset, charscount)
+
+    return {
+        prefix = _get_text_segment(buf, positions.prefix_pos, positions.cur_pos),
+        suffix = _get_text_segment(buf, positions.cur_pos, positions.suffix_pos),
+        prefixoffset = positions.prefixoffset,
+        norangecount = charscount - (Editor.offset_at(buf, positions.suffix_pos) or 0)
+    }
+end
+
+function PromptGenerator:_compute_editor_context(buf, position)
+    local wordcount = Editor.wordcount(buf)
+    assert(wordcount, 'Failed to get buffer word count')
+
+    local ctx
+    if wordcount.chars <= MAX_CHARS then
+        ctx = self:_small_file_context(buf, position)
+    else
+        ctx = self:_large_file_context(buf, position, wordcount.chars)
+    end
+
+    ctx.prefix = ctx.prefix or ''
+    ctx.suffix = ctx.suffix or ''
+    return ctx
+end
+
+-- endregion
+
+-- region Promise Utilities
+
+local function _promisify(async_fn)
+    return function(...)
+        local args = { ... }
+        return Promise:new(function(resolve, reject)
+            async_fn(unpack(args), {
+                on_success = resolve,
+                on_error = reject
+            })
+        end)
+    end
+end
+
+-- endregion
+
+-- region Meta Data Calculations
+
+function PromptGenerator:_calculate_edit_meta(options)
+    if not options.edit_mode then return {} end
+
+    -- TODO: 实现具体的历史记录获取逻辑
+    local history = ''
+    return {
+        edit_mode = 'true',
+        edit_mode_history = _clean_fim_pattern(history),
+        edit_mode_trigger_type = '0'
+    }
+end
+
+function PromptGenerator:_calculate_diff_meta(current_text, current_cipher, filename)
+    if filename ~= self.last.filename then
+        self.last = {
+            filename = filename,
+            text = current_text,
+            ciphertext = current_cipher
+        }
+        return {
+            pmd5 = '',
+            diff = current_text
+        }
+    end
+
+    local lbytes, rbytes = compare_bytes_order(self.last.text, current_text)
+    local diff_meta = {
+        plen = vim.str_utfindex(current_text:sub(1, lbytes), 'utf-16'),
+        slen = vim.str_utfindex(current_text:sub(-rbytes), 'utf-16'),
+        bplen = lbytes,
+        bslen = rbytes,
+        pmd5 = self.last.ciphertext,
+        diff = current_text:sub(lbytes + 1, #current_text - rbytes)
+    }
+
+    self.last.text = current_text
+    self.last.ciphertext = current_cipher
+
+    return diff_meta
 end
 
 function PromptGenerator:_recalculate_meta_datas(options)
-    assert(options)
-    local text = options.text or ''
-    local ciphertext = options.ciphertext or ''
-    local prefix = options.prefix or ''
-    local suffix = options.suffix or ''
-    local edit_mode = options.edit_mode or false
-    local filename = options.filename or ''
-    local prefixoffset = options.prefixoffset or 0
-    local norangecount = options.norangecount or 0
-
-    ---@type FittenCode.Inline.Prompt.MetaDatas
-    local meta_datas = {
-        cpos = vim.str_utfindex(prefix, 'utf-16'),
-        bcpos = prefix:len(),
+    local base_meta = {
+        cpos = vim.str_utfindex(options.prefix, 'utf-16'),
+        bcpos = #options.prefix,
         plen = 0,
         slen = 0,
         bplen = 0,
         bslen = 0,
         pmd5 = '',
-        nmd5 = '',
-        diff = '',
-        filename = '',
-        edit_mode = '',
-        edit_mode_history = '',
-        edit_mode_trigger_type = '',
+        nmd5 = options.ciphertext,
+        diff = options.text,
+        filename = options.filename,
         pc_available = true,
         pc_prompt = '',
         pc_prompt_type = '0'
     }
-    if edit_mode then
-        meta_datas.edit_mode = 'true'
-        -- local J = History.get(postion)
-        -- J = string.sub(J, prefixoffset + 1, #J - norangecount)
-        -- J = vim.fn.substitute(J, fim_pattern, '', 'g')
-        -- meta_datas.edit_mode_history = J
-        -- meta_datas.edit_mode_trigger_type = '0' -- 0: 手动触发 1：自动触发
-    end
 
-    if filename ~= self.last.filename then
-        self.last.filename = filename
-        self.last.text = text
-        self.last.ciphertext = ciphertext
-        meta_datas = vim.tbl_deep_extend('force', meta_datas, {
-            plen = 0,
-            slen = 0,
-            bplen = 0,
-            bslen = 0,
-            pmd5 = '',
-            nmd5 = ciphertext,
-            diff = text,
-            filename = filename
-        })
-        return meta_datas
-    else
-        local lbytes, rbytes = compare_bytes_order(self.last.text, text)
-        local lchars = vim.str_utfindex(text, 'utf-16', lbytes)
-        local rchars = vim.str_utfindex(text:sub(rbytes + 1, #text), 'utf-16')
-        local diff = text:sub(lbytes + 1, #text - rbytes)
-        meta_datas = vim.tbl_deep_extend('force', meta_datas, {
-            plen = lchars,
-            slen = rchars,
-            bplen = lbytes,
-            bslen = rbytes,
-            pmd5 = self.last.ciphertext,
-            nmd5 = ciphertext,
-            diff = diff,
-            filename = filename
-        })
-        self.last.text = text
-        self.last.ciphertext = ciphertext
-        return meta_datas
-    end
+    return vim.tbl_deep_extend('force',
+        base_meta,
+        self:_calculate_edit_meta(options),
+        self:_calculate_diff_meta(options.text, options.ciphertext, options.filename)
+    )
 end
 
-function PromptGenerator:_generate_project_completion_prompt(buf, position, options)
-    Promise:new(function(resolve, reject)
-        self.project_completion_service.project_completion.v2:get_file_lsp(buf, {
-            on_success = function(lsp)
-                resolve(lsp)
-            end,
-            on_error = function()
-                reject()
-            end
-        })
-    end):forward(function(lsp)
-        return Promise:new(function(resolve, reject)
-            self.project_completion_service:check_project_completion_available(lsp, {
-                on_success = function(available)
-                    resolve()
-                end,
-                on_error = function()
-                    reject()
-                end,
-            })
-        end)
-    end):forward(function()
-        return Promise:new(function(resolve, reject)
-            local function get_prompt(callbacks)
-                if self.project_completion_service:get_last_chosen_prompt_type() == '5' then
-                    self.project_completion_service.project_completion.v1:get_prompt(buf, position.row, callbacks)
-                else
-                    self.project_completion_service.project_completion.v2:get_prompt(buf, position.row, callbacks)
-                end
-            end
-            local callbacks = {
-                on_success = function(prompt)
-                    resolve(prompt)
-                end,
-                on_error = function()
-                    reject()
-                end
-            }
-            get_prompt(callbacks)
-        end)
-    end):catch(function()
-        Fn.schedule_call(options.on_error)
-    end)
+-- endregion
+
+-- region Core Logic
+
+function PromptGenerator:_get_project_prompt(buf, row)
+    local version = self.project_completion_service:get_last_chosen_prompt_type() == '5'
+        and 'v1' or 'v2'
+    return _promisify(function(_, callbacks)
+        self.project_completion_service.project_completion[version]
+            :get_prompt(buf, row, callbacks)
+    end)()
 end
 
-function PromptGenerator:_generate_prompt(buf, position, options)
-    local ctx = self:_recalculate_prefix_suffix(buf, position)
-    local text = ctx.prefix .. ctx.suffix
+function PromptGenerator:_generate_project_completion_prompt(buf, position)
+    return _promisify(self.project_completion_service.project_completion.v2.get_file_lsp)(buf)
+        :forward(function(lsp)
+            return _promisify(self.project_completion_service.check_project_completion_available)(lsp)
+        end)
+        :forward(function()
+            return self:_get_project_prompt(buf, position.row)
+        end)
+end
 
-    Promise:new(function(resolve, reject)
-        Hash.hash('MD5', text, {
-            on_once = function(ciphertext)
-                resolve(ciphertext)
-            end,
-            on_error = function()
-                Fn.schedule_call(options.on_error)
-            end
-        })
-    end):forward(function(ciphertext)
-        return Promise:new(function(resolve, reject)
+function PromptGenerator:_generate_base_prompt(ctx, options)
+    return _promisify(Hash.hash)('MD5', ctx.prefix .. ctx.suffix)
+        :forward(function(ciphertext)
             local meta_datas = self:_recalculate_meta_datas({
-                text = text,
+                text = ctx.prefix .. ctx.suffix,
                 ciphertext = ciphertext,
                 prefix = ctx.prefix,
                 suffix = ctx.suffix,
-                edit_mode = options.edit_mode,
                 filename = options.filename,
+                edit_mode = options.edit_mode,
                 prefixoffset = ctx.prefixoffset,
                 norangecount = ctx.norangecount
             })
-            local prompt = {
+
+            return {
                 inputs = '',
                 meta_datas = meta_datas
             }
-            resolve(prompt)
         end)
-    end):forward(function(prompt)
-        Fn.schedule_call(options.on_once, prompt)
-    end)
 end
 
----@param buf number?
----@param position FittenCode.Position
----@param options table
 function PromptGenerator:generate(buf, position, options)
     Fn.schedule_call(options.on_create)
 
-    local open_pc = Config.use_project_completion.open
-    local fc_nodefault = Config.server.fitten_version ~= 'default'
-    local h = -1
+    local should_use_pc = Config.use_project_completion.open == 'on' or
+        (Config.use_project_completion.open ~= 'off' and
+            Config.server.fitten_version ~= 'default')
 
-    if ((open_pc ~= 'off' and fc_nodefault) or (open_pc == 'on' and not fc_nodefault)) and h == 0 then
+    if should_use_pc then
         LspService.notify_install_lsp(buf)
-        Fn.schedule_call(options.on_error)
-        return
+        return Fn.schedule_call(options.on_error)
     end
 
+    local ctx = self:_compute_editor_context(buf, position)
+
     Promise.all({
-        Promise:new(function(resolve, reject)
-            self:_generate_prompt(buf, position, {
-                on_once = function(prompt)
-                    resolve(prompt)
-                end,
-                on_error = function()
-                    reject()
-                end
-            })
-        end),
-        Promise:new(function(resolve, reject)
-            self:_generate_project_completion_prompt(buf, position, {
-                on_once = function(prompt)
-                    resolve(prompt)
-                end,
-                on_error = function()
-                    reject()
-                end
-            })
-        end),
+        self:_generate_base_prompt(ctx, {
+            edit_mode = options.edit_mode,
+            filename = options.filename,
+            prefixoffset = ctx.prefixoffset,
+            norangecount = ctx.norangecount
+        }),
+        self:_generate_project_completion_prompt(buf, position)
     }):forward(function(results)
-        local prompt = results[1]
-        local project_completion_prompt = results[2]
-        prompt = vim.tbl_deep_extend('force', prompt, project_completion_prompt or {})
-        Fn.schedule_call(options.on_success, prompt)
+        local merged = vim.tbl_deep_extend('force', results[1], results[2] or {})
+        Fn.schedule_call(options.on_success, merged)
     end):catch(function()
         Fn.schedule_call(options.on_error)
     end)
 end
+
+-- endregion
 
 return PromptGenerator
