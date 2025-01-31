@@ -1,75 +1,105 @@
-local config = {
-    max_connections = 10,
-    timeout = 30000,
-    user_agent = 'nvim-http/1.0',
-    ssl_verify = true,
-    dns_cache = {}
-}
+local Config = require('fittencode.config')
 
-local function setup(opts)
-    config = vim.tbl_deep_extend('force', config, opts or {})
+local M = {}
 
-    -- 初始化 DNS 缓存清理定时器
-    uv.new_timer():start(0, 60 * 60 * 1000, function()
-        config.dns_cache = {}
-    end)
-end
+---@class FittenCode.HTTP.RequestSpecElement
+---@field required? boolean
+---@field type string|table<string>
+---@field default? string
 
--- lua/http/init.lua
-local M = {
-    backends = {},
-    config = {
-        backend = "curl", -- 默认使用curl命令行
-        timeout = 30000,
-        max_redirects = 5,
-        user_agent = "nvim-http/1.0"
-    }
-}
-
-local backends = {
-    curl = require("http.backends.curl"),
-    libcurl = require("http.backends.libcurl")
-}
+---@class FittenCode.HTTP.RequestSpec
+---@field url FittenCode.HTTP.RequestSpecElement
+---@field method FittenCode.HTTP.RequestSpecElement
+---@field headers FittenCode.HTTP.RequestSpecElement
+---@field body FittenCode.HTTP.RequestSpecElement
+---@field timeout FittenCode.HTTP.RequestSpecElement
+---@field follow_redirects FittenCode.HTTP.RequestSpecElement
+---@field validate_ssl FittenCode.HTTP.RequestSpecElement
 
 -- 统一请求参数规范
+---@class FittenCode.HTTP.RequestSpec
 local RequestSpec = {
-    url = { required = true, type = "string" },
-    method = { default = "GET", type = "string" },
-    headers = { type = "table" },
-    body = { type = { "string", "function" } },
-    timeout = { type = "number" },
-    follow_redirects = { type = "boolean" },
-    validate_ssl = { type = "boolean" }
+    url = { required = true, type = 'string' },
+    method = { default = 'GET', type = 'string' },
+    headers = { type = 'table' },
+    body = { type = { 'string', 'function' } },
+    timeout = { type = 'number' },
+    follow_redirects = { type = 'boolean' },
+    validate_ssl = { type = 'boolean' }
 }
 
+---@param spec FittenCode.HTTP.RequestSpec
+---@return FittenCode.HTTP.RequestSpec?
 local function validate_spec(spec)
-    -- 参数验证逻辑...
+    -- 确保 spec 是一个表
+    if type(spec) ~= 'table' then
+        error('spec must be a table')
+    end
+
+    for key, value in pairs(RequestSpec) do
+        -- 检查必需字段是否存在
+        if value.required and not spec[key] then
+            error(string.format('spec.%s is required', key))
+        end
+
+        -- 设置默认值
+        if not spec[key] and value.default then
+            spec[key] = value.default
+        end
+
+        -- 检查类型是否正确
+        if spec[key] then
+            if type(value.type) == 'table' then
+                -- 多种类型检查
+                assert(value.type == 'table')
+                local valid_type = false
+                ---@diagnostic disable-next-line: param-type-mismatch
+                for _, t in ipairs(value.type) do
+                    if type(spec[key]) == t then
+                        valid_type = true
+                        break
+                    end
+                end
+                if not valid_type then
+                    ---@diagnostic disable-next-line: param-type-mismatch
+                    error(string.format('spec.%s must be one of these types: %s', key, table.concat(value.type, ', ')))
+                end
+            else
+                -- 单一类型检查
+                if type(spec[key]) ~= value.type then
+                    error(string.format('spec.%s must be a %s', key, value.type))
+                end
+            end
+        end
+    end
+
+    -- 如果所有检查都通过，则返回 spec
+    return spec
 end
 
-function M.setup(config)
-    M.config = vim.tbl_deep_extend("force", M.config, config or {})
-end
-
-function M.request(spec, callback)
-    validate_spec(spec)
-    local backend = backends[M.config.backend]
-    return backend.request(spec, callback)
+---@param url string
+---@param options? FittenCode.HTTP.RequestOptions
+function M.fetch(url, options)
+    local backend = require('fittencode.http.backends.' .. Config.http.backend)
+    if not backend then
+        error('Unsupported backend: ' .. Config.http.backend)
+    end
+    return backend.fetch(url, options)
 end
 
 -- 快捷方法
 local function create_method(method)
-    return function(url, opts, callback)
-        return M.request(vim.tbl_extend("force", {
-            url = url,
+    return function(url, opts)
+        return M.fetch(url, vim.tbl_extend('force', {
             method = method
         }, opts or {}), callback)
     end
 end
 
-M.get = create_method("GET")
-M.post = create_method("POST")
-M.put = create_method("PUT")
-M.delete = create_method("DELETE")
-M.patch = create_method("PATCH")
+M.get = create_method('GET')
+M.post = create_method('POST')
+M.put = create_method('PUT')
+M.delete = create_method('DELETE')
+M.patch = create_method('PATCH')
 
 return M

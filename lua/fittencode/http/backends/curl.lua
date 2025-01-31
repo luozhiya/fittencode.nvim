@@ -1,5 +1,5 @@
--- lua/http.lua
-local uv = vim.uv or vim.loop
+local Promise = require('fittencode.concurrency.promise')
+
 local M = {}
 
 local CURL_TIMING_FORMAT = [[
@@ -19,6 +19,7 @@ local function create_stream()
     return {
         _buffer = '',
         _headers = nil,
+        _status = nil,
         _callbacks = {},
         on = function(self, event, cb)
             self._callbacks[event] = cb
@@ -37,8 +38,29 @@ local function parse_timing(stderr)
     return vim.json.decode(json_str)
 end
 
-function M.fetch(url, opts)
-    opts = opts or {}
+---@class FittenCode.HTTP.RequestOptions
+---@field method? string
+---@field headers? table<string, string>
+---@field body? string
+---@field timeout? number
+---@field follow_redirects? boolean
+
+---@class FittenCode.HTTP.FetchStream
+---@field on function
+---@field _buffer string
+---@field _headers? table<string, string>
+---@field _callbacks table<string, function>
+
+---@class FittenCode.HTTP.RequestResponse
+---@field stream FittenCode.HTTP.FetchStream
+---@field abort function
+---@field promise fun(): Promise
+
+---@param url string
+---@param options? FittenCode.HTTP.RequestOptions
+---@return FittenCode.HTTP.RequestResponse
+function M.fetch(url, options)
+    options = options or {}
     local stream = create_stream()
     local handle = { aborted = false }
 
@@ -47,19 +69,19 @@ function M.fetch(url, opts)
         '-s', '-L', '--compressed',
         '--no-buffer', '--tcp-fastopen',
         '--write-out', CURL_TIMING_FORMAT,
-        '-X', opts.method or 'GET',
+        '-X', options.method or 'GET',
     }
 
     -- 请求头处理
-    if opts.headers then
-        for k, v in pairs(opts.headers) do
+    if options.headers then
+        for k, v in pairs(options.headers) do
             table.insert(args, '-H')
             table.insert(args, string.format('%s: %s', k, v))
         end
     end
 
     -- 请求体处理
-    if opts.body then
+    if options.body then
         table.insert(args, '--data-binary')
         table.insert(args, '@-')
     end
@@ -67,36 +89,35 @@ function M.fetch(url, opts)
     table.insert(args, url)
 
     -- 进程管理
-    local stdin = uv.new_pipe(false)
-    local stdout = uv.new_pipe(false)
-    local stderr = uv.new_pipe(false)
+    local stdin = vim.uv.new_pipe(false)
+    local stdout = vim.uv.new_pipe(false)
+    local stderr = vim.uv.new_pipe(false)
     local process
 
     -- 响应处理状态
     local timing = {}
-    local headers_parsed = false
-    local status_code
 
-    process = uv.spawn('curl', {
+    process = vim.uv.spawn('curl', {
         args = args,
         stdio = { stdin, stdout, stderr }
     }, function(code)
         -- 清理资源
-        uv.close(stdin)
-        uv.close(stdout)
-        uv.close(stderr)
+        vim.uv.close(stdin)
+        vim.uv.close(stdout)
+        vim.uv.close(stderr)
         if process then process:close() end
 
         -- 最终回调
         if not handle.aborted then
-            stream:_emit('end', {
-                status = status_code,
-                text = stream._buffer,
+            local response = {
+                status = stream._status,
+                headers = stream._headers,
+                ok = stream._status and stream._status >= 200 and stream._status < 300,
                 timing = timing,
-                json = function()
-                    return vim.json.decode(stream._buffer)
-                end
-            })
+                text = function() return stream._buffer end,
+                json = function() return vim.json.decode(stream._buffer) end
+            }
+            stream:_emit('end', response)
         end
     end)
 
@@ -105,12 +126,11 @@ function M.fetch(url, opts)
         if err or handle.aborted then return end
 
         if chunk then
-            if not headers_parsed then
+            if not stream._headers then
                 local header_end = chunk:find('\r\n\r\n') or chunk:find('\n\n')
                 if header_end then
-                    headers_parsed = true
                     local header_str = chunk:sub(1, header_end - 1)
-                    status_code = tonumber(header_str:match('HTTP/%d%.%d (%d+)'))
+                    stream._status = tonumber(header_str:match('HTTP/%d%.%d (%d+)'))
 
                     -- 解析 headers
                     local headers = {}
@@ -118,9 +138,10 @@ function M.fetch(url, opts)
                         local name, val = line:match('^([^%s:]+):%s*(.*)$')
                         if name then headers[name:lower()] = val end
                     end
+                    stream._headers = headers
 
                     stream:_emit('headers', {
-                        status = status_code,
+                        status = stream._status,
                         headers = headers
                     })
 
@@ -161,24 +182,26 @@ function M.fetch(url, opts)
     -- 请求控制方法
     handle.abort = function()
         handle.aborted = true
-        uv.process_kill(process, 'sigterm')
+        if process then
+            vim.uv.process_kill(process, 'sigterm')
+        end
         stream:_emit('abort')
     end
 
     -- 发送请求体
-    if opts.body then
-        uv.write(stdin, opts.body, function()
-            uv.shutdown(stdin)
+    if options.body then
+        vim.uv.write(stdin, options.body, function()
+            vim.uv.shutdown(stdin)
         end)
     else
-        uv.close(stdin)
+        vim.uv.close(stdin)
     end
 
     return {
         stream = stream,
         abort = handle.abort,
         promise = function()
-            return require('promise').new(function(resolve, reject)
+            return Promise:new(function(resolve, reject)
                 stream:on('end', resolve)
                 stream:on('error', reject)
                 stream:on('abort', function()

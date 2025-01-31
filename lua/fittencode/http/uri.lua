@@ -55,8 +55,35 @@ local function percent_decode(str)
     )
 end
 
+---@class FittenCode.HTTP.URI
+---@field scheme string
+---@field authority string
+---@field path string
+---@field query string
+---@field fragment string
+---@field userinfo string
+---@field host string
+---@field port? number
+
+---@class FittenCode.HTTP.URI
 local URI = {}
 URI.__index = URI
+
+---@return FittenCode.HTTP.URI
+function URI.dummy()
+    local obj = {
+        scheme = '',
+        authority = '',
+        path = '',
+        query = '',
+        fragment = '',
+        userinfo = '',
+        host = '',
+        port = nil
+    }
+    setmetatable(obj, URI)
+    return obj
+end
 
 -- 1. Scheme 验证（RFC 3986 §3.1）
 function URI:_validate_scheme()
@@ -65,7 +92,7 @@ function URI:_validate_scheme()
     end
 end
 
--- Authority 验证（RFC 3986 §3.2）
+-- 2. Authority 验证（RFC 3986 §3.2）
 function URI:_validate_authority()
     if self.authority == '' then return end
 
@@ -93,8 +120,10 @@ function URI:_validate_path()
     end
 
     -- 检测未编码的非法字符
-    if self.path:find("[^%w%-%.%_%~%!%$%&'%(%)%*%+,;=%:@/]") then
-        error('Invalid characters in path: ' .. self.path)
+    print(self.path)
+    local pos = self.path:find("[^%%%w%-%.%_%~%!%$%&'%(%)%*%+,;=%:@/]")
+    if pos then
+        error('Invalid characters in path: ' .. pos)
     end
 end
 
@@ -111,29 +140,81 @@ function URI:_validate_fragment()
     end
 end
 
-function URI:parse(uri_string)
-    -- RFC 3986 标准分解正则表达式
-    local pattern = '^([^:/?#]+):(?://([^/?#]*))?([^?#]*)(?:%?([^#]*))?(?:#(.*))?$'
-    local scheme, authority, path, query, fragment = uri_string:match(pattern)
+---@param uri string
+function URI:parse(uri)
+    local components = URI.dummy()
 
-    if not scheme then
-        error('Invalid URI: ' .. uri_string)
+    -- Step 1: 分离 fragment
+    local fragment_index = uri:find('#')
+    if fragment_index then
+        components.fragment = percent_decode(uri:sub(fragment_index + 1))
+        uri = uri:sub(1, fragment_index - 1)
     end
 
-    self.scheme = scheme:lower()
-    self.authority = authority and percent_decode(authority) or ''
-    self.path = self:_normalize_path(percent_decode(path or ''))
-    self.query = query and percent_decode(query) or ''
-    self.fragment = fragment and percent_decode(fragment) or ''
+    -- Step 2: 分离 query
+    local query_index = uri:find('?')
+    if query_index then
+        components.query = percent_decode(uri:sub(query_index + 1))
+        uri = uri:sub(1, query_index - 1)
+    end
 
-    self:_parse_authority()
+    -- Step 3: 解析 scheme
+    local scheme_end = uri:find(':')
+    if not scheme_end then
+        error('Invalid URI: missing scheme')
+    end
+    components.scheme = uri:sub(1, scheme_end - 1):lower()
+    uri = uri:sub(scheme_end + 1)
+
+    -- Step 4: 处理 authority 和 path
+    if uri:sub(1, 2) == '//' then
+        -- 包含 authority 的 URI
+        uri = uri:sub(3)
+        local authority_end = uri:find('/') or (uri:find('#') or uri:find('?') or #uri + 1)
+        components.authority = uri:sub(1, authority_end - 1)
+        components.path = uri:sub(authority_end)
+
+        -- 解析 authority 组件
+        local authority = percent_decode(components.authority)
+        local userinfo_index = authority:find('@')
+        if userinfo_index then
+            components.userinfo = authority:sub(1, userinfo_index - 1)
+            authority = authority:sub(userinfo_index + 1)
+        end
+
+        -- 解析 host 和 port
+        if authority:find('%b[]') then -- IPv6地址处理
+            local host, port = authority:match('%[([%x:%]]+)%](:?%d*)')
+            components.host = host or ''
+            components.port = port ~= '' and tonumber(port:sub(2)) or nil
+        else
+            local host, port = authority:match('([^:]*)(:?.*)')
+            components.host = host or ''
+            components.port = port ~= '' and tonumber(port:sub(2)) or nil
+        end
+    else
+        -- 无 authority 的 URI
+        components.path = uri
+    end
+
+    if not components.scheme then
+        error('Invalid URI: ' .. uri)
+    end
 
     -- RFC 3986 合规性验证
-    self:_validate_scheme()
-    self:_validate_authority()
-    self:_validate_path()
-    self:_validate_query()
-    self:_validate_fragment()
+    components:_validate_scheme()
+    components:_validate_authority()
+    components:_validate_path()
+    components:_validate_query()
+    components:_validate_fragment()
+
+    self.scheme = components.scheme:lower()
+    self.authority = components.authority and percent_decode(components.authority) or ''
+    self.path = self:_normalize_path(percent_decode(components.path or ''))
+    self.query = components.query and percent_decode(components.query) or ''
+    self.fragment = components.fragment and percent_decode(components.fragment) or ''
+
+    self:_parse_authority()
 
     -- 额外约束检查
     if self.scheme == 'file' then
@@ -307,6 +388,27 @@ function M.build(options)
     uri.query = options.query or ''
     uri.fragment = options.fragment or ''
     return uri
+end
+
+-- 测试用例
+local test_uris = {
+    'mailto:john.doe@example.com',
+    'file:///C:/Users/%E6%96%87%E6%A1%A3/test.txt',
+    'ftp://user:password@[2001:db8::1]:2121/path/to/file',
+    'urn:isbn:0451450523',
+    'http://example.com/path/../to/resource?q=test#section'
+}
+
+for _, uri in ipairs(test_uris) do
+    print('\nParsing URI:', uri)
+    local parsed = M.parse(uri)
+    print('Scheme:', parsed.scheme)
+    print('Authority:', parsed.authority)
+    print('Path:', parsed.path)
+    print('Query:', parsed.query)
+    print('Fragment:', parsed.fragment)
+    print('Host:', parsed.host)
+    print('Port:', parsed.port)
 end
 
 return M
