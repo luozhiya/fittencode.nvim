@@ -3,7 +3,7 @@ local Promise = require('promise')
 
 -- async 函数，将普通函数包装成返回 Promise 的异步函数
 ---@param func function
----@return Promise
+---@return FittenCode.Concurrency.Promise
 local function async(func)
     return Promise:new(function(resolve, reject)
         -- 创建协程来运行用户函数
@@ -45,7 +45,7 @@ local function async(func)
 end
 
 -- await 函数，只能在 async 函数内部使用
----@param promise Promise
+---@param promise FittenCode.Concurrency.Promise
 ---@return any
 local function await(promise)
     if not promise or type(promise) ~= 'table' or getmetatable(promise) ~= Promise then

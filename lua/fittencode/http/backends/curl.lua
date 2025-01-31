@@ -15,6 +15,7 @@ local CURL_TIMING_FORMAT = [[
   }
 }]]
 
+---@return FittenCode.HTTP.Request.Stream
 local function create_stream()
     return {
         _buffer = '',
@@ -32,33 +33,24 @@ local function create_stream()
     }
 end
 
+---@param stderr string
 local function parse_timing(stderr)
     local json_str = stderr:match('{%b{}}')
     if not json_str then return nil, 'Failed to parse timing data' end
     return vim.json.decode(json_str)
 end
 
----@class FittenCode.HTTP.RequestOptions
----@field method? string
----@field headers? table<string, string>
----@field body? string
----@field timeout? number
----@field follow_redirects? boolean
-
----@class FittenCode.HTTP.FetchStream
----@field on function
----@field _buffer string
----@field _headers? table<string, string>
----@field _callbacks table<string, function>
-
----@class FittenCode.HTTP.RequestResponse
----@field stream FittenCode.HTTP.FetchStream
----@field abort function
----@field promise fun(): Promise
+local CURL_ERROR_CODES = {
+    [6]  = 'DNS_RESOLUTION_FAILED', -- Couldn't resolve host
+    [7]  = 'CONNECTION_REFUSED',    -- Failed to connect to host
+    [28] = 'TIMEOUT_REACHED',       -- Operation timeout
+    [35] = 'SSL_HANDSHAKE_ERROR',   -- SSL connect error
+    [47] = 'TOO_MANY_REDIRECTS'     -- Redirect loop detected
+}
 
 ---@param url string
----@param options? FittenCode.HTTP.RequestOptions
----@return FittenCode.HTTP.RequestResponse
+---@param options? FittenCode.HTTP.Request.Options
+---@return FittenCode.HTTP.Request.Response
 function M.fetch(url, options)
     options = options or {}
     local stream = create_stream()
@@ -96,11 +88,13 @@ function M.fetch(url, options)
 
     -- 响应处理状态
     local timing = {}
+    -- 在 fetch 函数内部新增错误收集器
+    local stderr_buffer = {} -- 存储 stderr 输出
 
     process = vim.uv.spawn('curl', {
         args = args,
         stdio = { stdin, stdout, stderr }
-    }, function(code)
+    }, function(code, signal)
         -- 清理资源
         vim.uv.close(stdin)
         vim.uv.close(stdout)
@@ -109,15 +103,33 @@ function M.fetch(url, options)
 
         -- 最终回调
         if not handle.aborted then
-            local response = {
-                status = stream._status,
-                headers = stream._headers,
-                ok = stream._status and stream._status >= 200 and stream._status < 300,
-                timing = timing,
-                text = function() return stream._buffer end,
-                json = function() return vim.json.decode(stream._buffer) end
-            }
-            stream:_emit('end', response)
+            local success = code == 0
+
+            if not success then
+                -- 构造结构化错误对象
+                ---@class FittenCode.HTTP.Request.Stream.ErrorEvent
+                local error_obj = {
+                    type = 'CURL_ERROR',
+                    code = code,
+                    signal = signal,
+                    message = table.concat(stderr_buffer),
+                    timing = timing
+                }
+                -- 在构造 error_obj 时增加友好提示
+                error_obj.readable_type = CURL_ERROR_CODES[code] or 'UNKNOWN_ERROR'
+                stream:_emit('error', error_obj)
+            else
+                ---@class FittenCode.HTTP.Request.Stream.EndEvent
+                local response = {
+                    status = stream._status,
+                    headers = stream._headers,
+                    ok = stream._status and (stream._status >= 200 and stream._status < 300) or false,
+                    timing = timing,
+                    text = function() return stream._buffer end,
+                    json = function() return vim.json.decode(stream._buffer) end
+                }
+                stream:_emit('end', response)
+            end
         end
     end)
 
@@ -139,7 +151,6 @@ function M.fetch(url, options)
                         if name then headers[name:lower()] = val end
                     end
                     stream._headers = headers
-
                     stream:_emit('headers', {
                         status = stream._status,
                         headers = headers
@@ -176,6 +187,8 @@ function M.fetch(url, options)
             else
                 stream:_emit('error', chunk)
             end
+            -- 收集原始错误信息（重要！）
+            table.insert(stderr_buffer, chunk)
         end
     end)
 
@@ -202,10 +215,22 @@ function M.fetch(url, options)
         abort = handle.abort,
         promise = function()
             return Promise:new(function(resolve, reject)
-                stream:on('end', resolve)
-                stream:on('error', reject)
+                ---@param response FittenCode.HTTP.Request.Stream.EndEvent
+                stream:on('end', function(response)
+                    if response.ok then
+                        resolve(response)
+                    else
+                        -- 将 HTTP 4xx/5xx 转为可捕获错误
+                        reject({
+                            type = 'HTTP_ERROR',
+                            status = response.status,
+                            response = response
+                        })
+                    end
+                end)
+                stream:on('error', reject) -- 自动传递错误对象
                 stream:on('abort', function()
-                    reject('Request aborted')
+                    reject({ type = 'USER_ABORT' })
                 end)
             end)
         end
