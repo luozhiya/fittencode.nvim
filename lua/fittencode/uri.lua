@@ -58,6 +58,59 @@ end
 local URI = {}
 URI.__index = URI
 
+-- 1. Scheme 验证（RFC 3986 §3.1）
+function URI:_validate_scheme()
+    if not self.scheme:match('^[a-zA-Z][a-zA-Z0-9+.-]*$') then
+        error('Invalid scheme: ' .. self.scheme)
+    end
+end
+
+-- Authority 验证（RFC 3986 §3.2）
+function URI:_validate_authority()
+    if self.authority == '' then return end
+
+    -- 验证 IPv6 地址格式
+    if self.host and self.host:find('^%[.*%]$') then
+        local ipv6 = self.host:sub(2, -2)
+        if not ipv6:match('^[0-9a-fA-F:.%%]+$') then
+            error('Invalid IPv6 address: ' .. ipv6)
+        end
+    end
+
+    -- 验证端口范围
+    if self.port and (self.port < 1 or self.port > 65535) then
+        error('Invalid port number: ' .. self.port)
+    end
+end
+
+-- 3. Path 验证（RFC 3986 §3.3）
+function URI:_validate_path()
+    -- 存在 authority 时 path 必须是绝对路径或空
+    if self.authority ~= '' and self.path ~= '' then
+        if not self.path:find('^/') then
+            error('Path must be absolute when authority is present')
+        end
+    end
+
+    -- 检测未编码的非法字符
+    if self.path:find("[^%w%-%.%_%~%!%$%&'%(%)%*%+,;=%:@/]") then
+        error('Invalid characters in path: ' .. self.path)
+    end
+end
+
+-- 4. Query 和 Fragment 验证
+function URI:_validate_query()
+    if self.query:find("[^%w%-%.%_%~%!%$%&'%(%)%*%+,;=%:@/?]") then
+        error('Invalid characters in query: ' .. self.query)
+    end
+end
+
+function URI:_validate_fragment()
+    if self.fragment:find("[^%w%-%.%_%~%!%$%&'%(%)%*%+,;=%:@/?]") then
+        error('Invalid characters in fragment: ' .. self.fragment)
+    end
+end
+
 function URI:parse(uri_string)
     -- RFC 3986 标准分解正则表达式
     local pattern = '^([^:/?#]+):(?://([^/?#]*))?([^?#]*)(?:%?([^#]*))?(?:#(.*))?$'
@@ -74,6 +127,20 @@ function URI:parse(uri_string)
     self.fragment = fragment and percent_decode(fragment) or ''
 
     self:_parse_authority()
+
+    -- RFC 3986 合规性验证
+    self:_validate_scheme()
+    self:_validate_authority()
+    self:_validate_path()
+    self:_validate_query()
+    self:_validate_fragment()
+
+    -- 额外约束检查
+    if self.scheme == 'file' then
+        if self.authority ~= '' and self.authority ~= 'localhost' then
+            error("File URI authority must be empty or 'localhost'")
+        end
+    end
 end
 
 function URI:_parse_authority()
