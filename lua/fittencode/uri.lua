@@ -19,45 +19,38 @@
 
 local M = {}
 
--- RFC 3986 保留字符集
-local reserved_chars = {
-    gen_delims = { ':', '/', '?', '#', '[', ']', '@' },
-    sub_delims = { '!', '$', '&', "'", '(', ')', '*', '+', ',', ';', '=' }
+-- RFC 3986 定义组件字符集
+local component_chars = {
+    unreserved = 'a-zA-Z0-9%-._~',
+    gen_delims = ':/?#[]@',
+    sub_delims = "!$&'()*+,;="
 }
 
-local function uri_encode(str, encode_reserved)
-    return str:gsub(
-        '([^%w%-%.%_%~])',
-        function(c)
-            if encode_reserved then
-                return string.format('%%%02X', string.byte(c))
-            else
-                -- 检查是否为保留字符
-                for _, v in pairs(reserved_chars.gen_delims) do
-                    if c == v then return c end
-                end
-                for _, v in pairs(reserved_chars.sub_delims) do
-                    if c == v then return c end
-                end
-                return string.format('%%%02X', string.byte(c))
+local function component_encoder(safe_chars)
+    return function(str)
+        return str:gsub(
+            '([^' .. safe_chars .. '])',
+            function(c)
+                return string.format('%%%02X', c:byte())
             end
-        end
-    )
+        )
+    end
 end
 
-local function uri_decode(str)
+-- 各组件专用编码器
+local encode = {
+    scheme = component_encoder('a-zA-Z0-9%+%-%.'),
+    authority = component_encoder(component_chars.unreserved .. component_chars.sub_delims .. ':%'),
+    path_segment = component_encoder(component_chars.unreserved .. component_chars.sub_delims .. ':@'),
+    query = component_encoder(component_chars.unreserved .. component_chars.sub_delims .. ':@/?%'),
+    fragment = component_encoder(component_chars.unreserved .. component_chars.sub_delims .. ':@/?%')
+}
+
+local function percent_decode(str)
     return str:gsub(
         '%%(%x%x)',
         function(hex)
-            local char = string.char(tonumber(hex, 16))
-            -- 保留字符解码保护
-            for _, v in pairs(reserved_chars.gen_delims) do
-                if char == v then return '%%' .. hex end
-            end
-            for _, v in pairs(reserved_chars.sub_delims) do
-                if char == v then return '%%' .. hex end
-            end
-            return char
+            return string.char(tonumber(hex, 16))
         end
     )
 end
@@ -65,227 +58,188 @@ end
 local URI = {}
 URI.__index = URI
 
-function URI:parse(input)
-    -- 增强版 RFC 3986 正则表达式
+function URI:parse(uri_string)
+    -- RFC 3986 标准分解正则表达式
     local pattern = '^([^:/?#]+):(?://([^/?#]*))?([^?#]*)(?:%?([^#]*))?(?:#(.*))?$'
-    local scheme, authority, path, query, fragment = input:match(pattern)
+    local scheme, authority, path, query, fragment = uri_string:match(pattern)
 
     if not scheme then
-        error(string.format('Invalid URI format: %q', input))
+        error('Invalid URI: ' .. uri_string)
     end
 
     self.scheme = scheme:lower()
-    self.authority = authority and uri_decode(authority) or ''
-    self.path = self:_normalize_path(uri_decode(path or ''))
-    self.query = query and uri_decode(query) or ''
-    self.fragment = fragment and uri_decode(fragment) or ''
+    self.authority = authority and percent_decode(authority) or ''
+    self.path = self:_normalize_path(percent_decode(path or ''))
+    self.query = query and percent_decode(query) or ''
+    self.fragment = fragment and percent_decode(fragment) or ''
 
-    -- 解析 authority 组件
     self:_parse_authority()
 end
 
 function URI:_parse_authority()
+    self.userinfo, self.host, self.port = nil, nil, nil
     if self.authority == '' then return end
 
-    -- 解析 userinfo@host:port 格式
-    local userinfo, hostport = self.authority:match('^(.*)@(.*)$')
-    if not userinfo then hostport = self.authority end
-
-    self.host = hostport
-    self.port = nil
-    self.userinfo = userinfo
-
-    -- 解析 IPv6地址
-    if hostport:match('^%[.+%]$') then
-        self.host = hostport:match('^%[(.+)%]$')
-        local port_part = hostport:match('%]:(%d+)$')
-        if port_part then
-            self.port = tonumber(port_part)
-        end
+    -- 提取用户信息
+    local userinfo, rest = self.authority:match('^(.*)@(.*)$')
+    if userinfo then
+        self.userinfo = userinfo
     else
-        -- 普通主机端口解析
-        local host, port = hostport:match('^(.-):(%d+)$')
-        if host and port then
-            self.host = host
-            self.port = tonumber(port)
-        end
+        rest = self.authority
+    end
+
+    -- 处理 IPv6 地址
+    if rest:find('^%[') then
+        local ipv6, port = rest:match('^%[(.+)%](:?%d*)$')
+        if not ipv6 then error('Invalid IPv6 address') end
+        self.host = '[' .. ipv6 .. ']'
+        self.port = port ~= '' and tonumber(port:sub(2)) or nil
+    else
+        -- 普通主机和端口
+        local host, port = rest:match('^([^:]*)(:?%d*)$')
+        self.host = host ~= '' and host or nil
+        self.port = port ~= '' and tonumber(port:sub(2)) or nil
     end
 end
 
 function URI:_normalize_path(path)
-    -- 路径规范化处理
+    -- RFC 3986 路径规范化
     if path == '' then return '' end
 
-    -- 处理 Windows 驱动器号
-    if path:match('^/[A-Za-z]:') then
-        path = path:gsub('/', '', 1)
-    end
+    local is_absolute = path:sub(1, 1) == '/'
+    local segments = {}
 
-    -- 拆分路径组件
-    local parts = {}
-    for part in path:gmatch('[^/]+') do
-        if part == '.' then
-            -- 忽略当前目录
-        elseif part == '..' then
-            if #parts > 0 then
-                table.remove(parts)
+    for seg in path:gmatch('[^/]+') do
+        if seg == '.' then
+            -- 保留前导的当前目录
+            if #segments == 0 and not is_absolute then
+                table.insert(segments, seg)
+            end
+        elseif seg == '..' then
+            if #segments > 0 and segments[#segments] ~= '..' then
+                table.remove(segments)
+            else
+                table.insert(segments, seg)
             end
         else
-            table.insert(parts, part)
+            table.insert(segments, seg)
         end
     end
 
-    local normalized = table.concat(parts, '/')
-    if path:sub(1, 1) == '/' then
-        normalized = '/' .. normalized
-    end
-    if path:sub(-1, -1) == '/' then
-        normalized = normalized .. '/'
-    end
+    local normalized = table.concat(segments, '/')
+    if is_absolute then normalized = '/' .. normalized end
+    if path:sub(-1) == '/' then normalized = normalized .. '/' end
 
     return normalized
 end
 
-function URI:to_string(encode_reserved)
-    encode_reserved = encode_reserved == nil and true or encode_reserved
-
-    local parts = { self.scheme, ':' }
-
-    if self.authority ~= '' then
-        table.insert(parts, '//' .. uri_encode(self.authority, encode_reserved))
+function URI:build_authority()
+    local parts = {}
+    if self.userinfo then
+        table.insert(parts, encode.authority(self.userinfo) .. '@')
     end
-
-    local path = uri_encode(self.path, encode_reserved)
-    if self.scheme == 'file' then
-        if path == '' then path = '/' end
-        -- Windows 路径特殊处理
-        if vim.fn.has('win32') == 1 and path:match('^/[A-Za-z]:') then
-            path = path:sub(2)
+    if self.host then
+        -- IPv6 需要保留方括号
+        if self.host:find(':') and not self.host:find('^%[') then
+            table.insert(parts, '[' .. self.host .. ']')
+        else
+            table.insert(parts, self.host)
         end
     end
-    table.insert(parts, path)
+    if self.port then
+        table.insert(parts, ':' .. tostring(self.port))
+    end
+    return table.concat(parts, '')
+end
 
-    if self.query ~= '' then
-        table.insert(parts, '?' .. uri_encode(self.query, encode_reserved))
+function URI:to_string()
+    local parts = {
+        encode.scheme(self.scheme) .. ':'
+    }
+
+    -- Authority 处理
+    local authority = self:build_authority()
+    if authority ~= '' then
+        table.insert(parts, '//' .. authority)
+    elseif self.scheme == 'file' then
+        table.insert(parts, '//')
     end
 
+    -- Path 处理
+    local path = self.path
+    if path ~= '' then
+        if authority ~= '' and path:sub(1, 1) ~= '/' then
+            path = '/' .. path
+        end
+        local encoded_segments = {}
+        for seg in path:gmatch('[^/]+') do
+            table.insert(encoded_segments, encode.path_segment(seg))
+        end
+        path = table.concat(encoded_segments, '/')
+        if path:sub(1, 1) == '/' then path = '/' .. path end
+        table.insert(parts, path)
+    end
+
+    -- Query 和 Fragment
+    if self.query ~= '' then
+        table.insert(parts, '?' .. encode.query(self.query))
+    end
     if self.fragment ~= '' then
-        table.insert(parts, '#' .. uri_encode(self.fragment, encode_reserved))
+        table.insert(parts, '#' .. encode.fragment(self.fragment))
     end
 
     return table.concat(parts, '')
 end
 
-function URI:to_filepath()
-    if self.scheme ~= 'file' then
-        error("URI scheme is not 'file'")
-    end
+-- 文件 URI 特殊处理
+function URI:to_file_path()
+    if self.scheme ~= 'file' then error('Not a file URI') end
 
     local path = self.path
-    -- Windows 路径处理
-    if vim.fn.has('win32') == 1 then
-        -- 处理网络路径
-        if path:match('^//') then
-            return path:gsub('/', '\\')
-        end
-        -- 处理驱动器号
-        if path:match('^/[A-Za-z]:') then
-            path = path:sub(2):gsub('/', '\\')
-        end
-        return path
+    -- 处理 Windows 驱动器
+    if path:match('^/[A-Za-z]:') then
+        path = path:sub(2):gsub('/', '\\')
+        -- 处理 UNC 路径
+    elseif path:match('^//') then
+        path = path:gsub('/', '\\')
     else
-        return path
+        path = path:gsub('/', (vim.fn.has('win32') == 1) and '\\' or '/')
     end
+
+    return path
 end
 
+-- 查询参数处理
 function URI:parse_query()
     local params = {}
-    for pair in self.query:gmatch('[^&]+') do
-        local key, value = pair:match('^(.*)=(.*)$')
+    for pair in self.query:gmatch('([^&]+)') do
+        local key, value = pair:match('^([^=]*)=(.*)$')
         if key then
-            params[uri_decode(key)] = uri_decode(value)
+            params[percent_decode(key)] = percent_decode(value)
         else
-            params[uri_decode(pair)] = true
+            params[percent_decode(pair)] = ''
         end
     end
     return params
 end
 
-function URI:build_query(params)
-    local parts = {}
-    for k, v in pairs(params) do
-        local key = uri_encode(tostring(k), true)
-        if v == true then
-            table.insert(parts, key)
-        else
-            table.insert(parts, key .. '=' .. uri_encode(tostring(v), true))
-        end
-    end
-    self.query = table.concat(parts, '&')
-end
-
-function M.parse(value)
+-- 增强的构造方法
+function M.parse(str)
     local uri = setmetatable({}, URI)
-    uri:parse(value)
+    uri:parse(str)
     return uri
 end
 
-function M.file(path)
+function M.build(options)
     local uri = setmetatable({}, URI)
-    uri.scheme = 'file'
-    uri.authority = ''
-
-    -- 标准化路径
-    path = path:gsub('\\', '/')
-    if vim.fn.has('win32') == 1 then
-        -- 处理网络路径
-        if path:match('^//') then
-            uri.path = path
-        else
-            if path:match('^%a:') then
-                path = '/' .. path
-            end
-            uri.path = path
-        end
-    else
-        uri.path = path
-    end
-
-    uri.path = uri:_normalize_path(uri.path)
+    uri.scheme = options.scheme:lower()
+    uri.userinfo = options.userinfo
+    uri.host = options.host
+    uri.port = options.port
+    uri.path = uri:_normalize_path(options.path or '')
+    uri.query = options.query or ''
+    uri.fragment = options.fragment or ''
     return uri
 end
-
-function M.join_path(uri, ...)
-    local components = { ... }
-    local new_path = uri.path
-
-    for _, component in ipairs(components) do
-        component = component:gsub('^/+', ''):gsub('/+$', '')
-        if new_path:sub(-1) ~= '/' then
-            new_path = new_path .. '/'
-        end
-        new_path = new_path .. component
-    end
-
-    new_path = uri:_normalize_path(new_path)
-
-    return M.parse(uri:toString():gsub(uri.path, new_path))
-end
-
--- 使用示例增强：
-local uri = M.parse('https://user:pass@[fe80::1%eth0]:8080/path/../to/file.txt?q=1&test=true#frag')
-print(uri.scheme) --> https
-print(uri.host)   --> fe80::1%eth0
-print(uri.port)   --> 8080
-print(uri.path)   --> /to/file.txt
-
--- 查询参数解析
-local query_params = uri:parse_query()
-print(query_params.q)    --> "1"
-print(query_params.test) --> "true"
-
--- 构建查询参数
-uri:build_query({ a = '1', b = '2' })
-print(uri.query) --> a=1&b=2
 
 return M
