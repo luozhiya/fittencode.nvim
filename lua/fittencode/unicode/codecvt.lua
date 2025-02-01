@@ -85,6 +85,41 @@ function M.get_surrogate_pairs(cp)
     return { high, low }
 end
 
+function M.utf8_to_surrogate_pairs(input)
+    local codepoints = M.utf8_to_codepoints(input)
+    local surrogate_pairs = {}
+    for _, cp in ipairs(codepoints) do
+        if cp >= 0x10000 then
+            table.insert(surrogate_pairs, M.get_surrogate_pairs(cp))
+        else
+            table.insert(surrogate_pairs, { cp })
+        end
+    end
+    return surrogate_pairs
+end
+
+function M.surrogate_pairs_to_utf8(surrogate_pairs)
+    local codepoints = {}
+    for _, pair in ipairs(surrogate_pairs) do
+        if #pair == 2 then
+            local high, low = table.unpack(pair)
+            validate_codepoint(high)
+            validate_codepoint(low)
+            if high < 0xD800 or high > 0xDBFF or low < 0xDC00 or low > 0xDFFF then
+                error('Invalid surrogate pair')
+            end
+            codepoints[#codepoints + 1] = 0x10000 +
+                bit.lshift(bit.band(high, 0x3FF), 10) +
+                bit.band(low, 0x3FF)
+        else
+            local cp = pair[1]
+            validate_codepoint(cp)
+            codepoints[#codepoints + 1] = cp
+        end
+    end
+    return M.codepoints_to_utf8(codepoints)
+end
+
 -- UTF-16增强处理
 function M.utf8_to_utf16(input, endian, format)
     endian = endian or 'le'
