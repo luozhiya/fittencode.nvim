@@ -28,6 +28,7 @@ local function convert_to_lsp_completion_response(line, character, suggestions)
 end
 
 function blink:new()
+  require("blink.cmp.types").CompletionItemKind['FittenCode'] = 'FittenCode'
   return setmetatable({}, { __index = blink })
 end
 
