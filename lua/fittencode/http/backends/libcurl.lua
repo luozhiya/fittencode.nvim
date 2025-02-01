@@ -3,7 +3,7 @@ local Promise = require('fittencode.concurrency.promise')
 
 local M = {}
 
-ffi.cdef[[
+ffi.cdef [[
 typedef void CURL;
 typedef struct curl_slist curl_slist;
 typedef enum {
