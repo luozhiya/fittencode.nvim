@@ -39,7 +39,7 @@ end
 
 ---@param options FittenCode.Inline.ProjectCompletionService.GetProjectCompletionChosen.Options
 function ProjectCompletionService:get_project_completion_chosen(options)
-    Promise:new(function(resolve, reject)
+    Promise.new(function(resolve, reject)
         Client.request(Protocal.Methods.pc_check_auth, {
             on_once = function(stdout)
                 if Fn.startswith(stdout, 'yes-') then
@@ -81,7 +81,7 @@ function ProjectCompletionService:check_project_completion_available(lsp, option
         end
         return available
     end
-    Promise:new(function(resolve, reject)
+    Promise.new(function(resolve, reject)
         self:get_project_completion_chosen({
             on_success = function(chosen)
                 if _is_available(chosen) then

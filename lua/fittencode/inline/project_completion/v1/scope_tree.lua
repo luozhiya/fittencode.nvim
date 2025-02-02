@@ -35,7 +35,7 @@ function ScopeTree:new(buf)
 end
 
 function ScopeTree:update(buf, options)
-    Promise:new(function(resolve, reject)
+    Promise.new(function(resolve, reject)
         if self.has_lsp == -2 then
             LspService.check_has_lsp(buf, {
                 on_success = function(result)
@@ -73,7 +73,7 @@ function ScopeTree:query_symbols(buf, options)
 end
 
 function ScopeTree:do_update(buf, options)
-    Promise:new(function(resolve, reject)
+    Promise.new(function(resolve, reject)
         self:query_symbols(buf, {
             on_success = function(symbols)
                 resolve(symbols)
@@ -83,7 +83,7 @@ function ScopeTree:do_update(buf, options)
             end,
         })
     end):forward(function(symbols)
-        return Promise:new(function(resolve, reject)
+        return Promise.new(function(resolve, reject)
             self:sync_to_update(buf, symbols, {
                 on_success = function(updated_tree) resolve(updated_tree) end,
                 on_error = function() Fn.schedule_call(options.on_error) end,
@@ -126,7 +126,7 @@ function ScopeTree:_perform_update_if_not_locked(buf, options)
         self.locked = v == true and 1 or 0
         self.structure_updated = not v
     end
-    Promise:new(function(resolve, reject)
+    Promise.new(function(resolve, reject)
         _lock(true)
         if self:check_need_update(buf) then
             local start_time = vim.uv.hrtime()

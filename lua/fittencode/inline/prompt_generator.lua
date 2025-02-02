@@ -137,7 +137,7 @@ end
 local function _promisify(async_fn)
     return function(...)
         local args = { ... }
-        return Promise:new(function(resolve, reject)
+        return Promise.new(function(resolve, reject)
             async_fn(unpack(args), {
                 on_success = resolve,
                 on_error = reject

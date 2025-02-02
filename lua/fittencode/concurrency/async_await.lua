@@ -5,7 +5,7 @@ local Promise = require('promise')
 ---@param func function
 ---@return FittenCode.Concurrency.Promise
 local function async(func)
-    return Promise:new(function(resolve, reject)
+    return Promise.new(function(resolve, reject)
         -- 创建协程来运行用户函数
         local co = coroutine.create(func)
         -- 定义步骤函数，处理协程恢复和结果处理

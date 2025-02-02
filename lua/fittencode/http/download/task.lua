@@ -40,7 +40,7 @@ function Task:abort()
 end
 
 function Task:execute()
-    self.promise = Promise:new(function(resolve, reject)
+    self.promise = Promise.new(function(resolve, reject)
         local cmd, args = self.engine.build_command(self.config)
         self._tmpfile = os.tmpname()
 
@@ -120,7 +120,7 @@ function Task:verify(algorithm, expected)
     }
     local cmd = cmds[algorithm] or 'md5sum'
 
-    return Promise:new(function(resolve, reject)
+    return Promise.new(function(resolve, reject)
         uv.spawn(cmd, { args = { file } }, function(code)
             if code ~= 0 then return reject('Checksum failed') end
             local f = io.popen(cmd .. ' ' .. file)

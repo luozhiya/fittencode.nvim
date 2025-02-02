@@ -1,4 +1,5 @@
 --[[
+-- 其他模块使用 request 示例
 local http = require('fittencode.http.request')
 
 local res = http.fetch('https://api.example.com', {
@@ -232,7 +233,7 @@ function M.fetch(url, options)
         stream = stream,
         abort = handle.abort,
         promise = function()
-            return Promise:new(function(resolve, reject)
+            return Promise.new(function(resolve, reject)
                 stream:on('end', function(response)
                     if response.ok then
                         resolve(response)

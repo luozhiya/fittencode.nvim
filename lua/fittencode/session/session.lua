@@ -58,7 +58,7 @@ function M.login(username, password, options)
         username = username,
         password = password,
     }
-    Promise:new(function(resolve, reject)
+    Promise.new(function(resolve, reject)
         Client.request(Protocol.Methods.login, {
             body = assert(vim.fn.json_encode(body)),
             on_error = vim.schedule_wrap(function()
@@ -150,7 +150,7 @@ function M.login3rd(source, options)
                 Log.info('Login in timeout.')
                 Fn.schedule_call(options.on_error)
             end
-            Promise:new(function(resolve, reject)
+            Promise.new(function(resolve, reject)
                 Client.request(Protocol.Methods.fb_check_login_auth, {
                     variables = {
                         client_token = client_token,

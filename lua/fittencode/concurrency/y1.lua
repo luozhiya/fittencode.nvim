@@ -6,7 +6,7 @@ local await = AA.await
 
 -- 示例 1: 基本异步操作
 local function fetchData()
-    return Promise:new(function(resolve)
+    return Promise.new(function(resolve)
         vim.defer_fn(function()
             resolve('Data loaded after 1s')
         end, 1000)
@@ -28,7 +28,7 @@ end)
 
 -- 示例 2: 错误处理
 local function failingTask()
-    return Promise:new(function(_, reject)
+    return Promise.new(function(_, reject)
         vim.defer_fn(function()
             reject('Something went wrong')
         end, 500)

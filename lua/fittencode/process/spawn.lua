@@ -1,4 +1,20 @@
--- fittencode/process/spawn.lua
+--[[
+-- 其他模块使用 spawn 示例
+local process = require('fittencode.process.spawn')
+
+local p = process.spawn('ls', {'-l'}, {
+    stdin = nil
+})
+
+p:on('stdout', function(data)
+    print('Output:', data)
+end)
+
+p:on('exit', function(code)
+    print('Exit with code:', code)
+end)
+--]]
+
 local M = {}
 
 local function create_process()

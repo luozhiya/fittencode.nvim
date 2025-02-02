@@ -38,7 +38,7 @@ local function parse_response(raw)
 end
 
 function Headless:send_completions(prompt, options)
-    Promise:new(function(resolve, reject)
+    Promise.new(function(resolve, reject)
         Client.request(Protocol.Methods.generate_one_stage, {
             body = vim.fn.json_encode(prompt),
             on_create = function(handle)

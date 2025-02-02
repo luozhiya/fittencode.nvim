@@ -89,7 +89,7 @@ function Session:async_update_word_segments()
         Log.debug('Generated text is only ascii, skip word segmentation')
         return
     end
-    Promise:new(function(resolve, reject)
+    Promise.new(function(resolve, reject)
         Client.request(Protocol.Methods.chat_auth, {
             body = assert(vim.fn.json_encode(ChatPrompts.segment_words(generated_text))),
             on_create = function(handle)
@@ -296,7 +296,7 @@ end
 ---@param options FittenCode.Inline.SendCompletionsOptions
 function Session:send_completions(buf, position, options)
     self:record_timing('send_completions.start')
-    Promise:new(function(resolve, reject)
+    Promise.new(function(resolve, reject)
         self.prompt_generator:generate(buf, position, {
             filename = assert(Editor.filename(buf)),
             edit_mode = self.edit_mode,
@@ -355,7 +355,7 @@ function Session:send_completions(buf, position, options)
 end
 
 function Session:request_completions(prompt, options)
-    Promise:new(function(resolve, reject)
+    Promise.new(function(resolve, reject)
         Client.request(Protocol.Methods.get_completion_version, {
             on_create = function(handle)
                 if self:is_terminated() then
@@ -388,7 +388,7 @@ function Session:request_completions(prompt, options)
             end
         })
     end):forward(function(version)
-        return Promise:new(function(resolve, reject)
+        return Promise.new(function(resolve, reject)
             local _, json = pcall(vim.fn.json_encode, prompt)
             if not _ then
                 reject(prompt)
@@ -406,7 +406,7 @@ function Session:request_completions(prompt, options)
             })
         end)
     end):forward(function(_)
-        return Promise:new(function(resolve, reject)
+        return Promise.new(function(resolve, reject)
             local vu = {
                 ['0'] = '',
                 ['1'] = '2_1',

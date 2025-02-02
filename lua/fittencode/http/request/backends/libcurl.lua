@@ -252,7 +252,7 @@ function M.fetch(url, opts)
         stream = stream,
         abort = req_handle.abort,
         promise = function()
-            return Promise:new(function(resolve, reject)
+            return Promise.new(function(resolve, reject)
                 stream:on('end', function(response)
                     if response.ok then
                         resolve(response)

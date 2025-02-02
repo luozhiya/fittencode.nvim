@@ -44,7 +44,7 @@ function ConversationTypesProvider:load_conversation_types()
 end
 
 function ConversationTypesProvider:async_load_conversation_types(on_loaded)
-    Promise:new(function(resolve, reject)
+    Promise.new(function(resolve, reject)
         self:load_conversation_types()
         resolve()
     end):forward(function()

@@ -166,7 +166,7 @@ function Conversation:execute_chat(options)
         local retrieval_augmentation = ir.retrievalAugmentation
         local evaluated = self:evaluate_template(ir.template, variables)
 
-        Promise:new(function(resolve, reject)
+        Promise.new(function(resolve, reject)
             local api_key_manager = Client.get_api_key_manager()
 
             local completion = {}

@@ -23,30 +23,30 @@ local Promise = {}
 -- Promise() constructor, https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/Promise
 ---@param executor? function
 ---@return FittenCode.Concurrency.Promise
-function Promise:new(executor, async)
+function Promise.new(executor, async)
     assert(type(executor) == 'function', 'Promise executor must be a function')
-    local obj = {
+    local self = {
         state = PromiseState.PENDING,
         value = nil,
         reason = nil,
         promise_reactions = { {}, {} },
     }
     local function resolve(value)
-        if obj.state == PromiseState.PENDING then
-            obj.state = PromiseState.FULFILLED
-            obj.value = value
+        if self.state == PromiseState.PENDING then
+            self.state = PromiseState.FULFILLED
+            self.value = value
             vim.tbl_map(function(callback)
-                callback(obj)
-            end, obj.promise_reactions[PromiseState.FULFILLED])
+                callback(self)
+            end, self.promise_reactions[PromiseState.FULFILLED])
         end
     end
     local function reject(reason)
-        if obj.state == PromiseState.PENDING then
-            obj.state = PromiseState.REJECTED
-            obj.reason = reason
+        if self.state == PromiseState.PENDING then
+            self.state = PromiseState.REJECTED
+            self.reason = reason
             vim.tbl_map(function(callback)
-                callback(obj)
-            end, obj.promise_reactions[PromiseState.REJECTED])
+                callback(self)
+            end, self.promise_reactions[PromiseState.REJECTED])
         end
     end
     if async then
@@ -54,8 +54,7 @@ function Promise:new(executor, async)
     else
         executor(resolve, reject)
     end
-    self.__index = self
-    return setmetatable(obj, self)
+    return setmetatable(self, { __index = Promise })
 end
 
 -- Promise.prototype.then(), https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
@@ -66,7 +65,7 @@ end
 ---@param on_rejected? function
 ---@return FittenCode.Concurrency.Promise
 function Promise:forward(on_fulfilled, on_rejected)
-    return Promise:new(function(resolve, reject)
+    return Promise.new(function(resolve, reject)
         if self.state == PromiseState.PENDING then
             table.insert(self.promise_reactions[PromiseState.FULFILLED], function(promise)
                 if on_fulfilled then
@@ -131,12 +130,12 @@ end
 -- * It immediately returns another Promise object, allowing you to chain calls to other promise methods.
 function Promise:finally(on_finally)
     return self:forward(function(value)
-        return Promise:new(function(resolve)
+        return Promise.new(function(resolve)
             on_finally()
             resolve(value)
         end)
     end, function(reason)
-        return Promise:new(function(_, reject)
+        return Promise.new(function(_, reject)
             on_finally()
             reject(reason)
         end)
@@ -162,7 +161,7 @@ end
 ---@param promises FittenCode.Concurrency.Promise[]
 ---@return FittenCode.Concurrency.Promise
 function Promise.all(promises)
-    return Promise:new(function(resolve, reject)
+    return Promise.new(function(resolve, reject)
         local results = {}
         local count = #promises
         if count == 0 then
@@ -203,7 +202,7 @@ end
 ---@param promises FittenCode.Concurrency.Promise[]
 ---@return FittenCode.Concurrency.Promise
 function Promise.all_settled(promises)
-    return Promise:new(function(resolve, _)
+    return Promise.new(function(resolve, _)
         local results = {}
         local count = #promises
         if count == 0 then
@@ -244,7 +243,7 @@ end
 ---@param promises FittenCode.Concurrency.Promise[]
 ---@return FittenCode.Concurrency.Promise?
 function Promise.any(promises)
-    return Promise:new(function(resolve, reject)
+    return Promise.new(function(resolve, reject)
         -- 处理空数组的特殊情况
         if #promises == 0 then
             return reject({ errors = {}, message = 'All promises were rejected' })
@@ -293,7 +292,7 @@ end
 ---@param promises FittenCode.Concurrency.Promise[]
 ---@return FittenCode.Concurrency.Promise
 function Promise.race(promises)
-    return Promise:new(function(resolve, reject)
+    return Promise.new(function(resolve, reject)
         -- 记录是否已有结果
         local has_settled = false
 
@@ -330,7 +329,7 @@ end
 ---@param reason any
 ---@return FittenCode.Concurrency.Promise
 function Promise.reject(reason)
-    return Promise:new(function(_, reject)
+    return Promise.new(function(_, reject)
         reject(reason) -- 同步触发拒绝
     end)
 end
@@ -346,7 +345,7 @@ function Promise.resolve(value)
     end
 
     -- 创建立即解决的 Promise
-    return Promise:new(function(resolve)
+    return Promise.new(function(resolve)
         resolve(value) -- 同步触发解决
     end)
 end
@@ -357,7 +356,7 @@ end
 ---@param fn function
 ---@return FittenCode.Concurrency.Promise
 function Promise.try(fn)
-    return Promise:new(function(resolve, reject)
+    return Promise.new(function(resolve, reject)
         -- 使用 pcall 捕获同步错误
         local ok, result = pcall(fn)
 
