@@ -15,16 +15,32 @@ end
 
 ----- UTF-8 验证 -----
 -- 验证字节流（字符串或字节数组）
-function M.validate_utf8_bytes(input)
-    local s = type(input) == 'table' and string.char(unpack(input)) or input
-    return M.validate_utf8(s)
+---@param byte_stream string|table<number> 输入字节流
+---@param allow_bom? boolean 是否允许BOM
+---@return boolean 是否有效
+function M.validate_utf8_bytes(byte_stream, allow_bom)
+    ---@type string
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local utf8_string = (type(byte_stream) == 'table') and string.char(unpack(byte_stream)) or byte_stream
+    return M.validate_utf8(utf8_string, allow_bom)
 end
 
--- 辅助函数：验证UTF-8有效性
-function M.validate_utf8(s)
+-- 对于 UTF-8 来说，units 就是字节数组
+M.validate_utf8_units = M.validate_utf8_bytes
+
+-- 验证UTF-8有效性
+---@param utf8_string string 输入字符串
+---@param allow_bom? boolean 是否允许BOM
+---@return boolean 是否有效
+function M.validate_utf8(utf8_string, allow_bom)
+    -- 默认允许BOM
+    allow_bom = (allow_bom == nil) and true or allow_bom
     local i = 1
-    while i <= #s do
-        local b1 = s:byte(i)
+    if allow_bom and M.is_utf8_bom(utf8_string:sub(1, 3)) then
+        i = 4 -- 跳过BOM
+    end
+    while i <= #utf8_string do
+        local b1 = utf8_string:byte(i)
         local bytes
 
         -- 确定字节数
@@ -41,12 +57,12 @@ function M.validate_utf8(s)
         end
 
         -- 检查后续字节
-        if i + bytes - 1 > #s then
+        if i + bytes - 1 > #utf8_string then
             return false -- 字节不足
         end
 
         for j = 1, bytes - 1 do
-            if bit.band(s:byte(i + j), 0xC0) ~= 0x80 then
+            if bit.band(utf8_string:byte(i + j), 0xC0) ~= 0x80 then
                 return false
             end
         end
@@ -58,7 +74,7 @@ function M.validate_utf8(s)
         else
             cp = bit.band(b1, bit.rshift(0xFF, bytes + 1))
             for j = 1, bytes - 1 do
-                cp = bit.bor(bit.lshift(cp, 6), bit.band(s:byte(i + j), 0x3F))
+                cp = bit.bor(bit.lshift(cp, 6), bit.band(utf8_string:byte(i + j), 0x3F))
             end
         end
 
@@ -81,47 +97,66 @@ function M.validate_utf8(s)
     return true
 end
 
+---@param utf8_string string 输入字符串
+function M.is_utf8_bom(utf8_string)
+    return utf8_string == '\xEF\xBB\xBF'
+end
+
 ----- UTF-16 验证 -----
--- 验证字节流（自动检测BOM）
-function M.validate_utf16_bytes(bytes, optional_endian)
-    local s = type(bytes) == 'table' and string.char(unpack(bytes)) or bytes
-    local len = #s
+-- 验证字节流（检测BOM）
+---@param byte_stream string|table<number> 输入字节流
+---@param endian? string 字节序，可选 'be' 或 'le'
+---@param allow_bom? boolean 是否允许BOM
+---@return boolean 是否有效
+function M.validate_utf16_bytes(byte_stream, endian, allow_bom)
+    local utf16_stream = type(byte_stream) == 'table' and string.char(unpack(byte_stream)) or byte_stream
+    local len = #utf16_stream
 
     -- 长度必须为偶数
     if len % 2 ~= 0 then return false end
 
     -- 解析BOM
-    local endian = optional_endian
-    if not endian and len >= 2 then
-        local bom = s:sub(1, 2)
+    allow_bom = (allow_bom == nil) and true or allow_bom
+    local computed_endian = endian
+    if allow_bom and len >= 2 then
+        local bom = utf16_stream:sub(1, 2)
         if bom == '\xFE\xFF' then
-            endian = 'be'
+            computed_endian = 'be'
         elseif bom == '\xFF\xFE' then
-            endian = 'le'
+            computed_endian = 'le'
         end
+    end
+    if endian and computed_endian ~= endian then
+        return false -- 字节序不匹配
+    else
+        endian = computed_endian or 'le'
     end
 
     -- 转换码元数组
     local units = {}
     for i = 1, len, 2 do
-        local b1, b2 = s:byte(i), s:byte(i + 1)
+        local b1, b2 = utf16_stream:byte(i), utf16_stream:byte(i + 1)
         local unit = endian == 'le'
             and bit.bor(bit.lshift(b2, 8), b1)
             or bit.bor(bit.lshift(b1, 8), b2)
         table.insert(units, unit)
     end
 
-    return M.validate_utf16_units(units, endian ~= nil)
+    return M.validate_utf16_units(units, endian, allow_bom)
 end
 
--- 辅助函数：验证UTF-16码元数组
-function M.validate_utf16_units(units, allow_bom)
+-- 验证UTF-16码元数组
+---@param units table<number> 码元数组
+---@param endian? string 字节序，可选 'be' 或 'le'
+---@param allow_bom? boolean 是否允许BOM
+---@return boolean 是否有效
+function M.validate_utf16_units(units, endian, allow_bom)
     local i = 1
     if allow_bom and #units > 0 then
         -- 跳过BOM码元
-        if units[1] == 0xFEFF then
+        if units[1] == 0xFEFF and endian == 'be' or units[1] == 0xFFFE and endian == 'le' then
             i = 2
-        elseif units[1] == 0xFFFE then
+        elseif units[1] == 0xFEFF and endian == 'le' or units[1] == 0xFFFE and endian == 'be' then
             return false -- 非法BOM
         end
     end
@@ -152,28 +187,38 @@ end
 
 ----- UTF-32 验证 -----
 -- 验证字节流（自动检测BOM）
-function M.validate_utf32_bytes(bytes, optional_endian)
-    local s = type(bytes) == 'table' and string.char(unpack(bytes)) or bytes
-    local len = #s
+---@param byte_stream string|table<number> 输入字节流
+---@param endian? string 字节序，可选 'be' 或 'le'
+---@param allow_bom? boolean 是否允许BOM
+---@return boolean 是否有效
+function M.validate_utf32_bytes(byte_stream, endian, allow_bom)
+    local utf32_stream = type(byte_stream) == 'table' and string.char(unpack(byte_stream)) or byte_stream
+    local len = #utf32_stream
 
     -- 长度必须为4的倍数
     if len % 4 ~= 0 then return false end
 
     -- 解析BOM
-    local endian = optional_endian
-    if not endian and len >= 4 then
-        local bom = s:sub(1, 4)
+    allow_bom = (allow_bom == nil) and true or allow_bom
+    local computed_endian = endian
+    if allow_bom and len >= 4 then
+        local bom = utf32_stream:sub(1, 4)
         if bom == '\x00\x00\xFE\xFF' then
-            endian = 'be'
+            computed_endian = 'be'
         elseif bom == '\xFF\xFE\x00\x00' then
-            endian = 'le'
+            computed_endian = 'le'
         end
+    end
+    if endian and computed_endian ~= endian then
+        return false -- 字节序不匹配
+    else
+        endian = computed_endian or 'le'
     end
 
     -- 转换码点数组
     local cps = {}
     for i = 1, len, 4 do
-        local b1, b2, b3, b4 = s:byte(i, i + 3)
+        local b1, b2, b3, b4 = utf32_stream:byte(i, i + 3)
         local cp
         if endian == 'be' then
             cp = bit.bor(
@@ -193,17 +238,21 @@ function M.validate_utf32_bytes(bytes, optional_endian)
         table.insert(cps, cp)
     end
 
-    return M.validate_utf32_codepoints(cps, endian ~= nil)
+    return M.validate_utf32_codepoints(cps, endian, allow_bom)
 end
 
--- 辅助函数：验证UTF-32码点数组
-function M.validate_utf32_codepoints(cps, allow_bom)
+-- 验证UTF-32码点数组
+---@param cps table<number> 码点数组
+---@param endian? string 字节序，可选 'be' 或 'le'
+---@param allow_bom? boolean 是否允许BOM
+---@return boolean 是否有效
+function M.validate_utf32_codepoints(cps, endian, allow_bom)
     -- 增加BOM处理
     local i = 1
     if allow_bom and #cps > 0 then
-        if cps[1] == 0xFEFF then
+        if cps[1] == 0xFEFF and endian == 'be' or cps[1] == 0xFFFE0000 and endian == 'le' then
             i = 2        -- 跳过BOM
-        elseif cps[1] == 0xFFFE0000 then
+        elseif cps[1] == 0xFEFF and endian == 'le' or cps[1] == 0xFFFE0000 and endian == 'be' then
             return false -- 非法BOM
         end
     end
@@ -216,7 +265,7 @@ function M.validate_utf32_codepoints(cps, allow_bom)
     return true
 end
 
--- 主检测函数
+-- 自动识别编码
 function M.detect_encoding(s)
     local typ = type(s)
 
@@ -341,7 +390,11 @@ function M.detect_encoding(s)
     error('Invalid input type: ' .. typ)
 end
 
------ 智能验证入口 -----
+-- 验证一个 input 是否是有效的 UTF-x 编码
+---@param input string|table<number> 输入字符串或字节数组
+---@param encoding string|nil 编码类型，默认为 'auto'
+---@param format string|nil 输入格式，默认为 'auto'
+---@return boolean 是否有效
 function M.validate(input, encoding, format)
     encoding = encoding or 'auto'
     format = format or 'auto'
