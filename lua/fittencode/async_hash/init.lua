@@ -71,11 +71,11 @@ function M.hash(algorithm, data, options)
 end
 
 -- 自动生成快捷方法
-local algos = {'md5', 'sha1', 'sha256', 'sha512'}
+local algos = { 'md5', 'sha1', 'sha256', 'sha512' }
 for _, algo in ipairs(algos) do
-  M[algo] = function(data, opts)
-    return M.hash(algo, data, opts)
-  end
+    M[algo] = function(data, opts)
+        return M.hash(algo, data, opts)
+    end
 end
 
 return M

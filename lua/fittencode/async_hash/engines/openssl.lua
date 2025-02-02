@@ -1,9 +1,15 @@
-local ProcessSpawn = require('fittencode.process.spawn')
+local spawn = require('fittencode.process.spawn')
 local Promise = require('fittencode.concurrency.promise')
+
+local algorithms = {
+    'md4', 'md5', 'mdc2', 'rmd160', 'sha1', 'sha224', 'sha256',
+    'sha384', 'sha512', 'sha3-224', 'sha3-256', 'sha3-384', 'sha3-512',
+    'shake128', 'shake256', 'blake2b512', 'blake2s256', 'sm3'
+}
 
 local M = {
     name = 'openssl',
-    algorithms = { 'md5', 'sha1', 'sha256' }
+    algorithms = algorithms
 }
 
 function M.is_available()
@@ -13,27 +19,33 @@ end
 function M.hash(algorithm, data, options)
     options = options or {}
     local args = { 'dgst', '-' .. algorithm }
-    local stdin_data
+
+    if options.output_binary then
+        table.insert(args, '-binary')
+    end
 
     local is_file = options.input_type == 'file' or
         (type(data) == 'string' and vim.fn.filereadable(data) == 1)
 
     if is_file then
         table.insert(args, data)
-    else
-        stdin_data = data
+        data = nil
     end
 
-    local process = ProcessSpawn.spawn('openssl', args, { stdin = stdin_data })
+    local process = spawn.spawn('openssl', args, { stdin = data })
 
     return Promise.new(function(resolve, reject)
         local stdout = ''
         process:on('stdout', function(d) stdout = stdout .. d end)
         process:on('exit', function(code)
             if code == 0 then
-                -- 1MD5(stdin)= d41d8cd98f00b204e9800998ecf8427e
-                local hash = stdout:match('([%x]+)$')
-                if hash then resolve(hash) else reject('Invalid output') end
+                if options.output_binary then
+                    resolve(stdout)
+                else
+                    -- 1MD5(stdin)= d41d8cd98f00b204e9800998ecf8427e
+                    local hash = stdout:match('([%x]+)$') or stdout:gsub('%s+', '')
+                    if hash then resolve(hash) else reject('Invalid output') end
+                end
             else
                 reject('Exit code: ' .. code)
             end
