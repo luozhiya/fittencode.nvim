@@ -12,61 +12,99 @@ AsyncHash.sha256("/path/to/file", {input_type = 'file'})
 
 local Promise = require('fittencode.concurrency.promise')
 
--- 引擎列表
-local engine_names = {
-    'openssl',
-    'md5sum',
-    'sha1sum',
-    'sha256sum',
-    'libcrypto',
-    'native',
+local engine_priority = {
+    ['libcrypto']   = 100, -- FFI实现的最高优先级
+    ['openssl-cli'] = 90,  -- OpenSSL命令行
+    ['sum-command'] = 80,  -- 系统sum命令
+    ['native']      = 70   -- 纯Lua实现
 }
 
--- 引擎模块
-local modoules = {}
+local function sort_engines(a, b)
+    -- 优先按分类权重排序
+    if a.priority ~= b.priority then
+        return a.priority > b.priority
+    end
+    -- 同分类下按性能评分排序
+    return a.features.performance > b.features.performance
+end
 
--- 根据 Hash 算法分类引擎
-local algorithm_engines = {}
+local function load_engines()
+    -- 引擎列表
+    local engine_names = {
+        'openssl',
+        'md5sum',
+        'sha1sum',
+        'sha256sum',
+        'libcrypto',
+        'native',
+    }
 
-local M = {}
-
-function M.setup()
+    local candidates = {}
     -- 加载引擎模块
     for _, name in ipairs(engine_names) do
         local ok, mod = pcall(require, 'fittencode.async_hash.engines.' .. name)
         if ok then
-            table.insert(modoules, mod)
+            table.insert(candidates, mod)
         end
     end
-    -- 初始化可用引擎
-    local available_engines = {}
-    for _, engine in ipairs(modoules) do
+
+    local available = {}
+    for _, engine in ipairs(candidates) do
         if engine.is_available() then
-            table.insert(available_engines, engine)
-            for _, algo in ipairs(engine.algorithms) do
-                if not algorithm_engines[algo] then
-                    algorithm_engines[algo] = {}
-                end
-                table.insert(algorithm_engines[algo], engine)
+            -- 自动设置优先级权重
+            engine.priority = engine_priority[engine.category] or 50
+            table.insert(available, engine)
+        end
+    end
+
+    table.sort(available, sort_engines)
+    return available
+end
+
+-- 根据 Hash 算法分类引擎
+local algorithm_engine_map = {}
+
+local M = {}
+
+function M.setup()
+    -- 初始化时加载排序后的引擎
+    local engines = load_engines()
+
+    for _, engine in ipairs(engines) do
+        for _, algo in ipairs(engine.algorithms) do
+            if not algorithm_engine_map[algo] then
+                algorithm_engine_map[algo] = {
+                    primary = engine, -- 主选引擎
+                    fallbacks = {}    -- 备选引擎
+                }
+            else
+                table.insert(algorithm_engine_map[algo].fallbacks, engine)
             end
         end
     end
 end
 
-local function resolve_engine(algorithm)
-    local engines = algorithm_engines[algorithm]
-    if not engines or #engines == 0 then
-        return nil, 'No available engine for algorithm: ' .. algorithm
+function M.get_engine(algorithm, options)
+    options = options or {}
+    local entry = algorithm_engine_map[algorithm]
+    if not entry then return nil, 'Unsupported algorithm' end
+
+    -- 根据选项动态选择
+    if options.prefer then
+        for _, engine in ipairs(entry.fallbacks) do
+            if engine.name == options.prefer then
+                return engine
+            end
+        end
     end
-    return engines[1]
+
+    -- 自动选择主引擎
+    return entry.primary
 end
 
 function M.hash(algorithm, data, options)
-    options = options or {}
-    local engine, err = resolve_engine(algorithm)
-    if not engine then
-        return Promise.reject(err)
-    end
+    local engine, err = M.get_engine(algorithm, options)
+    if not engine then return Promise.reject(err) end
     return engine.hash(algorithm, data, options)
 end
 

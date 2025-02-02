@@ -19,24 +19,52 @@ local function md5_padding(msg_len)
     return string.char(0x80) .. string.rep('\0', pad_len - 1) .. string.pack('<I8', msg_len * 8)
 end
 
-local function F(x, y, z) return bxor(z, band(x, bxor(y, z))) end
-local function G(x, y, z) return bxor(y, band(z, bxor(x, y))) end
-local function H(x, y, z) return bxor(x, bxor(y, z)) end
-local function I(x, y, z) return bxor(y, bor(x, bnot(z))) end
+-- MD5 算法核心
+local MD5 = {}
+MD5.__index = MD5
 
-local function round(a, b, c, d, k, s, i, f)
-    local temp = rol((a + f(b, c, d) + k + i) % 0x100000000, s)
-    return (b + temp) % 0x100000000
+function MD5.new()
+    local self = setmetatable({
+        a = 0x67452301,
+        b = 0xEFCDAB89,
+        c = 0x98BADCFE,
+        d = 0x10325476,
+        buffer = '',
+        total_len = 0
+    }, MD5)
+    return self
 end
 
-local function md5_process_block(block, a0, b0, c0, d0)
+function MD5:update(data)
+    self.buffer = self.buffer .. data
+    self.total_len = self.total_len + #data
+
+    while #self.buffer >= 64 do
+        self:_process_block(self.buffer:sub(1, 64))
+        self.buffer = self.buffer:sub(65)
+    end
+end
+
+function MD5:_process_block(block)
     local w = {}
     for i = 0, 15 do
         local j = i * 4 + 1
         w[i] = bytes_to_w32(block:byte(j, j + 3))
     end
 
-    local a, b, c, d = a0, b0, c0, d0
+    -- 四轮运算
+    local a, b, c, d = self.a, self.b, self.c, self.d
+
+    -- 轮函数定义
+    local function F(x, y, z) return bxor(z, band(x, bxor(y, z))) end
+    local function G(x, y, z) return bxor(y, band(z, bxor(x, y))) end
+    local function H(x, y, z) return bxor(x, bxor(y, z)) end
+    local function I(x, y, z) return bxor(y, bor(x, bnot(z))) end
+
+    local function round(a, b, c, d, k, s, i, func)
+        local temp = rol((a + func(b, c, d) + k + i) % 0x100000000, s)
+        return (b + temp) % 0x100000000
+    end
 
     -- Round 1
     for i = 0, 15 do
@@ -73,39 +101,36 @@ local function md5_process_block(block, a0, b0, c0, d0)
         b = round(b, c, d, a, w[(7 * (i + 3)) % 16], 21, 0x49b40821, I)
     end
 
-    return
-        (a0 + a) % 0x100000000,
-        (b0 + b) % 0x100000000,
-        (c0 + c) % 0x100000000,
-        (d0 + d) % 0x100000000
+    self.a = (self.a + a) % 0x100000000
+    self.b = (self.b + b) % 0x100000000
+    self.c = (self.c + c) % 0x100000000
+    self.d = (self.d + d) % 0x100000000
 end
 
-local M = {}
-
-function M.hash(data)
-    local a = 0x67452301
-    local b = 0xEFCDAB89
-    local c = 0x98BADCFE
-    local d = 0x10325476
-
-    -- 处理数据块
-    data = data .. md5_padding(#data)
-    for pos = 1, #data, 64 do
-        local chunk = data:sub(pos, pos + 63)
-        a, b, c, d = md5_process_block(chunk, a, b, c, d)
-    end
+function MD5:finalize()
+    -- 添加填充
+    local pad = md5_padding(self.total_len)
+    self:update(pad)
 
     -- 转换为小端字节序
-    local b1, b2, b3, b4 = w32_to_bytes(a)
-    local h1 = string.format('%02x%02x%02x%02x', b1, b2, b3, b4)
-    b1, b2, b3, b4 = w32_to_bytes(b)
-    local h2 = string.format('%02x%02x%02x%02x', b1, b2, b3, b4)
-    b1, b2, b3, b4 = w32_to_bytes(c)
-    local h3 = string.format('%02x%02x%02x%02x', b1, b2, b3, b4)
-    b1, b2, b3, b4 = w32_to_bytes(d)
-    local h4 = string.format('%02x%02x%02x%02x', b1, b2, b3, b4)
+    local function format_word(w)
+        local b1, b2, b3, b4 = w32_to_bytes(w)
+        return string.format('%02x%02x%02x%02x', b1, b2, b3, b4)
+    end
 
-    return h1 .. h2 .. h3 .. h4
+    return format_word(self.a) ..
+        format_word(self.b) ..
+        format_word(self.c) ..
+        format_word(self.d)
+end
+
+local M = {
+    algorithms = { 'md5' },
+    new = MD5.new
+}
+
+function M.is_available()
+    return pcall(require, 'bit') and true or false
 end
 
 return M

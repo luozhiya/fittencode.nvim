@@ -3,7 +3,14 @@ local Promise = require('fittencode.concurrency.promise')
 
 local M = {
     name = 'sha1sum',
-    algorithms = { 'sha1' }
+    category = 'sum-command',
+    algorithms = { 'sha1' },
+    priority = 80,
+    features = {
+        async = true,
+        streaming = false,
+        performance = 0.6
+    }
 }
 
 function M.is_available()

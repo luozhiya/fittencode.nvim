@@ -9,7 +9,14 @@ local algorithms = {
 
 local M = {
     name = 'openssl',
-    algorithms = algorithms
+    algorithms = algorithms,
+    category = 'openssl-cli', -- 新增分类标识
+    priority = 90,            -- 定义优先级权重
+    features = {
+        async = true,
+        streaming = true,
+        performance = 0.8 -- 性能评分(0-1)
+    }
 }
 
 function M.is_available()

@@ -39,9 +39,22 @@ local algorithm_map = {
     ['sm3']        = 'sm3'
 }
 
+local algorithms = {
+    'md4', 'md5', 'mdc2', 'rmd160', 'sha1', 'sha224', 'sha256',
+    'sha384', 'sha512', 'sha3-224', 'sha3-256', 'sha3-384', 'sha3-512',
+    'shake128', 'shake256', 'blake2b512', 'blake2s256', 'sm3'
+}
+
 local M = {
     name = 'libcrypto',
-    algorithms = vim.tbl_keys(algorithm_map)
+    category = 'libcrypto',
+    algorithms = algorithms,
+    priority = 100, -- 最高优先级
+    features = {
+        async = true,
+        streaming = true,
+        performance = 0.95
+    }
 }
 
 function M.is_available()

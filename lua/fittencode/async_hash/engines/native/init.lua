@@ -1,27 +1,49 @@
-local bit = require('bit')
 local Promise = require('fittencode.concurrency.promise')
 
--- MD5纯Lua实现（示例，需补充完整实现）
-local md5 = {}
-function md5.new()
-    return {
-        update = function(self, data) end,
-        finalize = function(self) return 'd41d8cd98f00b204e9800998ecf8427e' end
-    }
+-- 自动加载子模块
+local algorithms = {
+    md5 = { module = 'md5', available = false },
+    sha1 = { module = 'sha1', available = false }
+}
+
+local hashers = {}
+
+-- 检测子模块可用性
+for algo, info in pairs(algorithms) do
+    local ok, mod = pcall(require, 'fittencode.async_hash.engines.native.' .. info.module)
+    if ok and mod.is_available() then
+        hashers[algo] = mod
+        info.available = true
+    end
 end
 
 local M = {
     name = 'native',
-    algorithms = { 'md5' },
-    supported_algorithms = { md5 = true }
+    category = 'native',
+    algorithms = {}, -- 'md5', 'sha1'
+    priority = 70,
+    features = {
+        async = true,
+        streaming = true,
+        performance = 0.4
+    },
+    supported_algorithms = {}
 }
 
+-- 生成支持的算法列表
+for algo, info in pairs(algorithms) do
+    if info.available then
+        table.insert(M.algorithms, algo)
+        M.supported_algorithms[algo] = true
+    end
+end
+
 function M.is_available()
-    return pcall(require, 'bit') and true or false
+    return #M.algorithms > 0
 end
 
 function M.create_hasher(algorithm)
-    if algorithm == 'md5' then return md5.new() end
+    return hashers[algorithm].new()
 end
 
 function M.hash(algorithm, data, options)
@@ -34,9 +56,34 @@ function M.hash(algorithm, data, options)
 
     if is_file then
         return Promise.new(function(resolve, reject, async)
-            -- 异步文件处理逻辑
             local hasher = M.create_hasher(algorithm)
-            resolve(hasher:finalize())
+            local chunk_size = 4096
+            local fd = vim.loop.fs_open(data, 'r', 438)
+
+            if not fd then
+                return reject('Failed to open file: ' .. data)
+            end
+
+            local function read_next(offset)
+                vim.loop.fs_read(fd, chunk_size, offset, function(err, chunk)
+                    if err then
+                        vim.loop.fs_close(fd)
+                        return reject(err)
+                    end
+
+                    if chunk and #chunk > 0 then
+                        hasher:update(chunk)
+                        read_next(offset + #chunk)
+                    else
+                        vim.loop.fs_close(fd, function(close_err)
+                            if close_err then return reject(close_err) end
+                            resolve(hasher:finalize())
+                        end)
+                    end
+                end)
+            end
+
+            read_next(0)
         end, true)
     else
         local hasher = M.create_hasher(algorithm)
