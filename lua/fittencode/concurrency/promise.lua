@@ -420,4 +420,40 @@ function Promise.try(fn)
     end)
 end
 
+-- Promise.reduce()
+-- * 该方法用于按顺序处理一个 Promise 数组，将前一个 Promise 的结果传递给下一个。
+-- * 如果任何 Promise 被拒绝，该方法将立即返回被拒绝的 Promise。
+-- * 如果所有 Promise 都成功解决，该方法将返回一个解决的 Promise，其值是数组中所有 Promise 结果的累积。
+---@param promises FittenCode.Concurrency.Promise[]
+---@param callback function
+---@param initial_value any
+---@return FittenCode.Concurrency.Promise
+function Promise.reduce(promises, callback, initial_value)
+    local function do_reduce(index, accumulator)
+        if index > #promises then
+            return Promise.new(function(resolve)
+                resolve(accumulator)
+            end)
+        end
+
+        local p = promises[index]
+        if type(p) == 'table' and getmetatable(p) == Promise then
+            return p:forward(
+                function(value)
+                    return do_reduce(index + 1, callback(accumulator, value, index, promises))
+                end,
+                function(reason)
+                    return Promise.new(function(_, reject)
+                        reject(reason)
+                    end)
+                end
+            )
+        else
+            return do_reduce(index + 1, callback(accumulator, p, index, promises))
+        end
+    end
+
+    return do_reduce(1, initial_value)
+end
+
 return Promise

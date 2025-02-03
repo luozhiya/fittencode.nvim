@@ -2,12 +2,12 @@
 local uv = require('fittencode.uv')
 
 -- 基础使用
-uv.tempfile.withTempFile(function(fd, path)
+uv.tempfile.with_temp_file(function(fd, path)
     return uv.fs.write(fd, "Hello World")
-        :then(function()
+        :forward(function()
             return uv.process.spawn('cat', { args = { path } })
         end)
-        :then(function(result)
+        :forward(function(result)
             print("File content:", result.stdout)
         end)
 end)
@@ -16,11 +16,32 @@ end)
 end)
 
 -- 快速创建临时文件
-uv.tempfile.createTempFile("test data")
-    :then(function(path)
+uv.tempfile.create_temp_file("test data")
+    :forward(function(path)
         print("Temporary file created at:", path)
         -- 文件会在 Promise 链结束后自动删除
     end)
+
+-- 测试写入失败场景
+uv.tempfile.with_temp_file(function(fd, path)
+    return Promise.reject("模拟业务逻辑错误")
+end)
+:catch(function(err)
+    print("捕获到错误:", err)  -- 输出 "模拟业务逻辑错误"
+end)
+
+-- 测试文件删除失败场景（需模拟）
+uv.tempfile.with_temp_file(function(fd, path)
+    -- 强制保留文件引用
+    return uv.fs.write(fd, "test")
+        :forward(function()
+            return "操作成功"
+        end)
+end)
+:forward(function(result)
+    print(result)  -- 输出 "操作成功"
+    -- 此处实际文件已被删除
+end)
 --]]
 
 -- lua/fittencode/uv/tempfile.lua
@@ -33,7 +54,7 @@ local M = {}
 --- 创建并自动管理临时文件生命周期
 ---@param callback fun(fd: integer, path: string): FittenCode.Concurrency.Promise
 ---@return FittenCode.Concurrency.Promise
-function M.withTempFile(callback)
+function M.with_temp_file(callback)
     -- 生成唯一临时文件
     return fs.mkstemp('tmp_XXXXXX')
         :forward(function(results)
@@ -85,8 +106,8 @@ function M._cleanup(fd, path)
 end
 
 --- 快速创建临时文件并写入内容
-function M.createTempFile(content)
-    return M.withTempFile(function(fd, path)
+function M.create_temp_file(content)
+    return M.with_temp_file(function(fd, path)
         return fs.write(fd, content)
             :forward(function()
                 return path -- 返回可供使用的文件路径

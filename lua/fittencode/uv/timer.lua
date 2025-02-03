@@ -1,4 +1,13 @@
--- lua/fittencode/uv/timer.lua
+--[[
+-- 定时器示例
+local uv_timer = require('fittencode.uv.timer')
+
+uv_timer.sleep(1000)
+    :forward(function()
+        print("After 1 second")
+    end)
+--]]
+
 local uv = vim.uv
 local Promise = require('fittencode.concurrency.promise')
 

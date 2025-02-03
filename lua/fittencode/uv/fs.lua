@@ -1,7 +1,66 @@
--- lua/fittencode/uv/fs.lua
+--[[
+-- 文件操作示例
+local uv_fs = require('fittencode.uv.fs')
+
+uv_fs.read_file('test.txt')
+    :forward(function(content)
+        print("File content:", content)
+    end)
+    :catch(function(err)
+        print("Read error:", err)
+    end)
+--]]
+
 local _Promise = require('fittencode.uv._promise')
 local Promise = require('fittencode.concurrency.promise')
 
+-- local fs_functions = {
+--     'fs_close', 'fs_open', 'fs_read', 'fs_write', 'fs_unlink', 'fs_mkdir',
+--     'fs_mkdtemp', 'fs_mkstemp', 'fs_rmdir', 'fs_scandir', 'fs_stat', 'fs_fstat',
+--     'fs_lstat', 'fs_rename', 'fs_fsync', 'fs_fdatasync', 'fs_ftruncate',
+--     'fs_sendfile', 'fs_access', 'fs_chmod', 'fs_fchmod', 'fs_utime', 'fs_futime',
+--     'fs_lutime', 'fs_link', 'fs_symlink', 'fs_readlink', 'fs_realpath',
+--     'fs_chown', 'fs_fchown', 'fs_lchown', 'fs_copyfile', 'fs_opendir',
+--     'fs_readdir', 'fs_closedir', 'fs_statfs'
+-- }
+
+---@class FittenCode.uv.fs
+---@field close function
+---@field open function
+---@field read function
+---@field write function
+---@field unlink function
+---@field mkdir function
+---@field mkdtemp function
+---@field mkstemp function
+---@field rmdir function
+---@field scandir function
+---@field stat function
+---@field fstat function
+---@field lstat function
+---@field rename function
+---@field fsync function
+---@field fdatasync function
+---@field ftruncate function
+---@field sendfile function
+---@field access function
+---@field chmod function
+---@field fchmod function
+---@field utime function
+---@field futime function
+---@field lutime function
+---@field link function
+---@field symlink function
+---@field readlink function
+---@field realpath function
+---@field chown function
+---@field fchown function
+---@field lchown function
+---@field copyfile function
+---@field opendir function
+---@field readdir function
+---@field closedir function
+---@field statfs function
 local M = {}
 
 local fs_functions = vim.tbl_filter(function(x) return x:match('^fs_') end, vim.tbl_keys(vim.uv))
@@ -17,7 +76,7 @@ for _, fn in ipairs(fs_functions) do
 end
 
 -- 高级文件操作
-function M.readFile(path)
+function M.read_file(path)
     local fd
     return M.open(path, 'r', 438)
         :forward(function(result)
@@ -39,7 +98,7 @@ function M.readFile(path)
         end)
 end
 
-function M.writeFile(path, content)
+function M.write_file(path, content)
     local fd
     return M.open(path, 'w', 438)
         :forward(function(result)

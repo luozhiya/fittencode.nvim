@@ -1,4 +1,15 @@
--- lua/fittencode/uv/process.lua
+--[[
+-- 进程管理增强
+local proc = uv.process.spawn('ls', {'-l'}, {
+    cwd = '/tmp'
+})
+
+proc._promise:forward(function(result)
+    print('Exit code:', result.code)
+    print('Output:', result.stdout)
+end)
+--]]
+
 local uv = vim.uv
 local Promise = require('fittencode.concurrency.promise')
 
@@ -31,7 +42,7 @@ function M.spawn(command, args, options)
         uv.close(stdin)
         uv.close(stdout)
         uv.close(stderr)
-        handle._promise:resolve({
+        handle._promise:manually_resolve({
             code = code,
             signal = signal,
             success = code == 0,
