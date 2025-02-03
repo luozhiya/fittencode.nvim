@@ -24,37 +24,61 @@ local Promise = {}
 ---@param executor? function
 ---@return FittenCode.Concurrency.Promise
 function Promise.new(executor, async)
-    assert(type(executor) == 'function', 'Promise executor must be a function')
     local self = {
         state = PromiseState.PENDING,
         value = nil,
         reason = nil,
         promise_reactions = { {}, {} },
     }
-    local function resolve(value)
-        if self.state == PromiseState.PENDING then
-            self.state = PromiseState.FULFILLED
-            self.value = value
-            vim.tbl_map(function(callback)
-                callback(self)
-            end, self.promise_reactions[PromiseState.FULFILLED])
+
+    setmetatable(self, { __index = Promise })
+
+    if executor ~= nil then
+        assert(type(executor) == 'function', 'Promise executor must be a function')
+
+        local function resolve(value)
+            self:resolve(value)
+        end
+
+        local function reject(reason)
+            self:reject(reason)
+        end
+
+        if async then
+            vim.schedule(function()
+                executor(resolve, reject)
+            end)
+        else
+            local ok, err = pcall(executor, resolve, reject)
+            if not ok then
+                reject(err)
+            end
         end
     end
-    local function reject(reason)
-        if self.state == PromiseState.PENDING then
-            self.state = PromiseState.REJECTED
-            self.reason = reason
-            vim.tbl_map(function(callback)
-                callback(self)
-            end, self.promise_reactions[PromiseState.REJECTED])
+
+    return self
+end
+
+---@param value any
+function Promise:manually_resolve(value)
+    if self.state == PromiseState.PENDING then
+        self.state = PromiseState.FULFILLED
+        self.value = value
+        for _, callback in ipairs(self.promise_reactions[PromiseState.FULFILLED]) do
+            callback(self)
         end
     end
-    if async then
-        vim.schedule(function() executor(resolve, reject) end)
-    else
-        executor(resolve, reject)
+end
+
+---@param reason any
+function Promise:manually_reject(reason)
+    if self.state == PromiseState.PENDING then
+        self.state = PromiseState.REJECTED
+        self.reason = reason
+        for _, callback in ipairs(self.promise_reactions[PromiseState.REJECTED]) do
+            callback(self)
+        end
     end
-    return setmetatable(self, { __index = Promise })
 end
 
 -- Promise.prototype.then(), https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then

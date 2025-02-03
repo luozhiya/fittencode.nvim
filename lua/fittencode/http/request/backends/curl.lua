@@ -103,7 +103,10 @@ function M.fetch(url, options)
     end
 
     -- 请求体处理
-    if options.body then
+    if options.body_file then
+        table.insert(args, '--data-binary')
+        table.insert(args, '@' .. options.body_file)
+    elseif options.body then
         table.insert(args, '--data-binary')
         table.insert(args, '@-')
     end
