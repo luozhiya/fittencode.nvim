@@ -6,32 +6,41 @@ local M = {}
 ffi.cdef [[
 typedef void CURL;
 typedef struct curl_slist curl_slist;
+typedef long long curl_off_t;
+typedef int64_t time_t;
+
 typedef enum {
-  CURLE_OK = 0,
-  CURLOPT_URL = 10002,
-  CURLOPT_WRITEFUNCTION = 20011,
-  CURLOPT_WRITEDATA = 10001,
-  CURLOPT_HEADERFUNCTION = 20079,
-  CURLOPT_HEADERDATA = 10029,
-  CURLOPT_NOPROGRESS = 43,
-  CURLOPT_FOLLOWLOCATION = 52,
-  CURLOPT_TIMEOUT_MS = 155,
-  CURLOPT_MAXREDIRS = 68,
-  CURLOPT_TCP_FASTOPEN = 244,
-  CURLOPT_ACCEPT_ENCODING = 10102,
-  CURLOPT_USERAGENT = 10018,
-  CURLOPT_SSL_VERIFYPEER = 64,
-  CURLOPT_CUSTOMREQUEST = 10036,
-  CURLOPT_POSTFIELDS = 10015,
-  CURLOPT_POSTFIELDSIZE = 60,
-  CURLINFO_RESPONSE_CODE = 2097154,
-  CURLINFO_NAMELOOKUP_TIME = 3145733,
-  CURLINFO_CONNECT_TIME = 3145734,
-  CURLINFO_APPCONNECT_TIME = 3145765,
-  CURLINFO_PRETRANSFER_TIME = 3145735,
-  CURLINFO_STARTTRANSFER_TIME = 3145736,
-  CURLINFO_TOTAL_TIME = 3145737,
-  CURLINFO_SIZE_DOWNLOAD = 3145743
+    CURLE_OK = 0,
+    CURLOPT_URL = 10002,
+    CURLOPT_WRITEFUNCTION = 20011,
+    CURLOPT_WRITEDATA = 10001,
+    CURLOPT_HEADERFUNCTION = 20079,
+    CURLOPT_HEADERDATA = 10029,
+    CURLOPT_NOPROGRESS = 43,
+    CURLOPT_FOLLOWLOCATION = 52,
+    CURLOPT_TIMEOUT_MS = 155,
+    CURLOPT_MAXREDIRS = 68,
+    CURLOPT_TCP_FASTOPEN = 244,
+    CURLOPT_ACCEPT_ENCODING = 10102,
+    CURLOPT_USERAGENT = 10018,
+    CURLOPT_SSL_VERIFYPEER = 64,
+    CURLOPT_CUSTOMREQUEST = 10036,
+    CURLOPT_POSTFIELDS = 10015,
+    CURLOPT_POSTFIELDSIZE = 60,
+    CURLINFO_RESPONSE_CODE = 2097154,
+    CURLINFO_NAMELOOKUP_TIME = 3145733,
+    CURLINFO_CONNECT_TIME = 3145734,
+    CURLINFO_APPCONNECT_TIME = 3145765,
+    CURLINFO_PRETRANSFER_TIME = 3145735,
+    CURLINFO_STARTTRANSFER_TIME = 3145736,
+    CURLINFO_TOTAL_TIME = 3145737,
+    CURLINFO_SIZE_DOWNLOAD = 3145743,
+    // body_file
+    CURLOPT_READFUNCTION = 20012,
+    CURLOPT_READDATA = 10009,
+    CURLOPT_POSTFIELDSIZE_LARGE = 30120,
+    CURLOPT_INFILESIZE_LARGE = 30114,
+    CURLOPT_UPLOAD = 46,
 } CURLoption;
 
 CURL *curl_easy_init();
@@ -42,6 +51,12 @@ CURLcode curl_easy_setopt(CURL *curl, CURLoption option, ...);
 CURLcode curl_easy_perform(CURL *curl);
 const char *curl_easy_strerror(CURLcode code);
 CURLcode curl_easy_getinfo(CURL *curl, CURLoption option, ...);
+
+FILE *fopen(const char *filename, const char *mode);
+int fclose(FILE *stream);
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+int fseek(FILE *stream, long offset, int whence);
+long ftell(FILE *stream);
 ]]
 
 local curl = ffi.load('curl')
@@ -121,7 +136,54 @@ function M.fetch(url, opts)
     end
 
     -- 请求体
-    if opts.body then
+    local file = nil
+    local read_cb = nil
+    if opts.body_file then
+        -- 打开文件
+        file = ffi.C.fopen(opts.body_file, 'rb')
+        if file == nil then
+            curl.curl_easy_cleanup(handle)
+            stream:_emit('error', {
+                type = 'FILE_ERROR',
+                message = 'Failed to open file: ' .. opts.body_file
+            })
+            return {
+                stream = stream,
+                abort = function() end,
+                promise = function()
+                    return Promise.new(function(_, reject)
+                        reject({ type = 'FILE_ERROR', message = 'File open failed' })
+                    end)
+                end
+            }
+        end
+
+        -- 获取文件大小
+        ffi.C.fseek(file, 0, 2) -- SEEK_END
+        local file_size = ffi.C.ftell(file)
+        ffi.C.fseek(file, 0, 0) -- SEEK_SET
+
+        -- 根据方法配置
+        local method = opts.method or 'POST'
+        curl.curl_easy_setopt(handle, ffi.C.CURLOPT_CUSTOMREQUEST, method)
+
+        if method == 'PUT' then
+            curl.curl_easy_setopt(handle, ffi.C.CURLOPT_UPLOAD, 1)
+            curl.curl_easy_setopt(handle, ffi.C.CURLOPT_INFILESIZE_LARGE, file_size)
+        else
+            curl.curl_easy_setopt(handle, ffi.C.CURLOPT_POST, 1)
+            curl.curl_easy_setopt(handle, ffi.C.CURLOPT_POSTFIELDSIZE_LARGE, file_size)
+        end
+
+        -- 设置读取回调
+        read_cb = ffi.cast('curl_read_callback', function(ptr, size, nmemb, userdata)
+            local file = ffi.cast('FILE*', userdata)
+            return ffi.C.fread(ptr, 1, size * nmemb, file)
+        end)
+
+        curl.curl_easy_setopt(handle, ffi.C.CURLOPT_READFUNCTION, read_cb)
+        curl.curl_easy_setopt(handle, ffi.C.CURLOPT_READDATA, file)
+    elseif opts.body then
         local body = type(opts.body) == 'table' and vim.json.encode(opts.body) or opts.body
         curl.curl_easy_setopt(handle, ffi.C.CURLOPT_POSTFIELDS, body)
         curl.curl_easy_setopt(handle, ffi.C.CURLOPT_POSTFIELDSIZE, #body)
@@ -175,6 +237,11 @@ function M.fetch(url, opts)
         done = true
         timer:stop()
         timer:close()
+
+        if file then
+            ffi.C.fclose(file)
+            file = nil
+        end
 
         -- 解析计时信息
         local timing = {}
@@ -241,6 +308,10 @@ function M.fetch(url, opts)
     req_handle.abort = function()
         if not done then
             done = true
+            if file then
+                ffi.C.fclose(file)
+                file = nil
+            end
             curl.curl_easy_cleanup(handle)
             timer:stop()
             timer:close()

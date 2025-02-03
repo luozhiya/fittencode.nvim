@@ -2,6 +2,12 @@
 --   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
 --   https://medium.com/swlh/implement-a-simple-promise-in-javascript-20c9705f197a
 
+--[[
+local promise = Promise.new() -- 创建未决Promise
+promise:manually_resolve("成功")       -- 手动解决
+promise:manually_reject("失败")        -- 手动拒绝
+]]
+
 -- A Promise is in one of these states:
 -- * PENDING: initial state, neither fulfilled nor rejected.
 -- * FULFILLED: meaning that the operation was completed successfully.
@@ -21,6 +27,7 @@ local PromiseState = {
 local Promise = {}
 
 -- Promise() constructor, https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/Promise
+-- 允许不传 executor 创建 Promise 实例（用于手动控制）
 ---@param executor? function
 ---@return FittenCode.Concurrency.Promise
 function Promise.new(executor, async)
@@ -59,6 +66,18 @@ function Promise.new(executor, async)
     return self
 end
 
+-- To string method
+function Promise:__tostring()
+    if self.state == PromiseState.PENDING then
+        return 'Promise { <pending> }'
+    elseif self.state == PromiseState.FULFILLED then
+        return 'Promise { <fulfilled> ' .. tostring(self.value) .. ' }'
+    else
+        return 'Promise { <rejected> ' .. tostring(self.reason) .. ' }'
+    end
+end
+
+-- Manually resolve the Promise with a value.
 ---@param value any
 function Promise:manually_resolve(value)
     if self.state == PromiseState.PENDING then
@@ -70,6 +89,7 @@ function Promise:manually_resolve(value)
     end
 end
 
+-- Manually reject the Promise with a reason.
 ---@param reason any
 function Promise:manually_reject(reason)
     if self.state == PromiseState.PENDING then
