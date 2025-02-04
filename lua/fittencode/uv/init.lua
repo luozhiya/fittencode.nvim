@@ -1,10 +1,10 @@
 --[[
 -- 使用 Promise 链式调用
 uv.fs.open('a.txt', 'r', 438)
-   :then(function(fd)
+   :forward(function(fd)
        return uv.fs.read(fd, 1024, 0)
    end)
-   :then(function(data)
+   :forward(function(data)
        print('File content:', data)
    end)
    :catch(function(err)
@@ -16,7 +16,7 @@ local proc = uv.process.spawn('ls', {'-l'}, {
     cwd = '/tmp'
 })
 
-proc._promise:then(function(result)
+proc._promise:forward(function(result)
     print('Exit code:', result.code)
     print('Output:', result.stdout)
 end)

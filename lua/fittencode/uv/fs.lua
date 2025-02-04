@@ -24,7 +24,7 @@ local Promise = require('fittencode.concurrency.promise')
 --     'fs_readdir', 'fs_closedir', 'fs_statfs'
 -- }
 
----@class FittenCode.uv.fs
+---@class FittenCode.UV.FS
 ---@field close function
 ---@field open function
 ---@field read function

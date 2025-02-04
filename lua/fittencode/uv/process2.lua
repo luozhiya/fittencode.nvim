@@ -18,7 +18,7 @@ proc:wait()
 local proc = uv_process.spawn('ls')
 
 -- Promise 模式
-proc:wait():then(print)
+proc:wait():forward(print)
 
 -- 流式操作
 proc:pipe().stdout:read_start(function(_, data)

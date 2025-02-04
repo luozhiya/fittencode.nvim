@@ -115,4 +115,13 @@ function M.create_temp_file(content)
     end)
 end
 
+function M.with_temp_content_file(content, callback)
+    return M.with_temp_file(function(fd, path)
+        return fs.write(fd, content)
+            :forward(function()
+                return callback(path)
+            end)
+    end)
+end
+
 return M
