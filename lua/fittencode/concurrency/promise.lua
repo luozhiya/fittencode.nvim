@@ -388,10 +388,16 @@ function Promise.resolve(value)
         return value
     end
 
+    -- print('Promise.resolve', value)
+
     -- 创建立即解决的 Promise
-    return Promise.new(function(resolve)
-        resolve(value) -- 同步触发解决
-    end)
+    -- return Promise.new(function(resolve)
+    --     resolve(value) -- 同步触发解决
+    -- end)
+    
+    local p = Promise.new()
+    p:manually_resolve(value)
+    return p
 end
 
 -- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/try
