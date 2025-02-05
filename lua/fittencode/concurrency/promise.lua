@@ -82,7 +82,7 @@ end
 
 -- 输出格式如下
 --[[```
-Promise {
+Promise<> = {
   promise_reactions = { {}, {} },
   state = "<fulfilled>",
   value = {
@@ -112,6 +112,11 @@ function Promise:__tostring()
             end
         end
     })
+end
+
+--- 检查对象是否是 Promise
+function Promise.is_promise(obj)
+    return type(obj) == 'table' and getmetatable(obj) == Promise
 end
 
 -- Manually resolve the Promise with a value.

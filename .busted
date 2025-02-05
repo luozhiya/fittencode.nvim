@@ -1,0 +1,7 @@
+-- .busted
+return {
+    pattern = "_spec.lua$",
+    verbose = true,
+    output = 'spec',
+    shuffle = true,
+}
