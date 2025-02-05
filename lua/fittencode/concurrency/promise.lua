@@ -31,7 +31,7 @@ Promise.__index = Promise
 -- 允许不传 executor 创建 Promise 实例（用于手动控制）
 ---@param executor? function
 ---@return FittenCode.Concurrency.Promise
-function Promise.new(executor, async)
+function Promise.new(executor)
     local self = {
         state = PromiseState.PENDING,
         value = nil,
@@ -42,7 +42,7 @@ function Promise.new(executor, async)
     -- setmetatable 必须使用 Promise，才能利用 getmetatable 进行类型判断
     setmetatable(self, Promise)
 
-    if executor ~= nil then
+    if executor then
         assert(type(executor) == 'function', 'Promise executor must be a function')
 
         local function resolve(value)
@@ -53,15 +53,9 @@ function Promise.new(executor, async)
             self:manually_reject(reason)
         end
 
-        if async then
-            vim.schedule(function()
-                executor(resolve, reject)
-            end)
-        else
-            local ok, err = pcall(executor, resolve, reject)
-            if not ok then
-                reject(err)
-            end
+        local ok, err = pcall(executor, resolve, reject)
+        if not ok then
+            reject(err) -- 同步错误直接触发拒绝
         end
     end
 
