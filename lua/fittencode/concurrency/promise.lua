@@ -62,23 +62,35 @@ function Promise.new(executor)
     return self
 end
 
+-- 获取原始唯一标识符的方法
+local function get_unique_identifier(tbl)
+    if type(tbl) ~= 'table' then
+        return
+    end
+    local mt = getmetatable(tbl)
+    local __tostring = mt and mt.__tostring
+    if __tostring then
+        mt.__tostring = nil -- 临时移除 __tostring 方法
+    end
+    local unique_id = tostring(tbl)
+    if __tostring then
+        mt.__tostring = __tostring -- 恢复 __tostring 方法
+    end
+    unique_id = unique_id:match('table: (0x.*)')
+    return unique_id
+end
+
 -- 输出格式如下
 --[[```
-Pending 状态
 Promise {
-  State: <pending>
-}
-
-Fulfilled 状态
-Promise {
-  State: <fulfilled>
-  Value: 42
-}
-
-Rejected 状态
-Promise {
-  State: <rejected>
-  Reason: Error: Something went wrong
+  promise_reactions = { {}, {} },
+  state = "<fulfilled>",
+  value = {
+    a = {
+      q = 1
+    },
+    b = true
+  }
 }
 --]]
 function Promise:__tostring()
@@ -87,13 +99,19 @@ function Promise:__tostring()
         [PromiseState.FULFILLED] = '<fulfilled>',
         [PromiseState.REJECTED] = '<rejected>'
     }
-    local details = ''
-    if self.state == PromiseState.FULFILLED then
-        details = '\n  Value: ' .. tostring(self.value)
-    elseif self.state == PromiseState.REJECTED then
-        details = '\n  Reason: ' .. tostring(self.reason)
-    end
-    return string.format('Promise {\n  State: %s%s\n}', assert(states[self.state]), details)
+    return 'Promise<' .. get_unique_identifier(self) .. '> = ' .. vim.inspect(self, {
+        process = function(item, path)
+            if type(item) ~= 'function' and item ~= getmetatable(self) then
+                -- print(vim.inspect(path), vim.inspect(item))
+                -- { "state", inspect.KEY } "state"
+                -- { "state" } 1
+                if #path == 1 and path[1] == 'state' then
+                    return assert(states[self.state], 'Invalid state')
+                end
+                return item
+            end
+        end
+    })
 end
 
 -- Manually resolve the Promise with a value.

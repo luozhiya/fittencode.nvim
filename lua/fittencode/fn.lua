@@ -263,6 +263,24 @@ local function clamp(value, min, max)
     return math.max(min, math.min(value, max))
 end
 
+-- 获取原始唯一标识符的方法
+local function get_unique_identifier(tbl)
+    if type(tbl) ~= 'table' then
+        return
+    end
+    local mt = getmetatable(tbl)
+    local __tostring = mt and mt.__tostring
+    if __tostring then
+        mt.__tostring = nil -- 临时移除 __tostring 方法
+    end
+    local unique_id = tostring(tbl)
+    if __tostring then
+        mt.__tostring = __tostring -- 恢复 __tostring 方法
+    end
+    unique_id = unique_id:match('table: (0x.*)')
+    return unique_id
+end
+
 return {
     clamp = clamp,
     debounce = debounce,
@@ -285,4 +303,5 @@ return {
     encode_uri_component = encode_uri_component,
     math_type = math_type,
     simple_math_type = simple_math_type,
+    get_unique_identifier = get_unique_identifier,
 }
