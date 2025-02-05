@@ -10,10 +10,7 @@ end
 
 --- 实现 await 关键字功能
 function M.await(promise)
-    -- print("await", promise)
-
     if not is_promise(promise) then
-        -- print("not a promise", promise)
         return promise
     end
 
@@ -62,16 +59,12 @@ function M.async(func)
 
             local function step(...)
                 local ok, ret = coroutine.resume(co, ...)
-                print('step', ...)
-                print('ok', ok)
-                print('ret', ret)
                 if not ok then
                     -- 协程运行错误
                     reject(ret)
                     return
                 end
 
-                print('coroutine.status(co)', coroutine.status(co))
                 if coroutine.status(co) == 'dead' then
                     -- 协程正常结束
                     resolve(ret)
