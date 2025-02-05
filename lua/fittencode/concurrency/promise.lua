@@ -62,15 +62,38 @@ function Promise.new(executor)
     return self
 end
 
--- To string method
+-- 输出格式如下
+--[[
+Pending 状态
+Promise {
+  State: <pending>
+}
+
+Fulfilled 状态
+Promise {
+  State: <fulfilled>
+  Value: 42
+}
+
+Rejected 状态
+Promise {
+  State: <rejected>
+  Reason: Error: Something went wrong
+}
+--]]
 function Promise:__tostring()
-    if self.state == PromiseState.PENDING then
-        return 'Promise { <pending> }'
-    elseif self.state == PromiseState.FULFILLED then
-        return 'Promise { <fulfilled> ' .. tostring(self.value) .. ' }'
-    else
-        return 'Promise { <rejected> ' .. tostring(self.reason) .. ' }'
+    local states = {
+        [PromiseState.PENDING] = '<pending>',
+        [PromiseState.FULFILLED] = '<fulfilled>',
+        [PromiseState.REJECTED] = '<rejected>'
+    }
+    local details = ''
+    if self.state == PromiseState.FULFILLED then
+        details = '\n  Value: ' .. tostring(self.value)
+    elseif self.state == PromiseState.REJECTED then
+        details = '\n  Reason: ' .. tostring(self.reason)
     end
+    return string.format('Promise {\n  State: %s%s\n}', assert(states[self.state]), details)
 end
 
 -- Manually resolve the Promise with a value.
