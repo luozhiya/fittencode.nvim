@@ -1,8 +1,6 @@
 -- local Promise = require("fittencode.concurrency.promise")
 local Promise = require('promise')
 
-local Promise = require('promise')  -- 假设你的 Promise 模块路径
-
 local M = {}
 
 --- 检查对象是否是 Promise
@@ -21,7 +19,7 @@ function M.await(promise)
 
     local current_co = coroutine.running()
     if not current_co then
-        error("await() must be called within an async function")
+        error('await() must be called within an async function')
     end
 
     local resolved, rejected
@@ -49,7 +47,7 @@ function M.await(promise)
     coroutine.yield()
 
     if rejected then
-        error(err)  -- 将 rejection 转换为 Lua error
+        error(err) -- 将 rejection 转换为 Lua error
     end
 
     return result
@@ -64,12 +62,16 @@ function M.async(func)
 
             local function step(...)
                 local ok, ret = coroutine.resume(co, ...)
+                print('step', ...)
+                print('ok', ok)
+                print('ret', ret)
                 if not ok then
                     -- 协程运行错误
                     reject(ret)
                     return
                 end
 
+                print('coroutine.status(co)', coroutine.status(co))
                 if coroutine.status(co) == 'dead' then
                     -- 协程正常结束
                     resolve(ret)
@@ -83,9 +85,9 @@ function M.async(func)
                             vim.schedule(function() step(value) end)
                         end,
                         function(err)
-                            vim.schedule(function() 
+                            vim.schedule(function()
                                 -- 将 rejection 转换为协程错误
-                                step(nil, err) 
+                                step(nil, err)
                             end)
                         end
                     )
@@ -97,22 +99,8 @@ function M.async(func)
 
             -- 启动协程执行
             vim.schedule(function() step(unpack(args)) end)
-        end, true)  -- 使用异步模式执行 executor
+        end) -- 使用异步模式执行 executor
     end
 end
 
-local async = M.async
-local await = M.await
-
-async(function()
-    print("Start")
-    print(await(42))  -- 同步值
-    -- print(1)
-    -- local p = Promise.resolve("Immediate Promise")
-    -- print(2)
-    -- print(vim.inspect(p))
-    print(await(Promise.resolve("Immediate Promise")))  -- 立即解决的 Promise
-    print(await(Promise.new(function(resolve)
-        vim.defer_fn(function() resolve("Delayed") end, 10000)
-    end)))  -- 延迟 1 秒的 Promise
-end)()
+return M
