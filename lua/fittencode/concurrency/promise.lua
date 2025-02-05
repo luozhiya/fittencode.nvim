@@ -63,7 +63,7 @@ function Promise.new(executor)
 end
 
 -- 输出格式如下
---[[
+--[[```
 Pending 状态
 Promise {
   State: <pending>
