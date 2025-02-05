@@ -69,7 +69,7 @@ function Promise.new(executor, async)
 end
 
 -- To string method
-function Promise.__tostring(self)
+function Promise:__tostring()
     if self.state == PromiseState.PENDING then
         return 'Promise { <pending> }'
     elseif self.state == PromiseState.FULFILLED then
