@@ -25,6 +25,7 @@ local PromiseState = {
 ---@field reason any
 ---@field promise_reactions table
 local Promise = {}
+Promise.__index = Promise
 
 -- Promise() constructor, https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/Promise
 -- 允许不传 executor 创建 Promise 实例（用于手动控制）
@@ -38,17 +39,18 @@ function Promise.new(executor, async)
         promise_reactions = { {}, {} },
     }
 
-    setmetatable(self, { __index = Promise })
+    -- setmetatable 必须使用 Promise，才能利用 getmetatable 进行类型判断
+    setmetatable(self, Promise)
 
     if executor ~= nil then
         assert(type(executor) == 'function', 'Promise executor must be a function')
 
         local function resolve(value)
-            self:resolve(value)
+            self:manually_resolve(value)
         end
 
         local function reject(reason)
-            self:reject(reason)
+            self:manually_reject(reason)
         end
 
         if async then
@@ -67,7 +69,7 @@ function Promise.new(executor, async)
 end
 
 -- To string method
-function Promise:__tostring()
+function Promise.__tostring(self)
     if self.state == PromiseState.PENDING then
         return 'Promise { <pending> }'
     elseif self.state == PromiseState.FULFILLED then
@@ -388,16 +390,10 @@ function Promise.resolve(value)
         return value
     end
 
-    -- print('Promise.resolve', value)
-
     -- 创建立即解决的 Promise
-    -- return Promise.new(function(resolve)
-    --     resolve(value) -- 同步触发解决
-    -- end)
-    
-    local p = Promise.new()
-    p:manually_resolve(value)
-    return p
+    return Promise.new(function(resolve)
+        resolve(value) -- 同步触发解决
+    end)
 end
 
 -- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/try

@@ -31,7 +31,8 @@ local DEVELOPER_DOCUMENT = 'FittenDocument-FT-ozlpsknq83720108429'
 -- 状态变量
 local needs_preface = true
 
---[[ 辅助函数 ]] --
+--[[ 辅助函数 ]]
+--
 local function get_level_name(level)
     return LOG_LEVEL_NAMES[level + 1] or 'UNKNOWN'
 end
@@ -79,7 +80,8 @@ local function rotate_log_if_needed()
     end
 end
 
---[[ 核心日志功能 ]] --
+--[[ 核心日志功能 ]]
+--
 local function write_to_log(content)
     local ok, err = pcall(function()
         local file = io.open(LOG_FILE, 'a')
@@ -119,7 +121,8 @@ local function async_log(level, message)
     end)
 end
 
---[[ 公共接口 ]] --
+--[[ 公共接口 ]]
+--
 function M.set_level(level)
     if type(level) == 'string' then
         level = LOG_LEVELS[level:upper()]
