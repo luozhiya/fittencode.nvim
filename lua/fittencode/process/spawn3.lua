@@ -29,15 +29,15 @@ end
 function M.spawn(command, args, options)
     options = options or {}
     local process = create_process()
-    
+
     -- 创建管道
     local stdio = {}
-    for i, fd_type in ipairs(options.stdio or {'pipe', 'pipe', 'pipe'}) do
+    for i, fd_type in ipairs(options.stdio or { 'pipe', 'pipe', 'pipe' }) do
         if fd_type == 'pipe' then
             stdio[i] = uv.new_pipe(false)
-            if i == 1 then process.stdin = stdio[i] end   -- stdin
-            if i == 2 then process.stdout = stdio[i] end  -- stdout
-            if i == 3 then process.stderr = stdio[i] end  -- stderr
+            if i == 1 then process.stdin = stdio[i] end  -- stdin
+            if i == 2 then process.stdout = stdio[i] end -- stdout
+            if i == 3 then process.stderr = stdio[i] end -- stderr
         else
             stdio[i] = fd_type
         end
@@ -64,7 +64,7 @@ function M.spawn(command, args, options)
     end)
 
     if not handle then
-        return nil, "Failed to spawn process: "..command
+        return nil, 'Failed to spawn process: ' .. command
     end
 
     -- 设置输出流读取

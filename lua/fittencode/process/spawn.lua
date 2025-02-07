@@ -46,8 +46,11 @@ function M.spawn(command, args, options)
     local process = create_process()
 
     local stdin = vim.uv.new_pipe(false)
+    assert(stdin, 'Failed to create stdin pipe')
     local stdout = vim.uv.new_pipe(false)
+    assert(stdout, 'Failed to create stdout pipe')
     local stderr = vim.uv.new_pipe(false)
+    assert(stderr, 'Failed to create stderr pipe')
 
     local handle = {
         process = nil,

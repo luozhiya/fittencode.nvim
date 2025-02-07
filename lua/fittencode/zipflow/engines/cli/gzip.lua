@@ -1,4 +1,4 @@
-local Spawn3 = require('fittencode.process.spawn3')
+local Spawn = require('fittencode.process.spawn')
 local Promise = require('fittencode.concurrency.promise')
 
 local M = {
@@ -30,27 +30,22 @@ local function handle_data_input(input, opts)
             table.insert(args, '-' .. opts.level)
         end
 
-        local p = Spawn3.spawn('gzip', args, {
-            stdio = {
-                stdin = 'pipe',
-                stdout = 'pipe',
-                stderr = 'pipe'
-            }
+        local p = Spawn.spawn('gzip', args, {
+            stdin = input,
         })
 
         local output = {}
         local errors = {}
 
-        p.stdin:write(input)
-        p.stdin:shutdown()
-
-        p.stdout:on('data', function(data)
+        p:on('stdout', function(data)
             table.insert(output, data)
         end)
 
-        p.stderr:on('data', function(data)
+        p:on('stderr', function(data)
             table.insert(errors, data)
         end)
+
+        p:on('error', reject)
 
         p:on('exit', function(code)
             if code == 0 then
@@ -83,7 +78,7 @@ local function handle_file_input(input_path, opts)
 
         table.insert(args, input_path)
 
-        local p = Spawn3.spawn('gzip', args)
+        local p = Spawn.spawn('gzip', args)
 
         p:on('exit', function(code)
             if code == 0 then
@@ -146,27 +141,22 @@ end
 local function decompress_data(input, opts)
     return Promise.new(function(resolve, reject)
         local args = { '-c', '-d' }
-        local p = Spawn3.spawn('gzip', args, {
-            stdio = {
-                stdin = 'pipe',
-                stdout = 'pipe',
-                stderr = 'pipe'
-            }
+        local p = Spawn.spawn('gzip', args, {
+            stdin = input
         })
 
         local output = {}
         local errors = {}
 
-        p.stdin:write(input)
-        p.stdin:shutdown()
-
-        p.stdout:on('data', function(data)
+        p:on('stdout', function(data)
             table.insert(output, data)
         end)
 
-        p.stderr:on('data', function(data)
+        p:on('stderr', function(data)
             table.insert(errors, data)
         end)
+
+        p:on('error', reject)
 
         p:on('exit', function(code)
             if code == 0 then
@@ -195,7 +185,7 @@ local function decompress_file(input_path, opts)
 
         local args = { '-k', '-d', input_path }
 
-        local p = Spawn3.spawn('gzip', args)
+        local p = Spawn.spawn('gzip', args)
 
         p:on('exit', function(code)
             if code == 0 then
