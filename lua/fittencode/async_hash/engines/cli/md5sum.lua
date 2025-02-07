@@ -3,7 +3,7 @@ local Promise = require('fittencode.concurrency.promise')
 
 local M = {
     name = 'md5sum',
-    category = 'sum-command',
+    category = 'cli',
     algorithms = { 'md5' },
     priority = 80,
     features = {

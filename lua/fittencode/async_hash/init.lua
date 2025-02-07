@@ -11,12 +11,13 @@ AsyncHash.sha256("/path/to/file", {input_type = 'file'})
 --]]
 
 local Promise = require('fittencode.concurrency.promise')
+local Fn = require('fittencode.fn')
 
 local engine_priority = {
-    ['libcrypto']   = 100, -- FFI实现的最高优先级
-    ['openssl-cli'] = 90,  -- OpenSSL命令行
-    ['sum-command'] = 80,  -- 系统sum命令
-    ['native']      = 70   -- 纯Lua实现
+    ['cc']      = 110, -- C实现的最高优先级
+    ['ffi']     = 100, -- FFI实现的高优先级
+    ['cli']     = 90,  -- OpenSSL命令行
+    ['purelua'] = 70   -- 纯Lua实现
 }
 
 local function sort_engines(a, b)
@@ -29,23 +30,28 @@ local function sort_engines(a, b)
 end
 
 local function load_engines()
-    -- 引擎列表
-    local engine_names = {
-        'openssl',
-        'md5sum',
-        'sha1sum',
-        'sha256sum',
-        'libcrypto',
-        'native',
+    local files = {}
+    local directories = {
+        'cc',
+        'ffi',
+        'cli'
     }
+    for _, dir in ipairs(directories) do
+        vim.tbl_deep_extend('force', files, vim.fn.glob(Fn.extension_uri() .. 'lua/fittencode/async_hash/engines/' .. dir .. '/*.lua', true))
+    end
 
+    -- 引擎列表
     local candidates = {}
     -- 加载引擎模块
-    for _, name in ipairs(engine_names) do
-        local ok, mod = pcall(require, 'fittencode.async_hash.engines.' .. name)
+    for _, f in ipairs(files) do
+        local ok, mod = pcall(require, f:gsub('^lua/', ''):gsub('/', '.'):gsub('.lua$', ''))
         if ok then
             table.insert(candidates, mod)
         end
+    end
+    local _, purelua = pcall(require, 'fittencode.async_hash.engines.purelua')
+    if purelua then
+        table.insert(candidates, purelua)
     end
 
     local available = {}

@@ -47,7 +47,7 @@ local algorithms = {
 
 local M = {
     name = 'libcrypto',
-    category = 'libcrypto',
+    category = 'ffi',
     algorithms = algorithms,
     priority = 100, -- 最高优先级
     features = {

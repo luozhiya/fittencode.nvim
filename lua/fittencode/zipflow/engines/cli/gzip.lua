@@ -1,4 +1,4 @@
-local spawn = require('fittencode.process.spawn')
+local Spawn = require('fittencode.process.spawn')
 local Promise = require('fittencode.concurrency.promise')
 
 local M = {
@@ -9,7 +9,7 @@ local M = {
 }
 
 local function check_availability()
-    local p = spawn.spawn('gzip', { '--version' })
+    local p = Spawn.spawn('gzip', { '--version' })
     local promise = Promise.new(function(resolve)
         p:on('exit', function(code)
             resolve(code == 0)
@@ -29,7 +29,7 @@ end
 
 local function gzip_process(args, input)
     return Promise.new(function(resolve, reject)
-        local p = spawn.spawn('gzip', args, { stdin = input })
+        local p = Spawn.spawn('gzip', args, { stdin = input })
         local output = {}
 
         p:on('stdout', function(data)

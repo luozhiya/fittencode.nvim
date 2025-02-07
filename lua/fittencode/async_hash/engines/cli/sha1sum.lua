@@ -2,9 +2,9 @@ local ProcessSpawn = require('fittencode.process.spawn')
 local Promise = require('fittencode.concurrency.promise')
 
 local M = {
-    name = 'sha256sum',
-    category = 'sum-command',
-    algorithms = { 'sha256' },
+    name = 'sha1sum',
+    category = 'cli',
+    algorithms = { 'sha1' },
     priority = 80,
     features = {
         async = true,
@@ -14,7 +14,7 @@ local M = {
 }
 
 function M.is_available()
-    return vim.fn.executable('sha256sum') == 1
+    return vim.fn.executable('sha1sum') == 1
 end
 
 function M.hash(_, data, options)
@@ -31,14 +31,14 @@ function M.hash(_, data, options)
         stdin_data = data
     end
 
-    local process = ProcessSpawn.spawn('sha256sum', args, { stdin = stdin_data })
+    local process = ProcessSpawn.spawn('sha1sum', args, { stdin = stdin_data })
 
     return Promise.new(function(resolve, reject)
         local stdout = ''
         process:on('stdout', function(d) stdout = stdout .. d end)
         process:on('exit', function(code)
             if code == 0 then
-                -- 1d14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f  -
+                -- 1da39a3ee5e6b4b0d3255bfef95601890afd80709  -
                 local hash = stdout:match('^([%x]+)')
                 if hash then resolve(hash) else reject('Invalid output') end
             else

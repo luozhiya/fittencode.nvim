@@ -1,4 +1,5 @@
 local Promise = require('fittencode.concurrency.promise')
+local FS = require('fittencode.uv.fs')
 
 -- 自动加载子模块
 local algorithms = {
@@ -18,8 +19,8 @@ for algo, info in pairs(algorithms) do
 end
 
 local M = {
-    name = 'native',
-    category = 'native',
+    name = 'purelua',
+    category = 'purelua',
     algorithms = {}, -- 'md5', 'sha1'
     priority = 70,
     features = {
@@ -55,36 +56,39 @@ function M.hash(algorithm, data, options)
         (type(data) == 'string' and vim.fn.filereadable(data) == 1)
 
     if is_file then
-        return Promise.new(function(resolve, reject, async)
+        return Promise.new(function(resolve, reject)
             local hasher = M.create_hasher(algorithm)
             local chunk_size = 4096
-            local fd = vim.loop.fs_open(data, 'r', 438)
+            local fd = vim.uv.fs_open(data, 'r', 438)
 
             if not fd then
                 return reject('Failed to open file: ' .. data)
             end
 
-            local function read_next(offset)
-                vim.loop.fs_read(fd, chunk_size, offset, function(err, chunk)
-                    if err then
-                        vim.loop.fs_close(fd)
-                        return reject(err)
-                    end
+            FS.read_chunked(fd, chunk_size, function(chunk)
+                hasher:update(chunk)
+            end):forward(function() hasher:finalize() end)
 
-                    if chunk and #chunk > 0 then
-                        hasher:update(chunk)
-                        read_next(offset + #chunk)
-                    else
-                        vim.loop.fs_close(fd, function(close_err)
-                            if close_err then return reject(close_err) end
-                            resolve(hasher:finalize())
-                        end)
-                    end
-                end)
-            end
+            -- local function _read_next(offset)
+            --     vim.uv.fs_read(fd, chunk_size, offset, function(err, chunk)
+            --         if err then
+            --             vim.uv.fs_close(fd)
+            --             return reject(err)
+            --         end
 
-            read_next(0)
-        end, true)
+            --         if chunk and #chunk > 0 then
+            --             hasher:update(chunk)
+            --             _read_next(offset + #chunk)
+            --         else
+            --             vim.uv.fs_close(fd, function(close_err)
+            --                 if close_err then return reject(close_err) end
+            --                 resolve(hasher:finalize())
+            --             end)
+            --         end
+            --     end)
+            -- end
+            -- _read_next(0)
+        end)
     else
         local hasher = M.create_hasher(algorithm)
         hasher:update(data)

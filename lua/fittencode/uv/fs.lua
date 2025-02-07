@@ -27,7 +27,7 @@ local Promise = require('fittencode.concurrency.promise')
 ---@class FittenCode.UV.FS
 ---@field close function
 ---@field open function
----@field read function
+---@field read fun(fd, size, offset) : FittenCode.Concurrency.Promise
 ---@field write function
 ---@field unlink function
 ---@field mkdir function
@@ -76,7 +76,7 @@ for _, fn in ipairs(fs_functions) do
 end
 
 -- 高级文件操作
-function M.read_file(path)
+function M.read_content(path)
     local fd
     return M.open(path, 'r', 438)
         :forward(function(result)
@@ -98,7 +98,35 @@ function M.read_file(path)
         end)
 end
 
-function M.write_file(path, content)
+function M.read_chunked(path, chunk_size, on_chunk)
+    local fd
+    return M.open(path, 'r', 438)
+        :forward(function(result)
+            fd = result[1]
+            local function _read_next_chunk()
+                return M.read(fd, chunk_size, -1)
+                    :forward(function(chunk)
+                        local data = chunk[1]
+                        if data and #data > 0 then
+                            on_chunk(data)
+                            return _read_next_chunk()
+                        else
+                            return M.close(fd)
+                        end
+                    end)
+                    :catch(function(err)
+                        M.close(fd):catch(function() end)
+                        return Promise.reject(err)
+                    end)
+            end
+            return _read_next_chunk()
+        end)
+        :catch(function(err)
+            return Promise.reject(err)
+        end)
+end
+
+function M.write_content(path, content)
     local fd
     return M.open(path, 'w', 438)
         :forward(function(result)
