@@ -2,12 +2,13 @@
 local zf = require('zipflow')
 
 ----------------------------
--- 压缩文本数据
+-- 文本数据
 ----------------------------
 
 zf.compress("Hello World!", {
     format = 'gzip',
-    level = 9
+    level = 9,
+    input_type = 'data'
 }):forward(function(compressed)
     print("压缩后大小:", #compressed)
 end):catch(function(err)
@@ -15,29 +16,19 @@ end):catch(function(err)
 end)
 
 ----------------------------
--- 压缩二进制数据
-----------------------------
-local binary_data = get_image_data()
-
-zf.compress(binary_data, {
-    format = 'zlib',
-    input_type = 'binary'
-}):forward(function(result)
-    save_to_file(result, 'image.zlib')
-end)
-
-----------------------------
--- 压缩文件和目录
+-- 文件和目录
 ----------------------------
 
 -- 简单压缩
-zf.compress("input.txt", "output.gz", {
+zf.compress("input.txt", {
+    output = "output.gz",
     level = 9,
     preserve = true
 })
 
 -- 加密压缩
-zf.compress("data", "secure.zip", {
+zf.compress("secure.key", {
+    output = "secure.gz",
     encryption = {
         password = "secret123",
         method = "AES256"
@@ -45,28 +36,19 @@ zf.compress("data", "secure.zip", {
     threads = 4
 })
 
+-- 压缩目录
+zf.compress("/data/reports", {
+    format = 'tar.gz',
+    input_type = "directory",
+}):forward(function(result)
+    print("Directory compressed:", result.path)
+end)
+
 -- 解压操作
-zf.decompress("archive.tar.gz", "extracted", {
+zf.decompress("archive.tar.gz", {
     preserve_permissions = true
 })
 
-----------------------------
--- 流式处理
-----------------------------
-
-local stream = zf.compress_stream('gzip', {level=6})
-
--- 分块输入
-stream:send("Part1...")
-stream:send("Part2...")
-stream:send(nil) -- 结束输入
-
--- 分块接收输出
-while true do
-    local chunk = stream:receive()
-    if not chunk then break end
-    process_chunk(chunk)
-end
 --]]
 
 local M = {}
@@ -76,19 +58,27 @@ local Router = require('zipflow.router')
 local Validator = require('zipflow.validator')
 
 -- 输入类型检测
+-- uv.aliases.fs_stat_types:
+-- | "file"
+-- | "directory"
+-- | "link"
+-- | "fifo"
+-- | "socket"
+-- | "char"
+-- | "block"
 local function detect_input_type(input)
-    if type(input) == 'string' then
-        if vim.uv.fs_access(input, 'r') then
-            return 'file'
-        else
-            return (#input < 1024 and not input:find('\0'))
-                and 'text'
-                or 'binary'
-        end
-    elseif type(input) == 'table' and input._is_stream then
-        return 'stream'
+    if type(input) ~= 'string' then
+        return
     end
-    error('Unsupported input type')
+    local stat = vim.uv.fs_stat(input)
+    if stat then
+        if stat.type == 'file' or stat.type == 'directory' then
+            return stat.type
+        else
+            return
+        end
+    end
+    return 'data'
 end
 
 -- 统一入口函数
@@ -103,12 +93,12 @@ local function process(op_type, input, opts)
         end
 
         -- 参数校验
-        local ok, err = Validator.validate_input(opts)
-        if not ok then return reject(err) end
+        local ok, _ = Validator.validate(opts)
+        if not ok then return reject(_) end
 
         -- 选择引擎
-        local engine, err = Router.select_engine(opts)
-        if not engine then return reject(err) end
+        local engine, _ = Router.select_engine(opts)
+        if not engine then return reject(_) end
 
         -- 执行操作
         local processor = op_type == 'compress'
