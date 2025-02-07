@@ -1,4 +1,4 @@
-local spawn = require('fittencode.process.spawn3')
+local Spawn3 = require('fittencode.process.spawn3')
 local Promise = require('fittencode.concurrency.promise')
 
 local M = {
@@ -30,7 +30,7 @@ local function handle_data_input(input, opts)
             table.insert(args, '-' .. opts.level)
         end
 
-        local p = spawn('gzip', args, {
+        local p = Spawn3.spawn('gzip', args, {
             stdio = {
                 stdin = 'pipe',
                 stdout = 'pipe',
@@ -83,7 +83,7 @@ local function handle_file_input(input_path, opts)
 
         table.insert(args, input_path)
 
-        local p = spawn('gzip', args)
+        local p = Spawn3.spawn('gzip', args)
 
         p:on('exit', function(code)
             if code == 0 then
@@ -146,7 +146,7 @@ end
 local function decompress_data(input, opts)
     return Promise.new(function(resolve, reject)
         local args = { '-c', '-d' }
-        local p = spawn('gzip', args, {
+        local p = Spawn3.spawn('gzip', args, {
             stdio = {
                 stdin = 'pipe',
                 stdout = 'pipe',
@@ -195,7 +195,7 @@ local function decompress_file(input_path, opts)
 
         local args = { '-k', '-d', input_path }
 
-        local p = spawn('gzip', args)
+        local p = Spawn3.spawn('gzip', args)
 
         p:on('exit', function(code)
             if code == 0 then
@@ -219,7 +219,7 @@ end
 
 function M.decompress(input, opts)
     return Promise.new(function(resolve, reject)
-        local input_type = opts.input_type or 'data'
+        local input_type = opts.input_type
 
         -- 数据输入处理
         if input_type == 'data' then
@@ -228,17 +228,8 @@ function M.decompress(input, opts)
                 :catch(reject)
         end
 
-        -- 文件系统输入验证
-        local ok, stat = pcall(uv.fs_stat, input)
-        if not ok then
-            return reject({
-                code = 'INVALID_INPUT',
-                message = ('Path does not exist: %s'):format(input)
-            })
-        end
-
         -- 文件处理
-        if stat.type == 'file' then
+        if input_type == 'file' then
             return decompress_file(input, opts)
                 :forward(resolve)
                 :catch(reject)
@@ -246,7 +237,7 @@ function M.decompress(input, opts)
 
         reject({
             code = 'UNSUPPORTED_TYPE',
-            message = ('Unsupported input type: %s'):format(stat.type)
+            message = ('Unsupported input type: %s'):format(input_type)
         })
     end)
 end
