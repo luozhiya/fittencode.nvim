@@ -88,7 +88,7 @@ local function detect_input_type(input)
     elseif type(input) == 'table' and input._is_stream then
         return 'stream'
     end
-    error("Unsupported input type")
+    error('Unsupported input type')
 end
 
 -- 统一入口函数
