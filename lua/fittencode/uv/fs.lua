@@ -13,6 +13,7 @@ uv_fs.read_file('test.txt')
 
 local _Promise = require('fittencode.uv._promise')
 local Promise = require('fittencode.concurrency.promise')
+local Fn = require('fittencode.fn')
 
 -- local fs_functions = {
 --     'fs_close', 'fs_open', 'fs_read', 'fs_write', 'fs_unlink', 'fs_mkdir',
@@ -113,7 +114,7 @@ function M.read_chunked(path, chunk_size, on_chunk)
                     :forward(function(packed)
                         local chunk = packed[1]
                         if chunk and #chunk > 0 then
-                            on_chunk(chunk)
+                            Fn.check_call(on_chunk, chunk)
                             return _read_next_chunk()
                         else
                             return M.close(fd)

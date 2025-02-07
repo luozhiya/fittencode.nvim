@@ -56,35 +56,13 @@ function M.hash(algorithm, data, options)
         (type(data) == 'string' and vim.fn.filereadable(data) == 1)
 
     if is_file then
-        return Promise.new(function(resolve, reject)
-            local hasher = M.create_hasher(algorithm)
-            local chunk_size = 4096
-            local path = data
+        local hasher = M.create_hasher(algorithm)
+        local chunk_size = 4096
+        local path = data
 
-            FS.read_chunked(path, chunk_size, function(chunk)
-                hasher:update(chunk)
-            end):forward(function() hasher:finalize() end)
-
-            -- local function _read_next(offset)
-            --     vim.uv.fs_read(fd, chunk_size, offset, function(err, chunk)
-            --         if err then
-            --             vim.uv.fs_close(fd)
-            --             return reject(err)
-            --         end
-
-            --         if chunk and #chunk > 0 then
-            --             hasher:update(chunk)
-            --             _read_next(offset + #chunk)
-            --         else
-            --             vim.uv.fs_close(fd, function(close_err)
-            --                 if close_err then return reject(close_err) end
-            --                 resolve(hasher:finalize())
-            --             end)
-            --         end
-            --     end)
-            -- end
-            -- _read_next(0)
-        end)
+        return FS.read_chunked(path, chunk_size, function(chunk)
+            hasher:update(chunk)
+        end):forward(function() return hasher:finalize() end)
     else
         local hasher = M.create_hasher(algorithm)
         hasher:update(data)
