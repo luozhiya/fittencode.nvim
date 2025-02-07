@@ -2,6 +2,8 @@ local Fn = require('fittencode.fn')
 
 local M = {}
 
+local builtin_engines
+
 local function auto_discover()
     local engines = {}
     for _, f in ipairs(vim.fn.glob(Fn.extension_uri() .. 'lua/zipflow/engines/**/*.lua', true)) do
@@ -12,7 +14,10 @@ local function auto_discover()
 end
 
 function M.list_engines()
-    return auto_discover()
+    if not builtin_engines then
+        builtin_engines = auto_discover()
+    end
+    return builtin_engines
 end
 
 return M

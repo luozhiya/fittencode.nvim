@@ -48,6 +48,9 @@ local function gzip_process(args, input)
     end)
 end
 
+function M.supports(operation, format)
+end
+
 function M.compress(input, algorithm)
     return gzip_process({ '-c', '--best' }, input)
 end
