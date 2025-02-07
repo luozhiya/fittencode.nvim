@@ -3,9 +3,40 @@
 --   https://medium.com/swlh/implement-a-simple-promise-in-javascript-20c9705f197a
 
 --[[
+----------------------------
+-- Promise.new
+----------------------------
+
 local promise = Promise.new() -- 创建未决Promise
 promise:manually_resolve("成功")       -- 手动解决
 promise:manually_reject("失败")        -- 手动拒绝
+
+----------------------------
+-- Promise.reduce
+----------------------------
+
+-- 基础数值累加
+Promise.reduce({1, 2, 3}, function(acc, val) return acc + val end, 0)
+:forward(function(total) print(total) end) -- 输出6
+
+-- 异步Promise处理
+local p1 = Promise.resolve(10)
+local p2 = Promise.resolve(20)
+Promise.reduce({p1, p2}, function(acc, val) return acc * val end, 1)
+:forward(function(total) print(total) end) -- 输出200
+
+-- 自动展开嵌套Promise
+local async_add = function(a, b)
+    return Promise.new(function(resolve)
+        resolve(a + b)
+    end)
+end
+Promise.reduce({5, 10, 15}, async_add, 0)
+:forward(function(total) print(total) end) -- 输出30
+
+-- 错误处理示例
+Promise.reduce({Promise.reject("error"), 2}, function() end, 0)
+:catch(function(reason) print(reason) end) -- 输出"error"
 ]]
 
 -- A Promise is in one of these states:
@@ -156,7 +187,7 @@ function Promise:forward(on_fulfilled, on_rejected)
             table.insert(self.promise_reactions[PromiseState.FULFILLED], function(promise)
                 if on_fulfilled then
                     local last_promise = on_fulfilled(promise.value)
-                    if type(last_promise) == 'table' and getmetatable(last_promise) == Promise then
+                    if Promise.is_promise(last_promise) then
                         last_promise:forward(resolve, reject)
                     else
                         resolve(last_promise)
@@ -168,7 +199,7 @@ function Promise:forward(on_fulfilled, on_rejected)
             table.insert(self.promise_reactions[PromiseState.REJECTED], function(promise)
                 if on_rejected then
                     local last_promise = on_rejected(promise.reason)
-                    if type(last_promise) == 'table' and getmetatable(last_promise) == Promise then
+                    if Promise.is_promise(last_promise) then
                         last_promise:forward(resolve, reject)
                     else
                         resolve(last_promise)
@@ -180,7 +211,7 @@ function Promise:forward(on_fulfilled, on_rejected)
         elseif self.state == PromiseState.FULFILLED then
             if on_fulfilled then
                 local last_promise = on_fulfilled(self.value)
-                if type(last_promise) == 'table' and getmetatable(last_promise) == Promise then
+                if Promise.is_promise(last_promise) then
                     last_promise:forward(resolve, reject)
                 else
                     resolve(last_promise)
@@ -191,7 +222,7 @@ function Promise:forward(on_fulfilled, on_rejected)
         elseif self.state == PromiseState.REJECTED then
             if on_rejected then
                 local last_promise = on_rejected(self.reason)
-                if type(last_promise) == 'table' and getmetatable(last_promise) == Promise then
+                if Promise.is_promise(last_promise) then
                     last_promise:forward(resolve, reject)
                 else
                     resolve(last_promise)
@@ -257,7 +288,7 @@ function Promise.all(promises)
         local remaining = count
         for i = 1, count do
             local p = promises[i]
-            if type(p) == 'table' and getmetatable(p) == Promise then
+            if Promise.is_promise(p) then
                 p:forward(
                     function(value)
                         results[i] = value
@@ -298,7 +329,7 @@ function Promise.all_settled(promises)
         local remaining = count
         for i = 1, count do
             local p = promises[i]
-            if type(p) == 'table' and getmetatable(p) == Promise then
+            if Promise.is_promise(p) then
                 -- 处理 Promise 对象
                 p:forward(
                     function(value)
@@ -340,7 +371,7 @@ function Promise.any(promises)
         local has_resolved = false
 
         for i, p in ipairs(promises) do
-            if type(p) == 'table' and getmetatable(p) == Promise then
+            if Promise.is_promise(p) then
                 -- 处理 Promise 对象
                 p:forward(
                     function(value)
@@ -383,7 +414,7 @@ function Promise.race(promises)
         local has_settled = false
 
         for _, p in ipairs(promises) do
-            if type(p) == 'table' and getmetatable(p) == Promise then
+            if Promise.is_promise(p) then
                 -- 处理 Promise 对象
                 p:forward(
                     function(value)
@@ -426,7 +457,7 @@ end
 ---@return FittenCode.Concurrency.Promise
 function Promise.resolve(value)
     -- 如果参数是 Promise 实例则直接返回
-    if type(value) == 'table' and getmetatable(value) == Promise then
+    if Promise.is_promise(value) then
         return value
     end
 
@@ -451,7 +482,7 @@ function Promise.try(fn)
             reject(result)
         else
             -- 处理返回值类型
-            if type(result) == 'table' and getmetatable(result) == Promise then
+            if Promise.is_promise(result) then
                 -- Promise 实例：转发状态
                 result:forward(resolve, reject)
             else
@@ -466,36 +497,74 @@ end
 -- * 该方法用于按顺序处理一个 Promise 数组，将前一个 Promise 的结果传递给下一个。
 -- * 如果任何 Promise 被拒绝，该方法将立即返回被拒绝的 Promise。
 -- * 如果所有 Promise 都成功解决，该方法将返回一个解决的 Promise，其值是数组中所有 Promise 结果的累积。
----@param promises FittenCode.Concurrency.Promise[]
----@param callback function
+---@param iterable FittenCode.Concurrency.Promise[]
+---@param reducer function
 ---@param initial_value any
 ---@return FittenCode.Concurrency.Promise
-function Promise.reduce(promises, callback, initial_value)
-    local function do_reduce(index, accumulator)
-        if index > #promises then
-            return Promise.new(function(resolve)
-                resolve(accumulator)
-            end)
-        end
+function Promise.reduce(iterable, reducer, initial_value)
+    return Promise.new(function(resolve, reject)
+        local index = 0
+        local length = #iterable
+        local has_initial_value = initial_value ~= nil
+        local current_index -- 用于追踪当前处理的元素索引
 
-        local p = promises[index]
-        if type(p) == 'table' and getmetatable(p) == Promise then
-            return p:forward(
-                function(value)
-                    return do_reduce(index + 1, callback(accumulator, value, index, promises))
+        -- 递归处理函数：accumulator为当前累积值，current_index为待处理元素索引
+        local function _process_value(accumulator, _current_index)
+            -- 所有元素处理完毕，解决promise
+            if _current_index > length then
+                return resolve(accumulator)
+            end
+
+            -- 获取当前元素并用promise包裹
+            local current_element = iterable[_current_index]
+            Promise.resolve(current_element):forward(
+            -- 处理当前元素值
+                function(current_value)
+                    -- 调用reducer函数获取新的累积值
+                    local result = reducer(accumulator, current_value, _current_index, iterable)
+
+                    -- 处理reducer返回的promise或普通值
+                    if Promise.is_promise(result) then
+                        result:forward(
+                            function(new_accumulator)
+                                _process_value(new_accumulator, _current_index + 1) -- 继续处理下一个元素
+                            end,
+                            reject                                                  -- 如果reducer返回的promise被拒绝，直接传递拒绝原因
+                        )
+                    else
+                        _process_value(result, _current_index + 1) -- 直接处理下一个元素
+                    end
                 end,
-                function(reason)
-                    return Promise.new(function(_, reject)
-                        reject(reason)
-                    end)
-                end
+                reject -- 当前元素promise被拒绝，直接传递原因
             )
-        else
-            return do_reduce(index + 1, callback(accumulator, p, index, promises))
         end
-    end
 
-    return do_reduce(1, initial_value)
+        -- 处理无初始值的情况
+        if not has_initial_value then
+            if length == 0 then
+                return reject('Reduce of empty array with no initial value')
+            end
+            -- 取第一个元素作为初始值
+            local first_element = iterable[1]
+            index = 2 -- 下一个要处理的元素索引
+            if Promise.is_promise(first_element) then
+                first_element:forward(function(value)
+                    _process_value(value, 2) -- 从第二个元素开始处理
+                end, reject)
+            else
+                _process_value(first_element, 2)
+            end
+        else
+            -- 处理提供的初始值
+            if Promise.is_promise(initial_value) then
+                initial_value:forward(function(value)
+                    _process_value(value, 1) -- 从第一个元素开始处理
+                end, reject)
+            else
+                _process_value(initial_value, 1)
+            end
+        end
+    end)
 end
 
 return Promise
