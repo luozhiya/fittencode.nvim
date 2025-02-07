@@ -1,19 +1,27 @@
--- -- 使用示例
--- local future = Future.promisify(function(resolve)
---     -- 模拟异步操作（需要配合异步库使用）
---     -- 这里用简单的定时器模拟
---     local function setTimeout(fn, delay)
---         -- 实际使用时需要替换为具体的异步实现
---         -- 比如使用Luvit等库的定时器
---         fn()
---     end
---     setTimeout(function()
---         resolve("操作完成!")
---     end, 1000)
--- end)
--- -- 主协程等待结果
--- local result = future:await()
--- print(result)  -- 输出: 操作完成!
+--[[
+
+- Future
+- 异步操作结果的封装
+- promisify 返回的是一个简化 Promise 实现的 Future 对象
+
+-- 使用示例
+local future = Future.promisify(function(resolve)
+    -- 模拟异步操作（需要配合异步库使用）
+    -- 这里用简单的定时器模拟
+    local function setTimeout(fn, delay)
+        -- 实际使用时需要替换为具体的异步实现
+        -- 比如使用Luvit等库的定时器
+        fn()
+    end
+    setTimeout(function()
+        resolve("操作完成!")
+    end, 1000)
+end)
+
+-- 主协程等待结果
+local result = future:await()
+print(result)  -- 输出: 操作完成!
+--]]
 
 ---@class Future
 ---@field _completed boolean 是否完成
