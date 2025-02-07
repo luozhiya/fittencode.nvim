@@ -98,6 +98,11 @@ function M.read_content(path)
         end)
 end
 
+-- 异步读取文件内容，分块处理
+---@param path string 文件路径
+---@param chunk_size number 块大小
+---@param on_chunk function 块处理函数
+---@return FittenCode.Concurrency.Promise
 function M.read_chunked(path, chunk_size, on_chunk)
     local fd
     return M.open(path, 'r', 438)
@@ -105,10 +110,10 @@ function M.read_chunked(path, chunk_size, on_chunk)
             fd = result[1]
             local function _read_next_chunk()
                 return M.read(fd, chunk_size, -1)
-                    :forward(function(chunk)
-                        local data = chunk[1]
-                        if data and #data > 0 then
-                            on_chunk(data)
+                    :forward(function(packed)
+                        local chunk = packed[1]
+                        if chunk and #chunk > 0 then
+                            on_chunk(chunk)
                             return _read_next_chunk()
                         else
                             return M.close(fd)

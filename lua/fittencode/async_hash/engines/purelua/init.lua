@@ -59,13 +59,9 @@ function M.hash(algorithm, data, options)
         return Promise.new(function(resolve, reject)
             local hasher = M.create_hasher(algorithm)
             local chunk_size = 4096
-            local fd = vim.uv.fs_open(data, 'r', 438)
+            local path = data
 
-            if not fd then
-                return reject('Failed to open file: ' .. data)
-            end
-
-            FS.read_chunked(fd, chunk_size, function(chunk)
+            FS.read_chunked(path, chunk_size, function(chunk)
                 hasher:update(chunk)
             end):forward(function() hasher:finalize() end)
 
