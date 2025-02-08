@@ -38,6 +38,9 @@ local function create_process()
     }
 end
 
+-- 需要更大的控制权，可以用这个版本
+-- * 支持对 spawn 完整生命周期的控制
+-- * 支持流输出，适用于 Chat 类型的应用场景
 ---@param command string
 ---@param args string[]
 ---@param options? { stdin?: string }
@@ -59,12 +62,12 @@ function M.spawn(command, args, options)
         stderr = stderr
     }
 
-    function process.abort()
+    function process.abort(signal)
         if process.aborted then return end
         process.aborted = true
         process:_emit('abort')
         if handle.process then
-            vim.uv.process_kill(handle.process, 'sigterm')
+            vim.uv.process_kill(handle.process, signal or 'sigterm')
         end
         vim.uv.close(stdin)
         vim.uv.close(stdout)

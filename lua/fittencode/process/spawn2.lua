@@ -1,5 +1,5 @@
 --[[
-local spawn = require('spawn')
+local spawn = require('fittencode.process.spawn2')
 
 spawn.spawn('ls', { '-la' }, {})
     :forward(function(result)
