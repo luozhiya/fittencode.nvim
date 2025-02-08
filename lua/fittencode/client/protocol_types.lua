@@ -10,6 +10,7 @@
 ---@field body? table<string, any>
 ---@field query? string
 ---@field response? table<string, any>
+---@field type? string 'method'|'url'
 
 ---@alias FittenCode.Protocol.Element.URL string|table<string, string>
 

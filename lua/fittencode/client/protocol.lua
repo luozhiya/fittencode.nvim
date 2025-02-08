@@ -17,20 +17,41 @@
 local Protocol = {}
 
 ---@class FittenCode.Protocol.URLs
----@field register FittenCode.Protocol.Element.URL
----@field register_cvt FittenCode.Protocol.Element.URL
----@field question FittenCode.Protocol.Element.URL
----@field tutor FittenCode.Protocol.Element.URL
----@field try FittenCode.Protocol.Element.URL
+---@field register FittenCode.Protocol.Element
+---@field register_cvt FittenCode.Protocol.Element
+---@field question FittenCode.Protocol.Element
+---@field tutor FittenCode.Protocol.Element
+---@field try FittenCode.Protocol.Element
 
 Protocol.URLs = {
     -- Account
-    register = 'https://fc.fittentech.com/',
+    register = {
+        type = 'url',
+        method = 'OPENLINK',
+        url = 'https://fc.fittentech.com/',
+        query = '?{{platform_info}}'
+    },
     -- 通过第三方注册后需要调用此接口，后台做统计
-    register_cvt = 'https://fc.fittentech.com/cvt/register',
-    question = 'https://code.fittentech.com/assets/images/blog/QR.jpg',
-    tutor = 'https://code.fittentech.com/desc-vim',
-    try = 'https://code.fittentech.com/try',
+    register_cvt = {
+        type = 'url',
+        method = 'GET',
+        url = 'https://fc.fittentech.com/cvt/register'
+    },
+    question = {
+        type = 'url',
+        method = 'OPENLINK',
+        url = 'https://code.fittentech.com/assets/images/blog/QR.jpg'
+    },
+    tutor = {
+        type = 'url',
+        method = 'OPENLINK',
+        url = 'https://code.fittentech.com/desc-vim'
+    },
+    try = {
+        type = 'url',
+        method = 'OPENLINK',
+        url = 'https://code.fittentech.com/try'
+    },
 }
 
 ---@class FittenCode.Protocol.Methods

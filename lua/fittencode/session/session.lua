@@ -15,19 +15,19 @@ local EventLoop = require('fittencode.uv.event_loop')
 local M = {}
 
 function M.register()
-    vim.ui.open(assert(LocalizationAPI.localize(Protocol.URLs.register)) .. '/?' .. Server.get_platform_info_as_url_params())
+    Client.request(Protocol.URLs.register)
 end
 
 function M.tutor()
-    vim.ui.open(assert(LocalizationAPI.localize(Protocol.URLs.tutor)))
+    Client.request(Protocol.URLs.tutor)
 end
 
 function M.question()
-    vim.ui.open(assert(LocalizationAPI.localize(Protocol.URLs.question)))
+    Client.request(Protocol.URLs.question)
 end
 
 function M.try_web()
-    vim.ui.open(assert(LocalizationAPI.localize(Protocol.URLs.try)))
+    Client.request(Protocol.URLs.try)
 end
 
 ---@class FittenCode.Session.Login
@@ -138,50 +138,51 @@ function M.login3rd(source, options)
         }
     })
 
+    local function check_login()
+        if not start_check then
+            return
+        end
+        total_time = total_time + time_delta
+        if total_time > total_time_limit then
+            start_check = false
+            Log.info('Login in timeout.')
+            Fn.schedule_call(options.on_error)
+        end
+
+        local request_handle = Client.request(Protocol.Methods.fb_check_login_auth, {
+            variables = { client_token = client_token, }
+        })
+        if not request_handle then
+            return
+        end
+        request_handle.promise():forward(function(_)
+            ---@type FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
+            local response = _.json()
+            if response and response.access_token and response.refresh_token and response.user_info then
+                EventLoop.clear_interval(start_check_login_timer)
+                is_login_fb_running = false
+
+                api_key_manager:update(Keyring.make(response))
+                Log.notify_info(Translate('[Fitten Code] Login successful'))
+                Fn.schedule_call(options.on_success)
+
+                -- 发送统计信息
+                Client.request(Protocol.Methods.click_count, {
+                    variables = { click_count_type = response.create and 'register_fb' or 'login_fb' }
+                })
+                if response.create then
+                    Client.request(Protocol.URLs.register_cvt)
+                end
+            end
+        end)
+    end
+
     start_check = true;
     local function start_check_login()
         if is_login_fb_running then
             return
         end
         is_login_fb_running = true
-        local function check_login()
-            if not start_check then
-                return
-            end
-            total_time = total_time + time_delta
-            if total_time > total_time_limit then
-                start_check = false
-                Log.info('Login in timeout.')
-                Fn.schedule_call(options.on_error)
-            end
-
-            local request_handle = Client.request(Protocol.Methods.fb_check_login_auth, {
-                variables = { client_token = client_token, }
-            })
-            if not request_handle then
-                return
-            end
-            request_handle.promise():forward(function(_)
-                ---@type FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
-                local response = _.json()
-                if response and response.access_token and response.refresh_token and response.user_info then
-                    EventLoop.clear_interval(start_check_login_timer)
-                    is_login_fb_running = false
-
-                    api_key_manager:update(Keyring.make(response))
-                    Log.notify_info(Translate('[Fitten Code] Login successful'))
-                    Fn.schedule_call(options.on_success)
-
-                    -- 发送统计信息
-                    Client.request(Protocol.Methods.click_count, {
-                        variables = { click_count_type = response.create and 'register_fb' or 'login_fb' }
-                    })
-                    if response.create then
-                        HTTP.fetch(LocalizationAPI.localize(Protocol.URLs.register_cvt))
-                    end
-                end
-            end)
-        end
         start_check_login_timer = EventLoop.set_interval(time_delta * 1e3, check_login)
     end
     start_check_login()

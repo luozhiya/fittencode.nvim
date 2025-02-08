@@ -1,4 +1,5 @@
 local HTTP = require('fittencode.network.request')
+local LocalizationAPI = require('fittencode.client.localization_api')
 local URLSearchParams = require('fittencode.network.url_search_params')
 local Fn = require('fittencode.fn')
 local APIKeyManager = require('fittencode.client.api_key_manager')
@@ -11,7 +12,7 @@ local PlatformInfo = require('fittencode.client.platform_info')
 
 ---@class FittenCode.Client
 ---@field get_api_key_manager fun(): FittenCode.APIKeyManager
----@field request fun(protocol: FittenCode.Protocol.Element, options: FittenCode.Client.RequestOptions): FittenCode.Network.Request.Response?
+---@field request fun(protocol: FittenCode.Protocol.Element, options?: FittenCode.Client.RequestOptions): FittenCode.Network.Request.Response?
 
 ---@class FittenCode.Client
 local M = {}
@@ -50,9 +51,7 @@ function M.get_api_key_manager()
 end
 
 local function openlink(url)
-    local cmd, err = vim.ui.open(url)
-    if err then
-    end
+    vim.ui.open(url)
 end
 
 local function encode_variables(variables)
@@ -82,6 +81,11 @@ function M.request(protocol, options)
     local _, evaluated = pcall(EvaluateRequest.reevaluate_method, protocol, variables)
     if not evaluated then
         return
+    end
+
+    -- 协议 Method 需要补齐服务器地址前缀
+    if protocol.type == 'method' then
+        evaluated.url = Server.get_server_url() .. evaluated.url
     end
 
     if protocol.method == 'OPENLINK' then

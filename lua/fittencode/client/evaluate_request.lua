@@ -25,9 +25,17 @@ function M.reevaluate_method(protocol, variables)
     local method_url = assert(VM:new():run(env, LocalizationAPI.localize(protocol.url)))
     -- query
     local query = assert(VM:new():run(env, protocol.query or ''))
-    local url = table.concat({ Server.get_server_url(), method_url, query }, '')
+    local url = table.concat({ method_url, query }, '')
 
     return { headers = headers, url = url }
+end
+
+---@param code string
+---@param variables table<string, any>?
+---@return string
+function M.evaluate(code, variables)
+    local env = vim.tbl_deep_extend('force', {}, variables or {})
+    return assert(VM:new():run(env, code or ''))
 end
 
 return M
