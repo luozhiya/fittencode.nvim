@@ -5,12 +5,9 @@ local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local Protocal = require('fittencode.client.protocol')
 
----@class FittenCode.Inline.ProjectCompletionService
 local ProjectCompletionService = {}
 
----@return FittenCode.Inline.ProjectCompletionService
 function ProjectCompletionService:new(options)
-    ---@class FittenCode.Inline.ProjectCompletionService
     local obj = {}
     setmetatable(obj, { __index = ProjectCompletionService })
     obj:__initialize(options)
