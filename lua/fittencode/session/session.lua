@@ -29,26 +29,20 @@ function M.try_web()
     vim.ui.open(assert(LocalizationAPI.localize(Protocol.URLs.try)))
 end
 
----@class FittenCode.Session.LoginOptions
----@field on_success function
----@field on_error function
-
 ---@param username string
 ---@param password string
----@param options? FittenCode.Session.LoginOptions
+---@return FittenCode.Concurrency.Promise
 function M.login(username, password, options)
     options = options or {}
 
     if not username or not password then
-        Fn.schedule_call(options.on_error)
-        return
+        return Promise.reject()
     end
 
     local api_key_manager = Client.get_api_key_manager()
     if api_key_manager:get_fitten_user_id() then
         Log.notify_info(Translate('[Fitten Code] You are already logged in'))
-        Fn.schedule_call(options.on_success)
-        return
+        return Promise.resolve()
     end
 
     ---@type FittenCode.Protocol.Methods.Login.Body
@@ -61,26 +55,21 @@ function M.login(username, password, options)
         body = assert(vim.fn.json_encode(body)),
     })
     if not request_handle then
-        return
+        return Promise.reject()
     end
 
-    request_handle:promise():forward(function(_)
+    return request_handle:promise():forward(function(_)
         ---@type FittenCode.Protocol.Methods.Login.Response
         local response = _.json()
         if response and response.access_token and response.refresh_token and response.user_info then
             api_key_manager:update(Keyring.make(response))
             Log.notify_info(Translate('[Fitten Code] Login successful'))
-            Client.request(Protocol.Methods.click_count, {
-                variables = {
-                    click_count_type = 'login'
-                }
-            })
-            Fn.schedule_call(options.on_success)
+            Client.request(Protocol.Methods.click_count, { variables = { click_count_type = 'login' } })
         else
             return Promise.reject()
         end
     end):catch(function()
-        Fn.schedule_call(options.on_error)
+        return Promise.reject()
     end)
 end
 
