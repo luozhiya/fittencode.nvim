@@ -44,10 +44,8 @@ end)
 end)
 --]]
 
--- lua/fittencode/uv/tempfile.lua
-local uv = vim.uv
 local Promise = require('fittencode.concurrency.promise')
-local fs = require('fittencode.uv.fs')
+local FS = require('fittencode.uv.fs')
 
 local M = {}
 
@@ -56,7 +54,7 @@ local M = {}
 ---@return FittenCode.Concurrency.Promise
 function M.with_temp_file(callback)
     -- 生成唯一临时文件
-    return fs.mkstemp('tmp_XXXXXX')
+    return FS.mkstemp('tmp_XXXXXX')
         :forward(function(results)
             local fd = results[1]
             local path = results[2]
@@ -89,7 +87,7 @@ function M._cleanup(fd, path)
     return Promise.resolve()
         :forward(function()
             -- 1. 尝试关闭文件描述符
-            return fs.close(fd)
+            return FS.close(fd)
                 :catch(function(close_err)
                     -- 记录日志但不中断流程
                     -- print("Warning: Close failed:", close_err)
@@ -97,7 +95,7 @@ function M._cleanup(fd, path)
         end)
         :forward(function()
             -- 2. 尝试删除文件
-            return fs.unlink(path)
+            return FS.unlink(path)
                 :catch(function(unlink_err)
                     -- 记录日志但不中断流程
                     -- print("Warning: Unlink failed:", unlink_err)
@@ -108,7 +106,7 @@ end
 --- 快速创建临时文件并写入内容
 function M.create_temp_file(content)
     return M.with_temp_file(function(fd, path)
-        return fs.write(fd, content)
+        return FS.write(fd, content)
             :forward(function()
                 return path -- 返回可供使用的文件路径
             end)
@@ -117,7 +115,7 @@ end
 
 function M.with_temp_content_file(content, callback)
     return M.with_temp_file(function(fd, path)
-        return fs.write(fd, content)
+        return FS.write(fd, content)
             :forward(function()
                 return callback(path)
             end)

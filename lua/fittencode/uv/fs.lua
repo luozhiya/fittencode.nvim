@@ -28,6 +28,7 @@ local Fn = require('fittencode.fn')
 ---@class FittenCode.UV.FS
 local M = {}
 
+---@type string[]
 local fs_functions = vim.tbl_filter(function(x) return x:match('^fs_') end, vim.tbl_keys(vim.uv))
 
 -- 文件系统操作 Promise 化
@@ -41,6 +42,8 @@ for _, fn in ipairs(fs_functions) do
 end
 
 -- 高级文件操作
+---@param path string 文件路径
+---@return FittenCode.Concurrency.Promise
 function M.read_content(path)
     local fd
     return M.open(path, 'r', 438)
@@ -96,6 +99,10 @@ function M.read_chunked(path, chunk_size, on_chunk)
         end)
 end
 
+-- 异步写入文件内容
+---@param path string 文件路径
+---@param content string 文件内容
+---@return FittenCode.Concurrency.Promise
 function M.write_content(path, content)
     local fd
     return M.open(path, 'w', 438)

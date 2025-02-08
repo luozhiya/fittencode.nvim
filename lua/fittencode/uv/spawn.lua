@@ -44,7 +44,7 @@ end
 -- * 支持流输出，适用于 Chat 类型的应用场景
 ---@param command string
 ---@param args string[]
----@param options? { stdin?: string }
+---@param options? { stdin?: string, env?: table, cwd?: string }
 function M.spawn(command, args, options)
     options = options or {}
     local process = create_process()
@@ -77,7 +77,9 @@ function M.spawn(command, args, options)
 
     handle.process = vim.uv.spawn(command, {
         args = args,
-        stdio = { stdin, stdout, stderr }
+        stdio = { stdin, stdout, stderr },
+        env = options.env,
+        cwd = options.cwd,
     }, function(code, signal)
         vim.uv.close(stdin)
         vim.uv.close(stdout)

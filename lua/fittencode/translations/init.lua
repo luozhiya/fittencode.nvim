@@ -1,5 +1,5 @@
-local LangPreference = require('fittencode.lang.preference')
-local LangFallback = require('fittencode.lang.fallback')
+local LangPreference = require('fittencode.language.preference')
+local LangFallback = require('fittencode.language.fallback')
 local Log = require('fittencode.log')
 local Fmt = require('fittencode.fmt')
 local Config = require('fittencode.config')

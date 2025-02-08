@@ -7,6 +7,10 @@ local M = {}
 M.tcp = {
     connect = _Promise.promisify(function(host, port, callback)
         local client = uv.new_tcp()
+        if not client then
+            callback('failed to create tcp client')
+            return
+        end
         client:connect(host, port, callback)
     end, { multi_args = true }),
 

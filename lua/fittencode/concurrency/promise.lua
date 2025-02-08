@@ -60,7 +60,7 @@ Promise.__index = Promise
 
 -- Promise() constructor, https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/Promise
 -- 允许不传 executor 创建 Promise 实例（用于手动控制）
----@param executor? function
+---@param executor? fun(resolve: function, reject: function): any
 ---@return FittenCode.Concurrency.Promise
 function Promise.new(executor)
     local self = {

@@ -49,6 +49,8 @@ function M.spawn_promise(cmd, args, options)
     handle, pid = vim.uv.spawn(cmd, {
         args = args,
         stdio = { stdin, stdout, stderr },
+        env = options.env,
+        cwd = options.cwd,
     }, on_exit)
 
     if not handle then

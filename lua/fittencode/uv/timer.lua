@@ -13,18 +13,18 @@ local Promise = require('fittencode.concurrency.promise')
 local M = {}
 
 function M.sleep(ms)
-    local p = Promise.new()
-    local timer = vim.uv.new_timer()
-    if not timer then
-        p:manually_reject("Failed to create timer")
-    else
+    return Promise.new(function(resolve, reject)
+        local timer = vim.uv.new_timer()
+        if not timer then
+            reject('Failed to create timer')
+            return
+        end
         vim.uv.timer_start(timer, ms, 0, function()
             vim.uv.timer_stop(timer)
             vim.uv.close(timer)
-            p:manually_resolve()
+            resolve()
         end)
-    end
-    return p
+    end)
 end
 
 return M
