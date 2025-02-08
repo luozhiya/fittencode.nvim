@@ -319,29 +319,24 @@ function Session:generate_prompt()
 end
 
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
--- * resolve 包含 no_more_suggestions / suggestions_ready
--- * reject 包含 error
+-- * resolve 包含 suggestions_ready
+-- * reject 包含 error / no_more_suggestions
 ---@return FittenCode.Concurrency.Promise
 function Session:send_completions()
-    return self:generate_prompt():forward(function(_)
+    return self:generate_prompt():forward(function(prompt)
         self:update_status():requesting_completions()
-        return self:request_completions(_):forward(function(_)
+        return self:request_completions(prompt):forward(function(completion)
             if self:is_terminated() then
                 return Promise.reject()
             end
-            if not _ then
+            if not completion then
                 self:update_status():no_more_suggestions()
-                return Promise.resolve({
-                    status = 'no_more_suggestions'
-                })
+                return Promise.reject()
             end
-            self:set_model(_)
+            self:set_model(completion)
             self:update_status():suggestions_ready()
             Fn.schedule_call(self.set_interactive_session_debounced, self)
-            return Promise.resolve({
-                status = 'suggestions_ready',
-                completion = _
-            })
+            return Promise.resolve(completion)
         end)
     end):catch(function()
         self:update_status():error()

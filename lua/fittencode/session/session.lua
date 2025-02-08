@@ -1,7 +1,4 @@
 local Protocol = require('fittencode.client.protocol')
-local Server = require('fittencode.client.server')
-local LocalizationAPI = require('fittencode.client.localization_api')
-local HTTP = require('fittencode.network.request')
 local Promise = require('fittencode.concurrency.promise')
 local Log = require('fittencode.log')
 local Translate = require('fittencode.translate')

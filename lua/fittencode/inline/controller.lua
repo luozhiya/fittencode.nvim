@@ -118,7 +118,10 @@ function Controller:cleanup_sessions()
     self.selected_session_id = nil
 end
 
----@param options FittenCode.Inline.TriggeringCompletionOptions
+-- 触发补全
+-- * resolve 成功时返回补全列表
+-- * reject 没有补全或者出错了
+---@return FittenCode.Concurrency.Promise
 function Controller:triggering_completion(options)
     Log.debug('Triggering completion')
     options = options or {}
@@ -156,29 +159,29 @@ function Controller:triggering_completion(options)
 
     local buf, position = _preflight_check()
     if not buf or not position then
-        Fn.schedule_call(options.on_failure)
-        return
+        return Promise.reject()
     end
 
     self:cleanup_sessions()
-    local session = self:send_completions(buf, position, options)
+    local session, completions = self:send_completions(buf, position, options.edit_mode)
     self.sessions[session.id] = session
     self.selected_session_id = session.id
+
+    return completions
 end
 
-function Controller:send_completions(buf, position, options)
+function Controller:send_completions(buf, position, edit_mode)
     local session = Session:new({
         buf = buf,
         position = position,
         id = assert(Fn.uuid_v4()),
-        edit_mode = options.edit_mode,
+        edit_mode = edit_mode,
         prompt_generator = self.prompt_generator,
         triggering_completion = function(...) self:triggering_completion_auto(...) end,
         update_inline_status = function(id) self:update_status(id) end,
         set_interactive_session_debounced = self.set_interactive_session_debounced
     })
-    session:send_completions()
-    return session
+    return session, session:send_completions()
 end
 
 function Controller:session()
@@ -295,24 +298,21 @@ function Controller:edit_completion()
     self:triggering_completion({
         force = true,
         edit_mode = true,
-        on_no_more_suggestion = function()
-            self:_show_no_more_suggestion(Translate('  (Currently no completion options available)'), 2000)
-        end
-    })
+    }):catch(function()
+        self:_show_no_more_suggestion(Translate('  (Currently no completion options available)'), 2000)
+    end)
 end
 
 function Controller:triggering_completion_by_shortcut()
     self:triggering_completion({
         force = true,
-        on_no_more_suggestion = function()
-            self:_show_no_more_suggestion(Translate('  (Currently no completion options available)'), 2000)
-        end
-    })
+    }):catch(function()
+        self:_show_no_more_suggestion(Translate('  (Currently no completion options available)'), 2000)
+    end)
 end
 
 function Controller:triggering_completion_auto(options)
     if not Config.inline_completion.auto_triggering_completion then
-        Fn.schedule_call(options.on_failure)
         return
     end
     self:triggering_completion(options)

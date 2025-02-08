@@ -60,11 +60,12 @@ function ProjectCompletionService:get_project_completion_chosen()
     end)
 end
 
----@class FittenCode.Inline.ProjectCompletionService.CheckProjectCompletionAvailable.Options : FittenCode.AsyncResultCallbacks
-
+-- 检测是否可使用 Project Completion
+-- * resolve 代表可以
+-- * reject 代表不可用或者未知出错
 ---@param lsp number
----@param options FittenCode.Inline.ProjectCompletionService.CheckProjectCompletionAvailable.Options
-function ProjectCompletionService:check_project_completion_available(lsp, options)
+---@return FittenCode.Concurrency.Promise
+function ProjectCompletionService:check_project_completion_available(lsp)
     local _is_available = function(chosen)
         local open = Config.use_project_completion.open
         local heart = 1
@@ -82,21 +83,12 @@ function ProjectCompletionService:check_project_completion_available(lsp, option
         end
         return available
     end
-    Promise.new(function(resolve, reject)
-        self:get_project_completion_chosen({
-            on_success = function(chosen)
-                if _is_available(chosen) then
-                    Fn.schedule_call(options.on_success)
-                else
-                    reject()
-                end
-            end,
-            on_failure = function()
-                reject()
-            end,
-        })
-    end):catch(function()
-        Fn.schedule_call(options.on_failure)
+    return self:get_project_completion_chosen():forward(function(chosen)
+        if _is_available(chosen) then
+            return chosen
+        else
+            return Promise.reject()
+        end
     end)
 end
 
