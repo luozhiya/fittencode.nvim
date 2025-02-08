@@ -300,67 +300,47 @@ function Session:request_handles_push(handle)
     self.request_handles[#self.request_handles + 1] = handle
 end
 
+-- 生成 Prompt
+---@return FittenCode.Concurrency.Promise
+function Session:generate_prompt()
+    self:update_status():generating_prompt()
+    self:record_timing('generate_prompt.request')
+
+    return self.prompt_generator:generate2(self.buf, self.position, {
+        filename = assert(Editor.filename(self.buf)),
+        edit_mode = self.edit_mode
+    }):forward(function(_)
+        self:record_timing('generate_prompt.response')
+        return _
+    end):catch(function()
+        self:record_timing('generate_prompt.error')
+        return Promise.reject()
+    end)
+end
+
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
----@param buf number
----@param position FittenCode.Position
 ---@param options FittenCode.Inline.SendCompletionsOptions
-function Session:send_completions(buf, position, options)
-    self:record_timing('send_completions.start')
-    Promise.new(function(resolve, reject)
-        self.prompt_generator:generate(buf, position, {
-            filename = assert(Editor.filename(buf)),
-            edit_mode = self.edit_mode,
-            on_create = function()
-                if self:is_terminated() then
-                    return
-                end
-                self:record_timing('generate_prompt.on_create')
-                self:update_status():generating_prompt()
-            end,
-            on_once = function(prompt)
-                if self:is_terminated() then
-                    return
-                end
-                self:record_timing('generate_prompt.on_once')
-                Log.debug('Generated prompt = {}', prompt)
-                resolve(prompt)
-            end,
-            on_error = function()
-                if self:is_terminated() then
-                    return
-                end
-                self:record_timing('generate_prompt.on_error')
-                self:update_status():error()
-                Fn.schedule_call(options.on_failure)
-            end
-        })
-    end):forward(function(prompt)
+function Session:send_completions(options)
+    self:generate_prompt():forward(function(_)
         self:update_status():requesting_completions()
-        self:request_completions(prompt, {
-            on_no_more_suggestion = function()
-                if self:is_terminated() then
-                    return
-                end
+        return self:request_completions(_):forward(function(_)
+            if self:is_terminated() then
+                return Promise.reject()
+            end
+            if not _ then
+                Log.info('No more suggestion')
                 self:update_status():no_more_suggestions()
                 Fn.schedule_call(options.on_no_more_suggestion)
-            end,
-            on_success = function(response)
-                if self:is_terminated() then
-                    return
-                end
-                self:set_model(response)
-                self:update_status():suggestions_ready()
-                Fn.schedule_call(options.on_success, response)
-                Fn.schedule_call(self.set_interactive_session_debounced, self)
-            end,
-            on_failure = function()
-                if self:is_terminated() then
-                    return
-                end
-                self:update_status():error()
-                Fn.schedule_call(options.on_failure)
+                return
             end
-        });
+            self:set_model(_)
+            self:update_status():suggestions_ready()
+            Fn.schedule_call(options.on_success, _)
+            Fn.schedule_call(self.set_interactive_session_debounced, self)
+        end)
+    end):catch(function()
+        self:update_status():error()
+        Fn.schedule_call(options.on_failure)
     end)
 end
 
@@ -377,9 +357,6 @@ function Session:get_completion_version()
 
     return request_handle.promise():forward(function(_)
         self:record_timing('get_completion_version.response')
-        if self:is_terminated() then
-            return Promise.reject()
-        end
         ---@type FittenCode.Protocol.Methods.GetCompletionVersion.Response
         local response = _.json()
         if not response then
@@ -408,7 +385,7 @@ function Session:async_compress_prompt(prompt)
     })
 end
 
-function Session:generate_one_stage_auth(completion_version, body, buf, position)
+function Session:generate_one_stage_auth(completion_version, body)
     local vu = {
         ['0'] = '',
         ['1'] = '2_1',
@@ -430,43 +407,28 @@ function Session:generate_one_stage_auth(completion_version, body, buf, position
 
     return request_handle.promise():forward(function(_)
         self:record_timing('generate_one_stage_auth.response')
-        if self:is_terminated() then
-            return Promise.reject()
-        end
         local response = _.json()
         if not response then
             Log.error('Failed to decode completion raw response: {}', _)
             return Promise.reject()
         end
         return GenerationResponseParser.parse(response, {
-            buf = buf,
-            position = position,
+            buf = self.buf,
+            position = self.position,
         })
     end):catch(function()
         self:record_timing('generate_one_stage_auth.error')
     end)
 end
 
-function Session:request_completions(prompt, options)
-    Promise.all({
+function Session:request_completions(prompt)
+    return Promise.all({
         self:get_completion_version(),
         self:async_compress_prompt(prompt),
     }):forward(function(_)
-        if self:is_terminated() then
-            return Promise.reject()
-        end
         local completion_version = _[1]
         local compressed_prompt = _[2]
-        return self:generate_one_stage_auth(completion_version, compressed_prompt, options.buf, options.position)
-    end):forward(function(_)
-        if not _ then
-            Log.info('No more suggestion')
-            Fn.schedule_call(options.on_no_more_suggestion)
-            return
-        end
-        Fn.schedule_call(options.on_success, _)
-    end):catch(function()
-        Fn.schedule_call(options.on_failure)
+        return self:generate_one_stage_auth(completion_version, compressed_prompt)
     end)
 end
 
