@@ -85,7 +85,7 @@ function M.request(protocol, options)
 
     -- 协议 Method 需要补齐服务器地址前缀
     if protocol.type == 'method' then
-        evaluated.url = Server.get_server_url() .. evaluated.url
+        evaluated.url = table.concat({ Server.get_server_url(), evaluated.url }, '')
     end
 
     if protocol.method == 'OPENLINK' then

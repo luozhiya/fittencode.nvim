@@ -26,33 +26,32 @@ local Protocol = {}
 Protocol.URLs = {
     -- Account
     register = {
-        type = 'url',
         method = 'OPENLINK',
         url = 'https://fc.fittentech.com/',
         query = '?{{platform_info}}'
     },
     -- 通过第三方注册后需要调用此接口，后台做统计
     register_cvt = {
-        type = 'url',
         method = 'GET',
         url = 'https://fc.fittentech.com/cvt/register'
     },
     question = {
-        type = 'url',
         method = 'OPENLINK',
         url = 'https://code.fittentech.com/assets/images/blog/QR.jpg'
     },
     tutor = {
-        type = 'url',
         method = 'OPENLINK',
         url = 'https://code.fittentech.com/desc-vim'
     },
     try = {
-        type = 'url',
         method = 'OPENLINK',
         url = 'https://code.fittentech.com/try'
     },
 }
+
+for _, url in pairs(Protocol.URLs) do
+    url.type = 'url'
+end
 
 ---@class FittenCode.Protocol.Methods
 ---@field login FittenCode.Protocol.Element
@@ -556,5 +555,9 @@ Protocol.Methods = {
         query = '?ft_token={{ft_token}}&{{platform_info}}'
     },
 }
+
+for _, method in pairs(Protocol.Methods) do
+    method.type = 'method'
+end
 
 return Protocol
