@@ -5,10 +5,11 @@ local M = {
     name = 'gzip',
     category = 'cli',
     priority = 80,
-    features = {
-        async = true,
-        performance = 0.6
+    performance = {
+        speed = 0.6,
+        compression_ratio = 0.5
     },
+    async = true,
     capabilities = {
         compress = {
             format = { 'gzip', 'gz' },

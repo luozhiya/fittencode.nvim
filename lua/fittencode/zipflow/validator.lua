@@ -1,6 +1,13 @@
 local M = {}
 
 local function validate_common(opts)
+    -- 操作类型检查
+    if not opts.operation then
+        return false, 'Missing required parameter: operation'
+    elseif not vim.tbl_contains({ 'compress', 'decompress' }, opts.operation) then
+        return false, 'Invalid operation: ' .. opts.operation
+    end
+
     -- 必须参数检查
     if not opts.input then
         return false, 'Missing required parameter: input'
@@ -21,6 +28,8 @@ local function validate_common(opts)
             return false, 'Output path already exists: ' .. opts.output_path
         end
     end
+
+    return true, nil
 end
 
 local function validate_compress(opts)

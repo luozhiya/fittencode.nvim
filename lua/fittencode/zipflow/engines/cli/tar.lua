@@ -1,20 +1,22 @@
-local spawn = require('zipflow.process.spawn')
+local Spawn = require('fittencode.process.spawn')
 local Promise = require('fittencode.concurrency.promise')
-local uv = vim.uv or vim.loop
 
 local M = {
     name = 'tar',
     type = 'cli',
+    priority = 80,
+    performance = {
+        speed = 0.6,
+        compression_ratio = 0.5
+    },
+    async = true,
     capabilities = {
         compress = {
             input_types = { 'directory' },
-            output_types = { 'file' },
-            formats = { 'tar' },
-            compression = { 'none', 'gzip', 'bzip2', 'xz' }
+            formats = { 'tar', 'tar.gz', 'tar.bz2', 'tar.xz' },
         },
         decompress = {
             input_types = { 'file' },
-            output_types = { 'directory' },
             formats = { 'tar', 'tar.gz', 'tar.bz2', 'tar.xz' }
         }
     }
@@ -43,7 +45,7 @@ function M.compress(input_dir, opts)
             '.'
         }
 
-        local p = spawn('tar', args)
+        local p = Spawn.spawn('tar', args)
 
         p:on('exit', function(code)
             if code == 0 then
@@ -77,9 +79,9 @@ function M.decompress(input_file, opts)
             '-C', output_dir
         }
 
-        uv.fs_mkdir(output_dir, 493) -- 0755 in decimal
+        vim.uv.fs_mkdir(output_dir, 493) -- 0755 in decimal
 
-        local p = spawn('tar', args)
+        local p = Spawn.spawn('tar', args)
 
         p:on('exit', function(code)
             if code == 0 then

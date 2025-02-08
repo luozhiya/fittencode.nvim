@@ -101,11 +101,7 @@ local function process(op_type, input, opts)
         if not engine then return reject(_) end
 
         -- 执行操作
-        local processor = op_type == 'compress'
-            and engine.compress
-            or engine.decompress
-
-        processor(input, opts)
+        engine[opts.operation](input, opts)
             :forward(resolve)
             :catch(reject)
     end)
