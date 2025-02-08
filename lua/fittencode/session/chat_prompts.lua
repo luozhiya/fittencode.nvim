@@ -1,27 +1,26 @@
 local VM = require('fittencode.vm')
+local Client = require('fittencode.client')
 
 local M = {}
 
 ---@param text? string|string[]
 function M.word_segmentation(text)
-    local fmttext = {}
-    if type(text) == 'string' then
-        fmttext = { text }
-    elseif type(text) == 'table' then
-        fmttext = text
+    if not text then
+        return
     end
-    assert(#fmttext > 0, 'text should not be empty')
+
+    ---@type string[]
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    text = (type(text) == 'string') and { text } or text
+
     local messages = {}
-    for idx, t in ipairs(fmttext) do
-        local lines = ''
-        lines = lines .. '# ' .. idx .. '\n'
-        lines = lines .. '\n```\n'
-        lines = lines .. t .. '\n'
-        lines = lines .. '```\n\n'
+    for idx, t in ipairs(text) do
+        assert(t and t ~= '', 'content should not be empty')
         messages[idx] = {
-            content = lines,
+            content = string.format('# %d\n\n```\n%s\n```\n\n', idx, t)
         }
     end
+
     local template = [[<|system|>
 Please reply directly to the code without any explanation.
 Please do not use markdown when replying.
@@ -42,9 +41,11 @@ Please do not use markdown when replying.
         messages = messages,
     }
     local inputs = assert(VM:new():run(env, template))
+    local api_key_manager = Client.get_api_key_manager()
+
     return {
         inputs = inputs,
-        ft_token = M.get_ft_token(),
+        ft_token = api_key_manager:get_fitten_user_id() or '',
         meta_datas = {
             project_id = '',
         }
