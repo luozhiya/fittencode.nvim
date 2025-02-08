@@ -132,7 +132,7 @@ function Promise:__tostring()
     }
     return 'Promise<' .. get_unique_identifier(self) .. '> = ' .. vim.inspect(self, {
         process = function(item, path)
-            if type(item) ~= 'function' and item ~= getmetatable(self) then
+            if (type(item) ~= 'function' or path[1] == 'promise_reactions') and item ~= getmetatable(self) then
                 -- print(vim.inspect(path), vim.inspect(item))
                 -- { "state", inspect.KEY } "state"
                 -- { "state" } 1
@@ -247,15 +247,15 @@ end
 -- * It immediately returns another Promise object, allowing you to chain calls to other promise methods.
 function Promise:finally(on_finally)
     return self:forward(function(value)
-        return Promise.new(function(resolve)
+        if on_finally then
             on_finally()
-            resolve(value)
-        end)
+        end
+        return value
     end, function(reason)
-        return Promise.new(function(_, reject)
+        if on_finally then
             on_finally()
-            reject(reason)
-        end)
+        end
+        return reason
     end)
 end
 
