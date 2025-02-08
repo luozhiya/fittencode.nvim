@@ -102,23 +102,26 @@ function Session:async_update_word_segmentation()
     local function _process_response(response)
         local deltas = {}
         local stdout = response.text()
+
         for _, bundle in ipairs(stdout) do
-            local v = vim.split(bundle, '\n', { trimempty = true })
-            for _, line in ipairs(v) do
-                ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
-                local _, chunk = pcall(vim.fn.json_decode, line)
-                if _ then
-                    deltas[#deltas + 1] = chunk.delta
+            local lines = vim.split(bundle, '\n', { trimempty = true })
+            for _, line in ipairs(lines) do
+                local success, chunk = pcall(vim.fn.json_decode, line)
+                if success then
+                    table.insert(deltas, chunk.delta)
                 else
-                    return nil, line
+                    Log.error('Failed to decode line: {}', line)
+                    return
                 end
             end
         end
-        local _, word_segmentation = pcall(vim.fn.json_decode, table.concat(deltas, ''))
-        if _ then
+
+        local success, word_segmentation = pcall(vim.fn.json_decode, table.concat(deltas, ''))
+        if success then
             return word_segmentation
         else
-            return nil, deltas
+            Log.error('Failed to decode concatenated deltas: {}', deltas)
+            return nil
         end
     end
 
