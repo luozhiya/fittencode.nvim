@@ -45,7 +45,6 @@ function M.login(username, password, options)
     end
 
     local api_key_manager = Client.get_api_key_manager()
-
     if api_key_manager:get_fitten_user_id() then
         Log.notify_info(Translate('[Fitten Code] You are already logged in'))
         Fn.schedule_call(options.on_success)
@@ -53,38 +52,34 @@ function M.login(username, password, options)
     end
 
     ---@type FittenCode.Protocol.Methods.Login.Body
-    local
-    body = {
+    local body = {
         username = username,
         password = password,
     }
-    Promise.new(function(resolve, reject)
-        Client.request(Protocol.Methods.login, {
-            body = assert(vim.fn.json_encode(body)),
-            on_error = vim.schedule_wrap(function()
-                reject()
-            end),
-            on_once = vim.schedule_wrap(function(stdout)
-                ---@type _, FittenCode.Protocol.Methods.Login.Response
-                local _, response = pcall(vim.fn.json_decode, stdout)
-                if response and response.access_token and response.refresh_token and response.user_info then
-                    resolve(response)
-                else
-                    reject()
-                end
-            end)
-        })
-        ---@param response FittenCode.Protocol.Methods.Login.Response
-    end):forward(function(response)
-        api_key_manager:update(Keyring.make(response))
-        Log.notify_info(Translate('[Fitten Code] Login successful'))
-        Client.request(Protocol.Methods.click_count, {
-            variables = {
-                click_count_type = 'login'
-            }
-        })
-        Fn.schedule_call(options.on_success)
-    end, function()
+
+    local request_handle = Client.request(Protocol.Methods.login, {
+        body = assert(vim.fn.json_encode(body)),
+    })
+    if not request_handle then
+        return
+    end
+
+    request_handle:promise():forward(function(_)
+        ---@type FittenCode.Protocol.Methods.Login.Response
+        local response = _.json()
+        if response and response.access_token and response.refresh_token and response.user_info then
+            api_key_manager:update(Keyring.make(response))
+            Log.notify_info(Translate('[Fitten Code] Login successful'))
+            Client.request(Protocol.Methods.click_count, {
+                variables = {
+                    click_count_type = 'login'
+                }
+            })
+            Fn.schedule_call(options.on_success)
+        else
+            return Promise.reject()
+        end
+    end):catch(function()
         Fn.schedule_call(options.on_error)
     end)
 end
