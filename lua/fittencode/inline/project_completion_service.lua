@@ -1,5 +1,4 @@
 local Config = require('fittencode.config')
-local ProjectCompletionFactory = require('fittencode.inline.project_completion')
 local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.fn')
 local Client = require('fittencode.client')
@@ -20,8 +19,8 @@ end
 
 function ProjectCompletionService:__initialize(options)
     self.project_completion = {
-        v1 = assert(ProjectCompletionFactory.create('v1')),
-        v2 = assert(ProjectCompletionFactory.create('v2')),
+        v1 = require('fittencode.inline.project_completion.v1'),
+        v2 = require('fittencode.inline.project_completion.v2'),
     }
     self.last_chosen_prompt_type = '0'
     self.request_handle = nil
