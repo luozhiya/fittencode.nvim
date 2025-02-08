@@ -4,12 +4,12 @@ local spawn = require('spawn')
 spawn.spawn('ls', { '-la' }, {})
     :forward(function(result)
         print('Process succeeded:')
-        print('Output:', result.output)
+        print('Output:', result.stdout)
     end, function(error)
         print('Process failed:')
         print('Error:', error.error)
-        print('Output:', error.output)
-        print('Errors:', error.errors)
+        print('Output:', error.stdout)
+        print('Errors:', error.stderr)
     end)
 --]]
 
@@ -56,14 +56,14 @@ function M.spawn(cmd, args, options)
         return promise
     end
 
-    local output = {}
-    local errors = {}
+    local stdout_data = {}
+    local stderr_data = {}
 
     stdout:read_start(function(err, data)
         if err then
             promise:manually_reject({ error = err })
         elseif data then
-            table.insert(output, data)
+            table.insert(stdout_data, data)
         end
     end)
 
@@ -71,7 +71,7 @@ function M.spawn(cmd, args, options)
         if err then
             promise:manually_reject({ error = err })
         elseif data then
-            table.insert(errors, data)
+            table.insert(stderr_data, data)
         end
     end)
 
@@ -88,12 +88,12 @@ function M.spawn(cmd, args, options)
     end
 
     return promise:forward(function(result)
-        result.output = table.concat(output)
-        result.errors = table.concat(errors)
+        result.stdout = table.concat(stdout_data)
+        result.stderr = table.concat(stderr_data)
         return result
     end, function(error)
-        error.output = table.concat(output)
-        error.errors = table.concat(errors)
+        error.stdout = table.concat(stdout_data)
+        error.stderr = table.concat(stderr_data)
         return error
     end)
 end
