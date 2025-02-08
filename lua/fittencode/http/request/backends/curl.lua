@@ -31,7 +31,7 @@ res.promise()
 --]]
 
 local Promise = require('fittencode.concurrency.promise')
-local ProcessSpawn = require('fittencode.process.spawn')
+local Process = require('fittencode.uv.process')
 
 local M = {}
 
@@ -119,7 +119,7 @@ function M.fetch(url, options)
     local headers_processed = false
 
     -- 使用新进程模块
-    local process = ProcessSpawn.spawn('curl', args, {
+    local process = Process.spawn('curl', args, {
         stdin = options.body
     })
 

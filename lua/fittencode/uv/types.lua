@@ -1,0 +1,6 @@
+---@class FittenCode.UV.Process
+---@field _callbacks table<string, function[]>
+---@field aborted boolean
+---@field on function
+---@field _emit function
+---@field abort function

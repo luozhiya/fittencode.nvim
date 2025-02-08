@@ -1,4 +1,4 @@
-local Spawn = require('fittencode.process.spawn')
+local Process = require('fittencode.uv.process')
 local Promise = require('fittencode.concurrency.promise')
 
 local M = {
@@ -31,7 +31,7 @@ local function handle_data_input(input, opts)
             table.insert(args, '-' .. opts.level)
         end
 
-        local p = Spawn.spawn('gzip', args, {
+        local p = Process.spawn('gzip', args, {
             stdin = input,
         })
 
@@ -79,7 +79,7 @@ local function handle_file_input(input_path, opts)
 
         table.insert(args, input_path)
 
-        local p = Spawn.spawn('gzip', args)
+        local p = Process.spawn('gzip', args)
 
         p:on('exit', function(code)
             if code == 0 then
@@ -142,7 +142,7 @@ end
 local function decompress_data(input, opts)
     return Promise.new(function(resolve, reject)
         local args = { '-c', '-d' }
-        local p = Spawn.spawn('gzip', args, {
+        local p = Process.spawn('gzip', args, {
             stdin = input
         })
 
@@ -186,7 +186,7 @@ local function decompress_file(input_path, opts)
 
         local args = { '-k', '-d', input_path }
 
-        local p = Spawn.spawn('gzip', args)
+        local p = Process.spawn('gzip', args)
 
         p:on('exit', function(code)
             if code == 0 then

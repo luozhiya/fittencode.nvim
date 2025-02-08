@@ -1,4 +1,4 @@
-local ProcessSpawn = require('fittencode.process.spawn')
+local Process = require('fittencode.uv.process')
 local Promise = require('fittencode.concurrency.promise')
 
 local M = {
@@ -31,7 +31,7 @@ function M.hash(_, data, options)
         stdin_data = data
     end
 
-    local process = ProcessSpawn.spawn('sha256sum', args, { stdin = stdin_data })
+    local process = Process.spawn('sha256sum', args, { stdin = stdin_data })
 
     return Promise.new(function(resolve, reject)
         local stdout = ''

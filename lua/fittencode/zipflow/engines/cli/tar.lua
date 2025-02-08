@@ -1,4 +1,4 @@
-local Spawn = require('fittencode.process.spawn')
+local Process = require('fittencode.uv.process')
 local Promise = require('fittencode.concurrency.promise')
 
 local M = {
@@ -45,7 +45,7 @@ function M.compress(input_dir, opts)
             '.'
         }
 
-        local p = Spawn.spawn('tar', args)
+        local p = Process.spawn('tar', args)
 
         p:on('exit', function(code)
             if code == 0 then
@@ -81,7 +81,7 @@ function M.decompress(input_file, opts)
 
         vim.uv.fs_mkdir(output_dir, 493) -- 0755 in decimal
 
-        local p = Spawn.spawn('tar', args)
+        local p = Process.spawn('tar', args)
 
         p:on('exit', function(code)
             if code == 0 then

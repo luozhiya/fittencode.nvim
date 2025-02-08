@@ -1,6 +1,6 @@
 --[[
 -- 其他模块使用 spawn 示例
-local process = require('fittencode.process.spawn')
+local process = require('spawn')
 
 local p = process.spawn('ls', {'-l'}, {
     stdin = nil
@@ -17,6 +17,7 @@ end)
 
 local M = {}
 
+---@return FittenCode.UV.Process
 local function create_process()
     return {
         _callbacks = { stdout = {}, stderr = {}, exit = {}, error = {}, abort = {} },

@@ -1,4 +1,4 @@
-local spawn = require('fittencode.process.spawn')
+local Process = require('fittencode.uv.process')
 local Promise = require('fittencode.concurrency.promise')
 
 local algorithms = {
@@ -39,7 +39,7 @@ function M.hash(algorithm, data, options)
         data = nil
     end
 
-    local process = spawn.spawn('openssl', args, { stdin = data })
+    local process = Process.spawn('openssl', args, { stdin = data })
 
     return Promise.new(function(resolve, reject)
         local stdout = ''

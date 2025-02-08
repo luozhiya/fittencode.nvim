@@ -1,5 +1,5 @@
 --[[
-local spawn = require('fittencode.process.spawn2')
+local spawn = require('spawn_promise')
 
 spawn.spawn('ls', { '-la' }, {})
     :forward(function(result)
@@ -18,7 +18,7 @@ local Promise = require('fittencode.concurrency.promise')
 local M = {}
 
 -- 如果只关心最后输出的话，可以选择这个版本
-function M.spawn(cmd, args, options)
+function M.spawn_promise(cmd, args, options)
     local promise = Promise.new()
 
     local handle, pid

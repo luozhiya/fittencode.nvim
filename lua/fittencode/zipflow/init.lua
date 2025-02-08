@@ -102,7 +102,7 @@ local function process(op_type, input, opts)
 
         -- 执行操作
         local processor = engine[opts.operation]
-        assert(processor, "Engine does not support operation: " .. opts.operation)
+        assert(processor, 'Engine does not support operation: ' .. opts.operation)
         processor(input, opts)
             :forward(resolve)
             :catch(reject)
