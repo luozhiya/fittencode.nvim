@@ -25,8 +25,8 @@ end
 function Model:clear()
 end
 
-function Model:validate_word_segments(segments)
-    for k, v in pairs(segments) do
+function Model:validate_word_segments(word_segmentation)
+    for k, v in pairs(word_segmentation) do
         if table.concat(v, '') ~= self.completion.computed[tonumber(k)].generated_text then
             return false
         end
@@ -34,16 +34,16 @@ function Model:validate_word_segments(segments)
     return true
 end
 
--- Update the model with the given state, only support word_segments for now.
+-- Update the model with the given state, only support word_segmentation for now.
 function Model:update(state)
     if not state then
         return
     end
-    if state.word_segments then
-        if not self:validate_word_segments(state.word_segments) then
+    if state.word_segmentation then
+        if not self:validate_word_segments(state.word_segmentation) then
             return
         end
-        self.word_segments = state.word_segments
+        self.word_segmentation = state.word_segmentation
         self:recalculate()
     end
 end

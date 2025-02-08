@@ -56,7 +56,7 @@ function Session:set_model(parsed_response)
         completion = completion,
     })
     self.model:recalculate()
-    self:async_update_word_segments()
+    self:async_update_word_segmentation()
 end
 
 -- 设置交互模式
@@ -76,7 +76,7 @@ function Session:update_model(update)
     self.model:update(update)
 end
 
-function Session:async_update_word_segments()
+function Session:async_update_word_segmentation()
     local computed = self.model.completion.computed
     if not computed then
         return
@@ -89,47 +89,53 @@ function Session:async_update_word_segments()
         Log.debug('Generated text is only ascii, skip word segmentation')
         return
     end
-    Promise.new(function(resolve, reject)
-        Client.request(Protocol.Methods.chat_auth, {
-            body = assert(vim.fn.json_encode(ChatPrompts.segment_words(generated_text))),
-            on_create = function(handle)
-                self:record_timing('segment_words.on_create')
-                self:request_handles_push(handle)
-            end,
-            on_once = function(stdout)
-                self:record_timing('segment_words.on_once')
-                local delta = {}
-                for _, bundle in ipairs(stdout) do
-                    local v = vim.split(bundle, '\n', { trimempty = true })
-                    for _, line in ipairs(v) do
-                        ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
-                        local _, chunk = pcall(vim.fn.json_decode, line)
-                        if _ then
-                            delta[#delta + 1] = chunk.delta
-                        else
-                            reject(line)
-                            return
-                        end
-                    end
-                end
-                local _, word_segments = pcall(vim.fn.json_decode, table.concat(delta, ''))
+
+    local request_handle = Client.request(Protocol.Methods.chat_auth, {
+        body = assert(vim.fn.json_encode(ChatPrompts.word_segmentation(generated_text))),
+    })
+    if not request_handle then
+        Log.error('Failed to send request')
+        return
+    end
+    self:record_timing('word_segmentation.request')
+
+    local function _process_response(response)
+        local deltas = {}
+        local stdout = response.text()
+        for _, bundle in ipairs(stdout) do
+            local v = vim.split(bundle, '\n', { trimempty = true })
+            for _, line in ipairs(v) do
+                ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
+                local _, chunk = pcall(vim.fn.json_decode, line)
                 if _ then
-                    Log.debug('Word segmentation: {}', word_segments)
-                    self:update_model({ word_segments = word_segments })
+                    deltas[#deltas + 1] = chunk.delta
                 else
-                    reject(delta)
-                    return
+                    return nil, line
                 end
-            end,
-            on_error = function(err)
-                self:record_timing('segment_words.on_error')
-                reject(err)
-                return
             end
-        })
+        end
+        local _, word_segmentation = pcall(vim.fn.json_decode, table.concat(deltas, ''))
+        if _ then
+            return word_segmentation
+        else
+            return nil, deltas
+        end
+    end
+
+    request_handle.promise():forward(function(response)
+        self:record_timing('word_segmentation.response')
+        local result, err = _process_response(response)
+        if result then
+            self:update_model({ word_segmentation = result })
+        else
+            return Promise.reject(err)
+        end
     end):catch(function(err)
-        Log.error('Error while segmenting words {}', err)
+        Log.error('Failed to parse response: {}', err)
+        self:record_timing('word_segmentation.error')
     end)
+
+    self:request_handles_push(request_handle)
 end
 
 function Session:update_view()

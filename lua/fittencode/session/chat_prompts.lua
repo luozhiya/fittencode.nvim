@@ -1,7 +1,7 @@
 local M = {}
 
 ---@param text? string|string[]
-function M.segment_words(text)
+function M.word_segmentation(text)
     local fmttext = {}
     if type(text) == 'string' then
         fmttext = { text }
