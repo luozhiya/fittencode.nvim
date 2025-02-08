@@ -101,7 +101,9 @@ local function process(op_type, input, opts)
         if not engine then return reject(_) end
 
         -- 执行操作
-        engine[opts.operation](input, opts)
+        local processor = engine[opts.operation]
+        assert(processor, "Engine does not support operation: " .. opts.operation)
+        processor(input, opts)
             :forward(resolve)
             :catch(reject)
     end)
