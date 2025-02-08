@@ -319,28 +319,33 @@ function Session:generate_prompt()
 end
 
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
----@param options FittenCode.Inline.SendCompletionsOptions
-function Session:send_completions(options)
-    self:generate_prompt():forward(function(_)
+-- * resolve 包含 no_more_suggestions / suggestions_ready
+-- * reject 包含 error
+---@return FittenCode.Concurrency.Promise
+function Session:send_completions()
+    return self:generate_prompt():forward(function(_)
         self:update_status():requesting_completions()
         return self:request_completions(_):forward(function(_)
             if self:is_terminated() then
                 return Promise.reject()
             end
             if not _ then
-                Log.info('No more suggestion')
                 self:update_status():no_more_suggestions()
-                Fn.schedule_call(options.on_no_more_suggestion)
-                return
+                return Promise.resolve({
+                    status = 'no_more_suggestions'
+                })
             end
             self:set_model(_)
             self:update_status():suggestions_ready()
-            Fn.schedule_call(options.on_success, _)
             Fn.schedule_call(self.set_interactive_session_debounced, self)
+            return Promise.resolve({
+                status = 'suggestions_ready',
+                completion = _
+            })
         end)
     end):catch(function()
         self:update_status():error()
-        Fn.schedule_call(options.on_failure)
+        return Promise.reject()
     end)
 end
 

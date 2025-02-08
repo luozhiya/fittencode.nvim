@@ -177,7 +177,7 @@ function Controller:send_completions(buf, position, options)
         update_inline_status = function(id) self:update_status(id) end,
         set_interactive_session_debounced = self.set_interactive_session_debounced
     })
-    session:send_completions(assert(Fn.tbl_keep_events(options)))
+    session:send_completions()
     return session
 end
 
