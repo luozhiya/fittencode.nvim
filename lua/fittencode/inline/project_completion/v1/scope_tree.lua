@@ -2,25 +2,14 @@ local Log = require('fittencode.log')
 local Promise = require('fittencode.concurrency.promise')
 local Editor = require('fittencode.editor')
 local EventLoop = require('fittencode.concurrency.event_loop')
-local LspService = require('fittencode.inline.lsp_service')
+local LspService = require('fittencode.lsp_service')
 local Fn = require('fittencode.fn')
 local ChangeState = require('fittencode.inline.project_completion.v1.change_state')
 local Root = require('fittencode.inline.project_completion.v1.root')
 
----@class FittenCode.Inline.ProjectCompletion.V1.ScopeTree
----@field locked number
----@field status number
----@field has_lsp number
----@field root Fittencode.Inline.ProjectCompletion.V1.Root
----@field change_state FittenCode.Inline.ProjectCompletion.V1.ChangeState
----@field structure_updated boolean
----@field last_prompt any
-
----@class FittenCode.Inline.ProjectCompletion.V1.ScopeTree
 local ScopeTree = {}
 ScopeTree.__index = ScopeTree
 
----@return FittenCode.Inline.ProjectCompletion.V1.ScopeTree
 function ScopeTree:new(buf)
     local obj = {
         root = Root:new(),
@@ -37,16 +26,11 @@ end
 function ScopeTree:update(buf, options)
     Promise.new(function(resolve, reject)
         if self.has_lsp == -2 then
-            LspService.check_has_lsp(buf, {
-                on_success = function(result)
-                    self.has_lsp = result
-                    self:show_info('-- has_lsp: {} {}', self.has_lsp, assert(Editor.uri(buf)))
-                    resolve()
-                end,
-                on_error = function()
-                    Fn.schedule_call(options.on_error)
-                end
-            })
+            LspService.check_has_lsp(buf):forward(function(_)
+                self.has_lsp = _
+                self:show_info('-- has_lsp: {} {}', self.has_lsp, assert(Editor.uri(buf)))
+                resolve()
+            end, reject)
         else
             resolve()
         end

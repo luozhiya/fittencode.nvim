@@ -206,22 +206,29 @@ function PromptGenerator:_generate_project_completion_prompt(buf, position)
     end)
 end
 
-function PromptGenerator:_generate_base_prompt(ctx, options)
-    return AsyncHash.md5(ctx.prefix .. ctx.suffix):forward(function(ciphertext)
-        local meta_datas = self:_recalculate_meta_datas({
-            text = ctx.prefix .. ctx.suffix,
-            ciphertext = ciphertext,
-            prefix = ctx.prefix,
-            suffix = ctx.suffix,
-            filename = options.filename,
-            edit_mode = options.edit_mode,
-            prefixoffset = ctx.prefixoffset,
-            norangecount = ctx.norangecount
-        })
-        return {
-            inputs = '',
-            meta_datas = meta_datas
-        }
+function PromptGenerator:_generate_base_prompt(buf, position, options)
+    Promise.new(function(resolve)
+        vim.schedule(function()
+            resolve(self:_compute_editor_context(buf, position))
+        end)
+    end):forward(function(ctx)
+        local text = ctx.prefix .. ctx.suffix
+        return AsyncHash.md5(text):forward(function(ciphertext)
+            local meta_datas = self:_recalculate_meta_datas({
+                text = text,
+                ciphertext = ciphertext,
+                prefix = ctx.prefix,
+                suffix = ctx.suffix,
+                filename = options.filename,
+                edit_mode = options.edit_mode,
+                prefixoffset = ctx.prefixoffset,
+                norangecount = ctx.norangecount
+            })
+            return {
+                inputs = '',
+                meta_datas = meta_datas
+            }
+        end)
     end)
 end
 
@@ -238,14 +245,11 @@ function PromptGenerator:generate(buf, position, options)
         return Promise.reject()
     end
 
-    local ctx = self:_compute_editor_context(buf, position)
-
+    -- 可以同时计算基础 Prompt 和 Project Completion Prompt
     return Promise.all({
-        self:_generate_base_prompt(ctx, {
+        self:_generate_base_prompt(buf, position, {
             edit_mode = options.edit_mode,
-            filename = options.filename,
-            prefixoffset = ctx.prefixoffset,
-            norangecount = ctx.norangecount
+            filename = options.filename
         }),
         self:_generate_project_completion_prompt(buf, position)
     }):forward(function(results)

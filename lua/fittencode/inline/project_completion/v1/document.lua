@@ -1,10 +1,3 @@
----@class FittenCode.Inline.ProjectCompletion.V1.Document
----@field name string
----@field compressed_code string
----@field uri FittenCode.Uri
----@field query_line number
-
----@class FittenCode.Inline.ProjectCompletion.V1.Document
 local Document = {}
 Document.__index = Document
 

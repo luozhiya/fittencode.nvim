@@ -1,11 +1,3 @@
----@class Fittencode.Inline.ProjectCompletion.V1.Root
----@field children table<string, Fittencode.Inline.ProjectCompletion.V1.Root>
----@field vars table<string, any>
----@field start_line number
----@field end_line number
----@field prefix string
-
----@class Fittencode.Inline.ProjectCompletion.V1.Root
 local Root = {}
 Root.__index = Root
 

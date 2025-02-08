@@ -1,13 +1,5 @@
 local Editor = require('fittencode.editor')
 
----@class FittenCode.Inline.ProjectCompletion.V1.ChangeState
----@field last_add_code string
----@field start_same_lines integer
----@field end_same_lines integer
----@field document_uri string
----@field old_total_lines integer
-
----@class FittenCode.Inline.ProjectCompletion.V1.ChangeState
 local ChangeState = {}
 ChangeState.__index = ChangeState
 

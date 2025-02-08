@@ -1,14 +1,6 @@
 local Editor = require('fittencode.editor')
 local Document = require('fittencode.inline.product_completion.v1.document')
 
----@class FittenCode.Inline.ProjectCompletion.V1.LastPrompt
----@field prompt string
----@field prompt_list table
----@field key_list table
----@field language_keywords table
----@field document FittenCode.Inline.ProjectCompletion.V1.Document
-
----@class FittenCode.Inline.ProjectCompletion.V1.LastPrompt
 local LastPrompt = {}
 LastPrompt.__index = LastPrompt
 

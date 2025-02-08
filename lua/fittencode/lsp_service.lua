@@ -2,8 +2,8 @@
 local M = {}
 
 ---@param buf number
----@return number
-function M.check_has_lsp(buf, options)
+---@return FittenCode.Concurrency.Promise
+function M.check_has_lsp(buf)
 end
 
 -- Detach
