@@ -7,6 +7,7 @@ local Runtime = require('fittencode.chat.runtime')
 local VM = require('fittencode.vm')
 local Promise = require('fittencode.concurrency.promise')
 local Protocal = require('fittencode.client.protocol')
+local Token = require('fittencode.client.token')
 
 ---@class FittenCode.Chat.Conversation
 local Conversation = {}
@@ -113,13 +114,13 @@ end
 
 function Conversation:recovered_from_error(error)
     self:add_bot_message({
-        content = error and vim.inspect(error) or "Error occurred, please try again later."
+        content = error and vim.inspect(error) or 'Error occurred, please try again later.'
     })
 end
 
 ---@param content? string
 function Conversation:answer(content)
-    content = Fn.remove_special_token(content or '')
+    content = Token.remove_special_token(content)
     if not content or content == '' then
         return
     end
@@ -226,7 +227,7 @@ function Conversation:execute_chat(options)
             self:handle_completion(completion)
         end, function(err)
             self:recovered_from_error(err)
-        end):finally(function ()
+        end):finally(function()
             self.update_status({ id = self.id, stream = false })
         end)
 

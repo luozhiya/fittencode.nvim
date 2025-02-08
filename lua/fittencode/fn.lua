@@ -153,10 +153,6 @@ local function slice(t, start)
     return result
 end
 
-local function remove_special_token(t)
-    return string.gsub(t, '<|(%w{%d,10})|>', '<| %1 |>')
-end
-
 local function sysname() return vim.uv.os_uname().sysname:lower() end
 local function is_windows() return sysname():find('windows') ~= nil end
 local function is_linux() return sysname():find('linux') ~= nil end
@@ -265,7 +261,6 @@ return {
     pack = pack,
     simple_format = simple_format,
     slice = slice,
-    remove_special_token = remove_special_token,
     is_windows = is_windows,
     is_linux = is_linux,
     uuid_v4 = uuid_v4,
