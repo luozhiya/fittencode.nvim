@@ -1,35 +1,3 @@
---[[
--- 其他模块使用 request 示例
-local http = require('fittencode.http.request')
-
-local res = http.fetch('https://api.example.com', {
-    method = 'POST',
-    headers = { ['Content-Type'] = 'application/json' },
-    body = vim.json.encode({ query = 'test' })
-})
-
-res.stream:on('data', function(chunk)
-    print('Received chunk:', chunk)
-end)
-
-res.stream:on('end', function(response)
-    print('Total response:', response:text())
-end)
-
-res.stream:on('error', function(err)
-    print('Error:', err.message)
-end)
-
--- 或者使用 Promise
-res.promise()
-    :forward(function(response)
-        print('Success:', response:text())
-    end)
-    :catch(function(err)
-        print('Failed:', err.type)
-    end)
---]]
-
 local Promise = require('fittencode.concurrency.promise')
 local Process = require('fittencode.uv.process')
 
@@ -81,6 +49,8 @@ local function parse_timing(stderr)
 end
 
 ---@param url string
+---@param options? FittenCode.Network.Request.Options
+---@return FittenCode.Network.Request.Response
 function M.fetch(url, options)
     options = options or {}
     local stream = create_stream()

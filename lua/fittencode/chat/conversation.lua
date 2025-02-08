@@ -111,19 +111,38 @@ function Conversation:evaluate_template(template, variables)
     return VM:new():run(env, template)
 end
 
+function Conversation:recovered_from_error(error)
+    self:add_bot_message({
+        content = error and vim.inspect(error) or "Error occurred, please try again later."
+    })
+end
+
 ---@param content? string
 function Conversation:answer(content)
+    content = Fn.remove_special_token(content or '')
     if not content or content == '' then
         return
     end
-    content = Fn.remove_special_token(content)
     self:add_user_message(content)
-    self:execute_chat({
+
+    -- 中断之前的请求
+    self.request_handle:abort()
+    self.request_handle = nil
+
+    -- 发送请求
+    local request_handle, err = self:execute_chat({
         workspace = Fn.startswith(content, '@workspace'),
         _workspace = Fn.startswith(content, '@_workspace'),
         enterprise_workspace = (Fn.startswith(content, '@_workspace(') or Fn.startswith(content, '@workspace(')) and Config.fitten.version == 'enterprise',
         content = content,
     })
+    if not request_handle then
+        -- 因为某些原因，请求失败，需要恢复状态
+        self:recovered_from_error(err)
+        return
+    end
+
+    self.request_handle = request_handle
 end
 
 ---@param content string
@@ -152,7 +171,7 @@ function Conversation:execute_chat(options)
     if options.workspace then
         if not options.enterprise_workspace then
             -- protocol = Protocal.Methods.rag_chat
-            Log.error('RAG chat is not implemented yet')
+            return nil, 'RAG chat is not implemented yet'
         end
     else
         ---@type FittenCode.Chat.Template.InitialMessage | FittenCode.Chat.Template.Response | nil
@@ -165,57 +184,53 @@ function Conversation:execute_chat(options)
         local variables = self:resolve_variables_at_message_time()
         local retrieval_augmentation = ir.retrievalAugmentation
         local evaluated = self:evaluate_template(ir.template, variables)
+        local api_key_manager = Client.get_api_key_manager()
 
-        Promise.new(function(resolve, reject)
-            local api_key_manager = Client.get_api_key_manager()
-
-            local completion = {}
-            ---@type FittenCode.Protocol.Methods.ChatAuth.Body
-            local body = {
-                inputs = evaluated,
-                ft_token = api_key_manager:get_fitten_user_id(),
-                meta_datas = {
-                    project_id = '',
-                }
+        local completion = {}
+        ---@type FittenCode.Protocol.Methods.ChatAuth.Body
+        local body = {
+            inputs = evaluated,
+            ft_token = api_key_manager:get_fitten_user_id() or '',
+            meta_datas = {
+                project_id = '',
             }
-            Client.request(protocol, {
-                body = assert(vim.fn.json_encode(body)),
-                ---@param handle FittenCode.HTTP.RequestHandle
-                on_create = function(handle)
-                    self.request_handle = handle
-                    self.update_status({ id = self.id, stream = true })
-                end,
-                ---@param stdout string
-                on_stream = function(stdout)
-                    assert(stdout)
-                    self.update_status({ id = self.id, stream = true })
-                    local v = vim.split(stdout, '\n', { trimempty = true })
-                    for _, line in ipairs(v) do
-                        ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
-                        local _, chunk = pcall(vim.fn.json_decode, line)
-                        if _ then
-                            completion[#completion + 1] = chunk.delta
-                            self:handle_partial_completion(completion)
-                        else
-                            Log.error('Error while decoding chunk: {}', line)
-                            reject(line)
-                        end
-                    end
-                end,
-                on_error = function(error)
-                    reject(error)
-                end,
-                on_exit = function()
-                    resolve(completion)
+        }
+
+        local res = Client.request(protocol, {
+            body = assert(vim.fn.json_encode(body)),
+        })
+        if not res then
+            return nil, 'Failed to create request chat'
+        end
+
+        -- Start streaming
+        res.stream:on('data', function(stdout)
+            print('Received chunk:', stdout)
+            self.update_status({ id = self.id, stream = true })
+            local v = vim.split(stdout, '\n', { trimempty = true })
+            for _, line in ipairs(v) do
+                ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
+                local _, chunk = pcall(vim.fn.json_decode, line)
+                if _ then
+                    completion[#completion + 1] = chunk.delta
+                    self:handle_partial_completion(completion)
+                else
+                    -- 忽略非法的 chunk
+                    Log.error('Error while decoding chunk: {}', line)
                 end
-            })
-        end):forward(function(completion)
-            self.update_status({ id = self.id, stream = false })
-            self:handle_completion(completion)
-        end, function(error)
-            self.update_status({ id = self.id, stream = false })
-            Log.error('Error while executing chat, conversation id = {}, error = {}', self.id, error)
+            end
         end)
+
+        -- 通过 Promise 统一处理请求结果与错误，简洁明了
+        res.promise():forward(function(response)
+            self:handle_completion(completion)
+        end, function(err)
+            self:recovered_from_error(err)
+        end):finally(function ()
+            self.update_status({ id = self.id, stream = false })
+        end)
+
+        return res
     end
 end
 
@@ -237,7 +252,9 @@ function Conversation:handle_completion(completion, env)
     end
 end
 
----@param msg table
+-- 当 Fitten 回复时，更新状态
+-- * 或者发生错误时，通过 bot_message 输出错误信息
+---@param msg { content: string, response_placeholder?: string }
 function Conversation:add_bot_message(msg)
     if self.abort_before_answer then
         self.abort_before_answer = false
@@ -279,11 +296,6 @@ function Conversation:update_partial_bot_message(msg)
         partial_answer = msg.content
     }
     self.update_view()
-end
-
----@return boolean
-function Conversation:is_busying()
-    return self.request_handle and self.request_handle.is_active() or false
 end
 
 return Conversation

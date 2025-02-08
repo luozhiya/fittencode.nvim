@@ -11,7 +11,7 @@ local hashers = {}
 
 -- 检测子模块可用性
 for algo, info in pairs(algorithms) do
-    local ok, mod = pcall(require, 'fittencode.async_hash.engines.native.' .. info.module)
+    local ok, mod = pcall(require, 'fittencode.async_hash.engines.purelua.' .. info.module)
     if ok and mod.is_available() then
         hashers[algo] = mod
         info.available = true

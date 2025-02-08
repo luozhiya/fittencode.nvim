@@ -19,22 +19,10 @@
 ---@field on_success? function
 ---@field on_failure? function
 
----@class FittenCode.HTTP.Request : FittenCode.AsyncIOCallbacks
----@field method string
----@field headers? FittenCode.HTTP.Headers
----@field body? string
----@field timeout? number
-
 ---@class FittenCode.Process.SpawnOptions : FittenCode.AsyncIOCallbacks
 
 ---@class FittenCode.Compression.CompressOptions : FittenCode.AsyncIOCallbacks
 ---@class FittenCode.Hash.HashOptions : FittenCode.AsyncIOCallbacks
-
----@alias FittenCode.HTTP.Headers table<string, string>
-
----@class FittenCode.HTTP.RequestHandle
----@field abort function
----@field is_active function
 
 ---@alias FittenCode.Version 'default' | 'enterprise'
 
@@ -66,7 +54,7 @@
 ---@field dismiss_error function
 ---@field get_title function
 ---@field evaluate_template function
----@field request_handle FittenCode.HTTP.RequestHandle?
+---@field request_handle FittenCode.Network.Request.Response?
 ---@field update_view function?
 ---@field update_status function?
 

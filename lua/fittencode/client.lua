@@ -1,4 +1,5 @@
 local HTTP = require('fittencode.network.request')
+local URLSearchParams = require('fittencode.network.url_search_params')
 local Fn = require('fittencode.fn')
 local APIKeyManager = require('fittencode.client.api_key_manager')
 local EvaluateRequest = require('fittencode.client.evaluate_request')
@@ -10,7 +11,7 @@ local PlatformInfo = require('fittencode.client.platform_info')
 
 ---@class FittenCode.Client
 ---@field get_api_key_manager fun(): FittenCode.APIKeyManager
----@field request fun(protocol: FittenCode.Protocol.Element, options: FittenCode.Client.RequestOptions): nil
+---@field request fun(protocol: FittenCode.Protocol.Element, options: FittenCode.Client.RequestOptions): FittenCode.Network.Request.Response?
 
 ---@class FittenCode.Client
 local M = {}
@@ -48,12 +49,10 @@ function M.get_api_key_manager()
     return api_key_manager
 end
 
-local function openlink(url, options)
+local function openlink(url)
     local cmd, err = vim.ui.open(url)
     if err then
-        Fn.schedule_call(options.on_error, { error = err })
     end
-    Fn.schedule_call(options.on_success)
 end
 
 local function encode_variables(variables)
@@ -66,7 +65,7 @@ local function encode_variables(variables)
         access_token = api_key_manager:get_fitten_access_token(),
     })
     variables = vim.tbl_map(function(v)
-        return Fn.encode_uri_component(v)
+        return URLSearchParams.encode_form_value(v)
     end, variables)
     variables = vim.tbl_extend('force', variables, {
         platform_info = PlatformInfo.get_platform_info_as_url_params(),
@@ -76,29 +75,26 @@ end
 
 -- 请求协议接口
 ---@param protocol FittenCode.Protocol.Element
----@param options FittenCode.Client.RequestOptions
+---@return FittenCode.Network.Request.Response?
 function M.request(protocol, options)
     local variables = encode_variables(options.variables)
 
     local _, evaluated = pcall(EvaluateRequest.reevaluate_method, protocol, variables)
     if not evaluated then
-        Fn.schedule_call(options.on_error, { error = evaluated })
         return
     end
 
     if protocol.method == 'OPENLINK' then
-        openlink(evaluated.url, options)
+        openlink(evaluated.url)
         return
     end
 
-    local fetch_options = Fn.tbl_keep_events(options, {
+    return HTTP.fetch(evaluated.url, {
         method = protocol.method,
         headers = evaluated.headers,
         body = options.body,
         timeout = options.timeout,
     })
-    assert(fetch_options)
-    HTTP.fetch(evaluated.url, fetch_options)
 end
 
 return M

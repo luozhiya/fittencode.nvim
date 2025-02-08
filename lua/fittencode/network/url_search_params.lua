@@ -21,25 +21,27 @@ URLSearchParams.__index = URLSearchParams
 -- * 字符串中的所有非字母数字字符（除了 -, ., _, ~）转换为 %XX 格式的十六进制编码
 -- * 空格字符转换为 +
 ---@param str string
----@return string, integer
-local function encode_form_value(str)
-    return str:gsub(
+---@return string
+function URLSearchParams.encode_form_value(str)
+    local pattern, _ = str:gsub(
         '([^%w%-%.%_%~ ])',
         function(c) return string.format('%%%02X', c:byte()) end
     ):gsub(' ', '+')
+    return pattern
 end
 
 -- 解码函数
 -- * + 解码为空格
 -- * %XX 格式的十六进制编码转换为对应的字符
 ---@param str string
----@return string, integer
-local function decode_form_value(str)
-    return str:gsub('+', ' ')
+---@return string
+function URLSearchParams.decode_form_value(str)
+    local pattern, _ = str:gsub('+', ' ')
         :gsub(
             '%%(%x%x)',
             function(hex) return string.char(tonumber(hex, 16)) end
         )
+    return pattern
 end
 
 -- 构造函数
@@ -69,7 +71,7 @@ function URLSearchParams:_parse_query(query)
     for pair in query:gmatch('[^&]+') do
         local key, value = pair:match('^([^=]*)=?(.*)$')
         if key then
-            self:append(decode_form_value(key), decode_form_value(value))
+            self:append(URLSearchParams.decode_form_value(key), URLSearchParams.decode_form_value(value))
         end
     end
 end
@@ -129,9 +131,9 @@ end
 function URLSearchParams:to_string()
     local parts = {}
     for key, values in pairs(self._params) do
-        local encoded_key = encode_form_value(key)
+        local encoded_key = URLSearchParams.encode_form_value(key)
         for _, value in ipairs(values) do
-            table.insert(parts, encoded_key .. '=' .. encode_form_value(value))
+            table.insert(parts, encoded_key .. '=' .. URLSearchParams.encode_form_value(value))
         end
     end
     return table.concat(parts, '&')
