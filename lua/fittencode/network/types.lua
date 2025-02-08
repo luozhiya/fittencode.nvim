@@ -38,7 +38,7 @@
 ---@field ok boolean @是否成功状态码 (200-299)
 ---@field timing FittenCode.Network.Timing @请求计时信息
 ---@field text fun(): string @获取响应文本方法
----@field json fun(): any @解析响应JSON方法
+---@field json fun(): any? @解析响应JSON方法
 
 ---@class FittenCode.Network.Request.Stream.ErrorEvent
 ---@field type string @错误类型标识

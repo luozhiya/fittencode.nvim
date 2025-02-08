@@ -38,35 +38,32 @@ local function parse_response(raw)
 end
 
 function Headless:send_completions(prompt, options)
-    Promise.new(function(resolve, reject)
-        Client.request(Protocol.Methods.generate_one_stage, {
-            body = vim.fn.json_encode(prompt),
-            on_create = function(handle)
-                Fn.schedule_call(options.on_create, handle)
-            end,
-            on_once = function(stdout)
-                local _, response = pcall(vim.json.decode, table.concat(stdout, ''))
-                if not _ then
-                    Log.error('Failed to decode completion raw response: {}', response)
-                    reject()
-                    return
-                end
-                resolve(parse_response(response))
-            end,
-            on_error = function()
-                reject()
-            end
-        })
-    end):forward(function(parsed_response)
-        if not parsed_response then
+    local request_handle = Client.request(Protocol.Methods.generate_one_stage, {
+        body = vim.fn.json_encode(prompt),
+    })
+    if not request_handle then
+        Fn.schedule_call(options.on_failure)
+        return
+    end
+
+    request_handle.promise():forward(function(_)
+        local response = _:json()
+        if not response then
+            Log.error('Failed to decode completion response: {}', _)
+            return Promise.reject()
+        end
+        response = parse_response(response)
+        if not response then
             Log.info('No more suggestion')
             Fn.schedule_call(options.on_no_more_suggestion)
             return
         end
-        Fn.schedule_call(options.on_success, parsed_response)
+        Fn.schedule_call(options.on_success, response)
     end):catch(function()
         Fn.schedule_call(options.on_failure)
     end)
+
+    return request_handle
 end
 
 return Headless

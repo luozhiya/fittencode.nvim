@@ -159,16 +159,21 @@ function M.fetch(url, options)
         if handle.aborted then return end
 
         if code == 0 then
+            ---@class FittenCode.Network.Request.Stream.EndEvent
             local response = {
                 status = stream._status,
                 headers = stream._headers,
                 ok = stream._status and (stream._status >= 200 and stream._status < 300) or false,
                 timing = timing,
                 text = function() return stream._buffer end,
-                json = function() return vim.json.decode(stream._buffer) end
+                json = function()
+                    local _, json = pcall(vim.json.decode, stream._buffer)
+                    if _ then return json end
+                end
             }
             stream:_emit('end', response)
         else
+            ---@class FittenCode.Network.Request.Stream.ErrorEvent
             local error_obj = {
                 type = 'CURL_ERROR',
                 code = code,
