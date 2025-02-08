@@ -9,9 +9,6 @@ local Protocal = require('fittencode.client.protocol')
 ---@class FittenCode.Inline.ProjectCompletionService
 local ProjectCompletionService = {}
 
----@class FittenCode.Inline.ProjectCompletionService.Options
-
----@param options? FittenCode.Inline.ProjectCompletionService.Options
 ---@return FittenCode.Inline.ProjectCompletionService
 function ProjectCompletionService:new(options)
     ---@class FittenCode.Inline.ProjectCompletionService
@@ -21,13 +18,13 @@ function ProjectCompletionService:new(options)
     return obj
 end
 
----@param options? FittenCode.Inline.ProjectCompletionService.Options
 function ProjectCompletionService:__initialize(options)
     self.project_completion = {
         v1 = assert(ProjectCompletionFactory.create('v1')),
         v2 = assert(ProjectCompletionFactory.create('v2')),
     }
     self.last_chosen_prompt_type = '0'
+    self.request_handle = nil
 end
 
 ---@return string
@@ -35,27 +32,31 @@ function ProjectCompletionService:get_last_chosen_prompt_type()
     return self.last_chosen_prompt_type
 end
 
----@class FittenCode.Inline.ProjectCompletionService.GetProjectCompletionChosen.Options : FittenCode.AsyncResultCallbacks
+function ProjectCompletionService:abort_request()
+    if self.request_handle then
+        self.request_handle.abort()
+        self.request_handle = nil
+    end
+end
 
----@param options FittenCode.Inline.ProjectCompletionService.GetProjectCompletionChosen.Options
-function ProjectCompletionService:get_project_completion_chosen(options)
-    Promise.new(function(resolve, reject)
-        Client.request(Protocal.Methods.pc_check_auth, {
-            on_once = function(stdout)
-                if Fn.startswith(stdout, 'yes-') then
-                    local u = stdout:split('-')[1] or '0'
-                    self.last_chosen_prompt_type = u:sub(1, 1)
-                    Fn.schedule_call(options.on_success, self.last_chosen_prompt_type)
-                else
-                    reject()
-                end
-            end,
-            on_error = function()
-                reject()
-            end
-        })
-    end):catch(function()
-        Fn.schedule_call(options.on_failure)
+---@return FittenCode.Concurrency.Promise
+function ProjectCompletionService:get_project_completion_chosen()
+    self:abort_request()
+    local handle = Client.request(Protocal.Methods.pc_check_auth)
+    if not handle then
+        return Promise.reject()
+    end
+    self.request_handle = handle
+    return handle.promise():forward(function(_)
+        local response = _.text()
+        if Fn.startswith(response, 'yes-') then
+            local u = response:split('-')[1] or '0'
+            local ty = u:sub(1, 1)
+            self.last_chosen_prompt_type = ty
+            return ty
+        else
+            return Promise.reject()
+        end
     end)
 end
 

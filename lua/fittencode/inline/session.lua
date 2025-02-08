@@ -98,7 +98,9 @@ function Session:async_update_word_segmentation()
         Log.error('Failed to send request')
         return
     end
+
     self:record_timing('word_segmentation.request')
+    self:request_handles_push(request_handle)
 
     local function _process_response(response)
         local deltas = {}
@@ -138,8 +140,6 @@ function Session:async_update_word_segmentation()
         Log.error('Failed to parse response: {}', err)
         self:record_timing('word_segmentation.error')
     end)
-
-    self:request_handles_push(request_handle)
 end
 
 function Session:update_view()
