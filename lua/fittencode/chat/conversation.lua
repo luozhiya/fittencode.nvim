@@ -206,7 +206,6 @@ function Conversation:execute_chat(options)
 
         -- Start streaming
         res.stream:on('data', function(stdout)
-            print('Received chunk:', stdout)
             self.update_status({ id = self.id, stream = true })
             local v = vim.split(stdout, '\n', { trimempty = true })
             for _, line in ipairs(v) do
