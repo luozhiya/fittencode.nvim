@@ -1,4 +1,4 @@
-local Hash = require('fittencode.hash')
+local AsyncHash = require('fittencode.async_hash')
 local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.fn')
 local Editor = require('fittencode.editor')
@@ -14,6 +14,10 @@ local SAMPLE_SIZE = 2000
 local FIM_PATTERN = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
 ---@class FittenCode.Inline.PromptGenerator
+---@field last table
+---@field project_completion_service FittenCode.Inline.ProjectCompletionService
+
+---@class FittenCode.Inline.PromptGenerator
 local PromptGenerator = {}
 PromptGenerator.__index = PromptGenerator
 
@@ -27,8 +31,6 @@ function PromptGenerator:new(options)
         project_completion_service = options.project_completion_service,
     }, self)
 end
-
--- region Helper Functions
 
 local function compare_bytes(x, y)
     local len = math.min(#x, #y)
@@ -87,10 +89,6 @@ local function _calculate_large_file_positions(buf, curoffset, charscount)
     }
 end
 
--- endregion
-
--- region Context Computation
-
 function PromptGenerator:_small_file_context(buf, position)
     local full_text = _get_full_text(buf)
     local prefix_end = Editor.offset_at(buf, position) or #full_text
@@ -129,26 +127,6 @@ function PromptGenerator:_compute_editor_context(buf, position)
     ctx.suffix = ctx.suffix or ''
     return ctx
 end
-
--- endregion
-
--- region Promise Utilities
-
-local function _promisify(async_fn)
-    return function(...)
-        local args = { ... }
-        return Promise.new(function(resolve, reject)
-            async_fn(unpack(args), {
-                on_success = resolve,
-                on_error = reject
-            })
-        end)
-    end
-end
-
--- endregion
-
--- region Meta Data Calculations
 
 function PromptGenerator:_calculate_edit_meta(options)
     if not options.edit_mode then return {} end
@@ -207,7 +185,6 @@ function PromptGenerator:_recalculate_meta_datas(options)
         pc_prompt = '',
         pc_prompt_type = '0'
     }
-
     return vim.tbl_deep_extend('force',
         base_meta,
         self:_calculate_edit_meta(options),
@@ -215,65 +192,55 @@ function PromptGenerator:_recalculate_meta_datas(options)
     )
 end
 
--- endregion
-
--- region Core Logic
-
+---@return FittenCode.Concurrency.Promise
 function PromptGenerator:_get_project_prompt(buf, row)
-    local version = self.project_completion_service:get_last_chosen_prompt_type() == '5'
-        and 'v1' or 'v2'
-    return _promisify(function(_, callbacks)
-        self.project_completion_service.project_completion[version]
-            :get_prompt(buf, row, callbacks)
-    end)()
+    local version = (self.project_completion_service:get_last_chosen_prompt_type() == '5') and 'v1' or 'v2'
+    return self.project_completion_service.project_completion[version]:get_prompt(buf, row)
 end
 
 function PromptGenerator:_generate_project_completion_prompt(buf, position)
-    return _promisify(self.project_completion_service.project_completion.v2.get_file_lsp)(buf)
-        :forward(function(lsp)
-            return _promisify(self.project_completion_service.check_project_completion_available)(lsp)
-        end)
-        :forward(function()
-            return self:_get_project_prompt(buf, position.row)
-        end)
+    self.project_completion_service.project_completion.v2:get_file_lsp(buf):forward(function(lsp)
+        return self.project_completion_service:check_project_completion_available(lsp)
+    end):forward(function()
+        return self:_get_project_prompt(buf, position.row)
+    end)
 end
 
 function PromptGenerator:_generate_base_prompt(ctx, options)
-    return _promisify(Hash.hash)('MD5', ctx.prefix .. ctx.suffix)
-        :forward(function(ciphertext)
-            local meta_datas = self:_recalculate_meta_datas({
-                text = ctx.prefix .. ctx.suffix,
-                ciphertext = ciphertext,
-                prefix = ctx.prefix,
-                suffix = ctx.suffix,
-                filename = options.filename,
-                edit_mode = options.edit_mode,
-                prefixoffset = ctx.prefixoffset,
-                norangecount = ctx.norangecount
-            })
-
-            return {
-                inputs = '',
-                meta_datas = meta_datas
-            }
-        end)
+    return AsyncHash.md5(ctx.prefix .. ctx.suffix):forward(function(ciphertext)
+        local meta_datas = self:_recalculate_meta_datas({
+            text = ctx.prefix .. ctx.suffix,
+            ciphertext = ciphertext,
+            prefix = ctx.prefix,
+            suffix = ctx.suffix,
+            filename = options.filename,
+            edit_mode = options.edit_mode,
+            prefixoffset = ctx.prefixoffset,
+            norangecount = ctx.norangecount
+        })
+        return {
+            inputs = '',
+            meta_datas = meta_datas
+        }
+    end)
 end
 
+---@param buf number
+---@param position FittenCode.Position
+---@return FittenCode.Concurrency.Promise
 function PromptGenerator:generate(buf, position, options)
-    Fn.schedule_call(options.on_create)
-
     local should_use_pc = Config.use_project_completion.open == 'on' or
         (Config.use_project_completion.open ~= 'off' and
             Config.server.fitten_version ~= 'default')
 
     if should_use_pc then
-        LspService.notify_install_lsp(buf)
-        return Fn.schedule_call(options.on_error)
+        LspService.async_notify_install_lsp(buf)
+        return Promise.reject()
     end
 
     local ctx = self:_compute_editor_context(buf, position)
 
-    Promise.all({
+    return Promise.all({
         self:_generate_base_prompt(ctx, {
             edit_mode = options.edit_mode,
             filename = options.filename,
@@ -282,13 +249,8 @@ function PromptGenerator:generate(buf, position, options)
         }),
         self:_generate_project_completion_prompt(buf, position)
     }):forward(function(results)
-        local merged = vim.tbl_deep_extend('force', results[1], results[2] or {})
-        Fn.schedule_call(options.on_success, merged)
-    end):catch(function()
-        Fn.schedule_call(options.on_error)
+        return vim.tbl_deep_extend('force', results[1], results[2] or {})
     end)
 end
-
--- endregion
 
 return PromptGenerator

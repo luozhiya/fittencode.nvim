@@ -6,7 +6,8 @@ local M = {}
 function M.check_has_lsp(buf, options)
 end
 
-function M.notify_install_lsp(buf)
+-- Detach
+function M.async_notify_install_lsp(buf)
 end
 
 return M

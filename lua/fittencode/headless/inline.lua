@@ -37,16 +37,16 @@ local function parse_response(raw)
     return parsed_response
 end
 
+---@return FittenCode.Network.Request.Response?, FittenCode.Concurrency.Promise
 function Headless:send_completions(prompt, options)
     local request_handle = Client.request(Protocol.Methods.generate_one_stage, {
         body = vim.fn.json_encode(prompt),
     })
     if not request_handle then
-        Fn.schedule_call(options.on_failure)
-        return
+        return nil, Promise.reject()
     end
 
-    request_handle.promise():forward(function(_)
+    return request_handle, request_handle.promise():forward(function(_)
         local response = _:json()
         if not response then
             Log.error('Failed to decode completion response: {}', _)
@@ -55,15 +55,9 @@ function Headless:send_completions(prompt, options)
         response = parse_response(response)
         if not response then
             Log.info('No more suggestion')
-            Fn.schedule_call(options.on_no_more_suggestion)
-            return
+            return Promise.reject()
         end
-        Fn.schedule_call(options.on_success, response)
-    end):catch(function()
-        Fn.schedule_call(options.on_failure)
     end)
-
-    return request_handle
 end
 
 return Headless

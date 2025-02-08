@@ -70,6 +70,12 @@ end
 -- 根据 Hash 算法分类引擎
 local algorithm_engine_map = {}
 
+---@class FittenCode.AsyncHash
+---@field hash fun(algorithm: string, data: string, options?: table): FittenCode.Concurrency.Promise
+---@field md5 fun(data: string, options?: table): FittenCode.Concurrency.Promise
+---@field sha1 fun(data: string, options?: table): FittenCode.Concurrency.Promise
+---@field sha256 fun(data: string, options?: table): FittenCode.Concurrency.Promise
+---@field sha512 fun(data: string, options?: table): FittenCode.Concurrency.Promise
 local M = {}
 
 function M.setup()

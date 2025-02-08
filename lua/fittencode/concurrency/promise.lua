@@ -568,10 +568,7 @@ function Promise.reduce(iterable, reducer, initial_value)
 end
 
 local p = Promise.new()
--- p:forward(function() print(2) end):catch(function() print(3) return Promise.reject(3) end):catch(function() print(4) end)
--- p:manually_reject(1)
-
-p:forward(function() print(2) end):forward(function() print(3) end)
-p:manually_resolve(1)
+p:forward(function() end):finally(function() print(2) end):finally(function() print(3) end):finally(function() print(4) end)
+p:manually_resolve(0)
 
 return Promise

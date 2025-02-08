@@ -1,6 +1,6 @@
 ---@class FittenCode.Inline.ProjectCompletion
----@field get_prompt function
----@field get_file_lsp function
+---@field get_prompt fun(self: FittenCode.Inline.ProjectCompletion, buf: number, line: number): FittenCode.Concurrency.Promise
+---@field get_file_lsp fun(self: FittenCode.Inline.ProjectCompletion, buf: number): FittenCode.Concurrency.Promise
 
 ---@class FittenCode.Inline.ProjectCompletion
 local ProjectCompletion = {}
@@ -13,13 +13,13 @@ end
 
 ---@param buf number
 ---@param line number
----@param options table
-function ProjectCompletion:get_prompt(buf, line, options)
+function ProjectCompletion:get_prompt(buf, line)
+    ---@diagnostic disable-next-line: missing-return
 end
 
 ---@param buf number
----@param options table
-function ProjectCompletion:get_file_lsp(buf, options)
+function ProjectCompletion:get_file_lsp(buf)
+    ---@diagnostic disable-next-line: missing-return
 end
 
 return ProjectCompletion
