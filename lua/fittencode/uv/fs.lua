@@ -26,42 +26,6 @@ local Fn = require('fittencode.fn')
 -- }
 
 ---@class FittenCode.UV.FS
----@field close function
----@field open function
----@field read fun(fd, size, offset) : FittenCode.Concurrency.Promise
----@field write function
----@field unlink function
----@field mkdir function
----@field mkdtemp function
----@field mkstemp function
----@field rmdir function
----@field scandir function
----@field stat function
----@field fstat function
----@field lstat function
----@field rename function
----@field fsync function
----@field fdatasync function
----@field ftruncate function
----@field sendfile function
----@field access function
----@field chmod function
----@field fchmod function
----@field utime function
----@field futime function
----@field lutime function
----@field link function
----@field symlink function
----@field readlink function
----@field realpath function
----@field chown function
----@field fchown function
----@field lchown function
----@field copyfile function
----@field opendir function
----@field readdir function
----@field closedir function
----@field statfs function
 local M = {}
 
 local fs_functions = vim.tbl_filter(function(x) return x:match('^fs_') end, vim.tbl_keys(vim.uv))

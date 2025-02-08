@@ -8,20 +8,23 @@ uv_timer.sleep(1000)
     end)
 --]]
 
-local uv = vim.uv
 local Promise = require('fittencode.concurrency.promise')
 
 local M = {}
 
 function M.sleep(ms)
-    return Promise.new(function(resolve)
-        local timer = uv.new_timer()
-        uv.timer_start(timer, ms, 0, function()
-            uv.timer_stop(timer)
-            uv.close(timer)
-            resolve()
+    local p = Promise.new()
+    local timer = vim.uv.new_timer()
+    if not timer then
+        p:manually_reject("Failed to create timer")
+    else
+        vim.uv.timer_start(timer, ms, 0, function()
+            vim.uv.timer_stop(timer)
+            vim.uv.close(timer)
+            p:manually_resolve()
         end)
-    end)
+    end
+    return p
 end
 
 return M
