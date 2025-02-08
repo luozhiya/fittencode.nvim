@@ -1,13 +1,14 @@
 local Protocol = require('fittencode.client.protocol')
 local Server = require('fittencode.client.server')
 local LocalizationAPI = require('fittencode.client.localization_api')
-local HTTP = require('fittencode.http')
+local HTTP = require('fittencode.network.request')
 local Promise = require('fittencode.concurrency.promise')
 local Log = require('fittencode.log')
 local Translate = require('fittencode.translate')
 local Fn = require('fittencode.fn')
 local Client = require('fittencode.client')
 local Keyring = require('fittencode.client.keyring')
+local EventLoop = require('fittencode.uv.event_loop')
 
 -- Implement Account Session APIs
 
@@ -29,13 +30,13 @@ function M.try_web()
     vim.ui.open(assert(LocalizationAPI.localize(Protocol.URLs.try)))
 end
 
----@class FittenCode.Session.LoginOptions
+---@class FittenCode.Session.Login
 ---@field on_success function
 ---@field on_error function
 
 ---@param username string
 ---@param password string
----@param options? FittenCode.Session.LoginOptions
+---@param options? FittenCode.Session.Login
 function M.login(username, password, options)
     options = options or {}
 
@@ -64,7 +65,7 @@ function M.login(username, password, options)
         return
     end
 
-    request_handle:promise():forward(function(_)
+    request_handle.promise():forward(function(_)
         ---@type FittenCode.Protocol.Methods.Login.Response
         local response = _.json()
         if response and response.access_token and response.refresh_token and response.user_info then
@@ -92,9 +93,17 @@ local login_providers = {
     'microsoft'
 }
 
-function M.login3rd(source, options)
-    local api_key_manager = Client.get_api_key_manager()
+---@class FittenCode.Session.Login3rd
+---@field on_success function
+---@field on_error function
 
+-- 对于循环嵌套的回调函数更好一点
+---@param source string
+---@param options? FittenCode.Session.Login3rd
+function M.login3rd(source, options)
+    options = options or {}
+
+    local api_key_manager = Client.get_api_key_manager()
     if api_key_manager:get_fitten_user_id() then
         Log.notify_info(Translate('[Fitten Code] You are already logged in'))
         Fn.schedule_call(options.on_success)
@@ -108,7 +117,7 @@ function M.login3rd(source, options)
     end
 
     local is_login_fb_running = false;
-    Fn.clear_interval(start_check_login_timer)
+    EventLoop.clear_interval(start_check_login_timer)
 
     local total_time_limit = 600;
     local time_delta = 3;
@@ -145,45 +154,35 @@ function M.login3rd(source, options)
                 Log.info('Login in timeout.')
                 Fn.schedule_call(options.on_error)
             end
-            Promise.new(function(resolve, reject)
-                Client.request(Protocol.Methods.fb_check_login_auth, {
-                    variables = {
-                        client_token = client_token,
-                    },
-                    on_error = function()
-                        reject()
-                    end,
-                    on_once = function(stdout)
-                        ---@type _, FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
-                        local _, response = pcall(vim.fn.json_decode, stdout)
-                        if response and response.access_token and response.refresh_token and response.user_info then
-                            resolve(response)
-                        else
-                            reject()
-                        end
-                    end
-                })
-                ---@param response FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
-            end):forward(function(response)
-                Fn.clear_interval(start_check_login_timer)
-                is_login_fb_running = false
-                api_key_manager:update(Keyring.make(response))
-                Log.notify_info(Translate('[Fitten Code] Login successful'))
-                Fn.schedule_call(options.on_success)
 
-                Client.request(Protocol.Methods.click_count, {
-                    variables = {
-                        click_count_type = response.create and 'register_fb' or 'login_fb'
-                    }
-                })
-                if response.create then
-                    HTTP.fetch(LocalizationAPI.localize(Protocol.URLs.register_cvt), {
-                        method = 'GET',
+            local request_handle = Client.request(Protocol.Methods.fb_check_login_auth, {
+                variables = { client_token = client_token, }
+            })
+            if not request_handle then
+                return
+            end
+            request_handle.promise():forward(function(_)
+                ---@type FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
+                local response = _.json()
+                if response and response.access_token and response.refresh_token and response.user_info then
+                    EventLoop.clear_interval(start_check_login_timer)
+                    is_login_fb_running = false
+
+                    api_key_manager:update(Keyring.make(response))
+                    Log.notify_info(Translate('[Fitten Code] Login successful'))
+                    Fn.schedule_call(options.on_success)
+
+                    -- 发送统计信息
+                    Client.request(Protocol.Methods.click_count, {
+                        variables = { click_count_type = response.create and 'register_fb' or 'login_fb' }
                     })
+                    if response.create then
+                        HTTP.fetch(LocalizationAPI.localize(Protocol.URLs.register_cvt))
+                    end
                 end
             end)
         end
-        start_check_login_timer = Fn.set_interval(time_delta * 1e3, check_login)
+        start_check_login_timer = EventLoop.set_interval(time_delta * 1e3, check_login)
     end
     start_check_login()
 end
