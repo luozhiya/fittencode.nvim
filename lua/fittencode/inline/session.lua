@@ -12,6 +12,7 @@ local Config = require('fittencode.config')
 local Protocol = require('fittencode.client.protocol')
 local ChatPrompts = require('fittencode.session.chat_prompts')
 local Compression = require('fittencode.compression')
+local ZipFlow = require('fittencode.zipflow')
 
 -- 一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
 -- * 一个会话的生命周期为：创建 -> 开始（交互模式） -> 结束
@@ -363,113 +364,109 @@ function Session:send_completions(buf, position, options)
     end)
 end
 
-function Session:request_completions(prompt, options)
-    Promise.new(function(resolve, reject)
-        Client.request(Protocol.Methods.get_completion_version, {
-            on_create = function(handle)
-                if self:is_terminated() then
-                    return
-                end
-                self:record_timing('get_completion_version.on_create')
-                self:request_handles_push(handle)
-            end,
-            on_once = function(stdout)
-                if self:is_terminated() then
-                    return
-                end
-                self:record_timing('get_completion_version.on_once')
-                local json = table.concat(stdout, '')
-                ---@type _, FittenCode.Protocol.Methods.GetCompletionVersion.Response
-                local _, response = pcall(vim.fn.json_decode, json)
-                if not _ or response == nil then
-                    Log.error('Failed to get completion version: {}', json)
-                    reject()
-                else
-                    resolve(response)
-                end
-            end,
-            on_error = function()
-                if self:is_terminated() then
-                    return
-                end
-                self:record_timing('get_completion_version.on_error')
-                reject()
-            end
+-- 获取补全版本号
+---@return FittenCode.Concurrency.Promise
+function Session:get_completion_version()
+    local request_handle = Client.request(Protocol.Methods.get_completion_version)
+    if not request_handle then
+        return Promise.reject()
+    end
+
+    self:record_timing('get_completion_version.request')
+    self:request_handles_push(request_handle)
+
+    return request_handle.promise():forward(function(_)
+        self:record_timing('get_completion_version.response')
+        if self:is_terminated() then
+            return Promise.reject()
+        end
+        ---@type FittenCode.Protocol.Methods.GetCompletionVersion.Response
+        local response = _.json()
+        if not response then
+            Log.error('Failed to get completion version: {}', _)
+            return Promise.reject()
+        else
+            return response
+        end
+    end):catch(function()
+        self:record_timing('get_completion_version.error')
+    end)
+end
+
+-- 压缩 Prompt 成 gzip 格式
+---@param prompt FittenCode.Inline.Prompt
+---@return FittenCode.Concurrency.Promise
+function Session:async_compress_prompt(prompt)
+    local _, data = pcall(vim.fn.json_encode, prompt)
+    if not _ then
+        return Promise.reject()
+    end
+    assert(data)
+    return ZipFlow.compress(data, {
+        format = 'gzip',
+        input_type = 'data'
+    })
+end
+
+function Session:generate_one_stage_auth(completion_version, body, buf, position)
+    local vu = {
+        ['0'] = '',
+        ['1'] = '2_1',
+        ['2'] = '2_2',
+        ['3'] = '2_3',
+    }
+    local request_handle = Client.request(Protocol.Methods.generate_one_stage_auth, {
+        variables = {
+            completion_version = vu[completion_version],
+        },
+        body = body,
+    })
+    if not request_handle then
+        return Promise.reject()
+    end
+
+    self:record_timing('generate_one_stage_auth.request')
+    self:request_handles_push(request_handle)
+
+    return request_handle.promise():forward(function(_)
+        self:record_timing('generate_one_stage_auth.response')
+        if self:is_terminated() then
+            return Promise.reject()
+        end
+        local response = _.json()
+        if not response then
+            Log.error('Failed to decode completion raw response: {}', _)
+            return Promise.reject()
+        end
+        return GenerationResponseParser.parse(response, {
+            buf = buf,
+            position = position,
         })
-    end):forward(function(version)
-        return Promise.new(function(resolve, reject)
-            local _, json = pcall(vim.fn.json_encode, prompt)
-            if not _ then
-                reject(prompt)
-                return
-            end
-            assert(json)
-            Compression.compress('gzip', json, {
-                on_once = function(compressed_stream)
-                    resolve({ body = compressed_stream, completion_version = version })
-                end,
-                on_error = function()
-                    Fn.schedule_call(options.on_error)
-                    reject(json)
-                end,
-            })
-        end)
+    end):catch(function()
+        self:record_timing('generate_one_stage_auth.error')
+    end)
+end
+
+function Session:request_completions(prompt, options)
+    Promise.all({
+        self:get_completion_version(),
+        self:async_compress_prompt(prompt),
+    }):forward(function(_)
+        if self:is_terminated() then
+            return Promise.reject()
+        end
+        local completion_version = _[1]
+        local compressed_prompt = _[2]
+        return self:generate_one_stage_auth(completion_version, compressed_prompt, options.buf, options.position)
     end):forward(function(_)
-        return Promise.new(function(resolve, reject)
-            local vu = {
-                ['0'] = '',
-                ['1'] = '2_1',
-                ['2'] = '2_2',
-                ['3'] = '2_3',
-            }
-            Client.request(Protocol.Methods.generate_one_stage_auth, {
-                variables = {
-                    completion_version = vu[_.completion_version],
-                },
-                body = _.body,
-                on_create = function(handle)
-                    if self:is_terminated() then
-                        return
-                    end
-                    self:record_timing('generate_one_stage_auth.on_create')
-                    self:request_handles_push(handle)
-                end,
-                on_once = function(stdout)
-                    if self:is_terminated() then
-                        return
-                    end
-                    self:record_timing('generate_one_stage_auth.on_once')
-                    local _, response = pcall(vim.json.decode, table.concat(stdout, ''))
-                    if not _ then
-                        Log.error('Failed to decode completion raw response: {}', response)
-                        reject(stdout)
-                        return
-                    end
-                    local parsed_response = GenerationResponseParser.parse(response, {
-                        buf = options.buf,
-                        position = options.position,
-                    })
-                    resolve(parsed_response)
-                end,
-                on_error = function()
-                    if self:is_terminated() then
-                        return
-                    end
-                    self:record_timing('generate_one_stage_auth.on_error')
-                    reject()
-                end
-            })
-        end)
-    end):forward(function(parsed_response)
-        if not parsed_response then
+        if not _ then
             Log.info('No more suggestion')
             Fn.schedule_call(options.on_no_more_suggestion)
             return
         end
-        Fn.schedule_call(options.on_success, parsed_response)
-    end):catch(function(err)
+        Fn.schedule_call(options.on_success, _)
+    end):catch(function()
         Fn.schedule_call(options.on_failure)
-        Log.error('Error while requesting completions: {}', err)
     end)
 end
 
