@@ -1,6 +1,42 @@
-local uv = vim.loop
-local lsp = vim.lsp
-local api = vim.api
+--[[
+ProjectCompletionOld 类生成 prompt 的核心逻辑如下：
+
+1. **文档监听与结构维护**
+   - 通过 DS 类监听文档变化（onDidChangeTextDocument），维护一个树状符号结构（ScopeTree）
+   - 树节点包含变量信息和子作用域，通过解析 DocumentSymbol 构建层次结构
+
+2. **变量收集策略**
+   - 遍历符号树收集满足以下条件的变量：
+     - 状态为 1（已成功更新）
+     - 位于当前光标所在行附近的上下文作用域
+     - 前缀匹配当前代码位置的符号层级（如 obj.method 的层级）
+
+3. **代码压缩与格式化**
+   - 使用 Tie() 函数压缩符号代码：
+     * 保留关键结构（类/函数定义）
+     * 折叠深层嵌套代码为"..."
+     * 去除空行和冗余缩进
+   - 用语言对应的注释语法包裹代码块（如 Python 用 # 注释）
+
+4. **智能拼接策略**
+   - 优先级排序：最近使用 > 作用域距离 > 前缀匹配度
+   - 动态长度控制（vHe=1000, SHe=2000）：
+     * 尝试添加时检查总长度
+     * 超过阈值时停止添加新内容
+   - 增量更新机制：保留上次有效的 prompt 片段，避免重复计算
+
+5. **多源数据整合**
+   - 通过 executeDefinitionProvider 获取跨文件定义
+   - 过滤被 .gitignore 忽略的文件路径
+   - 合并当前文件和外部引用的符号信息
+
+最终生成的 prompt 结构示例：
+
+--]]
+
+local Fn = require('fittencode.fn')
+local Editor = require('fittencode.editor')
+local LspService = require('fittencode.lsp_service')
 
 -- 符号树节点结构
 local SymbolNode = {}
@@ -17,34 +53,14 @@ function SymbolNode.new(name, kind, range, parent)
     }, SymbolNode)
 end
 
--- LSP 管理器
-local LSPManager = {}
-LSPManager.__index = LSPManager
-
-function LSPManager.new()
-    return setmetatable({
-        installed_servers = {},
-        language_map = {
-            python = 'pyright',
-            lua = 'sumneko_lua',
-            -- 添加更多语言映射...
-        }
-    }, LSPManager)
-end
-
-function LSPManager:check_installed(lang)
-    local server = self.language_map[lang]
-    return self.installed_servers[server] ~= nil
-end
-
 -- 项目补全类
+-- * 对应 VSCode 中的 ProjectCompletionOld
 local ProjectCompletion = {}
 ProjectCompletion.__index = ProjectCompletion
 
 function ProjectCompletion.new()
     return setmetatable({
         symbol_trees = {},
-        lsp_manager = LSPManager.new(),
         pending_requests = {}
     }, ProjectCompletion)
 end
@@ -75,7 +91,7 @@ local function build_symbol_tree(symbols, parent, buf)
         end
 
         -- 收集变量信息
-        if node.kind == lsp.protocol.SymbolKind.Variable then
+        if node.kind == vim.lsp.protocol.SymbolKind.Variable then
             parent.variables[node.name] = parent.variables[node.name] or {}
             table.insert(parent.variables[node.name], node)
         end
@@ -86,25 +102,24 @@ end
 
 -- 异步更新符号树
 function ProjectCompletion:update_symbols(buf)
-    local bufnr = api.nvim_buf_get_number(buf)
-    local lang = api.nvim_buf_get_option(buf, 'filetype')
+    local lang = assert(Editor.filetype(buf))
 
     -- 检查 LSP 是否可用
-    if not self.lsp_manager:check_installed(lang) then
+    if not LspService.check_installed(lang) then
         vim.notify('LSP server for ' .. lang .. ' not installed')
         return
     end
 
     local params = {
-        textDocument = lsp.util.make_text_document_params(buf)
+        textDocument = vim.lsp.util.make_text_document_params(buf)
     }
 
-    self.pending_requests[bufnr] = uv.now()
+    self.pending_requests[buf] = vim.uv.now()
 
-    lsp.buf_request(buf, 'textDocument/documentSymbol', params, function(err, result)
-        if self.pending_requests[bufnr] == nil then return end
+    vim.lsp.buf_request(buf, 'textDocument/documentSymbol', params, function(err, result)
+        if self.pending_requests[buf] == nil then return end
 
-        local tree = self:get_symbol_tree(bufnr)
+        local tree = self:get_symbol_tree(buf)
         tree.root = SymbolNode.new('__root__', 'root', { start = { line = 0 }, ['end'] = { line = 0 } })
 
         if not err and result then
@@ -112,7 +127,7 @@ function ProjectCompletion:update_symbols(buf)
             tree.version = tree.version + 1
         end
 
-        self.pending_requests[bufnr] = nil
+        self.pending_requests[buf] = nil
     end)
 end
 
@@ -156,23 +171,6 @@ function ProjectCompletion:generate_prompt(buf, line)
     end
 
     return table.concat(prompt, '\n')
-end
-
--- 使用示例
-local completion = ProjectCompletion.new()
-
--- 绑定自动更新
-api.nvim_create_autocmd({ 'BufEnter', 'TextChanged' }, {
-    callback = function(args)
-        completion:update_symbols(args.buf)
-    end
-})
-
--- 获取提示
-function GetCompletionPrompt()
-    local buf = api.nvim_get_current_buf()
-    local line = api.nvim_win_get_cursor(0)[1]
-    return completion:generate_prompt(buf, line - 1) -- line is 0-based
 end
 
 return ProjectCompletion

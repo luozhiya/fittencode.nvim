@@ -21,6 +21,12 @@ function ProjectCompletionService:__initialize(options)
     }
     self.last_chosen_prompt_type = '0'
     self.request_handle = nil
+    -- 绑定自动更新
+    vim.api.nvim_create_autocmd({ 'BufEnter', 'TextChanged' }, {
+        callback = function(args)
+            self.project_completion.v1:update_symbols(args.buf)
+        end
+    })
 end
 
 ---@return string

@@ -13,11 +13,6 @@ local HALF_MAX = MAX_CHARS / 2
 local SAMPLE_SIZE = 2000
 local FIM_PATTERN = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
----@class FittenCode.Inline.PromptGenerator
----@field last table
----@field project_completion_service FittenCode.Inline.ProjectCompletionService
-
----@class FittenCode.Inline.PromptGenerator
 local PromptGenerator = {}
 PromptGenerator.__index = PromptGenerator
 
@@ -29,7 +24,7 @@ function PromptGenerator:new(options)
             ciphertext = ''
         },
         project_completion_service = options.project_completion_service,
-    }, self)
+    }, PromptGenerator)
 end
 
 local function compare_bytes(x, y)
@@ -192,17 +187,11 @@ function PromptGenerator:_recalculate_meta_datas(options)
     )
 end
 
----@return FittenCode.Concurrency.Promise
-function PromptGenerator:_get_project_prompt(buf, row)
-    local version = (self.project_completion_service:get_last_chosen_prompt_type() == '5') and 'v1' or 'v2'
-    return self.project_completion_service.project_completion[version]:get_prompt(buf, row)
-end
-
 function PromptGenerator:_generate_project_completion_prompt(buf, position)
-    self.project_completion_service.project_completion.v2:get_file_lsp(buf):forward(function(lsp)
+    return self.project_completion_service:get_file_lsp(buf):forward(function(lsp)
         return self.project_completion_service:check_project_completion_available(lsp)
     end):forward(function()
-        return self:_get_project_prompt(buf, position.row)
+        return self.project_completion_service:get_prompt(buf, position)
     end)
 end
 

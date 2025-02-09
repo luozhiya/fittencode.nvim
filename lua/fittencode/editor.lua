@@ -8,6 +8,17 @@ local UTF8 = require('fittencode.utf8')
 ---@class FittenCode.Editor
 local M = {}
 
+function M.filetype(buf)
+    if not buf then
+        return
+    end
+    local ft
+    vim.api.nvim_buf_call(buf, function()
+        ft = vim.api.nvim_get_option_value('filetype', { buf = buf })
+    end)
+    return ft
+end
+
 ---@return string?
 function M.language_id(buf)
     if not buf then
