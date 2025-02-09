@@ -123,10 +123,4 @@ end
 return {
     ContextBuilder = ContextBuilder,
     GenerationResponseParser = ResponseParser,
-    -- 导出常量供外部查询（不建议修改）
-    PROTOCOL_CONSTANTS = {
-        FIM_MIDDLE = FIM_MIDDLE_TOKEN,
-        END_OF_TEXT = END_OF_TEXT_TOKEN,
-        DEFAULT_THRESHOLD = DEFAULT_CONTEXT_THRESHOLD
-    }
 }

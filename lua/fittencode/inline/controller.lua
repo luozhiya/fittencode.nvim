@@ -17,10 +17,6 @@ local PromptGenerator = require('fittencode.inline.prompt_generator')
 ---@class FittenCode.Inline.Controller
 local Controller = {}
 
----@class FittenCode.Inline.Controller.Options
----@field headless? boolean 未实现，暂不清楚 Controller 要如何设计 headless 模式
-
----@param options? FittenCode.Inline.Controller.Options
 ---@return FittenCode.Inline.Controller
 function Controller:new(options)
     ---@class FittenCode.Inline.Controller
@@ -30,7 +26,6 @@ function Controller:new(options)
     return obj
 end
 
----@param options? FittenCode.Inline.Controller.Options
 function Controller:__initialize(options)
     options = options or {}
     self.project_completion_service = ProjectCompletionService:new()
