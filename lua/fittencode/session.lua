@@ -7,8 +7,6 @@ local Client = require('fittencode.client')
 local Keyring = require('fittencode.client.keyring')
 local EventLoop = require('fittencode.uv.event_loop')
 
--- Implement Account Session APIs
-
 local M = {}
 
 function M.register()
@@ -27,13 +25,8 @@ function M.try_web()
     Client.request(Protocol.URLs.try)
 end
 
----@class FittenCode.Session.Login
----@field on_success function
----@field on_error function
-
 ---@param username string
 ---@param password string
----@param options? FittenCode.Session.Login
 function M.login(username, password, options)
     options = options or {}
 
@@ -90,13 +83,8 @@ local login_providers = {
     'microsoft'
 }
 
----@class FittenCode.Session.Login3rd
----@field on_success function
----@field on_error function
-
 -- 对于循环嵌套的回调函数更好一点
 ---@param source string
----@param options? FittenCode.Session.Login3rd
 function M.login3rd(source, options)
     options = options or {}
 
