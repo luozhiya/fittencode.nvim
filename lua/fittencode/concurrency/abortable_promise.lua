@@ -59,11 +59,11 @@ function AbortablePromise.new(executor)
         self.state = 'fulfilled'
         self.value = value
         -- 异步执行回调（模拟微任务）
-        vim.schedule(function()
-            for _, callback in ipairs(self.on_fulfilled_callbacks) do
+        for _, callback in ipairs(self.on_fulfilled_callbacks) do
+            vim.schedule(function()
                 callback(self.value)
-            end
-        end)
+            end)
+        end
     end
 
     local function reject(reason)
@@ -71,11 +71,11 @@ function AbortablePromise.new(executor)
         self.state = 'rejected'
         self.reason = reason
         -- 异步执行回调
-        vim.schedule(function()
-            for _, callback in ipairs(self.on_rejected_callbacks) do
+        for _, callback in ipairs(self.on_rejected_callbacks) do
+            vim.schedule(function()
                 callback(self.reason)
-            end
-        end)
+            end)
+        end
     end
 
     -- 取消方法

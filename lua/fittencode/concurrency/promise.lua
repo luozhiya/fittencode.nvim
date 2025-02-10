@@ -95,10 +95,10 @@ end
 
 function Promise.async(executor)
     local fn = vim.schedule_wrap(function(...)
-        return executor(...)
+        executor(...)
     end)
     return Promise.new(function(resolve, reject)
-        return fn(resolve, reject)
+        fn(resolve, reject)
     end)
 end
 
@@ -166,7 +166,9 @@ function Promise:manually_resolve(value)
         self.state = PromiseState.FULFILLED
         self.value = value
         for _, callback in ipairs(self.promise_reactions[PromiseState.FULFILLED]) do
-            callback(self)
+            vim.schedule(function()
+                callback(self)
+            end)
         end
     end
 end
@@ -178,7 +180,9 @@ function Promise:manually_reject(reason)
         self.state = PromiseState.REJECTED
         self.reason = reason
         for _, callback in ipairs(self.promise_reactions[PromiseState.REJECTED]) do
-            callback(self)
+            vim.schedule(function()
+                callback(self)
+            end)
         end
     end
 end
