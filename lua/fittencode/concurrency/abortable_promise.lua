@@ -98,9 +98,9 @@ end
 
 -- Then 方法实现
 function AbortablePromise:forward(on_fulfilled, on_rejected)
-    local newPromise = AbortablePromise.new(function(resolve, reject, on_cancel)
+    local new_promise = AbortablePromise.new(function(resolve, reject, on_cancel)
         -- 注册父级 Promise 回调
-        local function handle(resolveFn, rejectFn, handler)
+        local function handle(resolve_fn, rejectFn, handler)
             return function(...)
                 if self.state == 'pending' then return end
 
@@ -115,7 +115,7 @@ function AbortablePromise:forward(on_fulfilled, on_rejected)
                     result:forward(resolve, reject)
                     on_cancel(function() result:cancel() end)
                 else
-                    resolveFn(result)
+                    resolve_fn(result)
                 end
             end
         end
@@ -140,5 +140,5 @@ function AbortablePromise:forward(on_fulfilled, on_rejected)
         on_cancel(function() self:cancel() end)
     end)
 
-    return newPromise
+    return new_promise
 end
