@@ -16,7 +16,7 @@ local cache = {
 local function load_translations(lang_code)
     if cache.loaded[lang_code] then return true end
 
-    local ok, trans = pcall(require, 'translations.' .. lang_code)
+    local ok, trans = pcall(require, 'translations.lang' .. lang_code)
     if ok then
         cache.translations[lang_code] = trans
         cache.loaded[lang_code] = true

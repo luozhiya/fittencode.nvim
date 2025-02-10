@@ -1,6 +1,5 @@
 local Log = require('fittencode.log')
-local Translate = require('fittencode.translate')
-local Inline = require('fittencode.inline')
+local Tr = require('fittencode.translations')
 local Auth = require('fittencode.authentication')
 
 local commands = {
@@ -8,8 +7,8 @@ local commands = {
     register = Auth.register,
     login = {
         execute = function()
-            local username = vim.fn.input(Translate('Username/Email/Phone(+CountryCode): '))
-            local password = vim.fn.inputsecret(Translate('Password: '))
+            local username = vim.fn.input(Tr.translate('Username/Email/Phone(+CountryCode): '))
+            local password = vim.fn.inputsecret(Tr.translate('Password: '))
             Auth.login(username, password)
         end
     },
