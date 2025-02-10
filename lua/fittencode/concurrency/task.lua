@@ -1,3 +1,92 @@
+--[[
+
+-----------------------
+---await_any
+-----------------------
+
+-- 等待任意任务完成
+local results, errors = M.await_any({
+  function() return async_read("file1.txt") end,
+  function() return async_read("file2.txt") end
+}, 5000) -- 5秒超时
+
+-----------------------
+---wait
+-----------------------
+
+local task = M.go(function()
+  -- 长时间任务
+end)
+-- 等待任务完成（带超时）
+local result, err = task:wait(3000)
+
+-----------------------
+---超时控制
+-----------------------
+
+-- 在任意等待点添加超时
+M.cb_to_co(vim.system, 1000) -- 1秒超时的异步函数
+M.await_all(tasks, 5000)      -- 5秒超时的并行等待
+
+-----------------------
+---错误传播
+-----------------------
+
+-- 自定义错误处理
+local task = M.go(function()
+  -- 子任务会自动冒泡错误到父任务
+  M.go(function()
+    error("child error")
+  end):wait()
+end)
+
+task:wait() -- 最终会捕获到"child error"
+
+-----------------------
+---扩展示例 1
+-----------------------
+
+-- 带超时的复杂工作流
+local task = require'task'
+
+task.go(function()
+  -- 带超时的文件读取
+  local safe_read = task.cb_to_co(uv.fs_read, 1000)
+  
+  -- 并行执行带超时的操作
+  local files = task.await_any({
+    function() return safe_read("file1.txt") end,
+    function() return safe_read("file2.txt") end
+  }, 2000)
+
+  -- 错误处理
+  if files[1] then
+    print("Got file:", files[1])
+  else
+    print("All attempts failed:", files.errors)
+  end
+end)
+
+-----------------------
+---扩展示例 2
+-----------------------
+-- 创建任务
+local task = require'task'.go(function()
+  local async_read = require'task'.cb_to_co(vim.system)
+  
+  -- 并行执行
+  local results = require'task'.await_all({
+    function() return async_read("ls", {"-la"}):wait() end,
+    function() return async_read("pwd"):wait() end
+  })
+  
+  print(vim.inspect(results))
+end)
+
+-- 取消任务
+task:cancel()
+--]]
+
 local uv = vim.loop
 local M = {}
 
