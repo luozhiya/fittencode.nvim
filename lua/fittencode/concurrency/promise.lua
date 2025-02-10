@@ -93,6 +93,15 @@ function Promise.new(executor)
     return self
 end
 
+function Promise.async(executor)
+    local fn = vim.schedule_wrap(function(...)
+        return executor(...)
+    end)
+    return Promise.new(function(resolve, reject)
+        return fn(resolve, reject)
+    end)
+end
+
 -- 获取原始唯一标识符的方法
 local function get_unique_identifier(tbl)
     if type(tbl) ~= 'table' then
