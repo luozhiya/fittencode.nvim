@@ -1,0 +1,3 @@
+-- -- Inline
+-- enable_completions = { execute = function(ext) Inline.enable_completions(ext) end },
+-- disable_completions = { execute = function(ext) Inline.disable_completions(ext) end },

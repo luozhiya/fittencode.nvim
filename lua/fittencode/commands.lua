@@ -1,52 +1,32 @@
-local Chat = require('fittencode.chat')
 local Log = require('fittencode.log')
 local Translate = require('fittencode.translate')
 local Inline = require('fittencode.inline')
-local Session = require('fittencode.session.session')
+local Auth = require('fittencode.authentication')
 
 local commands = {
     -- Account
-    register = Session.register,
+    register = Auth.register,
     login = {
         execute = function()
             local username = vim.fn.input(Translate('Username/Email/Phone(+CountryCode): '))
             local password = vim.fn.inputsecret(Translate('Password: '))
-            Session.login(username, password)
+            Auth.login(username, password)
         end
     },
     login3rd = {
-        execute = function(source) Session.login3rd(source) end,
-        complete = Session.login_providers
+        execute = function(source) Auth.login3rd(source) end,
+        complete = Auth.login_providers
     },
-    logout = Session.logout,
-    -- Inline
-    enable_completions = { execute = function(ext) Inline.enable_completions(ext) end },
-    disable_completions = { execute = function(ext) Inline.disable_completions(ext) end },
-    -- Chat
-    show_chat = Chat.show_chat,
-    hide_chat = Chat.hide_chat,
-    toggle_chat = Chat.toggle_chat,
-    start_chat = Chat.start_chat,
-    reload_templates = Chat.reload_templates,
-    delete_all_chats = Chat.delete_all_chats,
-    edit_code = Chat.edit_code,
-    explain_code = Chat.explain_code,
-    find_bugs = Chat.find_bugs,
-    document_code = Chat.document_code,
-    generate_unit_test = Chat.generate_unit_test,
-    generate_code = Chat.generate_code,
-    optimize_code = Chat.optimize_code,
-    history = Chat.history,
-    favorites = Chat.favorites,
-    delete_conversation = Chat.delete_conversation,
-    delete_all_conversations = Chat.delete_all_conversations,
-    export_conversation = Chat.export_conversation,
-    share_conversation = Chat.share_conversation,
-    regenerate_response = Chat.regenerate_response,
+    logout = Auth.logout,
     -- Help
-    ask_question = Session.question,
-    user_guide = Session.tutor,
+    ask_question = Auth.question,
+    user_guide = Auth.tutor,
 }
+
+-- Chat
+vim.tbl_deep_extend('force', commands, require('fittencode.chat.commands'))
+-- Inline
+vim.tbl_deep_extend('force', commands, require('fittencode.inline.commands'))
 
 local function execute(input)
     if not commands[input.fargs[1]] then
