@@ -21,7 +21,7 @@ local M = {}
 --     return self.installed_servers[server] ~= nil
 -- end
 
-function M:check_installed(lang)
+function M.check_installed(lang)
 end
 
 -- Detach
