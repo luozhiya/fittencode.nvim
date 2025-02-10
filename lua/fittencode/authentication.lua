@@ -25,6 +25,16 @@ function M.try_web()
     Client.request(Protocol.URLs.try)
 end
 
+-- 同一时间只能有一个登录请求
+local request_handle
+
+local function abort_request()
+    if request_handle then
+        request_handle.abort()
+        request_handle = nil
+    end
+end
+
 ---@param username string
 ---@param password string
 function M.login(username, password, options)
@@ -48,7 +58,8 @@ function M.login(username, password, options)
         password = password,
     }
 
-    local request_handle = Client.request(Protocol.Methods.login, {
+    abort_request()
+    request_handle = Client.request(Protocol.Methods.login, {
         body = assert(vim.fn.json_encode(body)),
     })
     if not request_handle then
@@ -116,7 +127,8 @@ function M.login3rd(source, options)
         return
     end
 
-    Client.request(Protocol.Methods.fb_sign_in, {
+    abort_request()
+    request_handle = Client.request(Protocol.Methods.fb_sign_in, {
         variables = {
             sign_in_source = source,
             client_token = client_token,
@@ -134,7 +146,8 @@ function M.login3rd(source, options)
             Fn.schedule_call(options.on_error)
         end
 
-        local request_handle = Client.request(Protocol.Methods.fb_check_login_auth, {
+        abort_request()
+        request_handle = Client.request(Protocol.Methods.fb_check_login_auth, {
             variables = { client_token = client_token, }
         })
         if not request_handle then
