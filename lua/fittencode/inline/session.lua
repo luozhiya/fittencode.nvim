@@ -325,19 +325,19 @@ end
 function Session:send_completions()
     return self:generate_prompt():forward(function(prompt)
         self:update_status():requesting_completions()
-        return self:request_completions(prompt):forward(function(completion)
-            if self:is_terminated() then
-                return Promise.reject()
-            end
-            if not completion then
-                self:update_status():no_more_suggestions()
-                return Promise.reject()
-            end
-            self:set_model(completion)
-            self:update_status():suggestions_ready()
-            Fn.schedule_call(self.set_interactive_session_debounced, self)
-            return Promise.resolve(completion)
-        end)
+        return self:request_completions(prompt)
+    end):forward(function(completion)
+        if self:is_terminated() then
+            return Promise.reject()
+        end
+        if not completion then
+            self:update_status():no_more_suggestions()
+            return Promise.reject()
+        end
+        self:set_model(completion)
+        self:update_status():suggestions_ready()
+        Fn.schedule_call(self.set_interactive_session_debounced, self)
+        return Promise.resolve(completion)
     end):catch(function()
         self:update_status():error()
         return Promise.reject()
