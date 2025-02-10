@@ -1,7 +1,6 @@
 local uv = vim.loop
 local M = {}
 
--- 协程包装器，存储任务状态和子任务
 local Task = {}
 Task.__index = Task
 
@@ -11,69 +10,158 @@ function Task.new(fn, parent)
     children = {},
     parent = parent,
     cancelled = false,
-    on_done = nil,
+    done = false,
+    result = nil,
+    error = nil,
+    waiting_co = nil,
+    timer = nil,
   }, Task)
-  
-  -- 自动添加到父任务
+
   if parent then
     table.insert(parent.children, self)
   end
-  
+
   return self
 end
 
+function Task:wait(timeout)
+  if self.done then return self.result, self.error end
+  
+  if timeout then
+    self.timer = uv.new_timer()
+    self.timer:start(timeout, 0, function()
+      self:cancel()
+      self.timer:close()
+      if self.waiting_co then
+        coroutine.resume(self.waiting_co, nil, "timeout")
+      end
+    end)
+  end
+
+  self.waiting_co = coroutine.running()
+  return coroutine.yield()
+end
+
 function Task:cancel()
+  if self.cancelled then return end
   self.cancelled = true
-  -- 递归取消子任务
+  
+  if self.timer and not self.timer:is_closing() then
+    self.timer:close()
+  end
+
   for _, child in ipairs(self.children) do
     child:cancel()
+  end
+
+  if self.waiting_co then
+    coroutine.resume(self.waiting_co, nil, "cancelled")
   end
 end
 
 function Task:resume(...)
   if self.cancelled then return end
-  return coroutine.resume(self.co, ...)
+  local ok, res = coroutine.resume(self.co, ...)
+  
+  if not ok then
+    self:_handle_error(res)
+    return false
+  end
+  
+  if coroutine.status(self.co) == "dead" then
+    self.done = true
+    self.result = res
+    if self.waiting_co then
+      coroutine.resume(self.waiting_co, res)
+    end
+  end
+  return true
 end
 
--- 将回调式函数转换为协程
-function M.cb_to_co(fn)
+function Task:_handle_error(err)
+  self.done = true
+  self.error = err
+  if self.waiting_co then
+    coroutine.resume(self.waiting_co, nil, err)
+  end
+  
+  -- 错误冒泡
+  if self.parent then
+    self.parent:_handle_error(err)
+  else
+    print("Unhandled task error:", err)
+  end
+end
+
+-- 转换回调函数为协程可用形式（支持超时）
+function M.cb_to_co(fn, timeout)
   return function(...)
     local co = coroutine.running()
-    local rets
-    
-    -- 包装回调以恢复协程
-    local function wrapper(...)
-      rets = {...}
-      if co and coroutine.status(co) == 'suspended' then
+    local rets, err
+    local timer = timeout and uv.new_timer()
+
+    local function finalize()
+      if timer then
+        timer:stop()
+        timer:close()
+      end
+      if co and coroutine.status(co) == "suspended" then
         coroutine.resume(co)
       end
     end
-    
+
+    local function wrapper(...)
+      rets = {...}
+      finalize()
+    end
+
     local args = {...}
     table.insert(args, wrapper)
-    fn(unpack(args))
     
+    if timer then
+      timer:start(timeout, 0, function()
+        err = "timeout"
+        finalize()
+      end)
+    end
+
+    local ok, res = pcall(fn, unpack(args))
+    if not ok then
+      error(res)
+    end
+
     coroutine.yield()
+    if err then error(err) end
     return unpack(rets)
   end
 end
 
 -- 结构化并发原语
-function M.await_all(tasks)
-  local done = 0
+function M.await_all(tasks, timeout)
+  local co = coroutine.running()
   local results = {}
   local errors = {}
-  
-  local co = coroutine.running()
+  local completed = 0
+  local timer
+
   local function check()
-    done = done + 1
-    if done == #tasks then
+    completed = completed + 1
+    if completed == #tasks then
+      if timer then timer:close() end
       coroutine.resume(co, results, errors)
     end
   end
-  
+
+  if timeout then
+    timer = uv.new_timer()
+    timer:start(timeout, 0, function()
+      for _, t in ipairs(tasks) do t:cancel() end
+      coroutine.resume(co, nil, "timeout")
+    end)
+  end
+
   for i, task in ipairs(tasks) do
-    vim.schedule(function()
+    M.go(function()
       local ok, res = pcall(task)
       if ok then
         results[i] = res
@@ -83,56 +171,62 @@ function M.await_all(tasks)
       check()
     end)
   end
-  
+
   return coroutine.yield()
 end
 
--- 启动任务（类似 Go 的 go 关键字）
-function M.go(fn)
+function M.await_any(tasks, timeout)
+  local co = coroutine.running()
+  local results = {}
+  local errors = {}
+  local timer
+  local finished = false
+
+  local function check(i, ok, res)
+    if finished then return end
+    finished = true
+    
+    if ok then
+      results[i] = res
+    else
+      errors[i] = res
+    end
+    
+    if timer then timer:close() end
+    for _, t in ipairs(tasks) do t:cancel() end
+    coroutine.resume(co, results, errors)
+  end
+
+  if timeout then
+    timer = uv.new_timer()
+    timer:start(timeout, 0, function()
+      check(0, false, "timeout")
+    end)
+  end
+
+  for i, task in ipairs(tasks) do
+    M.go(function()
+      local ok, res = pcall(task)
+      check(i, ok, res)
+    end)
+  end
+
+  return coroutine.yield()
+end
+
+-- 启动任务
+function M.go(fn, opts)
   local task = Task.new(fn)
   
   local function step(...)
-    local ok, res = task:resume(...)
-    
-    if not ok then
-      -- 错误处理
-      print("Task failed:", res)
-      return
-    end
-    
-    if coroutine.status(task.co) ~= 'dead' then
-      -- 支持异步操作
-      if type(res) == 'userdata' and res:type() == 'uv_async_t' then
-        res:send()
-      else
-        vim.schedule(step)
-      end
+    if not task:resume(...) then return end
+    if coroutine.status(task.co) ~= "dead" then
+      vim.schedule(step)
     end
   end
-  
+
   vim.schedule(step)
   return task
 end
-
--- 示例使用
-M.go(function()
-  local read_file = M.cb_to_co(function(path, cb)
-    uv.fs_open(path, "r", 438, function(err, fd)
-      if err then return cb(err) end
-      uv.fs_read(fd, 1024, 0, cb)
-    end)
-  end)
-  
-  local results, errors = M.await_all({
-    function() return read_file("file1.txt") end,
-    function() return read_file("file2.txt") end
-  })
-  
-  if next(errors) then
-    print("Errors occurred:", vim.inspect(errors))
-  else
-    print("Results:", vim.inspect(results))
-  end
-end)
 
 return M
