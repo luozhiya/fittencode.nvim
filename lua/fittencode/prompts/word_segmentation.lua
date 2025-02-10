@@ -4,7 +4,7 @@ local Client = require('fittencode.client')
 local M = {}
 
 ---@param text? string|string[]
-function M.word_segmentation(text)
+function M.generate(text)
     if not text then
         return
     end
