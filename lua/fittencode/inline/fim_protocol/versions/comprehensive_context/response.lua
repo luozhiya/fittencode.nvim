@@ -8,16 +8,9 @@ local DEFAULT_CONTEXT_THRESHOLD = 100     -- 默认上下文阈值
 local FIM_MIDDLE_TOKEN = '<fim_middle>'   -- FIM中间标记
 local END_OF_TEXT_TOKEN = '<|endoftext|>' -- 文本结束标记
 
----@class FittenCode.Inline.ContextBuilder
----@field private _context_threshold number
 local ContextBuilder = {}
 ContextBuilder.__index = ContextBuilder
 
----@class FittenCode.Inline.ContextBuilder.Options
----@field context_threshold? number 可自定义的上下文阈值
-
----@param options? FittenCode.Inline.ContextBuilder.Options
----@return FittenCode.Inline.ContextBuilder
 function ContextBuilder:new(options)
     options = options or {}
     local instance = setmetatable({}, self)
@@ -65,14 +58,9 @@ function ContextBuilder:_create_peek_range(buf, base_offset, direction)
     }
 end
 
----@class FittenCode.Inline.ResponseParser
----@field private _context_builder FittenCode.Inline.ContextBuilder
-
----@class FittenCode.Inline.ResponseParser
 local ResponseParser = {}
 ResponseParser.__index = ResponseParser
 
----@param context_builder FittenCode.Inline.ContextBuilder
 function ResponseParser:new(context_builder)
     return setmetatable({
         _context_builder = context_builder or ContextBuilder:new()
@@ -122,5 +110,5 @@ end
 
 return {
     ContextBuilder = ContextBuilder,
-    GenerationResponseParser = ResponseParser,
+    ResponseParser = ResponseParser,
 }

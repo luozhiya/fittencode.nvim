@@ -4,7 +4,6 @@ local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')
 
----@class FittenCode.Inline.PromptGenerator.ImmediateContextGenerator
 local ImmediateContextGenerator = {}
 ImmediateContextGenerator.__index = ImmediateContextGenerator
 
@@ -15,7 +14,6 @@ function ImmediateContextGenerator:new()
 end
 
 function ImmediateContextGenerator:generate(buf, position, options)
-    Fn.schedule_call(options.on_create)
     local prefix = Editor.get_text(buf, Range:new({ start = Position:new({ row = 0, col = 0 }), end_ = position }))
     local suffix = Editor.get_text(buf, Range:new({ start = position, end_ = Position:new({ row = -1, col = -1 }) }))
     local inputs = '!FCPREFIX!' .. prefix .. '!FCSUFFIX!' .. suffix .. '!FCMIDDLE!'
@@ -26,7 +24,7 @@ function ImmediateContextGenerator:generate(buf, position, options)
             filename = options.filename,
         },
     }
-    Fn.schedule_call(options.on_once, prompt)
+    return prompt
 end
 
 return ImmediateContextGenerator
