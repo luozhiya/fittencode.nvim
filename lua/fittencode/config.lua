@@ -180,30 +180,11 @@ local defaults = {
         -- Notify when log errors occur.
         enable_notifications = false,
     },
-    hash = {
-        md5 = {
-            -- MD5 hash
-            -- Avaiable options:
-            -- * 'md5sum'
-            -- * 'mi'
-            backend = 'md5sum',
-            md5sum = {
-                -- Default `md5sum`
-                command = '',
-            },
-        }
-    },
-    compress = {
-        gzip = {
-            -- Avaiable options:
-            -- * 'gzip'
-            -- * 'zlib' (Only available on Linux)
-            backend = 'gzip',
-            gzip = {
-                -- Default `gzip`
-                command = '',
-            },
-        }
+    colors = {
+        -- { fg = '#ffffff', bg = '#000000', style = 'bold' }
+        ['FittenCodeSuggestion'] = {},
+        ['FittenCodeNoMoreSuggestion'] = {},
+        ['FittenCodeSuggestionCommit'] = {},
     },
     http = {
         -- Avaiable options:
