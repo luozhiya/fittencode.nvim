@@ -186,7 +186,7 @@ local defaults = {
         ['FittenCodeNoMoreSuggestion'] = {},
         ['FittenCodeSuggestionCommit'] = {},
     },
-    http = {
+    network = {
         -- Avaiable options:
         -- * 'curl'
         -- * 'libcurl' (Only available on Linux)
