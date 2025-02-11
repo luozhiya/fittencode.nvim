@@ -134,6 +134,9 @@ function M.login3rd(source, options)
             client_token = client_token,
         }
     })
+    if not request_handle then
+        return
+    end
 
     local function check_login()
         if not start_check then

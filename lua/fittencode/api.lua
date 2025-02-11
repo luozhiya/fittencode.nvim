@@ -1,33 +1,14 @@
 local M = {}
 
-local function action(k)
-    local inline = {
-        'set_log_level',
-        'triggering_completion',
-        'has_suggestions',
-        'dismiss_suggestions',
-        'accept_all_suggestions',
-        'accept_line',
-        'revoke_line',
-        'accept_word',
-        'revoke_word'
-    }
-    local chat = {
-    }
-    local function run(l)
-        return vim.tbl_count(vim.tbl_filter(function(v) return v == k end, l)) > 0
-    end
-    if run(inline) then
-        return require('fittencode.inline')[k]
-    end
-    if run(chat) then
-        return require('fittencode.chat')[k]
-    end
-    return nil
-end
+local api = {
+    ['set_log_level'] = function(level)
+        require('fittencode.log').set_level(level)
+    end,
+}
 
-return setmetatable(M, {
-    __index = function(_, k)
-        return action(k)
-    end
-})
+-- Chat
+vim.tbl_deep_extend('force', api, require('fittencode.chat.api'))
+-- Inline
+vim.tbl_deep_extend('force', api, require('fittencode.inline.api'))
+
+return M

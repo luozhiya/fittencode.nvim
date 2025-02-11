@@ -52,7 +52,7 @@ local task = require'task'
 task.go(function()
   -- 带超时的文件读取
   local safe_read = task.cb_to_co(uv.fs_read, 1000)
-  
+
   -- 并行执行带超时的操作
   local files = task.await_any({
     function() return safe_read("file1.txt") end,
@@ -73,13 +73,13 @@ end)
 -- 创建任务
 local task = require'task'.go(function()
   local async_read = require'task'.cb_to_co(vim.system)
-  
+
   -- 并行执行
   local results = require'task'.await_all({
     function() return async_read("ls", {"-la"}):wait() end,
     function() return async_read("pwd"):wait() end
   })
-  
+
   print(vim.inspect(results))
 end)
 
