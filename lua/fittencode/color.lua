@@ -20,7 +20,7 @@ function M.init()
         pattern = '*',
         callback = function()
             for name, color in pairs(PRESET_THEME) do
-                local _ = Config.colors[name]
+                local _ = Config.colors[name] or {}
                 if vim.tbl_isempty(_) then
                     color = _
                 end
