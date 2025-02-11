@@ -1,5 +1,3 @@
--- lua/fittencode/uv/_promise.lua
-local uv = vim.uv
 local Promise = require('fittencode.concurrency.promise')
 
 local M = {}
