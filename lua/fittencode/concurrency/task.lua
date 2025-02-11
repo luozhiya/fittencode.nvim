@@ -318,4 +318,188 @@ function M.go(fn, opts)
     return task
 end
 
+-- 增强 Task 元方法支持链式调用
+local TaskMeta = {
+    __index = {
+        -- 基础操作
+        forward = function(self, fn)
+            return M.TaskChain(self):forward(fn)
+        end,
+        catch = function(self, fn)
+            return M.TaskChain(self):catch(fn)
+        end,
+        map = function(self, fn)
+            return M.TaskChain(self):map(fn)
+        end,
+        filter = function(self, fn)
+            return M.TaskChain(self):filter(fn)
+        end,
+
+        -- 兼容 vim.system 风格
+        wait = function(self, timeout)
+            if self._chain then
+                return self._chain:wait(timeout)
+            end
+            return self:wait(timeout)
+        end
+    }
+}
+
+-- 任务链实现
+local TaskChain = {}
+TaskChain.__index = TaskChain
+
+function M.TaskChain(task)
+    return setmetatable({
+        _source = task,
+        _ops = {},
+        _current = nil,
+        _result = nil,
+        _error = nil
+    }, TaskChain)
+end
+
+function TaskChain:forward(fn)
+    table.insert(self._ops, { type = 'forward', fn = fn })
+    return self
+end
+
+function TaskChain:catch(fn)
+    table.insert(self._ops, { type = 'catch', fn = fn })
+    return self
+end
+
+function TaskChain:map(fn)
+    table.insert(self._ops, {
+        type = 'forward',
+        fn = function(res)
+            if type(res) == 'table' and vim.isarray(res) then
+                return vim.tbl_map(fn, res)
+            end
+            return fn(res)
+        end
+    })
+    return self
+end
+
+function TaskChain:filter(fn)
+    table.insert(self._ops, {
+        type = 'forward',
+        fn = function(res)
+            if type(res) == 'table' and vim.isarray(res) then
+                return vim.tbl_filter(fn, res)
+            end
+            return fn(res) and res or nil
+        end
+    })
+    return self
+end
+
+function TaskChain:_run_step(res)
+    local current_op = self._ops[1]
+    if not current_op then return res end
+
+    table.remove(self._ops, 1)
+
+    return M.go(function()
+        if current_op.type == 'forward' then
+            return current_op.fn(res)
+        elseif current_op.type == 'catch' then
+            if res.error then
+                return current_op.fn(res.error)
+            end
+            return res.value
+        end
+    end)
+end
+
+function TaskChain:wait(timeout)
+    if self._current then
+        return self._current:wait(timeout)
+    end
+
+    self._current = self._source
+    local final_task = M.go(function()
+        local res, err = self._current:wait(timeout)
+        if err then return nil, err end
+
+        while #self._ops > 0 do
+            self._current = self:_run_step(res)
+            res, err = self._current:wait(timeout)
+            if err then return nil, err end
+        end
+
+        return res
+    end)
+
+    return final_task:wait(timeout)
+end
+
+-- 适配外部任务（如 vim.system）
+function M.async(external_task)
+    return setmetatable({
+        wait = function(_, timeout)
+            return external_task:wait(timeout)
+        end,
+        cancel = function()
+            external_task:kill()
+        end
+    }, TaskMeta)
+end
+
+-- 在原有 TaskChain 中添加异步执行支持
+function TaskChain:start(callback)
+    self._current = self._source
+    self._callback = callback
+
+    local function step(res, err)
+        if err then
+            if self._callback then self._callback(nil, err) end
+            return
+        end
+
+        if #self._ops == 0 then
+            if self._callback then self._callback(res) end
+            return
+        end
+
+        self._current = self:_run_step(res)
+        self._current:wait_async(step) -- 异步等待
+    end
+
+    self._current:wait_async(step)
+    return self
+end
+
+-- 在 Task 对象中添加异步等待方法
+function Task:wait_async(callback)
+    if self.done then
+        callback(self.result, self.error)
+        return
+    end
+
+    self.waiting_callbacks = self.waiting_callbacks or {}
+    table.insert(self.waiting_callbacks, function()
+        callback(self.result, self.error)
+    end)
+
+    -- 确保任务在运行
+    if not self._scheduled then
+        self._scheduled = true
+        vim.schedule(function()
+            local function step(...)
+                if self.done then
+                    for _, cb in ipairs(self.waiting_callbacks) do
+                        cb(self.result, self.error)
+                    end
+                    return
+                end
+                self:resume(...)
+                vim.schedule(step)
+            end
+            step()
+        end)
+    end
+end
+
 return M
