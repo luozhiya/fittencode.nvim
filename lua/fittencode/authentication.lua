@@ -9,6 +9,34 @@ local EventLoop = require('fittencode.uv.event_loop')
 
 local M = {}
 
+-- 模块级状态变量
+local request_handle = nil
+local login3rd_check_timer = nil
+local login3rd_start_check = false
+local login3rd_total_time = 0
+local login3rd_time_delta = 3 -- 检查间隔（秒）
+local login3rd_total_time_limit = 600 -- 总超时时间（秒）
+
+local login_providers = { 'google', 'github', 'twitter', 'microsoft' }
+
+local function abort_all_operations()
+    -- 终止所有可能的请求
+    if request_handle then
+        request_handle.abort()
+        request_handle = nil
+    end
+
+    -- 清除第三方登录的定时器
+    if login3rd_check_timer then
+        EventLoop.clear_interval(login3rd_check_timer)
+        login3rd_check_timer = nil
+    end
+
+    -- 重置第三方登录状态
+    login3rd_start_check = false
+    login3rd_total_time = 0
+end
+
 function M.register()
     Client.request(Protocol.URLs.register)
 end
@@ -25,20 +53,11 @@ function M.try_web()
     Client.request(Protocol.URLs.try)
 end
 
--- 同一时间只能有一个登录请求
-local request_handle
-
-local function abort_request()
-    if request_handle then
-        request_handle.abort()
-        request_handle = nil
-    end
-end
-
 ---@param username string
 ---@param password string
 function M.login(username, password, options)
     options = options or {}
+    abort_all_operations() -- 终止其他操作
 
     if not username or not password then
         Fn.schedule_call(options.on_error)
@@ -53,18 +72,12 @@ function M.login(username, password, options)
     end
 
     ---@type FittenCode.Protocol.Methods.Login.Body
-    local body = {
-        username = username,
-        password = password,
-    }
+    local body = { username = username, password = password }
 
-    abort_request()
     request_handle = Client.request(Protocol.Methods.login, {
         body = assert(vim.fn.json_encode(body)),
     })
-    if not request_handle then
-        return
-    end
+    if not request_handle then return end
 
     request_handle.promise():forward(function(_)
         ---@type FittenCode.Protocol.Methods.Login.Response
@@ -72,11 +85,7 @@ function M.login(username, password, options)
         if response and response.access_token and response.refresh_token and response.user_info then
             api_key_manager:update(Keyring.make(response))
             Log.notify_info(Translate('[Fitten Code] Login successful'))
-            Client.request(Protocol.Methods.click_count, {
-                variables = {
-                    click_count_type = 'login'
-                }
-            })
+            Client.request(Protocol.Methods.click_count, { variables = { click_count_type = 'login' } })
             Fn.schedule_call(options.on_success)
         else
             return Promise.reject()
@@ -86,18 +95,10 @@ function M.login(username, password, options)
     end)
 end
 
-local start_check_login_timer = nil
-local login_providers = {
-    'google',
-    'github',
-    'twitter',
-    'microsoft'
-}
-
--- 对于循环嵌套的回调函数更好一点
 ---@param source string
 function M.login3rd(source, options)
     options = options or {}
+    abort_all_operations() -- 终止其他操作
 
     local api_key_manager = Client.get_api_key_manager()
     if api_key_manager:get_fitten_user_id() then
@@ -106,19 +107,11 @@ function M.login3rd(source, options)
         return
     end
 
-    if not source or vim.tbl_contains(login_providers, source) == false then
+    if not source or not vim.tbl_contains(login_providers, source) then
         Log.notify_error(Translate('[Fitten Code] Invalid 3rd-party login source'))
         Fn.schedule_call(options.on_error)
         return
     end
-
-    local is_login_fb_running = false;
-    EventLoop.clear_interval(start_check_login_timer)
-
-    local total_time_limit = 600;
-    local time_delta = 3;
-    local total_time = 0;
-    local start_check = false;
 
     local client_token = Fn.uuid_v4()
     if not client_token then
@@ -127,42 +120,40 @@ function M.login3rd(source, options)
         return
     end
 
-    abort_request()
+    -- 初始化第三方登录状态
+    login3rd_start_check = true
+    login3rd_total_time = 0
+
+    -- 发起第三方登录请求
     request_handle = Client.request(Protocol.Methods.fb_sign_in, {
-        variables = {
-            sign_in_source = source,
-            client_token = client_token,
-        }
+        variables = { sign_in_source = source, client_token = client_token }
     })
-    if not request_handle then
-        return
-    end
+    if not request_handle then return end
 
+    -- 定时检查登录状态
     local function check_login()
-        if not start_check then
-            return
-        end
-        total_time = total_time + time_delta
-        if total_time > total_time_limit then
-            start_check = false
-            Log.info('Login in timeout.')
+        if not login3rd_start_check then return end
+
+        login3rd_total_time = login3rd_total_time + login3rd_time_delta
+        if login3rd_total_time > login3rd_total_time_limit then
+            login3rd_start_check = false
+            Log.info('Login timeout')
             Fn.schedule_call(options.on_error)
-        end
-
-        abort_request()
-        request_handle = Client.request(Protocol.Methods.fb_check_login_auth, {
-            variables = { client_token = client_token, }
-        })
-        if not request_handle then
+            abort_all_operations()
             return
         end
-        request_handle.promise():forward(function(_)
-            ---@type FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
-            local response = _.json()
-            if response and response.access_token and response.refresh_token and response.user_info then
-                EventLoop.clear_interval(start_check_login_timer)
-                is_login_fb_running = false
 
+        -- 发起状态检查请求
+        request_handle = Client.request(Protocol.Methods.fb_check_login_auth, {
+            variables = { client_token = client_token }
+        })
+        if not request_handle then return end
+
+        request_handle.promise():forward(function(res)
+            ---@type FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
+            local response = res.json()
+            if response and response.access_token and response.refresh_token and response.user_info then
+                abort_all_operations() -- 成功时清理资源
                 api_key_manager:update(Keyring.make(response))
                 Log.notify_info(Translate('[Fitten Code] Login successful'))
                 Fn.schedule_call(options.on_success)
@@ -178,23 +169,19 @@ function M.login3rd(source, options)
         end)
     end
 
-    start_check = true;
-    local function start_check_login()
-        if is_login_fb_running then
-            return
-        end
-        is_login_fb_running = true
-        start_check_login_timer = EventLoop.set_interval(time_delta * 1e3, check_login)
-    end
-    start_check_login()
+    -- 启动定时检查
+    login3rd_check_timer = EventLoop.set_interval(login3rd_time_delta * 1000, check_login)
 end
 
 function M.logout()
+    abort_all_operations() -- 终止所有进行中的操作
+
     local api_key_manager = Client.get_api_key_manager()
     if not api_key_manager:get_fitten_user_id() then
         Log.notify_info(Translate('[Fitten Code] You are already logged out'))
         return
     end
+
     api_key_manager:clear()
     Log.notify_info(Translate('[Fitten Code] Logout successful'))
 end
