@@ -125,20 +125,7 @@ function M.init()
 
     -- 切换文档不影响选中状态
     -- 只有当在活动文档中输入状态下则清除Selection
-    vim.api.nvim_create_autocmd({ 'InsertEnter' }, {
-        group = vim.api.nvim_create_augroup('FittenCode.Editor.Selection.Clear', { clear = true }),
-        pattern = '*',
-        callback = function(args)
-            if args.buf ~= M.active_text_editor() then
-                return
-            end
-            record_state.selection = nil
-            vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.SelectionChanged', modeline = false, data = record_state.selection })
-        end,
-        desc = 'Fittencode editor selection clear event',
-    })
-
-    vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
+    vim.api.nvim_create_autocmd({ 'CursorMoved', 'InsertEnter' }, {
         group = vim.api.nvim_create_augroup('FittenCode.Editor.Selection', { clear = true }),
         pattern = '*',
         callback = function(args)
@@ -149,7 +136,10 @@ function M.init()
                 local modes = { ['v'] = true, ['V'] = true, [vim.api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
                 return modes[vim.api.nvim_get_mode().mode]
             end
-            if _check_v() then
+            if not _check_v() then
+                record_state.selection = nil
+                vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.SelectionChanged', modeline = false, data = record_state.selection })
+            else
                 local region = vim.fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
                 local pos = vim.fn.getregionpos(vim.fn.getpos('.'), vim.fn.getpos('v'))
                 local start = { pos[1][1][2], pos[1][1][3] }
