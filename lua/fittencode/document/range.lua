@@ -1,4 +1,4 @@
-local Position = require('fittencode.position')
+local Position = require('fittencode.document.position')
 
 -- Why `end_` instead of `end`?
 -- * `end` is a keyword in Lua, so it cannot be used as a field name.

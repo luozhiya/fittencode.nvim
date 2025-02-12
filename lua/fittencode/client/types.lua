@@ -67,7 +67,11 @@
 ---@field os_version string
 ---@field extension_version string
 
----@class FittenCode.Client.RequestOptions : FittenCode.AsyncIOCallbacks
+---@class FittenCode.Client
+---@field get_api_key_manager fun(): FittenCode.APIKeyManager
+---@field request fun(protocol: FittenCode.Protocol.Element, options?: FittenCode.Client.RequestOptions): FittenCode.Network.Request.Response?
+
+---@class FittenCode.Client.RequestOptions
 ---@field body? string
 ---@field timeout? number
 ---@field variables? table<string, any>

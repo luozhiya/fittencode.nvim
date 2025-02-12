@@ -1,6 +1,6 @@
-local Position = require('fittencode.position')
-local Range = require('fittencode.range')
-local TextLine = require('fittencode.text_line')
+local Position = require('fittencode.document.position')
+local Range = require('fittencode.document.range')
+local TextLine = require('fittencode.document.text_line')
 
 local M = {}
 

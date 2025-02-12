@@ -11,10 +11,6 @@ local Config = require('fittencode.config')
 local PlatformInfo = require('fittencode.client.platform_info')
 
 ---@class FittenCode.Client
----@field get_api_key_manager fun(): FittenCode.APIKeyManager
----@field request fun(protocol: FittenCode.Protocol.Element, options?: FittenCode.Client.RequestOptions): FittenCode.Network.Request.Response?
-
----@class FittenCode.Client
 local M = {}
 
 ---@type FittenCode.APIKeyManager?

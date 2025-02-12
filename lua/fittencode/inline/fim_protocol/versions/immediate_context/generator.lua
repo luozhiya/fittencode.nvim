@@ -1,8 +1,8 @@
 local Fn = require('fittencode.functional.fn')
 local Editor = require('fittencode.document.editor')
 local Log = require('fittencode.log')
-local Position = require('fittencode.position')
-local Range = require('fittencode.range')
+local Position = require('fittencode.document.position')
+local Range = require('fittencode.document.range')
 
 local ImmediateContextGenerator = {}
 ImmediateContextGenerator.__index = ImmediateContextGenerator
