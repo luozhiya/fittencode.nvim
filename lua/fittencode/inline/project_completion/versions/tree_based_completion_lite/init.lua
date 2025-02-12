@@ -36,7 +36,7 @@ ProjectCompletionOld 类生成 prompt 的核心逻辑如下：
 
 local Fn = require('fittencode.functional.fn')
 local Editor = require('fittencode.document.editor')
-local LspService = require('fittencode.lsp_service')
+local LspService = require('fittencode.functional.lsp_service')
 
 -- 符号树节点结构
 local SymbolNode = {}

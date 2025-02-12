@@ -5,7 +5,7 @@ local Editor = require('fittencode.document.editor')
 local Position = require('fittencode.document.position')
 local Range = require('fittencode.document.range')
 local Config = require('fittencode.config')
-local LspService = require('fittencode.lsp_service')
+local LspService = require('fittencode.functional.lsp_service')
 
 -- 常量定义
 local MAX_CHARS = 220000 -- ~200KB

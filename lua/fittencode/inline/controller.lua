@@ -12,7 +12,7 @@ local Position = require('fittencode.document.position')
 local ProjectCompletionService = require('fittencode.inline.project_completion.service')
 local Status = require('fittencode.inline.status')
 local NotifyLogin = require('fittencode.client.notify_login')
-local PromptGenerator = require('fittencode.inline.prompt_generator')
+local PromptGenerator = require('fittencode.inline.fim_protocol.versions.comprehensive_context.generator')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
