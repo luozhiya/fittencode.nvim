@@ -1,5 +1,5 @@
 local Fn = require('fittencode.functional.fn')
-local Translate = require('fittencode.translate')
+local Translate = require('fittencode.translations')
 
 ---@class FittenCode.SecretStorage
 ---@field _storage_dir string
@@ -84,7 +84,7 @@ end
 
 ---@return FittenCode.KeyStorage
 function SecretStorage.new(options)
-    local master_password = vim.fn.inputsecret(Translate('Enter master password: '))
+    local master_password = vim.fn.inputsecret(Translate.translate('Enter master password: '))
 
     assert(type(master_password) == 'string', 'Password must be string')
     assert(#master_password >= 12, 'Password too short (min 12 chars)')

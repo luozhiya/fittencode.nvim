@@ -1,7 +1,7 @@
 local Protocol = require('fittencode.client.protocol')
 local Promise = require('fittencode.concurrency.promise')
 local Log = require('fittencode.log')
-local Translate = require('fittencode.translate')
+local Translate = require('fittencode.translations')
 local Fn = require('fittencode.functional.fn')
 local Client = require('fittencode.client')
 local Keyring = require('fittencode.client.keyring')
@@ -73,7 +73,7 @@ function M.login(username, password, options)
 
     local api_key_manager = Client.get_api_key_manager()
     if api_key_manager:get_fitten_user_id() then
-        Log.notify_info(Translate('[Fitten Code] You are already logged in'))
+        Log.notify_info(Translate.translate('[Fitten Code] You are already logged in'))
         Fn.schedule_call(options.on_success)
         return
     end
@@ -91,7 +91,7 @@ function M.login(username, password, options)
         local response = _.json()
         if response and response.access_token and response.refresh_token and response.user_info then
             api_key_manager:update(Keyring.make(response))
-            Log.notify_info(Translate('[Fitten Code] Login successful'))
+            Log.notify_info(Translate.translate('[Fitten Code] Login successful'))
             Client.request(Protocol.Methods.click_count, { variables = { click_count_type = 'login' } })
             Fn.schedule_call(options.on_success)
         else
@@ -109,13 +109,13 @@ function M.login3rd(source, options)
 
     local api_key_manager = Client.get_api_key_manager()
     if api_key_manager:get_fitten_user_id() then
-        Log.notify_info(Translate('[Fitten Code] You are already logged in'))
+        Log.notify_info(Translate.translate('[Fitten Code] You are already logged in'))
         Fn.schedule_call(options.on_success)
         return
     end
 
     if not source or not vim.tbl_contains(M.login3rd_providers, source) then
-        Log.notify_error(Translate('[Fitten Code] Invalid 3rd-party login source'))
+        Log.notify_error(Translate.translate('[Fitten Code] Invalid 3rd-party login source'))
         Fn.schedule_call(options.on_error)
         return
     end
@@ -162,7 +162,7 @@ function M.login3rd(source, options)
             if response and response.access_token and response.refresh_token and response.user_info then
                 abort_all_operations() -- 成功时清理资源
                 api_key_manager:update(Keyring.make(response))
-                Log.notify_info(Translate('[Fitten Code] Login successful'))
+                Log.notify_info(Translate.translate('[Fitten Code] Login successful'))
                 Fn.schedule_call(options.on_success)
 
                 -- 发送统计信息
@@ -185,12 +185,12 @@ function M.logout()
 
     local api_key_manager = Client.get_api_key_manager()
     if not api_key_manager:get_fitten_user_id() then
-        Log.notify_info(Translate('[Fitten Code] You are already logged out'))
+        Log.notify_info(Translate.translate('[Fitten Code] You are already logged out'))
         return
     end
 
     api_key_manager:clear()
-    Log.notify_info(Translate('[Fitten Code] Logout successful'))
+    Log.notify_info(Translate.translate('[Fitten Code] Logout successful'))
 end
 
 return M

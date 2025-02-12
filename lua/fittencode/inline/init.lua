@@ -1,7 +1,7 @@
 local Controller = require('fittencode.inline.controller')
 local Config = require('fittencode.config')
 local Log = require('fittencode.log')
-local Translate = require('fittencode.translate')
+local Translate = require('fittencode.translations')
 local Fn = require('fittencode.functional.fn')
 
 -- 唯一的 Controller 对象
@@ -22,13 +22,13 @@ end
 local function enable()
     assert(controller, 'Controller not initialized')
     controller:set_suffix_permissions(true)
-    Log.notify_info(Translate('Global completions are activated'))
+    Log.notify_info(Translate.translate('Global completions are activated'))
 end
 
 local function disable()
     assert(controller, 'Controller not initialized')
     controller:set_suffix_permissions(false)
-    Log.notify_info(Translate('Gloabl completions are deactivated'))
+    Log.notify_info(Translate.translate('Gloabl completions are deactivated'))
 end
 
 ---@param suffixes string[]
@@ -37,9 +37,9 @@ local function onlyenable(suffixes)
     local prev = Config.inline_completion.enable
     controller:set_suffix_permissions(true, suffixes)
     if not prev then
-        Log.notify_info(Translate('Completions for files with the extensions of {} are enabled, global completions have been automatically activated'), suffixes)
+        Log.notify_info(Translate.translate('Completions for files with the extensions of {} are enabled, global completions have been automatically activated'), suffixes)
     else
-        Log.notify_info(Translate('Completions for files with the extensions of {} are enabled'), suffixes)
+        Log.notify_info(Translate.translate('Completions for files with the extensions of {} are enabled'), suffixes)
     end
 end
 
@@ -47,7 +47,7 @@ end
 local function onlydisable(suffixes)
     assert(controller, 'Controller not initialized')
     controller:set_suffix_permissions(false, suffixes)
-    Log.notify_info(Translate('Completions for files with the extensions of {} are disabled'), suffixes)
+    Log.notify_info(Translate.translate('Completions for files with the extensions of {} are disabled'), suffixes)
 end
 
 local function destory()

@@ -4,7 +4,7 @@ local Fn = require('fittencode.functional.fn')
 local Promise = require('fittencode.concurrency.promise')
 local Session = require('fittencode.inline.session')
 local Editor = require('fittencode.editor')
-local Translate = require('fittencode.translate')
+local Translate = require('fittencode.translations')
 local Log = require('fittencode.log')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
@@ -294,7 +294,7 @@ function Controller:edit_completion()
         force = true,
         edit_mode = true,
     }):catch(function()
-        self:_show_no_more_suggestion(Translate('  (Currently no completion options available)'), 2000)
+        self:_show_no_more_suggestion(Translate.translate('  (Currently no completion options available)'), 2000)
     end)
 end
 
@@ -302,7 +302,7 @@ function Controller:triggering_completion_by_shortcut()
     self:triggering_completion({
         force = true,
     }):catch(function()
-        self:_show_no_more_suggestion(Translate('  (Currently no completion options available)'), 2000)
+        self:_show_no_more_suggestion(Translate.translate('  (Currently no completion options available)'), 2000)
     end)
 end
 

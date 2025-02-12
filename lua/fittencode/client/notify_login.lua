@@ -1,5 +1,5 @@
 local Config = require('fittencode.config')
-local Translate = require('fittencode.translate')
+local Translate = require('fittencode.translations')
 
 local M = {}
 
@@ -11,7 +11,7 @@ function M.notify_login()
     if not note_login_dismissed and ((vim.uv.hrtime() - last_note_login_time) / 1e6) < note_login_interval then
         last_note_login_time = vim.uv.hrtime()
         vim.ui.select({ 'Login', 'Dismiss' }, {
-            prompt = Translate('[Fitten Code] Please login first.'),
+            prompt = Translate.translate('[Fitten Code] Please login first.'),
         }, function(choice)
             if choice == 'Login' then
                 vim.schedule(function()
