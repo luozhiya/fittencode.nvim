@@ -1,4 +1,4 @@
-local Editor = require('fittencode.editor')
+local Editor = require('fittencode.document.editor')
 local Range = require('fittencode.range')
 local Position = require('fittencode.position')
 local Fn = require('fittencode.functional.fn')

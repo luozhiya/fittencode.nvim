@@ -1,5 +1,5 @@
 local Fn = require('fittencode.functional.fn')
-local Editor = require('fittencode.editor')
+local Editor = require('fittencode.document.editor')
 local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')

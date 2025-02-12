@@ -1,4 +1,4 @@
-local Editor = require('fittencode.editor')
+local Editor = require('fittencode.document.editor')
 
 local M = {}
 

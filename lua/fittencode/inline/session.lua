@@ -1,4 +1,4 @@
-local Editor = require('fittencode.editor')
+local Editor = require('fittencode.document.editor')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local State = require('fittencode.inline.state')
@@ -7,11 +7,9 @@ local Fn = require('fittencode.functional.fn')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
 local SessionStatus = require('fittencode.inline.session_status')
-local GenerationResponseParser = require('fittencode.inline.parse_response').GenerationResponseParser
-local Config = require('fittencode.config')
+local ResponseParser = require('fittencode.inline.fim_protocol.versions.comprehensive_context.response_parser').ResponseParser
 local Protocol = require('fittencode.client.protocol')
-local ChatPrompts = require('fittencode.session.chat_prompts')
-local Compression = require('fittencode.compression')
+local WordSegmentation = require('fittencode.prompts.word_segmentation')
 local ZipFlow = require('fittencode.zipflow')
 
 -- 一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
@@ -92,7 +90,7 @@ function Session:async_update_word_segmentation()
     end
 
     local request_handle = Client.request(Protocol.Methods.chat_auth, {
-        body = assert(vim.fn.json_encode(ChatPrompts.word_segmentation(generated_text))),
+        body = assert(vim.fn.json_encode(WordSegmentation.generate(generated_text))),
     })
     if not request_handle then
         Log.error('Failed to send request')
@@ -412,7 +410,7 @@ function Session:generate_one_stage_auth(completion_version, body)
             Log.error('Failed to decode completion raw response: {}', _)
             return Promise.reject()
         end
-        return GenerationResponseParser.parse(response, {
+        return ResponseParser.parse(response, {
             buf = self.buf,
             position = self.position,
         })

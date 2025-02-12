@@ -1,4 +1,4 @@
-local VM = require('fittencode.vm')
+local VM = require('fittencode.open_promot_language.vm')
 local Client = require('fittencode.client')
 
 local M = {}

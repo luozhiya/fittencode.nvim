@@ -1,6 +1,6 @@
 local Config = require('fittencode.config')
 local ActiveEditor = require('fittencode.chat.active_editor')
-local Editor = require('fittencode.editor')
+local Editor = require('fittencode.document.editor')
 local Log = require('fittencode.log')
 
 local Runtime = {}
