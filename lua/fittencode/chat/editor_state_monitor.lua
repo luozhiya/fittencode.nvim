@@ -123,7 +123,22 @@ function M.init()
         end
     })
 
-    vim.api.nvim_create_autocmd({ 'CursorMoved', 'ModeChanged' }, {
+    -- 切换文档不影响选中状态
+    -- 只有当在活动文档中输入状态下则清除Selection
+    vim.api.nvim_create_autocmd({ 'InsertEnter' }, {
+        group = vim.api.nvim_create_augroup('FittenCode.Editor.Selection.Clear', { clear = true }),
+        pattern = '*',
+        callback = function(args)
+            if args.buf ~= M.active_text_editor() then
+                return
+            end
+            record_state.selection = nil
+            vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.SelectionChanged', modeline = false, data = record_state.selection })
+        end,
+        desc = 'Fittencode editor selection clear event',
+    })
+
+    vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
         group = vim.api.nvim_create_augroup('FittenCode.Editor.Selection', { clear = true }),
         pattern = '*',
         callback = function(args)
