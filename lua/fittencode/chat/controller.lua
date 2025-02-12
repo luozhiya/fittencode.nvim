@@ -3,7 +3,7 @@ local Log = require('fittencode.log')
 local Runtime = require('fittencode.chat.runtime')
 local State = require('fittencode.chat.state')
 local Status = require('fittencode.chat.status')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 
 ---@class FittenCode.Chat.Controller
 local Controller = {}

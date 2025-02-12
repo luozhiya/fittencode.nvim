@@ -2,7 +2,7 @@ local Controller = require('fittencode.inline.controller')
 local Config = require('fittencode.config')
 local Log = require('fittencode.log')
 local Translate = require('fittencode.translate')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 
 -- 唯一的 Controller 对象
 ---@type FittenCode.Inline.Controller?

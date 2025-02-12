@@ -1,4 +1,5 @@
 local bit = require('bit')
+
 local band, bor, bxor, bnot, lshift, rshift, rol =
     bit.band, bit.bor, bit.bxor, bit.bnot, bit.lshift, bit.rshift, bit.rol
 
@@ -130,7 +131,7 @@ local M = {
 }
 
 function M.is_available()
-    return pcall(require, 'bit') and true or false
+    return true
 end
 
 return M

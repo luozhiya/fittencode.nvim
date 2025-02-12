@@ -1,6 +1,6 @@
 local M = {}
 
-M.spawn = require('fittencode.uv.spawn').spawn
-M.spawn_promise = require('fittencode.uv.spawn_promise').spawn_promise
+M.spawn = require('fittencode.vim.promisify.uv.spawn').spawn
+M.spawn_promise = require('fittencode.vim.promisify.uv.spawn_promise').spawn_promise
 
 return M

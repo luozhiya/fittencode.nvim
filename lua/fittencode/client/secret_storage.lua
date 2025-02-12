@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 local Translate = require('fittencode.translate')
 
 ---@class FittenCode.SecretStorage

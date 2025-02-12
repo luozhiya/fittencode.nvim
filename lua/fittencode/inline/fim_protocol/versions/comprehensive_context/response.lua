@@ -1,7 +1,7 @@
 local Editor = require('fittencode.editor')
 local Range = require('fittencode.range')
 local Position = require('fittencode.position')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 
 -- 协议常量 (不可修改)
 local DEFAULT_CONTEXT_THRESHOLD = 100     -- 默认上下文阈值

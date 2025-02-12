@@ -1,5 +1,5 @@
 local Promise = require('fittencode.concurrency.promise')
-local FS = require('fittencode.uv.fs')
+local FS = require('fittencode.vim.promisify.uv.fs')
 
 -- 自动加载子模块
 local algorithms = {

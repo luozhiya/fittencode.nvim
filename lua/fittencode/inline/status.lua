@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 local Log = require('fittencode.log')
 
 ---@class FittenCode.Inline.Status

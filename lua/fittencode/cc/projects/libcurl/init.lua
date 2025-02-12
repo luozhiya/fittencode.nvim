@@ -2,7 +2,7 @@ package.cpath = package.cpath .. ';' .. require('cpath')
 -- package.cpath = package.cpath .. ';' .. require('fittencode.http.libcurl.cpath')
 
 local CC = require('libcurl')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 
 CC.global_init()
 

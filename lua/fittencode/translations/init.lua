@@ -3,7 +3,7 @@ local LangFallback = require('fittencode.language.fallback')
 local Log = require('fittencode.log')
 local Fmt = require('fittencode.fmt')
 local Config = require('fittencode.config')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 
 local M = {}
 

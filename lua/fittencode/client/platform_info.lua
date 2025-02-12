@@ -1,5 +1,5 @@
 local Meta = require('fittencode.client.meta')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 
 local M = {}
 

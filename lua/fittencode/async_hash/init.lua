@@ -11,7 +11,7 @@ AsyncHash.sha256("/path/to/file", {input_type = 'file'})
 --]]
 
 local Promise = require('fittencode.concurrency.promise')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 
 local engine_priority = {
     ['cc']      = 110, -- C实现的最高优先级

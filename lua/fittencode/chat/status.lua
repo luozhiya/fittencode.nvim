@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 
 ---@class fittencode.Chat.Status
 ---@field conversations table<string, boolean>

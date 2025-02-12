@@ -13,7 +13,7 @@ uv_fs.read_file('test.txt')
 
 local _Promise = require('fittencode.uv._promise')
 local Promise = require('fittencode.concurrency.promise')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 
 -- local fs_functions = {
 --     'fs_close', 'fs_open', 'fs_read', 'fs_write', 'fs_unlink', 'fs_mkdir',

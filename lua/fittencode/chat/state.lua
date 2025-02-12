@@ -1,5 +1,5 @@
 local Client = require('fittencode.client')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 local Editor = require('fittencode.editor')
 local ActiveEditor = require('fittencode.chat.active_editor')
 local Log = require('fittencode.log')

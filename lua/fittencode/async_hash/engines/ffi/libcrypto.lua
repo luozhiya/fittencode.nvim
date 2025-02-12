@@ -1,5 +1,6 @@
-local ffi = require('ffi')
 local Promise = require('fittencode.concurrency.promise')
+
+local ffi = require('ffi')
 
 ffi.cdef [[
 typedef struct evp_md_ctx_st EVP_MD_CTX;

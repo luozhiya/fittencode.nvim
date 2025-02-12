@@ -1,5 +1,5 @@
 local Controller = require('fittencode.chat.controller')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 local Model = require('fittencode.chat.model')
 local ConversationTypesProvider = require('fittencode.chat.conversation_types_provider')
 local Language = require('fittencode.language')

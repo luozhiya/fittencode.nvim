@@ -1,6 +1,6 @@
 local Client = require('fittencode.client')
 local Config = require('fittencode.config')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 local Promise = require('fittencode.concurrency.promise')
 local Session = require('fittencode.inline.session')
 local Editor = require('fittencode.editor')

@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 local Editor = require('fittencode.editor')
 local Log = require('fittencode.log')
 local Position = require('fittencode.position')

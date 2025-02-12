@@ -1,6 +1,6 @@
 local AsyncHash = require('fittencode.async_hash')
 local Promise = require('fittencode.concurrency.promise')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 local Editor = require('fittencode.editor')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')

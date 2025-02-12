@@ -34,7 +34,7 @@ ProjectCompletionOld 类生成 prompt 的核心逻辑如下：
 
 --]]
 
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 local Editor = require('fittencode.editor')
 local LspService = require('fittencode.lsp_service')
 

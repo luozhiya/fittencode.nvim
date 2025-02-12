@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.functional.fn')
 local Promise = require('fittencode.concurrency.promise')
 local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
