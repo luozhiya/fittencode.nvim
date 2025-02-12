@@ -1,4 +1,3 @@
----@class fittencode.CompletionStatistics
 local CompletionStatistics = {}
 CompletionStatistics.__index = CompletionStatistics
 
