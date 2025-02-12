@@ -22,54 +22,6 @@ function M.buf()
     end
 end
 
-vim.api.nvim_create_autocmd({ 'BufEnter' }, {
-    group = vim.api.nvim_create_augroup('fittencode.editor.active', { clear = true }),
-    pattern = '*',
-    callback = function(args)
-        if vim.tbl_contains(filter_bufs, args.buf) then
-            return
-        end
-        if Editor.is_filebuf(args.buf) then
-            active_buf = args.buf
-            vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.ActiveChanged', modeline = false, data = args.buf })
-        end
-    end
-})
-
-vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
-    group = vim.api.nvim_create_augroup('fittencode.editor.selection', { clear = true }),
-    pattern = '*',
-    callback = function(args)
-        if args.buf ~= M.buf() then
-            return
-        end
-        local function v()
-            local modes = { ['v'] = true, ['V'] = true, [vim.api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
-            return modes[vim.api.nvim_get_mode().mode]
-        end
-        if v() then
-            local region = vim.fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
-            local pos = vim.fn.getregionpos(vim.fn.getpos('.'), vim.fn.getpos('v'))
-            local start = { pos[1][1][2], pos[1][1][3] }
-            local end_ = { pos[#pos][2][2], pos[#pos][2][3] }
-            selection = {
-                buf = args.buf,
-                name = vim.api.nvim_buf_get_name(args.buf),
-                text = region,
-                location = {
-                    start_row = start[1],
-                    start_col = start[2],
-                    end_row = end_[1],
-                    end_col = end_[2],
-                }
-            }
-            vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.SelectionChanged', modeline = false, data = selection })
-        end
-    end,
-    desc = 'Fittencode editor selection event',
-})
-
-
 function M.selection()
     return selection
 end
@@ -127,6 +79,55 @@ function M.error_location()
 end
 
 function M.title_selected_text()
+end
+
+function M.init()
+    vim.api.nvim_create_autocmd({ 'BufEnter' }, {
+        group = vim.api.nvim_create_augroup('fittencode.editor.active', { clear = true }),
+        pattern = '*',
+        callback = function(args)
+            if vim.tbl_contains(filter_bufs, args.buf) then
+                return
+            end
+            if Editor.is_filebuf(args.buf) then
+                active_buf = args.buf
+                vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.ActiveChanged', modeline = false, data = args.buf })
+            end
+        end
+    })
+
+    vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
+        group = vim.api.nvim_create_augroup('fittencode.editor.selection', { clear = true }),
+        pattern = '*',
+        callback = function(args)
+            if args.buf ~= M.buf() then
+                return
+            end
+            local function v()
+                local modes = { ['v'] = true, ['V'] = true, [vim.api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
+                return modes[vim.api.nvim_get_mode().mode]
+            end
+            if v() then
+                local region = vim.fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
+                local pos = vim.fn.getregionpos(vim.fn.getpos('.'), vim.fn.getpos('v'))
+                local start = { pos[1][1][2], pos[1][1][3] }
+                local end_ = { pos[#pos][2][2], pos[#pos][2][3] }
+                selection = {
+                    buf = args.buf,
+                    name = vim.api.nvim_buf_get_name(args.buf),
+                    text = region,
+                    location = {
+                        start_row = start[1],
+                        start_col = start[2],
+                        end_row = end_[1],
+                        end_col = end_[2],
+                    }
+                }
+                vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.SelectionChanged', modeline = false, data = selection })
+            end
+        end,
+        desc = 'Fittencode editor selection event',
+    })
 end
 
 return M
