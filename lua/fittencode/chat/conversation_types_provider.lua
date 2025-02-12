@@ -5,6 +5,8 @@ local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.functional.fn')
 local Log = require('fittencode.log')
 local Path = require('fittencode.functional.path')
+local Performance = require('fittencode.functional.performance')
+local PerfTimer = Performance.Timer
 
 ---@class FittenCode.Chat.ConversationTypeProvider
 local ConversationTypesProvider = {}
@@ -45,14 +47,15 @@ function ConversationTypesProvider:load_conversation_types()
 end
 
 function ConversationTypesProvider:async_load_conversation_types()
-    local start = vim.uv.hrtime()
+    local perf = PerfTimer:new()
+    perf:start()
     return Promise.new(function(resolve)
         vim.schedule(function()
             self:load_conversation_types()
             resolve()
         end)
     end):forward(function()
-        local elapsed = vim.uv.hrtime() - start
+        local elapsed = perf:stop()
         Log.info('ConversationTypesProvider loaded total {:d} conversation types in {} ms', #(vim.tbl_keys(self.conversation_types)), elapsed / 1e6)
         return Promise.resolve()
     end)
