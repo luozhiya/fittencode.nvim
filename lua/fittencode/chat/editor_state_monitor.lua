@@ -1,29 +1,30 @@
 local Editor = require('fittencode.document.editor')
 
+-- 监控编辑器状态变化
+-- 1. 当前编辑的文件
+-- 2. 当前选中的文本
 local M = {}
 
----@type integer?
-local active_buf = nil
-
----@type FittenCode.Editor.Selection?
-local selection = nil
-
----@type table<integer>
-local filter_bufs = {}
+-- 定义 state 表
+local state = {
+    active_buf = nil,
+    selection = nil,
+    filter_bufs = {}
+}
 
 function M.register_filter_buf(buf)
-    filter_bufs[#filter_bufs + 1] = buf
+    table.insert(state.filter_bufs, buf)
 end
 
 ---@return integer?
 function M.buf()
-    if Editor.is_filebuf(active_buf) then
-        return active_buf
+    if Editor.is_filebuf(state.active_buf) then
+        return state.active_buf
     end
 end
 
 function M.selection()
-    return selection
+    return state.selection
 end
 
 function M.selected_text()
@@ -86,11 +87,11 @@ function M.init()
         group = vim.api.nvim_create_augroup('fittencode.editor.active', { clear = true }),
         pattern = '*',
         callback = function(args)
-            if vim.tbl_contains(filter_bufs, args.buf) then
+            if vim.tbl_contains(state.filter_bufs, args.buf) then
                 return
             end
             if Editor.is_filebuf(args.buf) then
-                active_buf = args.buf
+                state.active_buf = args.buf
                 vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.ActiveChanged', modeline = false, data = args.buf })
             end
         end
@@ -112,7 +113,7 @@ function M.init()
                 local pos = vim.fn.getregionpos(vim.fn.getpos('.'), vim.fn.getpos('v'))
                 local start = { pos[1][1][2], pos[1][1][3] }
                 local end_ = { pos[#pos][2][2], pos[#pos][2][3] }
-                selection = {
+                state.selection = {
                     buf = args.buf,
                     name = vim.api.nvim_buf_get_name(args.buf),
                     text = region,
@@ -123,7 +124,7 @@ function M.init()
                         end_col = end_[2],
                     }
                 }
-                vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.SelectionChanged', modeline = false, data = selection })
+                vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.SelectionChanged', modeline = false, data = state.selection })
             end
         end,
         desc = 'Fittencode editor selection event',
