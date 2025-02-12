@@ -1,4 +1,3 @@
-
 ---@class FittenCode.Chat.CompletionStatistics
 ---@field update_ft_token function
 ---@field check_accept function
@@ -187,4 +186,3 @@
 ---@field conversations table<FittenCode.Chat.Conversation>
 ---@field selected_conversation_id string
 ---@field fcps boolean
-

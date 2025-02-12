@@ -1,4 +1,3 @@
-
 -- 设计成一个类，并不是为了实例化，而是为了方便管理数据与资源
 -- * 事实上因为一些 augroups 等资源存在冲突，使得该类只能有一个实例
 ---@class FittenCode.Inline.Controller
