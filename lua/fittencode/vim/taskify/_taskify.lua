@@ -12,11 +12,6 @@ end
 -- 调用 taskify 函数，返回一个可以链式调用的 Task 对象
 local task = Taskify.taskify(async_func)
 
--- 链式调用 sync
-task(2):map():wait()
--- 链式调用 async
-task(3):map():filter:reduce():async(function(result) print(result) end)
-
 --]]
 
 local Task = require('fittencode.concurrency.task')
