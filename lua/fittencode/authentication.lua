@@ -9,15 +9,22 @@ local EventLoop = require('fittencode.uv.event_loop')
 
 local M = {}
 
--- 模块级状态变量
 local request_handle = nil
-local login3rd_check_timer = nil
-local login3rd_start_check = false
-local login3rd_total_time = 0
-local login3rd_time_delta = 3 -- 检查间隔（秒）
-local login3rd_total_time_limit = 600 -- 总超时时间（秒）
+local login3rd = {
+    check_timer = nil,
+    start_check = false,
+    total_time = 0,
+    time_delta = 3, -- 检查间隔（秒）
+    total_time_limit = 600 -- 总超时时间（秒）
+}
 
-local login_providers = { 'google', 'github', 'twitter', 'microsoft' }
+-- 第三方登录提供商
+M.login3rd_providers = {
+    'google',
+    'github',
+    'twitter',
+    'microsoft'
+}
 
 local function abort_all_operations()
     -- 终止所有可能的请求
@@ -27,14 +34,14 @@ local function abort_all_operations()
     end
 
     -- 清除第三方登录的定时器
-    if login3rd_check_timer then
-        EventLoop.clear_interval(login3rd_check_timer)
-        login3rd_check_timer = nil
+    if login3rd.check_timer then
+        EventLoop.clear_interval(login3rd.check_timer)
+        login3rd.check_timer = nil
     end
 
     -- 重置第三方登录状态
-    login3rd_start_check = false
-    login3rd_total_time = 0
+    login3rd.start_check = false
+    login3rd.total_time = 0
 end
 
 function M.register()
@@ -107,7 +114,7 @@ function M.login3rd(source, options)
         return
     end
 
-    if not source or not vim.tbl_contains(login_providers, source) then
+    if not source or not vim.tbl_contains(M.login3rd_providers, source) then
         Log.notify_error(Translate('[Fitten Code] Invalid 3rd-party login source'))
         Fn.schedule_call(options.on_error)
         return
@@ -121,8 +128,8 @@ function M.login3rd(source, options)
     end
 
     -- 初始化第三方登录状态
-    login3rd_start_check = true
-    login3rd_total_time = 0
+    login3rd.start_check = true
+    login3rd.total_time = 0
 
     -- 发起第三方登录请求
     request_handle = Client.request(Protocol.Methods.fb_sign_in, {
@@ -132,11 +139,11 @@ function M.login3rd(source, options)
 
     -- 定时检查登录状态
     local function check_login()
-        if not login3rd_start_check then return end
+        if not login3rd.start_check then return end
 
-        login3rd_total_time = login3rd_total_time + login3rd_time_delta
-        if login3rd_total_time > login3rd_total_time_limit then
-            login3rd_start_check = false
+        login3rd.total_time = login3rd.total_time + login3rd.time_delta
+        if login3rd.total_time > login3rd.total_time_limit then
+            login3rd.start_check = false
             Log.info('Login timeout')
             Fn.schedule_call(options.on_error)
             abort_all_operations()
@@ -170,7 +177,7 @@ function M.login3rd(source, options)
     end
 
     -- 启动定时检查
-    login3rd_check_timer = EventLoop.set_interval(login3rd_time_delta * 1000, check_login)
+    login3rd.check_timer = EventLoop.set_interval(login3rd.time_delta * 1000, check_login)
 end
 
 function M.logout()

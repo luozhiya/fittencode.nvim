@@ -14,7 +14,7 @@ local commands = {
     },
     login3rd = {
         execute = function(source) Auth.login3rd(source) end,
-        complete = Auth.login_providers
+        complete = Auth.login3rd_providers
     },
     logout = Auth.logout,
     -- Help
