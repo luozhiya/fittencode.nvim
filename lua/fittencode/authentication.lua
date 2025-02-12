@@ -14,7 +14,7 @@ local login3rd = {
     check_timer = nil,
     start_check = false,
     total_time = 0,
-    time_delta = 3, -- 检查间隔（秒）
+    time_delta = 3,        -- 检查间隔（秒）
     total_time_limit = 600 -- 总超时时间（秒）
 }
 
