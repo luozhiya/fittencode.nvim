@@ -6,7 +6,7 @@ local Range = require('fittencode.range')
 local Location = {}
 Location.__index = Location
 
----@param uri FittenCode.Uri
+---@param uri string
 ---@param range FittenCode.Range|FittenCode.Position
 ---@return FittenCode.Location
 function Location:new(uri, range)

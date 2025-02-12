@@ -1,11 +1,7 @@
-local Log = require('fittencode.log')
 local Position = require('fittencode.position')
 local Range = require('fittencode.range')
 local TextLine = require('fittencode.text_line')
-local UTF8 = require('fittencode.utf8')
 
--- Provide `TextDocument` interface for vim buffer.
----@class FittenCode.Editor
 local M = {}
 
 function M.filetype(buf)

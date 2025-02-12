@@ -55,21 +55,9 @@ local function percent_decode(str)
     )
 end
 
----@class FittenCode.HTTP.URI
----@field scheme string
----@field authority string
----@field path string
----@field query string
----@field fragment string
----@field userinfo string
----@field host string
----@field port? number
-
----@class FittenCode.HTTP.URI
 local URI = {}
 URI.__index = URI
 
----@return FittenCode.HTTP.URI
 function URI.dummy()
     local obj = {
         scheme = '',
