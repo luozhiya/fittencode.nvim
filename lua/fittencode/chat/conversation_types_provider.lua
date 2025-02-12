@@ -4,6 +4,7 @@ local Editor = require('fittencode.document.editor')
 local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.functional.fn')
 local Log = require('fittencode.log')
+local Path = require('fittencode.functional.path')
 
 ---@class FittenCode.Chat.ConversationTypeProvider
 local ConversationTypesProvider = {}
@@ -43,16 +44,22 @@ function ConversationTypesProvider:load_conversation_types()
     self:load_workspace_templates()
 end
 
-function ConversationTypesProvider:async_load_conversation_types(on_loaded)
-    Promise.new(function(resolve, reject)
-        self:load_conversation_types()
-        resolve()
+function ConversationTypesProvider:async_load_conversation_types()
+    local start = vim.uv.hrtime()
+    return Promise.new(function(resolve)
+        vim.schedule(function()
+            self:load_conversation_types()
+            resolve()
+        end)
     end):forward(function()
-        Fn.schedule_call(on_loaded)
+        local elapsed = vim.uv.hrtime() - start
+        Log.info('ConversationTypesProvider loaded total {d} conversation types in {} ms', #(vim.tbl_keys(self.conversation_types)), elapsed / 1e6)
+        return Promise.resolve()
     end)
 end
 
 function ConversationTypesProvider:load_builtin_templates()
+    Log.debug('ConversationTypesProvider will load built-in templates based on extension URI: {}', self.extension_uri)
     local list = {
         chat = {
             'chat-en.rdt.md',
@@ -98,8 +105,9 @@ end
 ---@param file string
 ---@return FittenCode.Chat.ConversationType?
 function ConversationTypesProvider:load_builtin_template(type, file)
-    local r = self.extension_uri .. 'template' .. '/' .. type .. '/' .. file
-    local t = TemplateResolver.load_from_file(r)
+    local resource = Path.join(self.extension_uri, 'template', type, file)
+    Log.info('Loading built-in template from: {}', resource)
+    local t = TemplateResolver.load_from_file(resource)
     if t then
         return ConversationType:new({ template = t, source = 'built-in' })
     end
@@ -126,7 +134,9 @@ function ConversationTypesProvider:load_workspace_templates()
     if not ws then
         return
     end
-    local e = TemplateResolver.load_from_directory(ws .. '/.fittencode/template')
+    local resource = Path.join(ws, '.fittencode', 'template')
+    Log.info('Loading workspace templates from: {}', resource)
+    local e = TemplateResolver.load_from_directory(resource)
     for _, r in ipairs(e) do
         if r and r.isEnabled then
             self.conversation_types[r.id] = ConversationType:new({ template = r, source = 'local-workspace' })

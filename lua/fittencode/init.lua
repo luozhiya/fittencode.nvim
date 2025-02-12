@@ -25,7 +25,7 @@ function M.setup(opts)
         { name = 'client',   init = true,                                   destroy = true },
         { name = 'commands', init = true,                                   destroy = true },
         { name = 'chat',     init = true,                                   destroy = true },
-        { name = 'inline',   init = true,                                   destroy = true },
+        -- { name = 'inline',   init = true,                                   destroy = true },
     }
     for _, module in ipairs(pipes) do
         _execute(module, 'init')

@@ -5,27 +5,41 @@ local Fn = require('fittencode.functional.fn')
 local Log = require('fittencode.log')
 local View = require('fittencode.chat.view')
 local Config = require('fittencode.config')
-local Language = require('fittencode.language.preference')
+local LangPreference = require('fittencode.language.preference')
+local LangFallback = require('fittencode.language.fallback')
 
 ---@type FittenCode.Chat.Controller
 local controller = nil
 
 local function init()
-    local model = Model:new()
-    local view = View:new({
-        model = model,
-        mode = Config.chat.view.mode
-    })
-    view:init()
-    local basic_chat_template_id = 'chat-' .. Language.display_preference()
     local conversation_types_provider = ConversationTypesProvider:new({ extension_uri = Fn.extension_uri() })
-    conversation_types_provider:async_load_conversation_types(function()
+    conversation_types_provider:async_load_conversation_types():forward(function()
         assert(conversation_types_provider)
-        local conversation_type = conversation_types_provider:get_conversation_type(basic_chat_template_id)
-        if not conversation_type then
-            Log.error('Failed to load basic chat template, fallback to `en` language template')
-            basic_chat_template_id = 'chat-en'
+        local basic_chat_template_id
+        local lang = LangPreference.display_preference()
+        Log.info('Display preference language: {}', lang)
+        local fallback = LangFallback.generate_chain(lang)
+        Log.info('Language fallback chain: {}', fallback)
+        for _, fb in ipairs(fallback) do
+            Log.info('Try to load basic chat template for {}', fb)
+            local conversation_type = conversation_types_provider:get_conversation_type('chat-' .. fb)
+            if conversation_type then
+                basic_chat_template_id = 'chat-' .. fb
+                break
+            end
         end
+        if not basic_chat_template_id then
+            Log.notify_error('Failed to load basic chat template')
+            Log.error('Chat controller not initialized')
+            return
+        end
+        Log.info('Basic chat template: {}', basic_chat_template_id)
+        local model = Model:new()
+        local view = View:new({
+            model = model,
+            mode = Config.chat.view.mode
+        })
+        view:init()
         controller = Controller:new({
             view = view,
             model = model,

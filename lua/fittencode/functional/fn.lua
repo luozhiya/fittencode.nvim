@@ -218,7 +218,7 @@ end
 
 local function extension_uri()
     local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('fn.lua', '')
-    return current_dir:gsub('/lua$', '') .. '../../'
+    return current_dir:gsub('/lua$', '') .. '../../../'
 end
 
 ---@param path string

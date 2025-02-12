@@ -1,3 +1,6 @@
+local Log = require('fittencode.log')
+local Fn = require('fittencode.functional.fn')
+
 local M = {}
 
 -- 语言标签解析器
@@ -20,11 +23,13 @@ local function generate_variants(tag)
     local variants = {}
 
     -- 完整格式
-    table.insert(variants, table.concat({
-        tag.main,
-        tag.script,
-        tag.region
-    }, '-'))
+    if tag.script and tag.region then
+        table.insert(variants, table.concat({
+            tag.main,
+            tag.script,
+            tag.region
+        }, '-'))
+    end
 
     -- 含脚本无地区
     if tag.script then
@@ -58,6 +63,7 @@ end
 function M.generate_chain(lang, final_fallback)
     lang = lang:gsub('_', '-'):lower()
     local tag = parse_lang_tag(lang)
+    Log.debug('Fallback chain for language tag: {}', tag)
     local variants = generate_variants(tag)
 
     -- 构建完整链
