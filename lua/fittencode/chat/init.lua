@@ -36,7 +36,7 @@ local function init()
     view:register_message_receiver(function(message)
         controller:receive_view_message(message)
     end)
-    require('fittencode.chat.active_editor')
+    require('fittencode.chat.editor_state_monitor').init()
 end
 
 local function show_chat()

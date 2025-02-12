@@ -3,6 +3,7 @@ local Editor = require('fittencode.document.editor')
 -- 监控编辑器状态变化，Vim 中只有 buffer，没有 VSCode 中的 activeTextEditor 概念
 -- 1. 当前编辑的文件
 -- 2. 当前选中的文本
+
 local M = {}
 
 -- 定义 state 表
@@ -93,7 +94,7 @@ end
 
 function M.init()
     vim.api.nvim_create_autocmd({ 'BufEnter' }, {
-        group = vim.api.nvim_create_augroup('fittencode.editor.active', { clear = true }),
+        group = vim.api.nvim_create_augroup('FittenCode.Editor.Active', { clear = true }),
         pattern = '*',
         callback = function(args)
             if vim.tbl_contains(record_state.filter_buffers, args.buf) then
@@ -101,23 +102,23 @@ function M.init()
             end
             if Editor.is_filebuf(args.buf) then
                 record_state.last_active_buffer = args.buf
-                vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.ActiveChanged', modeline = false, data = args.buf })
+                vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.ActiveChanged', modeline = false, data = args.buf })
             end
         end
     })
 
     vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
-        group = vim.api.nvim_create_augroup('fittencode.editor.selection', { clear = true }),
+        group = vim.api.nvim_create_augroup('FittenCode.Editor.Selection', { clear = true }),
         pattern = '*',
         callback = function(args)
             if args.buf ~= M.active_text_editor() then
                 return
             end
-            local function v()
+            local function _check_v()
                 local modes = { ['v'] = true, ['V'] = true, [vim.api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
                 return modes[vim.api.nvim_get_mode().mode]
             end
-            if v() then
+            if _check_v() then
                 local region = vim.fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
                 local pos = vim.fn.getregionpos(vim.fn.getpos('.'), vim.fn.getpos('v'))
                 local start = { pos[1][1][2], pos[1][1][3] }
@@ -133,7 +134,7 @@ function M.init()
                         end_col = end_[2],
                     }
                 }
-                vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.SelectionChanged', modeline = false, data = record_state.selection })
+                vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.SelectionChanged', modeline = false, data = record_state.selection })
             end
         end,
         desc = 'Fittencode editor selection event',

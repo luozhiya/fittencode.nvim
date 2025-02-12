@@ -1,7 +1,7 @@
 local Fn = require('fittencode.functional.fn')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
-local ActiveEditor = require('fittencode.chat.active_editor')
+local EditorStateMonitor = require('fittencode.chat.editor_state_monitor')
 local Language = require('fittencode.language')
 
 local welcome_message = {
@@ -89,9 +89,9 @@ function View:init()
         vim.api.nvim_set_option_value('swapfile', false, { buf = self.char_input.buf })
         vim.api.nvim_set_option_value('modifiable', false, { buf = self.char_input.buf })
     end)
-    ActiveEditor.register_filter_buf(self.messages_exchange.buf)
-    ActiveEditor.register_filter_buf(self.reference.buf)
-    ActiveEditor.register_filter_buf(self.char_input.buf)
+    EditorStateMonitor.register_filter_buf(self.messages_exchange.buf)
+    EditorStateMonitor.register_filter_buf(self.reference.buf)
+    EditorStateMonitor.register_filter_buf(self.char_input.buf)
 end
 
 function View:_destroy_win()

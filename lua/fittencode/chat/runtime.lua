@@ -1,5 +1,5 @@
 local Config = require('fittencode.config')
-local ActiveEditor = require('fittencode.chat.active_editor')
+local EditorStateMonitor = require('fittencode.chat.editor_state_monitor')
 local Editor = require('fittencode.document.editor')
 local Log = require('fittencode.log')
 
@@ -21,7 +21,7 @@ local function unit_test_framework()
 end
 
 function Runtime.resolve_variables_internal(v, e)
-    local buf = ActiveEditor.buf()
+    local buf = EditorStateMonitor.buf()
     if not buf then
         return ''
     end
@@ -36,10 +36,10 @@ function Runtime.resolve_variables_internal(v, e)
             return e and e[v.index] and e[v.index][v.property]
         end,
         ['selected-text'] = function()
-            return ActiveEditor.selected_text()
+            return EditorStateMonitor.selected_text()
         end,
         ['selected-location-text'] = function()
-            return ActiveEditor.selected_location_text()
+            return EditorStateMonitor.selected_location_text()
         end,
         ['filename'] = function()
             return Editor.filename(buf)
@@ -55,16 +55,16 @@ function Runtime.resolve_variables_internal(v, e)
             return s == 'Not specified' and '' or s
         end,
         ['selected-text-with-diagnostics'] = function()
-            return ActiveEditor.selected_text_with_diagnostics({ diagnostic_severities = v.severities })
+            return EditorStateMonitor.selected_text_with_diagnostics({ diagnostic_severities = v.severities })
         end,
         ['errorMessage'] = function()
-            return ActiveEditor.diagnose_info()
+            return EditorStateMonitor.diagnose_info()
         end,
         ['errorLocation'] = function()
-            return ActiveEditor.error_location()
+            return EditorStateMonitor.error_location()
         end,
         ['title-selected-text'] = function()
-            return ActiveEditor.title_selected_text()
+            return EditorStateMonitor.title_selected_text()
         end,
         ['terminal-text'] = function()
             Log.error('Not implemented for terminal-text')
