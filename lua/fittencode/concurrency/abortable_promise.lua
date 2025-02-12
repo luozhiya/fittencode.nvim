@@ -53,36 +53,12 @@ function AbortablePromise.new(executor)
     self.on_rejected_callbacks = {}
     self.on_cancel = nil -- 取消回调
 
-    -- 状态转换函数
     local function resolve(value)
-        if self.state ~= 'pending' then return end
-        self.state = 'fulfilled'
-        self.value = value
-        -- 异步执行回调（模拟微任务）
-        for _, callback in ipairs(self.on_fulfilled_callbacks) do
-            vim.schedule(function()
-                callback(self.value)
-            end)
-        end
+        self:manually_resolve(value)
     end
 
     local function reject(reason)
-        if self.state ~= 'pending' then return end
-        self.state = 'rejected'
-        self.reason = reason
-        -- 异步执行回调
-        for _, callback in ipairs(self.on_rejected_callbacks) do
-            vim.schedule(function()
-                callback(self.reason)
-            end)
-        end
-    end
-
-    -- 取消方法
-    function self:cancel()
-        if self.state ~= 'pending' then return end
-        if self.on_cancel then self.on_cancel() end
-        reject('Promise was cancelled')
+        self:manually_reject(reason)
     end
 
     -- 执行构造器函数
@@ -141,4 +117,36 @@ function AbortablePromise:forward(on_fulfilled, on_rejected)
     end)
 
     return new_promise
+end
+
+-- 状态转换函数
+function AbortablePromise:manually_resolve(value)
+    if self.state ~= 'pending' then return end
+    self.state = 'fulfilled'
+    self.value = value
+    -- 异步执行回调（模拟微任务）
+    for _, callback in ipairs(self.on_fulfilled_callbacks) do
+        vim.schedule(function()
+            callback(self.value)
+        end)
+    end
+end
+
+function AbortablePromise:manually_reject(reason)
+    if self.state ~= 'pending' then return end
+    self.state = 'rejected'
+    self.reason = reason
+    -- 异步执行回调
+    for _, callback in ipairs(self.on_rejected_callbacks) do
+        vim.schedule(function()
+            callback(self.reason)
+        end)
+    end
+end
+
+-- 取消方法
+function AbortablePromise:cancel()
+    if self.state ~= 'pending' then return end
+    if self.on_cancel then self.on_cancel() end
+    self:manually_reject('Promise was cancelled')
 end
