@@ -1,8 +1,68 @@
+--[[
+
+提供 C++20 `std::format` 风格的字符串格式化功能，支持：
+- 自动/手动参数索引
+- 对齐/填充控制
+- 数值类型格式化
+- 字符串截断
+- 格式说明符解析
+
+-------------------------------
+--- 格式说明符语法
+-------------------------------
+
+`{[index][:format_spec]}`
+
+index：可选参数索引（从0开始）
+format_spec：`[[fill]align][sign][#][0][width][.precision][type]`
+
+格式说明符组件
+组件             说明                                示例
+fill            填充字符（默认空格）                *
+align           对齐方式（<左 >右 ^中 =数字对齐）    >, ^
+sign            数字符号（+强制显示 -仅负数 空格留位）+,
+#               显示进制前缀                        #x → 0xf
+0               前导零填充（等同0>）                05d
+width           最小字段宽度                        10
+precision       浮点精度/字符串截断长度             .2f
+type            输出类型（d,i,x,o,f,e,g,s等）       x, .2f
+
+-------------------------------
+--- 使用示例 1
+-------------------------------
+
+local fmt = require("format")
+
+-- 基础用法
+fmt.format("Hello {}!", "Lua")        --> "Hello Lua!"
+fmt.format("{1} vs {0}", "A", "B")    --> "B vs A"
+
+-- 数字格式化
+fmt.format("{:*>+10.2f}", 3.1415)    --> "****+3.14"
+fmt.format("Hex: {:#04x}", 15)        --> "Hex: 0x0f"
+
+-- 字符串处理
+fmt.format("{:.^10.3}", "LuaRocks")  --> "...Lua..."
+
+-------------------------------
+--- 使用示例 2
+-------------------------------
+
+print(fmt.format("Hello, {}!", "World"))  -- Hello, World!
+print(fmt.format("{1} {0}", "a", "b"))    -- b a
+print(fmt.format("{:*^10}", "hi"))        -- ****hi****
+print(fmt.format("{:0>5}", 3))            -- 00003
+print(fmt.format("{:.2f}", math.pi))      -- 3.14
+print(fmt.format("{:#x}", 255))           -- 0xff
+print(fmt.format("{:d}", 123))            -- 123
+
+--]]
+
 local Fn = require('fittencode.functional.fn')
 
 local M = {}
 
--- 辅助函数：应用填充和对齐
+-- 根据宽度、填充字符和对齐方式对字符串进行填充
 local function apply_padding(s, width, fill, align)
     local padding = width - #s
     if padding <= 0 then return s end
@@ -20,7 +80,7 @@ local function apply_padding(s, width, fill, align)
     end
 end
 
--- 解析格式说明符
+-- 解析格式说明符字符串，分解为填充、对齐、符号等组件
 local function parse_format_spec(spec_str)
     local spec = {
         fill = ' ',
@@ -98,7 +158,7 @@ local function parse_format_spec(spec_str)
     return spec
 end
 
--- 格式化参数
+-- 根据参数类型和格式说明符生成格式化后的字符串，处理数字和字符串的不同情况
 local function format_arg(arg, spec_str)
     local spec = parse_format_spec(spec_str or '')
     local arg_type = type(arg)
@@ -123,11 +183,12 @@ local function format_arg(arg, spec_str)
         local format_str = ''
         local number_str
 
+        local is_integer = (Fn.math_type(arg) == 'integer')
+
         -- 处理整数类型
-        if spec.type == 'd' or spec.type == 'x' or spec.type == 'o' then
-            if Fn.math_type(arg) ~= 'integer' then
-                error("integer type required for format specifier '" .. spec.type .. "'")
-            end
+        if is_integer and (not spec.type or spec.type == 'd' or spec.type == 'x' or spec.type == 'o') then
+            spec.type = spec.type or 'd'
+
             if spec.type == 'd' then
                 format_str = '%d'
             elseif spec.type == 'x' then
@@ -144,7 +205,7 @@ local function format_arg(arg, spec_str)
             number_str = string.format(format_str, arg)
         else
             -- 处理浮点数
-            spec.type = spec.type or 'g'
+            spec.type = spec.type or 'f'
             if spec.type == 'f' or spec.type == 'e' or spec.type == 'g' then
                 local prec = spec.precision or (spec.type == 'f' and 6 or nil)
                 format_str = '%.' .. (prec or '') .. spec.type
@@ -181,7 +242,8 @@ local function format_arg(arg, spec_str)
     error('unsupported argument type: ' .. arg_type)
 end
 
--- 主格式化函数
+-- 解析格式字符串，处理转义字符，管理参数索引，调用格式化函数并拼接最终结果
+---@param fmt string 包含 {} 占位符的格式字符串
 function M.format(fmt, ...)
     local args = Fn.pack(...)
     local result = {}

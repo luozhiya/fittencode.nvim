@@ -53,7 +53,7 @@ function ConversationTypesProvider:async_load_conversation_types()
         end)
     end):forward(function()
         local elapsed = vim.uv.hrtime() - start
-        Log.info('ConversationTypesProvider loaded total {d} conversation types in {} ms', #(vim.tbl_keys(self.conversation_types)), elapsed / 1e6)
+        Log.info('ConversationTypesProvider loaded total {:d} conversation types in {} ms', #(vim.tbl_keys(self.conversation_types)), elapsed / 1e6)
         return Promise.resolve()
     end)
 end
