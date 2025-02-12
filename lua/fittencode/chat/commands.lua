@@ -19,3 +19,7 @@
 -- export_conversation = Chat.export_conversation,
 -- share_conversation = Chat.share_conversation,
 -- regenerate_response = Chat.regenerate_response,
+
+local M = {}
+
+return M

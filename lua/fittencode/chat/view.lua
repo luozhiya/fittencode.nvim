@@ -2,7 +2,7 @@ local Fn = require('fittencode.functional.fn')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local EditorStateMonitor = require('fittencode.chat.editor_state_monitor')
-local Language = require('fittencode.language')
+local Language = require('fittencode.language.preference')
 
 local welcome_message = {
     ['zh-cn'] = {

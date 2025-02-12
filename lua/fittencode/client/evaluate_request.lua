@@ -1,6 +1,5 @@
 local VM = require('fittencode.open_promot_language.vm')
 local LocalizationAPI = require('fittencode.client.localization_api')
-local Server = require('fittencode.client.server')
 
 local M = {}
 

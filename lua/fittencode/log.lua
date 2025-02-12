@@ -1,5 +1,5 @@
 local Config = require('fittencode.config')
-local Format = require('fittencode.format')
+local Format = require('fittencode.functional.format')
 
 ---@class FittenCode.Log
 ---@field error function
@@ -73,7 +73,7 @@ local function ensure_log_directory()
 end
 
 local function rotate_log_if_needed()
-    if Config.log.developer_mode or vim.fn.getfsize(LOG_FILE) > MAX_LOG_SIZE then
+    if Config.developer_mode or vim.fn.getfsize(LOG_FILE) > MAX_LOG_SIZE then
         vim.fn.delete(LOG_FILE)
     end
 end

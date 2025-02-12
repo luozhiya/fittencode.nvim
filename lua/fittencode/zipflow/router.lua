@@ -1,5 +1,5 @@
-local registry = require('zipflow.registry')
-local scorer = require('zipflow.scorer')
+local registry = require('fittencode.zipflow.registry')
+local scorer = require('fittencode.zipflow.scorer')
 
 local M = {}
 

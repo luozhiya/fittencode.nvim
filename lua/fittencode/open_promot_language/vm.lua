@@ -1,4 +1,4 @@
-local OPL = require('fittencode.opl')
+local OPL = require('fittencode.open_promot_language.opl')
 local Log = require('fittencode.log')
 
 ---@class FittenCode.VM

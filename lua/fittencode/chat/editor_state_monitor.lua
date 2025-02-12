@@ -125,6 +125,7 @@ function M.init()
 
     -- 切换文档不影响选中状态
     -- 只有当在活动文档中输入状态下则清除Selection
+    -- 还要继续测试一下
     vim.api.nvim_create_autocmd({ 'CursorMoved', 'InsertEnter' }, {
         group = vim.api.nvim_create_augroup('FittenCode.Editor.Selection', { clear = true }),
         pattern = '*',

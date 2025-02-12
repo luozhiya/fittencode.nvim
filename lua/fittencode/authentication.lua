@@ -5,7 +5,7 @@ local Translate = require('fittencode.translations')
 local Fn = require('fittencode.functional.fn')
 local Client = require('fittencode.client')
 local Keyring = require('fittencode.client.keyring')
-local EventLoop = require('fittencode.uv.event_loop')
+local EventLoop = require('fittencode.vim.promisify.uv.event_loop')
 
 local M = {}
 

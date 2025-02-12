@@ -54,8 +54,8 @@ zf.decompress("archive.tar.gz", {
 local M = {}
 
 local Promise = require('fittencode.concurrency.promise')
-local Router = require('zipflow.router')
-local Validator = require('zipflow.validator')
+local Router = require('fittencode.zipflow.router')
+local Validator = require('fittencode.zipflow.validator')
 
 -- 输入类型检测
 -- uv.aliases.fs_stat_types:

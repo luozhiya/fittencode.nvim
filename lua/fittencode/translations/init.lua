@@ -1,7 +1,7 @@
 local LangPreference = require('fittencode.language.preference')
 local LangFallback = require('fittencode.language.fallback')
 local Log = require('fittencode.log')
-local Fmt = require('fittencode.fmt')
+local Format = require('fittencode.functional.format')
 local Config = require('fittencode.config')
 local Fn = require('fittencode.functional.fn')
 
@@ -51,7 +51,7 @@ function M.translate(key, ...)
         Log.debug('Missing translation: {}', key)
     end
 
-    return Fmt.format(value, ...)
+    return Format.format(value, ...)
 end
 
 -- 手动添加翻译

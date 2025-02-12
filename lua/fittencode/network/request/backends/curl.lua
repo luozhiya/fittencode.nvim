@@ -1,5 +1,5 @@
 local Promise = require('fittencode.concurrency.promise')
-local Process = require('fittencode.uv.process')
+local Process = require('fittencode.vim.promisify.uv.process')
 
 local M = {}
 

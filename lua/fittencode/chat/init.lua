@@ -5,7 +5,7 @@ local Fn = require('fittencode.functional.fn')
 local Log = require('fittencode.log')
 local View = require('fittencode.chat.view')
 local Config = require('fittencode.config')
-local Language = require('fittencode.language')
+local Language = require('fittencode.language.preference')
 
 ---@type FittenCode.Chat.Controller
 local controller = nil
@@ -23,20 +23,21 @@ local function init()
         assert(conversation_types_provider)
         local conversation_type = conversation_types_provider:get_conversation_type(basic_chat_template_id)
         if not conversation_type then
-            Log.notify_error('Failed to load basic chat template')
+            Log.error('Failed to load basic chat template, fallback to `en` language template')
+            basic_chat_template_id = 'chat-en'
         end
+        controller = Controller:new({
+            view = view,
+            model = model,
+            conversation_types_provider = conversation_types_provider,
+            basic_chat_template_id = basic_chat_template_id
+        })
+        controller:init()
+        view:register_message_receiver(function(message)
+            controller:receive_view_message(message)
+        end)
+        require('fittencode.chat.editor_state_monitor').init()
     end)
-    controller = Controller:new({
-        view = view,
-        model = model,
-        conversation_types_provider = conversation_types_provider,
-        basic_chat_template_id = basic_chat_template_id
-    })
-    controller:init()
-    view:register_message_receiver(function(message)
-        controller:receive_view_message(message)
-    end)
-    require('fittencode.chat.editor_state_monitor').init()
 end
 
 local function show_chat()
