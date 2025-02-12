@@ -132,6 +132,9 @@ end
 -- 并在满足这个条件下返回该文件的路径 (路径是和平台相关的)
 ---@return boolean, string?
 function M.is_filebuf(buf)
+    if not buf then
+        return false
+    end
     local ok, r = pcall(vim.api.nvim_buf_is_valid, buf)
     if not ok or not r then
         return false

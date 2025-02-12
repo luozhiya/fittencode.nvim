@@ -30,6 +30,8 @@ end
 function M.active_text_editor()
     if Editor.is_filebuf(record_state.last_active_buffer) then
         return record_state.last_active_buffer
+    else
+        M.clear_state()
     end
 end
 
@@ -37,7 +39,21 @@ function M.selection()
     return record_state.selection
 end
 
+-- Chat 界面选择清除 Selection
+function M.clear_selection()
+    record_state.selection = nil
+end
+
+-- 清除选中状态
+function M.clear_state()
+    record_state.last_active_buffer = nil
+    record_state.selection = nil
+end
+
 function M.selected_text()
+    if not M.active_text_editor() then
+        return
+    end
     local selection = M.selection()
     if not selection then
         return
@@ -107,7 +123,7 @@ function M.init()
         end
     })
 
-    vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
+    vim.api.nvim_create_autocmd({ 'CursorMoved', 'ModeChanged' }, {
         group = vim.api.nvim_create_augroup('FittenCode.Editor.Selection', { clear = true }),
         pattern = '*',
         callback = function(args)
