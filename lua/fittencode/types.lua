@@ -1,7 +1,3 @@
----@class FittenCode.Position
----@field row number A zero-based row value.
----@field col number A zero-based column value.
-
 -- 按字符位置偏移量
 ---@alias FittenCode.CharactersOffset number
 

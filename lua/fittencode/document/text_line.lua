@@ -2,8 +2,6 @@
 ---@field line_number number
 ---@field text string
 ---@field range FittenCode.Range
-
----@class FittenCode.TextLine
 local TextLine = {}
 TextLine.__index = TextLine
 

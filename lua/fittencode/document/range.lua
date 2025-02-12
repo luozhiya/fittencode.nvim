@@ -1,17 +1,16 @@
 local Position = require('fittencode.document.position')
 
+-- A range represents an ordered pair of two positions. It is guaranteed that `start:is_before_or_equal(end)`
 -- Why `end_` instead of `end`?
 -- * `end` is a keyword in Lua, so it cannot be used as a field name.
 -- * `end_` is a common convention in Lua libraries to use a field name with an underscore suffix to indicate that it is a private field.
 -- * `end` is a common field name in some data structures, such as `string.find` and `table.sort`.
 -- * 这是最接近原生语义且符合 Lua 社区习惯的方式。许多 Lua 库在处理关键字冲突时都使用这种模式（如 end_），既保持了可读性又明确表示了这是替代关键字。
 -- * 最大程度保持与 end 的语义一致性
+
 ---@class FittenCode.Range
 ---@field start FittenCode.Position
 ---@field end_ FittenCode.Position
-
--- A range represents an ordered pair of two positions. It is guaranteed that `start:is_before_or_equal(end)`
----@class FittenCode.Range
 local Range = {}
 Range.__index = Range
 

@@ -3,7 +3,10 @@
 --   * `vim.api.nvim_win_get_cursor` 返回的 `col` 指向首字节
 --   * `vim.api.str_byteindex` 返回的 `col` 指向末尾字节
 -- * -1 是 row 和 col 的特殊值代表最后一行
+
 ---@class FittenCode.Position
+---@field row number A zero-based row value.
+---@field col number A zero-based column value.
 local Position = {}
 Position.__index = Position
 
