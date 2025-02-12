@@ -51,7 +51,14 @@ function M.get_api_key_manager()
 end
 
 local function openlink(url)
-    vim.ui.open(url)
+    local obj = vim.ui.open(url)
+    if obj then
+        return {
+            abort = function()
+                obj:kill('sigterm')
+            end
+        }
+    end
 end
 
 local function encode_variables(variables)
@@ -89,8 +96,7 @@ function M.request(protocol, options)
     end
 
     if protocol.method == 'OPENLINK' then
-        openlink(evaluated.url)
-        return
+        return openlink(evaluated.url)
     end
 
     return HTTP.fetch(evaluated.url, {

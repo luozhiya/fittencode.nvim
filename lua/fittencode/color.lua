@@ -7,9 +7,9 @@ local PRESET_COLORS = {
 }
 
 local PRESET_THEME = {
-    ['FittenCodeSuggestion'] = { fg = PRESET_COLORS.gray, ctermfg = 'LightGrey' },
-    ['FittenCodeNoMoreSuggestion'] = { fg = PRESET_COLORS.yellow, ctermfg = 'LightYellow' },
-    ['FittenCodeSuggestionCommit'] = { fg = PRESET_COLORS.yellow2, ctermfg = 'LightYellow' }
+    ['Suggestion'] = { fg = PRESET_COLORS.gray, ctermfg = 'LightGrey' },
+    ['NoMoreSuggestion'] = { fg = PRESET_COLORS.yellow, ctermfg = 'LightYellow' },
+    ['SuggestionCommit'] = { fg = PRESET_COLORS.yellow2, ctermfg = 'LightYellow' }
 }
 
 local M = {}
@@ -24,7 +24,7 @@ function M.init()
                 if vim.tbl_isempty(_) then
                     color = _
                 end
-                vim.api.nvim_set_hl(0, name, color)
+                vim.api.nvim_set_hl(0, 'FittenCode' .. name, color)
             end
         end,
     })

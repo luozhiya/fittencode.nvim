@@ -182,9 +182,9 @@ local defaults = {
     },
     colors = {
         -- { fg = '#ffffff', bg = '#000000', style = 'bold' }
-        ['FittenCodeSuggestion'] = {},
-        ['FittenCodeNoMoreSuggestion'] = {},
-        ['FittenCodeSuggestionCommit'] = {},
+        ['Suggestion'] = {},
+        ['NoMoreSuggestion'] = {},
+        ['SuggestionCommit'] = {},
     },
     network = {
         -- Avaiable options:
