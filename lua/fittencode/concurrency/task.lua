@@ -11,49 +11,19 @@ Task 抽象和 Promise/AA，Future 的不同在于
 - 高层不用关心 coroutines，只需要关注任务的状态和结果
 - 导出 M.async/M.go，不需要从 Task 类创建任务
 
--- 示例用法
-local async_system = M.async(vim.system)
-
 M.go(function()
-    -- 并发执行任务
-    local tasks = {
-        async_system({ 'ls' }):with_timeout(1000),
-        async_system({ 'date' }),
-    }
+    -- 新的调用方式
+    local task1 = M.async(vim.system, { 'ls' })
+    local task2 = M.async(vim.system, { 'date' }):with_timeout(1000)
 
-    -- 等待全部完成
-    local results = M.await_all(tasks):await()
+    -- 等待任意任务完成
+    local result = M.await_any({ task1, task2 }):await()
 
     -- 链式处理
-    async_system({ 'echo', 'done' }):forward(
+    M.async(vim.system, { 'echo', 'done' }):forward(
         function(res) print(res.stdout) end,
         function(err) print('Error:', err) end
     )
-end)
-
--- 文件批量处理
-local async_read = M.async(vim.fn.readfile)
-local async_write = M.async(vim.fn.writefile)
-
-M.go(function()
-    -- 并发读取多个文件
-    local files = {
-        async_read('/path/a.txt'),
-        async_read('/path/b.txt'),
-    }
-
-    -- 等待任意一个完成
-    local content = M.await_any(files):await()
-
-    -- 处理结果
-    local processed = transform(content)
-
-    -- 链式写入
-    async_write('/path/out.txt', processed)
-        :forward(
-            function() print('Success!') end,
-            function(err) print('Failed:', err) end
-        )
 end)
 
 --]]
@@ -90,21 +60,23 @@ end
 -- 协程包装器
 function Task.new(fn)
     local self = setmetatable({
-        co = coroutine.create(fn),
         state = TaskState.PENDING,
         waiters = {},
         children = {},
         cancel_handlers = {}
     }, Task)
 
-    -- 首次执行协程
-    local ok, res = coroutine.resume(self.co)
-    if not ok then
-        self:_transition(TaskState.REJECTED, nil, res)
-    elseif coroutine.status(self.co) == 'dead' then
-        self:_transition(TaskState.FULFILLED, res)
-    end
+    self.co = coroutine.create(function()
+        local ok, res = pcall(fn)
+        if ok then
+            self:_transition(TaskState.FULFILLED, res)
+        else
+            self:_transition(TaskState.REJECTED, nil, res)
+        end
+    end)
 
+    -- 立即执行首次 resume
+    coroutine.resume(self.co)
     return self
 end
 
@@ -161,7 +133,7 @@ function M.await_any(tasks)
     end)
 end
 
--- 链式处理（原 and_then）
+-- 链式处理
 function Task:forward(success, failure)
     local new_task = Task.new(function()
         if self.state == TaskState.FULFILLED then
@@ -207,40 +179,42 @@ function Task:with_timeout(ms)
 end
 
 -- 异步函数包装
-function M.async(fn)
-    return function(...)
-        local args = { ... }
-        if coroutine.running() then
-            return fn(...)
-        else
-            return M.go(function()
-                return fn(unpack(args))
-            end)
+function M.async(fn, ...)
+    local args = { ... }
+    local wrapper = function()
+        local co = coroutine.running()
+        if not co then return fn(unpack(args)) end
+
+        -- 自动处理回调函数
+        local callback
+        local nargs = select('#', unpack(args))
+        local new_args = { unpack(args) }
+
+        -- 注入回调处理器
+        callback = function(...)
+            if coroutine.status(co) == 'suspended' then
+                coroutine.resume(co, ...)
+            end
         end
+
+        new_args[nargs + 1] = callback
+        local ret = fn(unpack(new_args))
+        return coroutine.yield()
+    end
+
+    -- 自动创建任务
+    if coroutine.running() then
+        -- 在协程中同步执行
+        return wrapper()
+    else
+        -- 创建异步任务
+        return M.go(wrapper)
     end
 end
 
 -- 启动并发任务
 function M.go(fn)
     return Task.new(fn)
-end
-
--- 回调转协程（核心）
-function M.cb_to_co(fn)
-    return function(...)
-        local co = coroutine.running()
-        if not co then return fn(...) end
-
-        local args = { ... }
-        local nargs = select('#', ...)
-
-        args[nargs + 1] = function(...)
-            coroutine.resume(co, ...)
-        end
-
-        local _ = fn(unpack(args))
-        return coroutine.yield()
-    end
 end
 
 return M
