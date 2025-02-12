@@ -77,7 +77,7 @@ end
 
 -- 请求协议接口
 ---@param protocol FittenCode.Protocol.Element
----@return FittenCode.Network.Request.Response?
+---@return FittenCode.HTTP.Response?
 function M.request(protocol, options)
     local variables = encode_variables(options.variables)
 

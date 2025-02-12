@@ -54,7 +54,7 @@
 ---@field dismiss_error function
 ---@field get_title function
 ---@field evaluate_template function
----@field request_handle FittenCode.Network.Request.Response?
+---@field request_handle FittenCode.HTTP.Response?
 ---@field update_view function?
 ---@field update_status function?
 

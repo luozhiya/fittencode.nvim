@@ -1,38 +1,38 @@
----@class FittenCode.Network.Request.Backend
----@field fetch fun(url: string, options?: FittenCode.Network.Request.Options): FittenCode.Network.Request.Response
+---@class FittenCode.HTTP.Request.Backend
+---@field fetch fun(url: string, options?: FittenCode.HTTP.Request): FittenCode.HTTP.Response
 
----@class FittenCode.Network.Request.Options
+---@class FittenCode.HTTP.Request
 ---@field method? string @HTTP 方法 (默认: 'GET')
 ---@field headers? table<string, string> @请求头
 ---@field body? string @请求体内容
 ---@field timeout? number @超时时间（毫秒）
 ---@field follow_redirects? boolean @是否跟随重定向 (默认: true)
 
----@class FittenCode.Network.Request.Response
----@field stream FittenCode.Network.Request.Stream @响应流对象
+---@class FittenCode.HTTP.Response
+---@field stream FittenCode.HTTP.Request.Stream @响应流对象
 ---@field abort fun() @中止请求方法
 ---@field promise fun(): FittenCode.Concurrency.Promise @返回关联的 Promise 对象
 
----@class FittenCode.Network.Request.Stream
----@field on fun(self: FittenCode.Network.Request.Stream, event: FittenCode.Network.Request.Stream.Event, callback: function): FittenCode.Network.Request.Stream
----@field _emit fun(self: FittenCode.Network.Request.Stream, event: FittenCode.Network.Request.Stream.Event, ...: any)
+---@class FittenCode.HTTP.Request.Stream
+---@field on fun(self: FittenCode.HTTP.Request.Stream, event: FittenCode.HTTP.Request.Stream.Event, callback: function): FittenCode.HTTP.Request.Stream
+---@field _emit fun(self: FittenCode.HTTP.Request.Stream, event: FittenCode.HTTP.Request.Stream.Event, ...: any)
 ---@field _buffer string @响应内容缓冲区
 ---@field _status? integer @HTTP 状态码
 ---@field _headers? table<string, string> @响应头
----@field _callbacks table<FittenCode.Network.Request.Stream.Event, function> @事件回调表
+---@field _callbacks table<FittenCode.HTTP.Request.Stream.Event, function> @事件回调表
 
----@alias FittenCode.Network.Request.Stream.Event
+---@alias FittenCode.HTTP.Request.Stream.Event
 ---| '"headers"'  # 收到响应头时触发
 ---| '"data"'     # 收到响应数据块时触发
 ---| '"end"'      # 响应完成时触发
 ---| '"error"'    # 发生错误时触发
 ---| '"abort"'    # 请求被中止时触发
 
----@class FittenCode.Network.Request.Stream.HeadersEvent
+---@class FittenCode.HTTP.Request.Stream.HeadersEvent
 ---@field status integer @HTTP 状态码
 ---@field headers table<string, string> @响应头表
 
----@class FittenCode.Network.Request.Stream.EndEvent
+---@class FittenCode.HTTP.Request.Stream.EndEvent
 ---@field status integer @HTTP 状态码
 ---@field headers table<string, string> @响应头表
 ---@field ok boolean @是否成功状态码 (200-299)
@@ -40,7 +40,7 @@
 ---@field text fun(): string @获取响应文本方法
 ---@field json fun(): any? @解析响应JSON方法
 
----@class FittenCode.Network.Request.Stream.ErrorEvent
+---@class FittenCode.HTTP.Request.Stream.ErrorEvent
 ---@field type string @错误类型标识
 ---@field code? integer @CURL 错误码
 ---@field signal? integer @系统信号码

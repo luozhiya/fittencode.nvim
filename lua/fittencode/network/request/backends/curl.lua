@@ -49,8 +49,8 @@ local function parse_timing(stderr)
 end
 
 ---@param url string
----@param options? FittenCode.Network.Request.Options
----@return FittenCode.Network.Request.Response
+---@param options? FittenCode.HTTP.Request
+---@return FittenCode.HTTP.Response
 function M.fetch(url, options)
     options = options or {}
     local stream = create_stream()
@@ -159,7 +159,7 @@ function M.fetch(url, options)
         if handle.aborted then return end
 
         if code == 0 then
-            ---@class FittenCode.Network.Request.Stream.EndEvent
+            ---@class FittenCode.HTTP.Request.Stream.EndEvent
             local response = {
                 status = stream._status,
                 headers = stream._headers,
@@ -173,7 +173,7 @@ function M.fetch(url, options)
             }
             stream:_emit('end', response)
         else
-            ---@class FittenCode.Network.Request.Stream.ErrorEvent
+            ---@class FittenCode.HTTP.Request.Stream.ErrorEvent
             local error_obj = {
                 type = 'CURL_ERROR',
                 code = code,

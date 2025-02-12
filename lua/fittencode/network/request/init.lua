@@ -35,10 +35,10 @@ local Config = require('fittencode.config')
 local M = {}
 
 ---@param url string
----@param options? FittenCode.Network.Request.Options
----@return FittenCode.Network.Request.Response
+---@param options? FittenCode.HTTP.Request
+---@return FittenCode.HTTP.Response
 function M.fetch(url, options)
-    ---@type FittenCode.Network.Request.Backend
+    ---@type FittenCode.HTTP.Request.Backend
     local backend = require('fittencode.network.request.backends.' .. Config.http.backend)
     if not backend then
         error('Unsupported backend: ' .. Config.http.backend)
