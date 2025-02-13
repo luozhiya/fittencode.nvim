@@ -44,44 +44,10 @@ local M = {}
 
 local PathMT = {}
 
--- Windows禁止的文件名字符
-local windows_forbidden_chars = {
-    ['<'] = true,
-    ['>'] = true,
-    -- [":"] = true,
-    ['\"'] = true,
-    ['/'] = true,
-    -- ["\\"] = true,
-    ['|'] = true,
-    ['?'] = true,
-    ['*'] = true
-}
-
--- Linux禁止的文件名字符（主要为路径分隔符）
-local linux_forbidden_chars = {
-    -- ["/"] = true
-}
-
--- Linux中不推荐使用的文件名字符（虽然不是严格禁止，但可能会导致命令行解析错误）
-local linux_unrecommended_chars = {
-    ['\0'] = true, -- 空字符
-    ['\n'] = true  -- 换行符
-}
-
 -- 私有方法：路径解析器
 local function parse_path(path_str, platform)
     local drive, root, segments = '', '', {}
     platform = platform or 'posix'
-
-    -- Check for forbidden characters
-    -- local forbidden_chars = platform == 'windows' and windows_forbidden_chars or linux_forbidden_chars
-    -- if #forbidden_chars > 0 then
-    --     for i = 1, #path_str do
-    --         if forbidden_chars[path_str:sub(i, i)] then
-    --             error('Invalid character in path: ' .. path_str:sub(i, i))
-    --         end
-    --     end
-    -- end
 
     -- 特殊路径预处理（Windows特性）
     if platform == 'windows' then
@@ -94,8 +60,7 @@ local function parse_path(path_str, platform)
 
         -- 处理UNC路径
         if path_str:match '^%s*[/\\][/\\]' then
-            root = '\\\\'
-            path_str = path_str:gsub('^%s*[/\\]+', '')
+            error('UNC path is not supported: ' .. path_str)
         end
     end
 
