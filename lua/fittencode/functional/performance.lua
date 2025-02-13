@@ -65,7 +65,27 @@ function Timer:stop()
     return duration
 end
 
+-------------------------------------------------------
+-- 方法3：手动控制计时器（适合测量代码块）(优化版)
+
+local smart_timer = function()
+    local start = vim.uv.hrtime()
+    return function() return (vim.uv.hrtime() - start) / 1e6 end -- 直接返回毫秒
+end
+
+local smart_timer_format = function()
+    local start = vim.uv.hrtime()
+    return function()
+        local ns = vim.uv.hrtime() - start
+        return ns < 1e3 and ns .. ' ns'
+            or ns < 1e6 and ('%.2f μs'):format(ns / 1e3)
+            or ('%.2f ms'):format(ns / 1e6)
+    end
+end
+
 return {
     measure = measure,
-    Timer = Timer
+    Timer = Timer,
+    smart_timer = smart_timer,
+    smart_timer_format = smart_timer_format
 }
