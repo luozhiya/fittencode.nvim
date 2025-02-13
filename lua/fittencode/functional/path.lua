@@ -15,7 +15,7 @@ function Path.join(...)
             end
         end
     end
-    return result
+    return Path.normalize(result)
 end
 
 -- 获取路径的基本名称（不包括扩展名）
@@ -75,6 +75,82 @@ function Path.format(p)
     else
         return dir .. '/' .. base
     end
+end
+
+-- 规范化路径，消除中间的..和.
+function Path.normalize(p)
+    local is_abs = Path.is_absolute(p)
+    local root = ''
+    local remaining = p
+
+    -- 提取根目录
+    if is_abs then
+        -- Windows盘符路径（如C:/或C:\）
+        local win_root = remaining:match('^(%a+:)[/\\]')
+        if win_root then
+            root = win_root .. '/'
+            remaining = remaining:sub(#win_root + 2)
+        else
+            -- Unix风格或Windows根路径（如/或\开头）
+            if remaining:match('^[/\\]') then
+                root = '/'
+                remaining = remaining:sub(2)
+            end
+        end
+    end
+
+    -- 分割路径部分，忽略空的部分和单独的.
+    local parts = {}
+    for part in remaining:gmatch('[^/\\]+') do
+        if part ~= '.' then
+            table.insert(parts, part)
+        end
+    end
+
+    local stack = {}
+    for _, part in ipairs(parts) do
+        if part == '..' then
+            if is_abs then
+                -- 绝对路径：弹出栈顶（如果存在）
+                if #stack > 0 then
+                    table.remove(stack)
+                end
+            else
+                -- 相对路径：仅当栈顶存在且不是..时弹出，否则保留
+                if #stack > 0 and stack[#stack] ~= '..' then
+                    table.remove(stack)
+                else
+                    table.insert(stack, '..')
+                end
+            end
+        else
+            table.insert(stack, part)
+        end
+    end
+
+    -- 组合路径
+    local normalized = table.concat(stack, '/')
+
+    -- 处理绝对路径的根目录
+    if is_abs then
+        normalized = root .. normalized
+        -- 确保根目录后无多余的斜杠（如E:/ → E:/）
+        if normalized == root and root:sub(-1) == '/' then
+            return root:sub(1, -2)
+        end
+    elseif #stack == 0 then
+        -- 相对路径为空时返回当前目录
+        return '.'
+    end
+
+    -- 处理路径中的末尾斜杠（如a/b/c/ → a/b/c）
+    if normalized:match('^/') then
+        normalized = normalized:gsub('//+', '/')
+    else
+        normalized = normalized:gsub('//+', '/')
+    end
+
+    return normalized
 end
 
 return Path
