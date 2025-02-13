@@ -129,7 +129,7 @@ function M.new(path_str, platform)
 end
 
 -- 元方法：路径字符串化
-function PathMT.__tostring(self)
+function PathMT:__tostring()
     local sep = self.platform == 'windows' and '\\' or '/'
     local parts = {}
 
@@ -144,8 +144,21 @@ function PathMT.__tostring(self)
     return table.concat(parts)
 end
 
-function PathMT.tostring(self)
+-- C:\Program Files\Neovim\share\nvim\runtime
+-- /usr/local/bin/share/nvim/runtime
+function PathMT:as_file()
     return tostring(self)
+end
+
+-- C:\Program Files\Neovim\share\nvim\runtime\
+-- /usr/local/bin/share/nvim/runtime/
+function PathMT.as_directory(self)
+    local sep = self.platform == 'windows' and '\\' or '/'
+    local file = PathMT.as_file(self)
+    if file:sub(-1) == sep then
+        return file
+    end
+    return file .. sep
 end
 
 -- 核心方法：跨平台转换
@@ -260,6 +273,8 @@ setmetatable(PathMT, {
 })
 
 -- Posix 风格 `/usr/local/bin/share/nvim/runtime`
+-- WSL 也算作 Posix 平台
+-- - 还可以 `/mnt/c/Windows/System32`
 M.posix = function(path) return M.new(path, 'posix') end
 
 -- Windows 风格 `C:\Program Files\Neovim\share\nvim\runtime`
@@ -267,7 +282,6 @@ M.posix = function(path) return M.new(path, 'posix') end
 M.windows = function(path) return M.new(path, 'windows') end
 
 -- 根据 path 自动检测平台，path应该是绝对路径
--- WSL 也算作 Posix 平台
 local function detect_platform(path)
     if path[1] == '/' then
         return M.posix(path)
