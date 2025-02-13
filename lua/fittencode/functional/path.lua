@@ -203,32 +203,22 @@ setmetatable(PathMT, {
     end
 })
 
--- 跨平台路径转换
-local p = M
-local x1 = p.new('C:\\Program Files'):to('posix'):to_windows()
--- print(print(vim.inspect(x1)))
--- print(x1)
--- print(p.new('C:\\Program Files'):to('posix')) -- 输出 C:/Program Files
+M.posix = M.new('', 'posix')
+M.windows = M.new('', 'windows')
 
--- -- 混合平台路径操作
--- local project_path = p.new('src/components', 'posix')
---     :to('windows')
---     :join('..\\utils')
---     :normalize()
+-- default is posix
+function M.join(...)
+    local components = { ... }
+    local path_obj = M.new(components[1], 'posix')
+    table.remove(components, 1)
+    path_obj = path_obj:join(unpack(components)):normalize()
+    return tostring(path_obj)
+end
 
--- print(project_path) -- 输出 src\utils
-
--- UNC路径支持
-local unc = p.new('\\\\server\\share\\file.txt')
--- print(vim.inspect(unc))
--- local unc_posix = unc:to('posix')
--- print(vim.inspect(unc_posix))
--- print(unc:to('posix')) -- 输出 //server/share/file.txt
-
--- 链式语法糖
-local res = p.new('/usr/local')
-    :join('bin/neovim')
-    :flip_slashes()
-print(res) -- 输出 /usr/local/bin/neovim
+-- default is posix
+function M.normalize(path)
+    local path_obj = M.new(path, 'posix')
+    return tostring(path_obj:normalize())
+end
 
 return M

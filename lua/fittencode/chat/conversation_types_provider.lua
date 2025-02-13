@@ -18,6 +18,7 @@ function ConversationTypesProvider:new(opts)
         conversation_types = {},
         extension_uri = opts.extension_uri
     }
+    obj.extension_uri = Path.normalize(opts.extension_uri)
     setmetatable(obj, ConversationTypesProvider)
     return obj
 end
