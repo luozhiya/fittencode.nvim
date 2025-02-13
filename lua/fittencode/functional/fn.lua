@@ -216,11 +216,6 @@ local function tbl_keep_events(a, c)
     return vim.tbl_deep_extend('force', b, c)
 end
 
-local function extension_uri()
-    local current_dir = debug.getinfo(1, 'S').source:sub(2):gsub('fn.lua', '')
-    return current_dir:gsub('/lua$', '') .. '../../../'
-end
-
 ---@param path string
 ---@return string
 local function normalize_path(path)
@@ -265,7 +260,6 @@ return {
     is_linux = is_linux,
     uuid_v4 = uuid_v4,
     tbl_keep_events = tbl_keep_events,
-    extension_uri = extension_uri,
     normalize_path = normalize_path,
     math_type = math_type,
     simple_math_type = simple_math_type,

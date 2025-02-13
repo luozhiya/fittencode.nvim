@@ -1,4 +1,5 @@
 local Fn = require('fittencode.functional.fn')
+local Extension = require('fittencode.extension')
 
 local M = {}
 
@@ -6,7 +7,7 @@ local builtin_engines
 
 local function auto_discover()
     local engines = {}
-    for _, f in ipairs(vim.fn.glob(Fn.extension_uri() .. 'lua/zipflow/engines/**/*.lua', true)) do
+    for _, f in ipairs(vim.fn.glob(Extension.extension_uri .. 'lua/zipflow/engines/**/*.lua', true)) do
         local engine = require(f:gsub('^lua/', ''):gsub('/', '.'):gsub('.lua$', ''))
         table.insert(engines, engine)
     end
