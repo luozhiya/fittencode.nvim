@@ -27,8 +27,8 @@ local function _init(conversation_types_provider)
         end
     end
     if not basic_chat_template_id then
-        Log.notify_error('Failed to load basic chat template')
-        Log.error('Chat controller not initialized')
+        Log.error('Failed to load basic chat template')
+        Log.notify_error('Chat controller not initialized')
         return
     end
     Log.info('Basic chat template: {}', basic_chat_template_id)
