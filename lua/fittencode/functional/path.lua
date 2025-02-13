@@ -57,19 +57,11 @@ function path_mt.__tostring(self)
     local sep = self.platform == 'windows' and '\\' or '/'
     local parts = {}
 
-    if self.platform == 'windows' then
-        if self.drive ~= '' then
-            table.insert(parts, self.drive)
-            table.insert(parts, '\\')
-        elseif self.root == '\\\\' then
-            table.insert(parts, '\\\\')
-        elseif self.root == '\\' then
-            table.insert(parts, '\\')
-        end
-    else
-        if self.root == '/' then
-            table.insert(parts, '/')
-        end
+    if self.drive ~= '' then
+        table.insert(parts, self.drive)
+    end
+    if self.root ~= '' then
+        table.insert(parts, self.root)
     end
 
     table.insert(parts, table.concat(self.segments, sep))
@@ -150,6 +142,20 @@ function path_mt.normalize(self)
     }, path_mt)
 end
 
+function path_mt.clone(self)
+    return setmetatable({
+        drive = self.drive,
+        root = self.root,
+        segments = vim.deepcopy(self.segments),
+        platform = self.platform,
+        is_absolute = self.is_absolute
+    }, path_mt)
+end
+
+function path_mt.flip_slashes(self)
+    return self.platform == 'windows' and self:to('posix') or self:to('windows')
+end
+
 -- 链式调用支持
 setmetatable(path_mt, {
     __index = function(table, key)
@@ -179,16 +185,15 @@ local x1 = p.new('C:\\Program Files'):to('posix'):to_windows()
 
 -- UNC路径支持
 local unc = p.new('\\\\server\\share\\file.txt')
-print(vim.inspect(unc))
-local unc_posix = unc:to('posix')
-print(vim.inspect(unc_posix))
+-- print(vim.inspect(unc))
+-- local unc_posix = unc:to('posix')
+-- print(vim.inspect(unc_posix))
 -- print(unc:to('posix')) -- 输出 //server/share/file.txt
 
--- -- 链式语法糖
--- local res = p.new('/usr/local')
---     :to_windows()
---     :join('bin/neovim')
---     :to_posix()
--- print(res) -- 输出 /usr/local/bin/neovim
+-- 链式语法糖
+local res = p.new('/usr/local')
+    :join('bin/neovim')
+    :flip_slashes()
+print(res) -- 输出 /usr/local/bin/neovim
 
 return M
