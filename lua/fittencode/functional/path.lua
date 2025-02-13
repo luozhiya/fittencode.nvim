@@ -30,7 +30,7 @@ local project_path = p.new('src/components', 'posix')
     :normalize()
 print(project_path) -- 输出 src\utils
 
--- UNC路径支持
+-- UNC路径支持?
 print(p.new('\\\\server\\share\\file.txt', 'windows'):to_posix()) -- 输出 //server/share/file.txt
 
 local res = p.new('/usr/local')
@@ -41,7 +41,7 @@ print(res) -- 输出 /usr/local/bin/share/nvim/runtime
 
 --]]
 
-local Fn = require('fittencode.functional.fn')
+local Platform = require('fittencode.functional.platform')
 
 local M = {}
 
@@ -145,6 +145,10 @@ function PathMT.__tostring(self)
 
     table.insert(parts, table.concat(self.segments, sep))
     return table.concat(parts)
+end
+
+function PathMT.tostring(self)
+    return tostring(self)
 end
 
 -- 核心方法：跨平台转换
@@ -268,11 +272,19 @@ M.windows = function(path) return M.new(path, 'windows') end
 -- TODO: WSL 支持
 -- - 切换平台的逻辑要和 Neovim 符合，目前只支持 Windows 和 Linux
 M.dynamic_platform = function(path)
-    if Fn.is_windows() then
+    if Platform.is_windows() then
         return M.windows(path)
     else
         return M.posix(path)
     end
+end
+
+-- 根据 path 自动检测平台，path应该是绝对路径
+M.detect_platform = function(path)
+    if path[1] == '/' then
+        return M.posix(path)
+    end
+    return M.windows(path)
 end
 
 -- default is posix

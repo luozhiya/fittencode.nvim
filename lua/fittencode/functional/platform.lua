@@ -89,17 +89,34 @@ local arch_aliases = {
     ['armv8b'] = 'arm64', -- arm64 compat
     ['armv8l'] = 'arm64', -- arm64 compat
 }
+local M = {}
 
-local M = {
-    os = {
-        is_windows = vim.fn.has('win32') == 1 or vim.fn.has('win64') == 1,
-        is_linux = vim.fn.has('linux') == 1,
-        is_mac = vim.fn.has('mac') == 1,
-        is_unix = vim.fn.has('unix') == 1,
-        is_wsl = vim.fn.has('wsl') == 1,
-        is_bsd = vim.fn.has('bsd') == 1,
-    },
-    arch = arch_aliases[uname.machine] or uname.machine,
-}
+M.is_windows = function()
+    return vim.fn.has('win32') == 1 or vim.fn.has('win64') == 1
+end
+
+M.is_linux = function()
+    return vim.fn.has('linux') == 1
+end
+
+M.is_mac = function()
+    return vim.fn.has('mac') == 1
+end
+
+M.is_unix = function()
+    return vim.fn.has('unix') == 1
+end
+
+M.is_wsl = function()
+    return vim.fn.has('wsl') == 1
+end
+
+M.is_bsd = function()
+    return vim.fn.has('bsd') == 1
+end
+
+M.get_arch = function()
+    return arch_aliases[uname.machine] or uname.machine
+end
 
 return M

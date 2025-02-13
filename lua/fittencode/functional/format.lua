@@ -58,9 +58,33 @@ print(fmt.format("{:d}", 123))            -- 123
 
 --]]
 
-local Fn = require('fittencode.functional.fn')
-
 local M = {}
+
+local function pack(...)
+    return { n = select('#', ...), ... }
+end
+
+local function math_type(num)
+    if type(num) ~= 'number' then
+        return nil -- 非数值类型返回 nil
+    end
+
+    -- 检查是否为整数值（兼容 5.1 的浮点数存储方式）
+    if num == math.floor(num) then
+        -- 进一步区分 5.3 风格的整数表示
+        if tostring(num):find('%.') then -- 包含小数点的视为浮点数
+            return 'float'
+        else
+            return 'integer'
+        end
+    else
+        return 'float'
+    end
+end
+
+local function simple_math_type(num)
+    return (type(num) == 'number' and (num == math.floor(num)) and 'integer' or 'float')
+end
 
 -- 根据宽度、填充字符和对齐方式对字符串进行填充
 local function apply_padding(s, width, fill, align)
@@ -183,7 +207,7 @@ local function format_arg(arg, spec_str)
         local format_str = ''
         local number_str
 
-        local is_integer = (Fn.math_type(arg) == 'integer')
+        local is_integer = (math_type(arg) == 'integer')
         if not spec.type then
             spec.type = is_integer and 'd' or 'f'
         end
@@ -250,7 +274,7 @@ end
 -- 解析格式字符串，处理转义字符，管理参数索引，调用格式化函数并拼接最终结果
 ---@param fmt string 包含 {} 占位符的格式字符串
 function M.format(fmt, ...)
-    local args = Fn.pack(...)
+    local args = pack(...)
     local result = {}
     local pos = 1
     local len = #fmt

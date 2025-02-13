@@ -1,5 +1,6 @@
 local Fn = require('fittencode.functional.fn')
 local Translate = require('fittencode.translations')
+local Path = require('fittencode.functional.path')
 
 ---@class FittenCode.SecretStorage
 ---@field _storage_dir string
@@ -95,7 +96,7 @@ function SecretStorage.new(options)
         _master_password = master_password
     }
 
-    self._data_file = Fn.normalize_path(self._storage_dir .. '/' .. self._filename)
+    self._data_file = Path.detect_platform(self._storage_dir):join(self._filename):normalize():tostring()
 
     -- 创建存储目录
     local ok, err = pcall(vim.uv.fs_mkdir, self._storage_dir, 448, true)

@@ -1,5 +1,6 @@
 local Fn = require('fittencode.functional.fn')
 local Log = require('fittencode.log')
+local Platform = require('fittencode.functional.platform')
 
 local M = {}
 
@@ -12,7 +13,7 @@ function M.arg_max()
     if ARG_MAX ~= nil then
         return ARG_MAX
     end
-    if Fn.is_windows() then
+    if Platform.is_windows() then
         ARG_MAX = 32767
     else
         local _, sys = pcall(tonumber, vim.fn.system('getconf ARG_MAX'))

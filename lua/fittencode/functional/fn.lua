@@ -90,61 +90,6 @@ local function fs_all_entries(path, prename)
     return res
 end
 
-local function pack(...)
-    return { n = select('#', ...), ... }
-end
-
-local function simple_format(msg, ...)
-    ---@type string
-    msg = msg or ''
-    local args = pack(...)
-    for i = 1, args.n do
-        local arg = args[i]
-        if arg == nil then
-            msg = msg:gsub('{}', '%%s', 1)
-            args[i] = 'nil'
-        elseif type(arg) == 'integer' or type(arg) == 'number' then
-            if arg == math.floor(arg) then
-                msg = msg:gsub('{}', '%%d', 1)
-            else
-                msg = msg:gsub('{}', '%%.3f', 1)
-            end
-        elseif type(arg) == 'string' then
-            msg = msg:gsub('{}', '%%s', 1)
-        else
-            msg = msg:gsub('{}', '%%s', 1)
-            args[i] = vim.inspect(arg)
-        end
-    end
-    local ok, vfmt = pcall(string.format, msg, unpack(args))
-    if ok then
-        return vfmt
-    end
-    return msg
-end
-
-local function math_type(num)
-    if type(num) ~= 'number' then
-        return nil -- 非数值类型返回 nil
-    end
-
-    -- 检查是否为整数值（兼容 5.1 的浮点数存储方式）
-    if num == math.floor(num) then
-        -- 进一步区分 5.3 风格的整数表示
-        if tostring(num):find('%.') then -- 包含小数点的视为浮点数
-            return 'float'
-        else
-            return 'integer'
-        end
-    else
-        return 'float'
-    end
-end
-
-local function simple_math_type(num)
-    return (type(num) == 'number' and (num == math.floor(num)) and 'integer' or 'float')
-end
-
 local function slice(t, start)
     local result = {}
     for i = start, #t do
@@ -212,12 +157,6 @@ local function tbl_keep_events(a, c)
     return vim.tbl_deep_extend('force', b, c)
 end
 
----@param path string
----@return string
-local function normalize_path(path)
-    return is_windows() and path:gsub('/', '\\') or path:gsub('\\', '/')
-end
-
 local function clamp(value, min, max)
     return math.max(min, math.min(value, max))
 end
@@ -249,13 +188,8 @@ return {
     check_call = check_call,
     startswith = startswith,
     fs_all_entries = fs_all_entries,
-    pack = pack,
-    simple_format = simple_format,
     slice = slice,
     uuid_v4 = uuid_v4,
     tbl_keep_events = tbl_keep_events,
-    normalize_path = normalize_path,
-    math_type = math_type,
-    simple_math_type = simple_math_type,
     get_unique_identifier = get_unique_identifier,
 }
