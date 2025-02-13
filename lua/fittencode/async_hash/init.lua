@@ -13,6 +13,7 @@ AsyncHash.sha256("/path/to/file", {input_type = 'file'})
 local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.functional.fn')
 local Extension = require('fittencode.extension')
+local Path = require('fittencode.functional.path')
 
 local engine_priority = {
     ['cc']      = 110, -- C实现的最高优先级
@@ -38,7 +39,8 @@ local function load_engines()
         'cli'
     }
     for _, dir in ipairs(directories) do
-        vim.tbl_deep_extend('force', files, vim.fn.glob(Extension.extension_uri .. 'lua/fittencode/async_hash/engines/' .. dir .. '/*.lua', true))
+        local engine_path = Path.join(Extension.extension_uri, 'lua/fittencode/async_hash/engines', dir, '*.lua')
+        vim.tbl_deep_extend('force', files, vim.fn.glob(engine_path, true))
     end
 
     -- 引擎列表

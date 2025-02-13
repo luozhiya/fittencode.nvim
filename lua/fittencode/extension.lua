@@ -9,6 +9,7 @@ local M = {
     ide = 'nvim',
     ide_name = 'neovim',
     extension_version = '0.2.0',
+    -- posix
     extension_uri = extension_uri(),
 }
 

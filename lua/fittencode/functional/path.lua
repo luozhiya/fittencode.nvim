@@ -66,14 +66,14 @@ local function parse_path(path_str, platform)
     platform = platform or 'posix'
 
     -- Check for forbidden characters
-    local forbidden_chars = platform == 'windows' and windows_forbidden_chars or linux_forbidden_chars
-    if #forbidden_chars > 0 then
-        for i = 1, #path_str do
-            if forbidden_chars[path_str:sub(i, i)] then
-                error('Invalid character in path: ' .. path_str:sub(i, i))
-            end
-        end
-    end
+    -- local forbidden_chars = platform == 'windows' and windows_forbidden_chars or linux_forbidden_chars
+    -- if #forbidden_chars > 0 then
+    --     for i = 1, #path_str do
+    --         if forbidden_chars[path_str:sub(i, i)] then
+    --             error('Invalid character in path: ' .. path_str:sub(i, i))
+    --         end
+    --     end
+    -- end
 
     -- 特殊路径预处理（Windows特性）
     if platform == 'windows' then
@@ -264,5 +264,7 @@ function M.normalize(path)
     local path_obj = M.new(path)
     return tostring(path_obj:normalize())
 end
+
+print(M.join('src/components', '**/utils'))
 
 return M
