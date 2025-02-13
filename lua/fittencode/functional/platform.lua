@@ -115,7 +115,7 @@ M.is_bsd = function()
     return vim.fn.has('bsd') == 1
 end
 
-M.get_arch = function()
+M.arch = function()
     return arch_aliases[uname.machine] or uname.machine
 end
 
