@@ -4,26 +4,26 @@ local PathMT = {}
 
 -- Windows禁止的文件名字符
 local windows_forbidden_chars = {
-    ["<"] = true,
-    [">"] = true,
-    [":"] = true,
-    ["\""] = true,
-    ["/"] = true,
-    ["\\"] = true,
-    ["|"] = true,
-    ["?"] = true,
-    ["*"] = true
+    ['<'] = true,
+    ['>'] = true,
+    -- [":"] = true,
+    ['\"'] = true,
+    ['/'] = true,
+    -- ["\\"] = true,
+    ['|'] = true,
+    ['?'] = true,
+    ['*'] = true
 }
 
 -- Linux禁止的文件名字符（主要为路径分隔符）
 local linux_forbidden_chars = {
-    ["/"] = true
+    -- ["/"] = true
 }
 
 -- Linux中不推荐使用的文件名字符（虽然不是严格禁止，但可能会导致命令行解析错误）
 local linux_unrecommended_chars = {
-    ["\0"] = true, -- 空字符
-    ["\n"] = true  -- 换行符
+    ['\0'] = true, -- 空字符
+    ['\n'] = true  -- 换行符
 }
 
 -- 私有方法：路径解析器
@@ -31,6 +31,16 @@ local function parse_path(path_str, platform)
     local drive, root, segments = '', '', {}
     local os_sep = package.config:sub(1, 1)
     platform = platform or (os_sep == '\\' and 'windows' or 'posix')
+
+    -- Check for forbidden characters
+    local forbidden_chars = platform == 'windows' and windows_forbidden_chars or linux_forbidden_chars
+    if #forbidden_chars > 0 then
+        for i = 1, #path_str do
+            if forbidden_chars[path_str:sub(i, i)] then
+                error('Invalid character in path: ' .. path_str:sub(i, i))
+            end
+        end
+    end
 
     -- 特殊路径预处理（Windows特性）
     if platform == 'windows' then
