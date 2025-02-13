@@ -184,11 +184,16 @@ local function format_arg(arg, spec_str)
         local number_str
 
         local is_integer = (Fn.math_type(arg) == 'integer')
+        if not spec.type then
+            spec.type = is_integer and 'd' or 'f'
+        end
 
         -- 处理整数类型
-        if is_integer and (not spec.type or spec.type == 'd' or spec.type == 'x' or spec.type == 'o') then
-            spec.type = spec.type or 'd'
-
+        if spec.type == 'd' or spec.type == 'x' or spec.type == 'o' then
+            if not is_integer then
+                error("integer type required for format specifier '" .. spec.type .. "'")
+            end
+            -- spec.type = spec.type or 'd'
             if spec.type == 'd' then
                 format_str = '%d'
             elseif spec.type == 'x' then
@@ -205,7 +210,7 @@ local function format_arg(arg, spec_str)
             number_str = string.format(format_str, arg)
         else
             -- 处理浮点数
-            spec.type = spec.type or 'f'
+            -- spec.type = spec.type or 'f'
             if spec.type == 'f' or spec.type == 'e' or spec.type == 'g' then
                 local prec = spec.precision or (spec.type == 'f' and 6 or nil)
                 format_str = '%.' .. (prec or '') .. spec.type
