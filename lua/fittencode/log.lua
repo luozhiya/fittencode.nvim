@@ -1,5 +1,6 @@
 local Config = require('fittencode.config')
 local Format = require('fittencode.functional.format')
+local Path = require('fittencode.functional.path')
 
 ---@class FittenCode.Log
 ---@field error function
@@ -24,7 +25,7 @@ local M = {}
 -- 常量定义
 local LOG_LEVELS = vim.deepcopy(vim.log.levels)
 local LOG_LEVEL_NAMES = { 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR' }
-local LOG_FILE = vim.fn.stdpath('log') .. '/fittencode/fittencode.log'
+local LOG_FILE = Path.join(vim.fn.stdpath('log'), 'fittencode', 'fittencode.log')
 local MAX_LOG_SIZE = 2 * 1024 * 1024 -- 2MB
 local DEVELOPER_DOCUMENT = 'FittenDocument-FT-ozlpsknq83720108429'
 

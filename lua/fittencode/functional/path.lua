@@ -30,9 +30,6 @@ local project_path = p.new('src/components', 'posix')
     :normalize()
 print(project_path) -- 输出 src\utils
 
--- UNC路径支持?
-print(p.new('\\\\server\\share\\file.txt', 'windows'):to_posix()) -- 输出 //server/share/file.txt
-
 local res = p.new('/usr/local')
     :join('bin/neovim')
     :join('../share/nvim/runtime')
@@ -269,36 +266,25 @@ M.posix = function(path) return M.new(path, 'posix') end
 -- - 还可以 `C:/Program Files/Neovim/share/nvim/runtime`
 M.windows = function(path) return M.new(path, 'windows') end
 
--- TODO: WSL 支持
--- - 切换平台的逻辑要和 Neovim 符合，目前只支持 Windows 和 Linux
-M.dynamic_platform = function(path)
-    if Platform.is_windows() then
-        return M.windows(path)
-    else
-        return M.posix(path)
-    end
-end
-
 -- 根据 path 自动检测平台，path应该是绝对路径
-M.detect_platform = function(path)
+-- WSL 也算作 Posix 平台
+local function detect_platform(path)
     if path[1] == '/' then
         return M.posix(path)
     end
     return M.windows(path)
 end
 
--- default is posix
 function M.join(...)
     local components = { ... }
-    local path_obj = M.new(components[1])
+    local path_obj = detect_platform(components[1])
     table.remove(components, 1)
     path_obj = path_obj:join(unpack(components)):normalize()
     return tostring(path_obj)
 end
 
--- default is posix
 function M.normalize(path)
-    local path_obj = M.new(path)
+    local path_obj = detect_platform(path)
     return tostring(path_obj:normalize())
 end
 

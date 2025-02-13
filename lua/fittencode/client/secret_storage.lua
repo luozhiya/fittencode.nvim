@@ -96,7 +96,7 @@ function SecretStorage.new(options)
         _master_password = master_password
     }
 
-    self._data_file = Path.detect_platform(self._storage_dir):join(self._filename):normalize():tostring()
+    self._data_file = Path.join(self._storage_dir, self._filename)
 
     -- 创建存储目录
     local ok, err = pcall(vim.uv.fs_mkdir, self._storage_dir, 448, true)

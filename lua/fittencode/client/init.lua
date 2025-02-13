@@ -9,6 +9,7 @@ local PlainStorage = require('fittencode.client.plain_storage')
 local SecretStorage = require('fittencode.client.secret_storage')
 local Config = require('fittencode.config')
 local PlatformInfo = require('fittencode.client.platform_info')
+local Path = require('fittencode.functional.path')
 
 ---@class FittenCode.Client
 local M = {}
@@ -22,14 +23,14 @@ function M.init()
     if Config.key_storage == 'plain' then
         storage = PlainStorage.new({
             storage_location = {
-                directory = vim.fn.stdpath('data') .. '/fittencode/storage',
+                directory = Path.join(vim.fn.stdpath('data'), 'fittencode', 'storage'),
                 filename = 'secrets.dat'
             }
         })
     elseif Config.key_storage == 'secret' then
         storage = SecretStorage.new({
             storage_location = {
-                directory = vim.fn.stdpath('data') .. '/fittencode/secret_storage',
+                directory = Path.join(vim.fn.stdpath('data'), 'fittencode', 'secret_storage'),
                 filename = 'secrets.dat'
             }
         })
