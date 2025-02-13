@@ -1,6 +1,6 @@
 local M = {}
-local os_sep = package.config:sub(1, 1)
-local path_mt = {}
+
+local PathMT = {}
 
 -- Windows禁止的文件名字符
 local windows_forbidden_chars = {
@@ -29,6 +29,7 @@ local linux_unrecommended_chars = {
 -- 私有方法：路径解析器
 local function parse_path(path_str, platform)
     local drive, root, segments = '', '', {}
+    local os_sep = package.config:sub(1, 1)
     platform = platform or (os_sep == '\\' and 'windows' or 'posix')
 
     -- 特殊路径预处理（Windows特性）
@@ -72,12 +73,12 @@ end
 
 function M.new(path_str, platform)
     local obj = parse_path(path_str or '', platform)
-    path_mt.__index = path_mt
-    return setmetatable(obj, path_mt)
+    PathMT.__index = PathMT
+    return setmetatable(obj, PathMT)
 end
 
 -- 元方法：路径字符串化
-function path_mt.__tostring(self)
+function PathMT.__tostring(self)
     local sep = self.platform == 'windows' and '\\' or '/'
     local parts = {}
 
@@ -93,7 +94,7 @@ function path_mt.__tostring(self)
 end
 
 -- 核心方法：跨平台转换
-function path_mt.to(self, target_platform)
+function PathMT.to(self, target_platform)
     if target_platform == self.platform then return self end
 
     -- 创建新路径对象
@@ -120,11 +121,11 @@ function path_mt.to(self, target_platform)
         end
     end
 
-    return setmetatable(new_path, path_mt)
+    return setmetatable(new_path, PathMT)
 end
 
 -- 智能路径拼接
-function path_mt.join(self, ...)
+function PathMT.join(self, ...)
     local components = { ... }
     local new_segments = vim.deepcopy(self.segments)
 
@@ -143,11 +144,11 @@ function path_mt.join(self, ...)
         segments = new_segments,
         platform = self.platform,
         is_absolute = self.is_absolute
-    }, path_mt)
+    }, PathMT)
 end
 
 -- 路径规范化
-function path_mt.normalize(self)
+function PathMT.normalize(self)
     local stack = {}
     for _, seg in ipairs(self.segments) do
         if seg == '..' and #stack > 0 then
@@ -163,25 +164,25 @@ function path_mt.normalize(self)
         segments = stack,
         platform = self.platform,
         is_absolute = self.is_absolute
-    }, path_mt)
+    }, PathMT)
 end
 
-function path_mt.clone(self)
+function PathMT.clone(self)
     return setmetatable({
         drive = self.drive,
         root = self.root,
         segments = vim.deepcopy(self.segments),
         platform = self.platform,
         is_absolute = self.is_absolute
-    }, path_mt)
+    }, PathMT)
 end
 
-function path_mt.flip_slashes(self)
+function PathMT.flip_slashes(self)
     return self.platform == 'windows' and self:to('posix') or self:to('windows')
 end
 
 -- 链式调用支持
-setmetatable(path_mt, {
+setmetatable(PathMT, {
     __index = function(table, key)
         if string.match(key, 'to_') then
             local platform = key:sub(4)
