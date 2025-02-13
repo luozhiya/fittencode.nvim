@@ -152,9 +152,9 @@ end
 
 -- C:\Program Files\Neovim\share\nvim\runtime\
 -- /usr/local/bin/share/nvim/runtime/
-function PathMT.as_directory(self)
+function PathMT:as_directory()
     local sep = self.platform == 'windows' and '\\' or '/'
-    local file = PathMT.as_file(self)
+    local file = self:as_file()
     if file:sub(-1) == sep then
         return file
     end
@@ -162,7 +162,7 @@ function PathMT.as_directory(self)
 end
 
 -- 核心方法：跨平台转换
-function PathMT.to(self, target_platform)
+function PathMT:to(target_platform)
     if target_platform == self.platform then return self end
 
     -- 创建新路径对象
@@ -194,7 +194,7 @@ end
 
 -- 智能路径拼接
 -- 当遇到绝对路径组件时，完全替换当前路径的属性，确保新路径正确反映绝对路径的信息
-function PathMT.join(self, ...)
+function PathMT:join(...)
     local components = { ... }
     -- 初始化新路径的属性为当前路径的值
     local new_drive = self.drive
@@ -227,7 +227,7 @@ function PathMT.join(self, ...)
 end
 
 -- 路径规范化
-function PathMT.normalize(self)
+function PathMT:normalize()
     local stack = {}
     for _, seg in ipairs(self.segments) do
         if seg == '..' and #stack > 0 then
@@ -246,7 +246,7 @@ function PathMT.normalize(self)
     }, PathMT)
 end
 
-function PathMT.clone(self)
+function PathMT:clone()
     return setmetatable({
         drive = self.drive,
         root = self.root,
@@ -256,7 +256,7 @@ function PathMT.clone(self)
     }, PathMT)
 end
 
-function PathMT.flip_slashes(self)
+function PathMT:flip_slashes()
     return self.platform == 'windows' and self:to('posix') or self:to('windows')
 end
 
