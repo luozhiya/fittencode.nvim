@@ -8,7 +8,7 @@ local builtin_engines
 
 local function auto_discover()
     local engines = {}
-    local engine_path = Path.join(Extension.extension_uri, 'lua/fittencode/zipflow/engines', '**/*.lua')
+    local engine_path = Path.join(Extension.extension_uri, 'lua', 'fittencode', 'zipflow', 'engines', '**', '*.lua')
     for _, f in ipairs(vim.fn.glob(engine_path, true)) do
         local engine = require(f:gsub('^lua/', ''):gsub('/', '.'):gsub('.lua$', ''))
         table.insert(engines, engine)

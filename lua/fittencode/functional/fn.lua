@@ -153,10 +153,6 @@ local function slice(t, start)
     return result
 end
 
-local function sysname() return vim.uv.os_uname().sysname:lower() end
-local function is_windows() return sysname():find('windows') ~= nil end
-local function is_linux() return sysname():find('linux') ~= nil end
-
 local function validate(uuid)
     local pattern = '%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x'
     return uuid:match(pattern) ~= nil
@@ -256,8 +252,6 @@ return {
     pack = pack,
     simple_format = simple_format,
     slice = slice,
-    is_windows = is_windows,
-    is_linux = is_linux,
     uuid_v4 = uuid_v4,
     tbl_keep_events = tbl_keep_events,
     normalize_path = normalize_path,

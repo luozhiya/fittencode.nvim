@@ -1,5 +1,14 @@
 --[[
 
+Path 模块的设计区别于 Node.js 的模块，可以提供更加灵活的接口
+- 路径按平台分类
+- 在不同的平台上，路径还可以有不同的形式
+- 路径可以跨平台转换 (仅作斜杠和反斜杠的转换)
+  - 因为做更深层次的转换意义不大？比如 /usr/bin 转成 C:\\Windows\\System32 ? 这是没有什么意义的
+  - 有转换意义可能是 wsl 路径转换，比如 /mnt/c/Windows/System32 转成 C:\\Windows\\System32
+- 路径可以智能拼接
+- 路径可以智能解析
+
 local p = M
 
 ---------------------------------------
@@ -31,6 +40,8 @@ local res = p.new('/usr/local')
 print(res) -- 输出 /usr/local/bin/share/nvim/runtime
 
 --]]
+
+local Fn = require('fittencode.functional.fn')
 
 local M = {}
 
@@ -98,7 +109,7 @@ local function parse_path(path_str, platform)
     end
 
     -- 分割路径段
-    local pattern = platform == 'windows' and '[^\\]+' or '[^/]+'
+    local pattern = platform == 'windows' and '[^\\/]+' or '[^/]+'
     for segment in path_str:gmatch(pattern) do
         if segment ~= '.' then -- 过滤当前目录
             table.insert(segments, segment)
@@ -247,8 +258,22 @@ setmetatable(PathMT, {
     end
 })
 
+-- Posix 风格 `/usr/local/bin/share/nvim/runtime`
 M.posix = function(path) return M.new(path, 'posix') end
+
+-- Windows 风格 `C:\Program Files\Neovim\share\nvim\runtime`
+-- - 还可以 `C:/Program Files/Neovim/share/nvim/runtime`
 M.windows = function(path) return M.new(path, 'windows') end
+
+-- TODO: WSL 支持
+-- - 切换平台的逻辑要和 Neovim 符合，目前只支持 Windows 和 Linux
+M.dynamic_platform = function(path)
+    if Fn.is_windows() then
+        return M.windows(path)
+    else
+        return M.posix(path)
+    end
+end
 
 -- default is posix
 function M.join(...)
@@ -264,7 +289,5 @@ function M.normalize(path)
     local path_obj = M.new(path)
     return tostring(path_obj:normalize())
 end
-
-print(M.join('src/components', '**/utils'))
 
 return M

@@ -39,7 +39,7 @@ local function load_engines()
         'cli'
     }
     for _, dir in ipairs(directories) do
-        local engine_path = Path.join(Extension.extension_uri, 'lua/fittencode/async_hash/engines', dir, '*.lua')
+        local engine_path = Path.join(Extension.extension_uri, 'lua', 'fittencode', 'async_hash', 'engines', dir, '*.lua')
         vim.tbl_deep_extend('force', files, vim.fn.glob(engine_path, true))
     end
 
