@@ -1,3 +1,37 @@
+--[[
+
+local p = M
+
+---------------------------------------
+-- 使用 new/windows/posix 方法创建路径对象
+---------------------------------------
+
+print(p.new('', 'windows'):join('C:\\Program Files'))    -- C:\Program Files
+print(p.windows():join('C:\\Program Files'):to('posix')) -- 输出 C:/Program Files
+print(p.windows('C:\\Program Files'):to('posix'))        -- 输出 C:/Program Files
+print(p.windows('C:\\Program Files'):flip_slashes())     -- 输出 C:/Program Files
+
+---------------------------------------
+-- 混合平台路径操作
+---------------------------------------
+
+local project_path = p.new('src/components', 'posix')
+    :to('windows')
+    :join('..\\utils')
+    :normalize()
+print(project_path) -- 输出 src\utils
+
+-- UNC路径支持
+print(p.new('\\\\server\\share\\file.txt', 'windows'):to_posix()) -- 输出 //server/share/file.txt
+
+local res = p.new('/usr/local')
+    :join('bin/neovim')
+    :join('../share/nvim/runtime')
+    :normalize()
+print(res) -- 输出 /usr/local/bin/share/nvim/runtime
+
+--]]
+
 local M = {}
 
 local PathMT = {}
@@ -29,8 +63,7 @@ local linux_unrecommended_chars = {
 -- 私有方法：路径解析器
 local function parse_path(path_str, platform)
     local drive, root, segments = '', '', {}
-    local os_sep = package.config:sub(1, 1)
-    platform = platform or (os_sep == '\\' and 'windows' or 'posix')
+    platform = platform or 'posix'
 
     -- Check for forbidden characters
     local forbidden_chars = platform == 'windows' and windows_forbidden_chars or linux_forbidden_chars
@@ -135,25 +168,36 @@ function PathMT.to(self, target_platform)
 end
 
 -- 智能路径拼接
+-- 当遇到绝对路径组件时，完全替换当前路径的属性，确保新路径正确反映绝对路径的信息
 function PathMT.join(self, ...)
     local components = { ... }
+    -- 初始化新路径的属性为当前路径的值
+    local new_drive = self.drive
+    local new_root = self.root
     local new_segments = vim.deepcopy(self.segments)
+    local new_is_absolute = self.is_absolute
 
     for _, component in ipairs(components) do
         local path_obj = type(component) == 'string' and M.new(component, self.platform) or component
         if path_obj.is_absolute then
-            new_segments = path_obj.segments
+            -- 当组件是绝对路径时，完全替换当前路径的属性
+            new_drive = path_obj.drive
+            new_root = path_obj.root
+            new_segments = vim.deepcopy(path_obj.segments)
+            new_is_absolute = true
         else
+            -- 相对路径则追加路径段
             vim.list_extend(new_segments, path_obj.segments)
         end
     end
 
+    -- 构建新的路径对象
     return setmetatable({
-        drive = self.drive,
-        root = self.root,
+        drive = new_drive,
+        root = new_root,
         segments = new_segments,
         platform = self.platform,
-        is_absolute = self.is_absolute
+        is_absolute = new_is_absolute
     }, PathMT)
 end
 
@@ -203,13 +247,13 @@ setmetatable(PathMT, {
     end
 })
 
-M.posix = M.new('', 'posix')
-M.windows = M.new('', 'windows')
+M.posix = function(path) return M.new(path, 'posix') end
+M.windows = function(path) return M.new(path, 'windows') end
 
 -- default is posix
 function M.join(...)
     local components = { ... }
-    local path_obj = M.new(components[1], 'posix')
+    local path_obj = M.new(components[1])
     table.remove(components, 1)
     path_obj = path_obj:join(unpack(components)):normalize()
     return tostring(path_obj)
@@ -217,7 +261,7 @@ end
 
 -- default is posix
 function M.normalize(path)
-    local path_obj = M.new(path, 'posix')
+    local path_obj = M.new(path)
     return tostring(path_obj:normalize())
 end
 
