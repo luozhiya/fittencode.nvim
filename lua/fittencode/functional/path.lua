@@ -44,36 +44,53 @@ local M = {}
 
 local PathMT = {}
 
--- 私有方法：路径解析器
 local function parse_path(path_str, platform)
     local drive, root, segments = '', '', {}
     platform = platform or 'posix'
+    local sep = platform == 'windows' and '\\' or '/'
 
-    -- 特殊路径预处理（Windows特性）
+    -- Detect the first separator to determine the actual sep used
     if platform == 'windows' then
-        -- 处理盘符路径
+        local first_slash = path_str:find('[/\\]')
+        if first_slash then
+            sep = path_str:sub(first_slash, first_slash)
+        end
+    else
+        -- Posix only uses '/'
+        sep = '/'
+    end
+
+    -- Handle Windows drive letters and root
+    if platform == 'windows' then
         local drive_match = path_str:match '^%s*([a-zA-Z]:)([/\\]?)'
         if drive_match then
             drive = drive_match:upper()
             path_str = path_str:sub(#drive_match + 1)
-        end
-
-        -- 处理UNC路径
-        if path_str:match '^%s*[/\\][/\\]' then
-            error('UNC path is not supported: ' .. path_str)
+            -- Check if there's a root after the drive
+            if path_str:sub(1, 1) == '/' or path_str:sub(1, 1) == '\\' then
+                root = sep
+                path_str = path_str:sub(2)
+            end
+        else
+            -- Handle UNC paths (simplified)
+            if path_str:match '^%s*\\\\' then
+                error('UNC path is not supported: ' .. path_str)
+            end
         end
     end
 
-    -- 处理根目录
-    if path_str:match '^%s*[/\\]' then
-        root = platform == 'windows' and '\\' or '/'
-        path_str = path_str:gsub('^%s*[/\\]+', '')
+    -- Handle root for non-Windows or without drive
+    if root == '' then
+        if path_str:match('^%s*[/\\]') then
+            root = platform == 'windows' and sep or '/'
+            path_str = path_str:gsub('^%s*[/\\]+', '')
+        end
     end
 
-    -- 分割路径段
+    -- Split segments
     local pattern = platform == 'windows' and '[^\\/]+' or '[^/]+'
     for segment in path_str:gmatch(pattern) do
-        if segment ~= '.' then -- 过滤当前目录
+        if segment ~= '.' then
             table.insert(segments, segment)
         end
     end
@@ -83,6 +100,7 @@ local function parse_path(path_str, platform)
         root = root,
         segments = segments,
         platform = platform,
+        sep = sep,
         is_absolute = root ~= ''
     }
 end
@@ -93,19 +111,15 @@ function M.new(path_str, platform)
     return setmetatable(obj, PathMT)
 end
 
--- 元方法：路径字符串化
 function PathMT:__tostring()
-    local sep = self.platform == 'windows' and '\\' or '/'
     local parts = {}
-
     if self.drive ~= '' then
         table.insert(parts, self.drive)
     end
     if self.root ~= '' then
         table.insert(parts, self.root)
     end
-
-    table.insert(parts, table.concat(self.segments, sep))
+    table.insert(parts, table.concat(self.segments, self.sep))
     return table.concat(parts)
 end
 
@@ -118,38 +132,33 @@ end
 -- C:\Program Files\Neovim\share\nvim\runtime\
 -- /usr/local/bin/share/nvim/runtime/
 function PathMT:as_directory()
-    local sep = self.platform == 'windows' and '\\' or '/'
     local file = self:as_file()
-    if file:sub(-1) == sep then
-        return file
+    if file:sub(-1) ~= self.sep then
+        return file .. self.sep
     end
-    return file .. sep
+    return file
 end
 
--- 核心方法：跨平台转换
+-- 规范转换
 function PathMT:to(target_platform)
     if target_platform == self.platform then return self end
 
-    -- 创建新路径对象
     local new_path = {
         drive = self.drive,
         root = self.root,
         segments = vim.deepcopy(self.segments),
         platform = target_platform,
+        sep = target_platform == 'windows' and '\\' or '/',
         is_absolute = self.is_absolute
     }
 
-    -- 转换Windows特殊格式
-    if target_platform == 'posix' and self.platform == 'windows' then
-        if new_path.root == '\\\\' then
-            new_path.root = '//'
-        elseif new_path.root == '\\' then
+    -- Adjust root for target platform
+    if target_platform == 'posix' then
+        if new_path.root == '\\' then
             new_path.root = '/'
         end
-    elseif target_platform == 'windows' and self.platform == 'posix' then
-        if new_path.root == '//' then
-            new_path.root = '\\\\'
-        elseif new_path.root == '/' then
+    else
+        if new_path.root == '/' then
             new_path.root = '\\'
         end
     end
@@ -157,11 +166,8 @@ function PathMT:to(target_platform)
     return setmetatable(new_path, PathMT)
 end
 
--- 智能路径拼接
--- 当遇到绝对路径组件时，完全替换当前路径的属性，确保新路径正确反映绝对路径的信息
 function PathMT:join(...)
     local components = { ... }
-    -- 初始化新路径的属性为当前路径的值
     local new_drive = self.drive
     local new_root = self.root
     local new_segments = vim.deepcopy(self.segments)
@@ -170,33 +176,32 @@ function PathMT:join(...)
     for _, component in ipairs(components) do
         local path_obj = type(component) == 'string' and M.new(component, self.platform) or component
         if path_obj.is_absolute then
-            -- 当组件是绝对路径时，完全替换当前路径的属性
             new_drive = path_obj.drive
             new_root = path_obj.root
             new_segments = vim.deepcopy(path_obj.segments)
             new_is_absolute = true
         else
-            -- 相对路径则追加路径段
             vim.list_extend(new_segments, path_obj.segments)
         end
     end
 
-    -- 构建新的路径对象
     return setmetatable({
         drive = new_drive,
         root = new_root,
         segments = new_segments,
         platform = self.platform,
+        sep = self.sep,
         is_absolute = new_is_absolute
     }, PathMT)
 end
 
--- 路径规范化
 function PathMT:normalize()
     local stack = {}
     for _, seg in ipairs(self.segments) do
-        if seg == '..' and #stack > 0 then
-            table.remove(stack)
+        if seg == '..' then
+            if #stack > 0 then
+                table.remove(stack)
+            end
         elseif seg ~= '.' and seg ~= '' then
             table.insert(stack, seg)
         end
@@ -207,28 +212,29 @@ function PathMT:normalize()
         root = self.root,
         segments = stack,
         platform = self.platform,
+        sep = self.sep,
         is_absolute = self.is_absolute
     }, PathMT)
 end
 
 function PathMT:clone()
-    return setmetatable({
-        drive = self.drive,
-        root = self.root,
-        segments = vim.deepcopy(self.segments),
-        platform = self.platform,
-        is_absolute = self.is_absolute
-    }, PathMT)
+    return setmetatable(vim.deepcopy(self), PathMT)
 end
 
 function PathMT:flip_slashes()
-    return self.platform == 'windows' and self:to('posix') or self:to('windows')
+    local new_path = self:clone()
+    new_path.sep = new_path.sep == '/' and '\\' or '/'
+    if new_path.root == '/' then
+        new_path.root = '\\'
+    elseif new_path.root == '\\' then
+        new_path.root = '/'
+    end
+    return new_path
 end
 
--- 链式调用支持
 setmetatable(PathMT, {
     __index = function(table, key)
-        if string.match(key, 'to_') then
+        if key:match('^to_') then
             local platform = key:sub(4)
             return function(self)
                 return self:to(platform)
@@ -246,20 +252,24 @@ M.posix = function(path) return M.new(path, 'posix') end
 -- - 还可以 `C:/Program Files/Neovim/share/nvim/runtime`
 M.windows = function(path) return M.new(path, 'windows') end
 
--- 根据 path 自动检测平台，path应该是绝对路径
 local function detect_platform(path)
-    if path[1] == '/' then
+    if path:find('^/') then
         return M.posix(path)
+    elseif path:find('^%a+:') then
+        return M.windows(path)
+    else
+        return M.new(path, Platform.is_windows() and 'windows' or 'posix')
     end
-    return M.windows(path)
 end
 
 function M.join(...)
     local components = { ... }
+    if #components == 0 then return '' end
     local path_obj = detect_platform(components[1])
-    table.remove(components, 1)
-    path_obj = path_obj:join(unpack(components)):normalize()
-    return tostring(path_obj)
+    for i = 2, #components do
+        path_obj = path_obj:join(components[i])
+    end
+    return tostring(path_obj:normalize())
 end
 
 function M.normalize(path)
