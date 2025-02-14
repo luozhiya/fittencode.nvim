@@ -11,8 +11,6 @@ Path 模块的设计区别于 Node.js 的模块，可以提供更加灵活的接
 
 --]]
 
-local Platform = require('fittencode.functional.platform')
-
 local M = {}
 
 local Path = {}
@@ -42,7 +40,7 @@ function Path:_parse(input)
 
     -- 分离目录段和文件名
     local segments = split(remaining, '/')
-    if #segments > 0 and segments[#segments]:find('%.') then
+    if #segments > 0 and segments[#segments]:find('%.') and segments[#segments] ~= '..' and segments[#segments] ~= '.' then
         self.filename = table.remove(segments)
     else
         self.filename = nil
@@ -76,6 +74,8 @@ function Path:normalize()
         stack = {}
     end
 
+    print(vim.inspect(stack))
+
     new_path.segments = stack
     return new_path
 end
@@ -85,7 +85,7 @@ function Path:join(...)
     for _, part in ipairs({ ... }) do
         local other = Path.new(part)
         if other:is_absolute() then
-            return other
+            new_path = other
         end
         new_path.segments = vim.list_extend(new_path.segments, other.segments)
         if other.filename then
@@ -171,9 +171,10 @@ end
 function Path:tostring()
     local sep = self._separator or '/'
     local parts = {}
+    local root = self.root
 
     if self.root ~= '' then
-        table.insert(parts, (self.root:gsub('/', sep)))
+        root = self.root:gsub('/', sep)
     end
 
     for _, seg in ipairs(self.segments) do
@@ -184,7 +185,7 @@ function Path:tostring()
         table.insert(parts, self.filename)
     end
 
-    local path = table.concat(parts, sep)
+    local path = root .. table.concat(parts, sep)
 
     -- 保留结尾分隔符
     if self.trailing_slash then
@@ -201,11 +202,16 @@ setmetatable(Path, {
 })
 
 function M.join(...)
-    return Path.new():join(...):tostring()
+    print(vim.inspect({...}))
+    local x = Path.new():join(...):normalize()
+    print(vim.inspect(x))
+    return x:tostring()
 end
 
 function M.normalize(path)
     return Path.new(path):normalize():tostring()
 end
+
+print(M.join('E:/DataCenter/onWorking/fittencode.nvim/lua/fittencode/extension.lua', '../../../'))
 
 return M
