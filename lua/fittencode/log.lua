@@ -58,9 +58,13 @@ local function prepare_log_header()
         edge,
         string.format('Verbose logging started: %s', os.date('%Y-%m-%d %H:%M:%S')),
         string.format('Log level: %s', get_level_name(Config.log.level)),
+        string.format('Calling process: %s', vim.uv.exepath()),
         string.format('Neovim version: %s', collect_neovim_info().nvim),
         string.format('Process ID: %d', vim.uv.os_getpid()),
+        string.format('Parent process ID: %d', vim.uv.os_getppid()),
         string.format('OS: %s', vim.inspect(vim.uv.os_uname())),
+        string.format('GUI running: %s', vim.fn.has('gui_running')),
+        string.format('WSL running: %s', vim.fn.has('wsl')),
         edge
     }
     return table.concat(header, '\n')
