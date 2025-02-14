@@ -62,11 +62,14 @@ local function prepare_log_header()
         string.format('Neovim version: %s', collect_neovim_info().nvim),
         string.format('Process ID: %d', vim.uv.os_getpid()),
         string.format('Parent process ID: %d', vim.uv.os_getppid()),
-        string.format('OS: %s', vim.inspect(vim.uv.os_uname())),
+        string.format('OS name: %s', vim.inspect(vim.uv.os_uname())),
         string.format('GUI running: %s', vim.fn.has('gui_running')),
         string.format('WSL running: %s', vim.fn.has('wsl')),
-        edge
     }
+    if Config.log.env then
+        header[#header + 1] = string.format('Environment: %s', vim.inspect(vim.uv.os_environ()))
+    end
+    header[#header + 1] = edge
     return table.concat(header, '\n')
 end
 
