@@ -15,9 +15,17 @@ function ProjectCompletionService:new(options)
 end
 
 function ProjectCompletionService:__initialize(options)
+    options = options or {}
+
+    -- semantic_context_aggregator
+    -- tree_based_completion
+    -- tree_based_completion_lite
+    -- tslsp_advanced
     self.project_completion = {
-        v1 = require('fittencode.inline.project_completion.v1'),
-        v2 = require('fittencode.inline.project_completion.v2'),
+        semantic_context_aggregator = require('fittencode.inline.project_completion.versions.semantic_context_aggregator'),
+        tree_based_completion = require('fittencode.inline.project_completion.versions.tree_based_completion'),
+        tree_based_completion_lite = require('fittencode.inline.project_completion.versions.tree_based_completion_lite'),
+        tslsp_advanced = require('fittencode.inline.project_completion.versions.tslsp_advanced'),
     }
     self.last_chosen_prompt_type = '0'
     self.request_handle = nil
