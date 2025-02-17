@@ -13,6 +13,7 @@ local ProjectCompletionService = require('fittencode.inline.project_completion.s
 local Status = require('fittencode.inline.status')
 local NotifyLogin = require('fittencode.client.notify_login')
 local PromptGenerator = require('fittencode.inline.fim_protocol.versions.comprehensive_context.generator')
+local CompletionStatistics = require('fittencode.inline.completion_statistics')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
@@ -32,6 +33,7 @@ function Controller:__initialize(options)
     self.prompt_generator = PromptGenerator:new({
         project_completion_service = self.project_completion_service
     })
+    self.completion_statistics = CompletionStatistics:new()
     self.observers = {}
     self.sessions = {}
     self.filter_events = {}
