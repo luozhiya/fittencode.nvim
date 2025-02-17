@@ -12,7 +12,8 @@ local M = {}
 ---@param variables table<string, any>?
 ---@return FittenCode.Client.EvaluateMethodResult
 function M.reevaluate_method(protocol, variables)
-    local env = vim.tbl_deep_extend('force', {}, variables or {})
+    variables = variables or {}
+    local env = vim.tbl_deep_extend('force', {}, variables)
 
     -- headers
     local headers = {}
@@ -23,7 +24,19 @@ function M.reevaluate_method(protocol, variables)
     -- url
     local method_url = assert(VM:new():run(env, LocalizationAPI.localize(protocol.url)))
     -- query
-    local query = assert(VM:new():run(env, protocol.query or ''))
+    local query = ''
+    -- 如果协议支持多种 query，则需要根据 variables 选择对应 query
+    if type(protocol.query) == 'table' then
+        query = variables.query or ''
+        query = protocol.query[query] or query
+    elseif type(protocol.query) == 'string' then
+        ---@diagnostic disable-next-line: cast-local-type
+        query = protocol.query or ''
+    end
+    query = assert(VM:new():run(env, query))
+    if query[1] ~= '?' then
+        query = '?' .. query
+    end
     local url = table.concat({ method_url, query }, '')
 
     return { headers = headers, url = url }

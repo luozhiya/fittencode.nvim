@@ -282,7 +282,9 @@ Protocol.Methods = {
         mode = 'cors',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/statistic_log',
-        query = '?tracker={{tracker}}'
+        query = {
+            tracker = '?tracker={{tracker}}',
+        }
     },
     -- 参加灰度测试接口
     -- * `method = GET`

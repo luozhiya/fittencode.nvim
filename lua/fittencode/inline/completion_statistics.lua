@@ -1,5 +1,13 @@
-local Item = {}
-function Item:new()
+local Client = require('fittencode.client')
+local Protocol = require('fittencode.client.protocol')
+
+local SENDING_TIME_INTERVAL = 1e3 * 60 * 10
+local SEND_TIME_INTERVAL = 1e3 * 60 * 5
+local MAX_TEXT_LENGTH = 5
+
+local Record = {}
+
+function Record:new()
     local object = {
         delete_cnt = 0,
         insert_without_paste_cnt = 0,
@@ -10,7 +18,7 @@ function Item:new()
         completion_times = 0,
         completion_total_time = 0
     }
-    setmetatable(object, { __index = self })
+    setmetatable(object, { __index = Record })
     return object
 end
 
@@ -24,31 +32,31 @@ function CompletionStatistics:new(e, r, n, i)
         user_id = n,
         logger = i,
     }
-    setmetatable(object, { __index = self })
+    setmetatable(object, { __index = CompletionStatistics })
     object:__initialize()
     return object
 end
 
 function CompletionStatistics:__initialize()
-    self.handleTextDocumentChange = function(o)
+    self.handle_text_document_change = function(o)
         local a = o.document
         local A = a.uri.toString()
         if self.completion_status_dict[A] then
             local c = self.completion_status_dict[A]
-            if os.time() - c.sending_time > eM then
+            if vim.uv.now() - c.sending_time > SEND_TIME_INTERVAL then
                 return
             end
             for _, l in ipairs(o.contentChanges) do
-                local h = check_accept(a, c, l.rangeOffset, l.text)
+                local h = self:check_accept(a, c, l.rangeOffset, l.text)
                 local d = #l.text
                 self.statistic_dict[A].insert_cnt = self.statistic_dict[A].insert_cnt + d
-                if d <= Cie or h == 1 then
+                if d <= MAX_TEXT_LENGTH or h == 1 then
                     self.statistic_dict[A].insert_without_paste_cnt = self.statistic_dict[A].insert_without_paste_cnt + d
                 end
                 self.statistic_dict[A].delete_cnt = self.statistic_dict[A].delete_cnt + l.rangeLength
                 if h <= 1 then
                     self.statistic_dict[A].insert_with_completion_cnt = self.statistic_dict[A].insert_with_completion_cnt + d
-                    if d <= Cie or h == 1 then
+                    if d <= MAX_TEXT_LENGTH or h == 1 then
                         self.statistic_dict[A].insert_with_completion_without_paste_cnt = self.statistic_dict[A].insert_with_completion_without_paste_cnt + d
                     end
                 end
@@ -77,24 +85,21 @@ function CompletionStatistics:check_accept(e, r, n, i)
 end
 
 function CompletionStatistics:send_one_status(e)
-    local r = Me.workspace.getConfiguration('http').get('proxy')
-    local n = r and require('vscode-http').ProxyAgent(r) or nil
-    local i = require('die').getServerURL()
-    local s = require('fetch')(i .. '/codeuser/statistic_log?' .. e, {
-        method = 'GET',
-        headers = { ['Content-Type'] = 'application/json' },
-        dispatcher = n
+    Client.request(Protocol.Methods.statistic_log, {
+        variables = {
+            query = e
+        }
     })
-    return s
 end
 
 function CompletionStatistics:send_status()
     local e = Me.workspace.getConfiguration('fittencode.useProjectCompletion').get('open')
     local r = oM(self.user_id)
+    -- pc_check_auth
     for uri, stats in pairs(self.statistic_dict) do
         if self.completion_status_dict[uri] then
             local a = self.completion_status_dict[uri]
-            if os.time() - a.sending_time > DHe then
+            if vim.uv.now() - a.sending_time > SENDING_TIME_INTERVAL then
                 ::continue::
             end
         end
@@ -134,7 +139,7 @@ end
 
 function CompletionStatistics:update_completion_time(e, r)
     if not self.statistic_dict[e] then
-        self.statistic_dict[e] = Item:new()
+        self.statistic_dict[e] = Record:new()
     end
     self.statistic_dict[e].completion_times = self.statistic_dict[e].completion_times + 1
     self.statistic_dict[e].completion_total_time = self.statistic_dict[e].completion_total_time + r
