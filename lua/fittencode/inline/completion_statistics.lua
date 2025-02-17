@@ -1,6 +1,5 @@
--- 定义 kS 类
-local kS = {}
-function kS:new()
+local Item = {}
+function Item:new()
     local object = {
         delete_cnt = 0,
         insert_without_paste_cnt = 0,
@@ -15,8 +14,8 @@ function kS:new()
     return object
 end
 
--- 定义 sM 类
 local CompletionStatistics = {}
+
 function CompletionStatistics:new(e, r, n, i)
     local object = {
         completion_status_dict = e,
@@ -24,37 +23,42 @@ function CompletionStatistics:new(e, r, n, i)
         file_code_tree_dict = r,
         user_id = n,
         logger = i,
-        handleTextDocumentChange = function(o)
-            local a = o.document
-            local A = a.uri.toString()
-            if object.completion_status_dict[A] then
-                local c = object.completion_status_dict[A]
-                if os.time() - c.sending_time > eM then
-                    return
+    }
+    setmetatable(object, { __index = self })
+    object:__initialize()
+    return object
+end
+
+function CompletionStatistics:__initialize()
+    self.handleTextDocumentChange = function(o)
+        local a = o.document
+        local A = a.uri.toString()
+        if self.completion_status_dict[A] then
+            local c = self.completion_status_dict[A]
+            if os.time() - c.sending_time > eM then
+                return
+            end
+            for _, l in ipairs(o.contentChanges) do
+                local h = check_accept(a, c, l.rangeOffset, l.text)
+                local d = #l.text
+                self.statistic_dict[A].insert_cnt = self.statistic_dict[A].insert_cnt + d
+                if d <= Cie or h == 1 then
+                    self.statistic_dict[A].insert_without_paste_cnt = self.statistic_dict[A].insert_without_paste_cnt + d
                 end
-                for _, l in ipairs(o.contentChanges) do
-                    local h = check_accept(a, c, l.rangeOffset, l.text)
-                    local d = #l.text
-                    object.statistic_dict[A].insert_cnt = object.statistic_dict[A].insert_cnt + d
+                self.statistic_dict[A].delete_cnt = self.statistic_dict[A].delete_cnt + l.rangeLength
+                if h <= 1 then
+                    self.statistic_dict[A].insert_with_completion_cnt = self.statistic_dict[A].insert_with_completion_cnt + d
                     if d <= Cie or h == 1 then
-                        object.statistic_dict[A].insert_without_paste_cnt = object.statistic_dict[A].insert_without_paste_cnt + d
+                        self.statistic_dict[A].insert_with_completion_without_paste_cnt = self.statistic_dict[A].insert_with_completion_without_paste_cnt + d
                     end
-                    object.statistic_dict[A].delete_cnt = object.statistic_dict[A].delete_cnt + l.rangeLength
-                    if h <= 1 then
-                        object.statistic_dict[A].insert_with_completion_cnt = object.statistic_dict[A].insert_with_completion_cnt + d
-                        if d <= Cie or h == 1 then
-                            object.statistic_dict[A].insert_with_completion_without_paste_cnt = object.statistic_dict[A].insert_with_completion_without_paste_cnt + d
-                        end
-                    end
-                    if h == 1 then
-                        object.statistic_dict[A].accept_cnt = object.statistic_dict[A].accept_cnt + d
-                    end
+                end
+                if h == 1 then
+                    self.statistic_dict[A].accept_cnt = self.statistic_dict[A].accept_cnt + d
                 end
             end
         end
-    }
-    Me.workspace.onDidChangeTextDocument = object.handleTextDocumentChange
-    return object
+    end
+    -- Me.workspace.onDidChangeTextDocument = object.handleTextDocumentChange
 end
 
 function CompletionStatistics:update_user_id(e)
@@ -91,11 +95,11 @@ function CompletionStatistics:send_status()
         if self.completion_status_dict[uri] then
             local a = self.completion_status_dict[uri]
             if os.time() - a.sending_time > DHe then
-                goto continue
+                ::continue::
             end
         end
         if stats.completion_times == 0 then
-            goto continue
+            ::continue::
         end
         local s = {
             user_id = self.user_id,
@@ -130,13 +134,10 @@ end
 
 function CompletionStatistics:update_completion_time(e, r)
     if not self.statistic_dict[e] then
-        self.statistic_dict[e] = kS:new()
+        self.statistic_dict[e] = Item:new()
     end
     self.statistic_dict[e].completion_times = self.statistic_dict[e].completion_times + 1
     self.statistic_dict[e].completion_total_time = self.statistic_dict[e].completion_total_time + r
 end
 
-function CompletionStatistics:getCurrentDate()
-    local date = os.date('!*t')
-    return string.format('%04d-%02d-%02d', date.year, date.month, date.day)
-end
+return CompletionStatistics
