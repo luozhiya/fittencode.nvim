@@ -4,6 +4,10 @@ local Fn = require('fittencode.functional.fn')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local Protocal = require('fittencode.client.protocol')
+local SemanticContextAggregator = require('fittencode.inline.project_completion.versions.semantic_context_aggregator')
+local TreeBasedCompletion = require('fittencode.inline.project_completion.versions.tree_based_completion')
+local TreeBasedCompletionLite = require('fittencode.inline.project_completion.versions.tree_based_completion_lite')
+local TslspAdvanced = require('fittencode.inline.project_completion.versions.tslsp_advanced')
 
 local ProjectCompletionService = {}
 
@@ -22,10 +26,10 @@ function ProjectCompletionService:__initialize(options)
     -- tree_based_completion_lite
     -- tslsp_advanced
     self.project_completion = {
-        semantic_context_aggregator = require('fittencode.inline.project_completion.versions.semantic_context_aggregator'),
-        tree_based_completion = require('fittencode.inline.project_completion.versions.tree_based_completion'),
-        tree_based_completion_lite = require('fittencode.inline.project_completion.versions.tree_based_completion_lite'),
-        tslsp_advanced = require('fittencode.inline.project_completion.versions.tslsp_advanced'),
+        semantic_context_aggregator = SemanticContextAggregator.new(),
+        tree_based_completion = TreeBasedCompletion.new(),
+        tree_based_completion_lite = TreeBasedCompletionLite.new(),
+        tslsp_advanced = TslspAdvanced.new(),
     }
     self.last_chosen_prompt_type = '0'
     self.request_handle = nil

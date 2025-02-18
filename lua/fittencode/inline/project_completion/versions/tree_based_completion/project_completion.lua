@@ -1,24 +1,21 @@
 local ProjectCompletion = {}
+ProjectCompletion.__index = ProjectCompletion
 
-function ProjectCompletion:new()
-    local object = {
-        files = {}
-    }
-    setmetatable(object, { __index = self })
-    return object
+function ProjectCompletion.new()
+    local self = setmetatable({}, ProjectCompletion)
+    self.files = {}
+    return self
 end
 
-function ProjectCompletion:get_prompt(e, r)
-    local fs_path = e.uri.fs_path
-    if not self.files[fs_path] then
-        self.files[fs_path] = ScopeTree:new(e)
-        self.files[fs_path]:update(e)
+function ProjectCompletion:get_prompt(document, cursor_pos)
+    local file_path = document.uri
+    if not self.files[file_path] then
+        self.files[file_path] = ScopeTree.new(document)
+        self.files[file_path]:update(document)
     end
-    local s = self.files[fs_path]:get_prompt(e, r, 50)
-    self.files[fs_path]:show_info('====== use project prompt ========')
-    self.files[fs_path]:show_info(s)
-    self.files[fs_path]:show_info('==================================')
-    return s
+
+    local prompt = self.files[file_path]:get_prompt(document, cursor_pos.line, 50)
+    return prompt
 end
 
 return ProjectCompletion

@@ -1,6 +1,7 @@
 --[[
 
-最终生成的 prompt 结构示例：
+简化版 Tree-based Completion
+- 去掉原来复杂的 ScopeTree 缓存机制
 
 --]]
 
