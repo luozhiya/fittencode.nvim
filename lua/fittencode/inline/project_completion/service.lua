@@ -19,7 +19,7 @@ end
 
 function ProjectCompletionService:__initialize(options)
     options = options or {}
-
+    self.provider = options.provider or 'semantic_context'
     self.project_completion = {
         semantic_context = SemanticContext.new(),
         vscode = PCVSCode.new(),
