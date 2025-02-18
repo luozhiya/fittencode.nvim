@@ -38,35 +38,34 @@ function CompletionStatistics:new(e, r, n, i)
 end
 
 function CompletionStatistics:__initialize()
-    self.handle_text_document_change = function(o)
-        local a = o.document
-        local A = a.uri.toString()
-        if self.completion_status_dict[A] then
-            local c = self.completion_status_dict[A]
-            if vim.uv.now() - c.sending_time > SEND_TIME_INTERVAL then
+    self.handle_text_document_change = function(buf)
+        local uri = buf.uri
+        if self.completion_status_dict[uri] then
+            local completion_status = self.completion_status_dict[uri]
+            if vim.uv.now() - completion_status.sending_time > SEND_TIME_INTERVAL then
                 return
             end
-            for _, l in ipairs(o.contentChanges) do
-                local h = self:check_accept(a, c, l.rangeOffset, l.text)
+            for _, l in ipairs(buf.contentChanges) do
+                local h = self:check_accept(buf, completion_status, l.rangeOffset, l.text)
                 local d = #l.text
-                self.statistic_dict[A].insert_cnt = self.statistic_dict[A].insert_cnt + d
+                self.statistic_dict[uri].insert_cnt = self.statistic_dict[uri].insert_cnt + d
                 if d <= MAX_TEXT_LENGTH or h == 1 then
-                    self.statistic_dict[A].insert_without_paste_cnt = self.statistic_dict[A].insert_without_paste_cnt + d
+                    self.statistic_dict[uri].insert_without_paste_cnt = self.statistic_dict[uri].insert_without_paste_cnt + d
                 end
-                self.statistic_dict[A].delete_cnt = self.statistic_dict[A].delete_cnt + l.rangeLength
+                self.statistic_dict[uri].delete_cnt = self.statistic_dict[uri].delete_cnt + l.rangeLength
                 if h <= 1 then
-                    self.statistic_dict[A].insert_with_completion_cnt = self.statistic_dict[A].insert_with_completion_cnt + d
+                    self.statistic_dict[uri].insert_with_completion_cnt = self.statistic_dict[uri].insert_with_completion_cnt + d
                     if d <= MAX_TEXT_LENGTH or h == 1 then
-                        self.statistic_dict[A].insert_with_completion_without_paste_cnt = self.statistic_dict[A].insert_with_completion_without_paste_cnt + d
+                        self.statistic_dict[uri].insert_with_completion_without_paste_cnt = self.statistic_dict[uri].insert_with_completion_without_paste_cnt + d
                     end
                 end
                 if h == 1 then
-                    self.statistic_dict[A].accept_cnt = self.statistic_dict[A].accept_cnt + d
+                    self.statistic_dict[uri].accept_cnt = self.statistic_dict[uri].accept_cnt + d
                 end
             end
         end
     end
-    -- Me.workspace.onDidChangeTextDocument = object.handleTextDocumentChange
+    -- on_did_change_text_document = self.handle_text_document_change
 end
 
 function CompletionStatistics:update_user_id(e)
@@ -84,10 +83,10 @@ function CompletionStatistics:check_accept(e, r, n, i)
     end
 end
 
-function CompletionStatistics:send_one_status(e)
+function CompletionStatistics:send_one_status(tracker_msg)
     Client.request(Protocol.Methods.statistic_log, {
         variables = {
-            query = e
+            query = tracker_msg
         }
     })
 end

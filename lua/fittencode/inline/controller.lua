@@ -33,7 +33,10 @@ function Controller:__initialize(options)
     self.prompt_generator = PromptGenerator:new({
         project_completion_service = self.project_completion_service
     })
-    self.completion_statistics = CompletionStatistics:new()
+    -- self.completion_statistics = CompletionStatistics:new({
+    --     check_accept = function() end,
+    --     get_project_completion_chosen = function() end,
+    -- })
     self.observers = {}
     self.sessions = {}
     self.filter_events = {}
