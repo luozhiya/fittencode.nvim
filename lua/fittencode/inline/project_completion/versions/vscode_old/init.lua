@@ -49,13 +49,12 @@ class UserDAO:
             ...
 --]]
 
-local Base = require('fittencode.inline.project_completion.base')
 local ProjectCompletionImpl = require('fittencode.inline.project_completion.versions.tree_based_completion.project_completion')
 
-local TreeBasedCompletion = Base:new()
+local TreeBasedCompletion = {}
 TreeBasedCompletion.__index = TreeBasedCompletion
 
-function TreeBasedCompletion:new()
+function TreeBasedCompletion.new()
     local obj = setmetatable({}, TreeBasedCompletion)
     obj:__initialize()
     return obj
