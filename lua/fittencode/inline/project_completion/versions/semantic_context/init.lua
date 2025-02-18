@@ -8,11 +8,15 @@
   - Precise 模式可能是指精确检索，需要较长时间来响应，但准确性较高。
 - 有两种输出模式，分别对应 VSCode 中的 ProjectCompletionOld 和 ProjectCompletion
 
-local sc = SemanticContext.new({ mode = 'fast', timeout = 1000, output_format = 'ProjectCompletion' })
-local scold = SemanticContext.new({ mode = 'fast', timeout = 1000, output_format = 'ProjectCompletionOld' })
+Fast 模式：
+- 仅使用 LSP 进行符号检索，尽量减少使用 Tree-sitter (限制文档大小)
+
+local sc = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'vscode' })
+local scold = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'vscode_old' })
 
 --]]
 
+local Promise = require('fittencode.concurrency.promise')
 local ProjectCompletion = require('fittencode.inline.project_completion.versions.semantic_context.project_completion')
 
 local SemanticContext = {}
@@ -25,14 +29,32 @@ function SemanticContext.new(options)
     return self
 end
 
+-- FittenCode 可以平均在 200 ms 内完成补全，如果在获取 ProjectCompletion 阶段耗时太多就没有意义了
+local MODE_TIMEOUT = {
+    fast = 50,
+    balance = 100,
+    precise = 1000
+}
+
 function SemanticContext:__initialize(options)
     self.mode = options.mode or 'balance'
-    self.timeout = options.timeout or 1000
-    self.output_format = options.output_format or 'ProjectCompletion'
-    self.engine = ProjectCompletion.new()
+    self.timeout = options.timeout or MODE_TIMEOUT[self.mode]
+    self.format = options.format or 'vscode'
+    self.engine = ProjectCompletion.new(self.mode, self.format)
 end
 
+-- 异步获取项目级别的 Prompt
+-- resolve: 超时返回 nil，否则返回提示内容
+-- reject: 超时返回
+---@return FittenCode.Concurrency.Promise
 function SemanticContext:generate_prompt(buf, position)
+    return Promise.race({
+        Promise.async(function(resolve, reject)
+            local result = self.engine:get_prompt(buf, position)
+            resolve(result)
+        end),
+        Promise.delay(self.timeout)
+    })
 end
 
 return SemanticContext
