@@ -76,7 +76,10 @@ function ProjectCompletion.new(mode, format)
 end
 
 -- 生成提示内容
-function ProjectCompletion:get_prompt(buf, postion)
+function ProjectCompletion:get_prompt(buf, postion, mode, format)
+    mode = mode or self.mode
+    format = format or self.format
+
     local context_symbol = get_context_symbol(buf, postion)
     if not context_symbol then
         return ''
@@ -89,7 +92,7 @@ function ProjectCompletion:get_prompt(buf, postion)
 
     local lang = vim.bo[buf].filetype
     local comment_pattern = Comment.pattern_by_line(lang) or ''
-    local title_template = Spec.format[self.format]
+    local title_template = Spec.format[format]
 
     local prompt = ''
     local count = 0
@@ -113,9 +116,9 @@ function ProjectCompletion:get_prompt(buf, postion)
         local header = ''
         local symbol = ''
 
-        if self.format == 'concise' then
+        if format == 'concise' then
             header = Format.format(title_template, comment_pattern, target_uri)
-        elseif self.format == 'redundant' then
+        elseif format == 'redundant' then
             header = Format.format(title_template, comment_pattern, target_uri, symbol)
         end
 
