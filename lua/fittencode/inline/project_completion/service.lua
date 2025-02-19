@@ -4,9 +4,6 @@ local Fn = require('fittencode.functional.fn')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local Protocal = require('fittencode.client.protocol')
-local PCVSCode = require('fittencode.inline.project_completion.versions.vscode')
-local PCVSCodeOld = require('fittencode.inline.project_completion.versions.vscode_old')
-local SemanticContext = require('fittencode.inline.project_completion.versions.semantic_context')
 
 local ProjectCompletionService = {}
 
@@ -19,25 +16,21 @@ end
 
 function ProjectCompletionService:__initialize(options)
     options = options or {}
+
     self.provider = options.provider or 'semantic_context'
-    self.project_completion = {
-        semantic_context = SemanticContext.new(),
-        vscode = PCVSCode.new(),
-        vscode_old = PCVSCodeOld.new(),
-    }
-    self.last_chosen_prompt_type = '0'
+    if self.provider == 'vscode' then
+        self.project_completion = require('fittencode.inline.project_completion.versions.vscode').new()
+    elseif self.provider == 'semantic_context' then
+        self.project_completion = require('fittencode.inline.project_completion.versions.semantic_context').new()
+    end
+
     self.request_handle = nil
-    -- 绑定自动更新
-    vim.api.nvim_create_autocmd({ 'BufEnter', 'TextChanged' }, {
-        callback = function(args)
-            self.project_completion.v1:update_symbols(args.buf)
-        end
-    })
+    self.heart = 1
 end
 
 ---@return string
 function ProjectCompletionService:get_last_chosen_prompt_type()
-    return self.last_chosen_prompt_type
+    return self.project_completion.last_chosen_prompt_type
 end
 
 function ProjectCompletionService:abort_request()
@@ -59,8 +52,7 @@ function ProjectCompletionService:get_project_completion_chosen()
         local response = _.text()
         if Fn.startswith(response, 'yes-') then
             local u = response:split('-')[1] or '0'
-            local ty = u:sub(1, 1)
-            self.last_chosen_prompt_type = ty
+            local ty = tonumber(u:sub(1, 1))
             return ty
         else
             return Promise.reject()
@@ -76,14 +68,13 @@ end
 function ProjectCompletionService:check_project_completion_available(lsp)
     local _is_available = function(chosen)
         local open = Config.use_project_completion.open
-        local heart = 1
         local available = false
         if open == 'auto' then
-            if chosen >= 1 and lsp == 1 and heart ~= 2 then
+            if chosen >= 1 and lsp == 1 and self.heart ~= 2 then
                 available = true
             end
         elseif open == 'on' then
-            if lsp == 1 and heart ~= 2 then
+            if lsp == 1 and self.heart ~= 2 then
                 available = true
             end
         elseif open == 'off' then
