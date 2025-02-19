@@ -64,18 +64,20 @@ function ProjectCompletionService:generate_prompt(buf, position)
     return self.project_completion:generate_prompt(buf, position)
 end
 
-function ProjectCompletionService:_get_chosen()
-end
-
 ---@return FittenCode.Concurrency.Promise
 function ProjectCompletionService:get_chosen()
+    -- 0. 清理过期请求
     self:abort_request()
+    -- 1. 非标准版
     if Config.server.fitten_version ~= 'default' then
-        return Promise.resolve('2')
-    end
-    if Perf.tok(self.get_chosen_last_time) < 1e3 * 10 then
+        self.last_chosen_prompt_type = '2'
         return Promise.resolve(self.last_chosen_prompt_type)
     end
+    -- 2. 缓存值
+    if Perf.tok(self.last_chosen_time) < 1e3 * 10 then
+        return Promise.resolve(self.last_chosen_prompt_type)
+    end
+    -- 3. 发送请求
     local handle = Client.request(Protocal.Methods.pc_check_auth)
     if not handle then
         return Promise.reject()
@@ -83,21 +85,18 @@ function ProjectCompletionService:get_chosen()
     self:push_request_handle(handle)
     return handle.promise():forward(function(_)
         local response = _.text()
+        -- 只要是前缀为 `yes-` 的字符串，就认为是合法的
         if Fn.startswith(response, 'yes-') then
-            self.get_chosen_last_time = Perf.tick()
+            self.last_chosen_time = Perf.tick()
             local _, ty = pcall(function()
-                local ver = (response:split('-')[1] or '0'):sub(1, 1)
-                return { ver, tonumber(ver) }
+                return (response:split('-')[1] or '0'):sub(1, 1)
             end)
             if _ then
-                -- 记录上一次选择的类型
-                self.last_chosen_prompt_type = ty[1]
-                return ty[2]
+                self.last_chosen_prompt_type = ty
             else
                 self.last_chosen_prompt_type = '0'
-                -- VSCode 中是返回的 1 哈!
-                return 1
             end
+            return self.last_chosen_prompt_type
         end
         return Promise.reject()
     end)
@@ -110,6 +109,7 @@ end
 ---@return FittenCode.Concurrency.Promise
 function ProjectCompletionService:check_available(lsp)
     local _is_available = function(chosen)
+        chosen = tonumber(chosen)
         local open = Config.use_project_completion.open
         local available = false
         local heart = self.heart_beater:get_status()
