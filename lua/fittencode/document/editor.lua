@@ -128,6 +128,17 @@ function M.workspace(buf)
     return ws
 end
 
+function M.is_valid(buf)
+    if not buf then
+        return false
+    end
+    local ok, r = pcall(vim.api.nvim_buf_is_valid, buf)
+    if not ok or not r then
+        return false
+    end
+    return false
+end
+
 -- 检测一个 buffer 是否是一个文件，并且可读
 -- 并在满足这个条件下返回该文件的路径 (路径是和平台相关的)
 ---@return boolean, string?

@@ -4,6 +4,7 @@ local Fn = require('fittencode.functional.fn')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local Protocal = require('fittencode.client.protocol')
+local HeartBeater = require('fittencode.inline.project_completion.heart_beater')
 
 local ProjectCompletionService = {}
 
@@ -23,9 +24,8 @@ function ProjectCompletionService:__initialize(options)
     elseif self.provider == 'semantic_context' then
         self.project_completion = require('fittencode.inline.project_completion.versions.semantic_context').new()
     end
-
+    self.heart_beater = HeartBeater.new()
     self.request_handle = nil
-    self.heart = 1
 end
 
 ---@return string
@@ -38,6 +38,10 @@ function ProjectCompletionService:abort_request()
         self.request_handle.abort()
         self.request_handle = nil
     end
+end
+
+function ProjectCompletionService:start_heartbeat()
+
 end
 
 ---@return FittenCode.Concurrency.Promise
@@ -69,12 +73,13 @@ function ProjectCompletionService:check_project_completion_available(lsp)
     local _is_available = function(chosen)
         local open = Config.use_project_completion.open
         local available = false
+        local heart = self.heart_beater:get_status()
         if open == 'auto' then
-            if chosen >= 1 and lsp == 1 and self.heart ~= 2 then
+            if chosen >= 1 and lsp == 1 and heart ~= 2 then
                 available = true
             end
         elseif open == 'on' then
-            if lsp == 1 and self.heart ~= 2 then
+            if lsp == 1 and heart ~= 2 then
                 available = true
             end
         elseif open == 'off' then

@@ -191,7 +191,7 @@ function PromptGenerator:_generate_project_completion_prompt(buf, position)
     return self.project_completion_service:get_file_lsp(buf):forward(function(lsp)
         return self.project_completion_service:check_project_completion_available(lsp)
     end):forward(function()
-        return self.project_completion_service:get_prompt(buf, position)
+        return self.project_completion_service:generate_prompt(buf, position)
     end)
 end
 

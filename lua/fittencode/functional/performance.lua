@@ -13,12 +13,13 @@ end
 local result, ns = measure(test, 1e6)
 print(string.format('Sum: %d, Time: %.3f ms', result, ns / 1e6))
 
-local timer = Timer:new()
-timer:start()
-
 ------------------------------------
 --- 手动控制计时器（适合测量代码块）
 ------------------------------------
+
+local timer = Timer:new()
+timer:start()
+
 local s = ''
 for i = 1, 1000 do
     s = s .. tostring(i)
@@ -83,9 +84,23 @@ local smart_timer_format = function()
     end
 end
 
+-------------------------------------------------------
+-- 方法4
+
+local tick = function(precision)
+    precision = precision or 1e6 -- 默认精度：微秒
+    return vim.uv.hrtime() / precision
+end
+
+local tok = function(start, precision)
+    return tick(precision) - start
+end
+
 return {
     measure = measure,
     Timer = Timer,
     smart_timer = smart_timer,
-    smart_timer_format = smart_timer_format
+    smart_timer_format = smart_timer_format,
+    tick = tick,
+    tok = tok
 }
