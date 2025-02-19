@@ -94,6 +94,7 @@ local tick = function(precision)
 end
 
 local tok = function(start, precision)
+    start = start or 0
     return tick(precision) - start
 end
 

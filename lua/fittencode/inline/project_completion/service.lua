@@ -6,6 +6,7 @@ local Log = require('fittencode.log')
 local Protocal = require('fittencode.client.protocol')
 local HeartBeater = require('fittencode.inline.project_completion.heart_beater')
 local LspService = require('fittencode.functional.lsp_service')
+local Perf = require('fittencode.functional.performance')
 
 local ProjectCompletionService = {}
 
@@ -68,10 +69,13 @@ end
 
 ---@return FittenCode.Concurrency.Promise
 function ProjectCompletionService:get_chosen()
-    if Config.server.fitten_version ~= 'default' then
-        return Promise.resolve(2)
-    end
     self:abort_request()
+    if Config.server.fitten_version ~= 'default' then
+        return Promise.resolve('2')
+    end
+    if Perf.tok(self.get_chosen_last_time) < 1e3 * 10 then
+        return Promise.resolve(self.last_chosen_prompt_type)
+    end
     local handle = Client.request(Protocal.Methods.pc_check_auth)
     if not handle then
         return Promise.reject()
@@ -80,6 +84,7 @@ function ProjectCompletionService:get_chosen()
     return handle.promise():forward(function(_)
         local response = _.text()
         if Fn.startswith(response, 'yes-') then
+            self.get_chosen_last_time = Perf.tick()
             local _, ty = pcall(function()
                 local ver = (response:split('-')[1] or '0'):sub(1, 1)
                 return { ver, tonumber(ver) }
