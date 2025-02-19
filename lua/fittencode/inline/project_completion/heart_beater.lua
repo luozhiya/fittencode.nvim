@@ -24,6 +24,7 @@ function HeartBeater:__reset()
     self.buffer = nil
 end
 
+-- 测速 LSP `textDocument/documentSymbol`
 function HeartBeater:start(force)
     if self.timer then
         if not force then

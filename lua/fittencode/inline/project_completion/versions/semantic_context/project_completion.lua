@@ -105,7 +105,7 @@ function ProjectCompletion:get_prompt_sync(buf, postion, mode, format)
     end
 
     local lang = vim.bo[buf].filetype
-    local comment_pattern = Comment.pattern_by_line(lang) or ''
+    local comment_pattern = Comment.line_pattern(lang) or ''
     local title_template = Spec.format[format]
 
     local prompt = ''

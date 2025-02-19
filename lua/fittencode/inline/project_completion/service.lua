@@ -91,11 +91,7 @@ function ProjectCompletionService:get_chosen()
             local _, ty = pcall(function()
                 return (response:split('-')[1] or '0'):sub(1, 1)
             end)
-            if _ then
-                self.last_chosen_prompt_type = ty
-            else
-                self.last_chosen_prompt_type = '0'
-            end
+            self.last_chosen_prompt_type = _ and ty or '0'
             return self.last_chosen_prompt_type
         end
         return Promise.reject()
