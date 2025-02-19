@@ -272,45 +272,45 @@ local function format_arg(arg, spec_str)
 end
 
 -- 解析格式字符串，处理转义字符，管理参数索引，调用格式化函数并拼接最终结果
----@param fmt string 包含 {} 占位符的格式字符串
-function M.format(fmt, ...)
+---@param placeholders string 包含 {} 占位符的格式字符串
+function M.format(placeholders, ...)
     local args = pack(...)
     local result = {}
     local pos = 1
-    local len = #fmt
+    local len = #placeholders
     local auto_index = 0
     local has_auto = false
     local has_manual = false
 
     while pos <= len do
-        local brace_start = fmt:find('{', pos, true)
+        local brace_start = placeholders:find('{', pos, true)
         if not brace_start then
-            table.insert(result, fmt:sub(pos))
+            table.insert(result, placeholders:sub(pos))
             break
         end
 
         -- 处理转义的 '{{'
-        if fmt:sub(brace_start, brace_start + 1) == '{{' then
-            table.insert(result, fmt:sub(pos, brace_start - 1))
+        if placeholders:sub(brace_start, brace_start + 1) == '{{' then
+            table.insert(result, placeholders:sub(pos, brace_start - 1))
             table.insert(result, '{')
             pos = brace_start + 2
         else
             -- 提取前面的普通文本
-            table.insert(result, fmt:sub(pos, brace_start - 1))
+            table.insert(result, placeholders:sub(pos, brace_start - 1))
 
             -- 查找闭合的 '}'
-            local brace_end = fmt:find('}', brace_start + 1, true)
+            local brace_end = placeholders:find('}', brace_start + 1, true)
             if not brace_end then
                 error('unclosed replacement field at position ' .. brace_start)
             end
 
             -- 处理转义的 '}}'
-            if fmt:sub(brace_end, brace_end + 1) == '}}' then
+            if placeholders:sub(brace_end, brace_end + 1) == '}}' then
                 error("unescaped '}' in replacement field")
             end
 
             -- 提取内容部分
-            local content = fmt:sub(brace_start + 1, brace_end - 1)
+            local content = placeholders:sub(brace_start + 1, brace_end - 1)
             pos = brace_end + 1
 
             -- 解析索引和格式说明符
@@ -347,8 +347,8 @@ function M.format(fmt, ...)
     return table.concat(result)
 end
 
-function M.safe_format(fmt, ...)
-    local _, s = pcall(M.format, fmt, ...)
+function M.safe_format(placeholders, ...)
+    local _, s = pcall(M.format, placeholders, ...)
     if _ and s then
         return s
     end

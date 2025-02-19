@@ -18,7 +18,6 @@ end
 
 function ProjectCompletionService:__initialize(options)
     options = options or {}
-
     self.provider = options.provider or 'semantic_context'
     if self.provider == 'vscode' then
         self.project_completion = require('fittencode.inline.project_completion.versions.vscode').new()

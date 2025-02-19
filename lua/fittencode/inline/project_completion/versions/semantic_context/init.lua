@@ -47,7 +47,7 @@ function SemanticContext.new(options)
     return self
 end
 
--- FittenCode 可以平均在 200 ms 内完成补全，如果在获取 ProjectCompletion 阶段耗时太多就没有意义了
+-- FittenCode 可以平均在 200 ms 内完成补全，如果本地在获取 ProjectCompletion Prompt 阶段耗时太多就没有意义了
 local MODE_TIMEOUT = {
     fast = 50,
     balance = 100,

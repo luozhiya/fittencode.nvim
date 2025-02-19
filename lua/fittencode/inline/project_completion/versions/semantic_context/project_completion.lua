@@ -1,37 +1,16 @@
 local Fn = require('fittencode.functional.fn')
 local Editor = require('fittencode.document.editor')
 local LspService = require('fittencode.functional.lsp_service')
+local Comment = require('fittencode.inline.project_completion.comment')
+local Spec = require('fittencode.inline.project_completion.spec')
+local Format = require('fittencode.functional.format')
 
-local M = {}
+local ProjectCompletion = {}
+ProjectCompletion.__index = ProjectCompletion
 
 -- 配置参数
 local MAX_LENGTH = 20000 -- 最大提示长度
-
-local COMMENT_PATTERNS = {
-    ['python'] = '#<content>',
-    ['c'] = '//<content>',
-    ['cpp'] = '//<content>',
-    ['csharp'] = '//<content>',
-    ['kotlin'] = '//<content>',
-    ['java'] = '//<content>',
-    ['javascript'] = '//<content>',
-    ['typescript'] = '//<content>',
-    ['php'] = '//<content>',
-    ['go'] = '//<content>',
-    ['rust'] = '//<content>',
-    ['ruby'] = '#<content>',
-    ['lua'] = '--<content>',
-    ['perl'] = '#<content>',
-    ['css'] = '/*<content>*/',
-    ['matlab'] = '%<content>',
-    ['unknown'] = '//<content>'
-}
-
--- 获取语言注释模式
-local function get_lang_title(filetype)
-    local pattern = COMMENT_PATTERNS[filetype] or COMMENT_PATTERNS['unknown']
-    return pattern:gsub('<content>', ' Below is partial code of %s for %s %s:')
-end
+local MAX_ITEMS = 5
 
 -- 压缩代码
 local function compress_code(lines)
@@ -89,24 +68,29 @@ local function get_context_symbol(bufnr, pos)
     return nil
 end
 
--- 生成提示内容
-function M.get_prompt()
-    local bufnr = vim.api.nvim_get_current_buf()
-    local pos = vim.api.nvim_win_get_cursor(0)
-    pos = { line = pos[1] - 1, character = pos[2] } -- 转换为LSP位置
+function ProjectCompletion.new(mode, format)
+    local self = setmetatable({}, ProjectCompletion)
+    self.mode = mode
+    self.format = format
+    return self
+end
 
-    local context_symbol = get_context_symbol(bufnr, pos)
+-- 生成提示内容
+function ProjectCompletion:get_prompt(buf, postion)
+    local context_symbol = get_context_symbol(buf, postion)
     if not context_symbol then
         return ''
     end
 
-    local definitions = get_symbol_definitions(bufnr, pos)
+    local definitions = get_symbol_definitions(buf, postion)
     if not definitions or #definitions == 0 then
         return ''
     end
 
-    local lang = vim.bo[bufnr].filetype
-    local title = get_lang_title(lang)
+    local lang = vim.bo[buf].filetype
+    local comment_pattern = Comment.pattern_by_line(lang) or ''
+    local title_template = Spec.format[self.format]
+
     local prompt = ''
     local count = 0
 
@@ -121,19 +105,19 @@ function M.get_prompt()
         -- 跳转到定义位置获取代码
         local success, code_lines = pcall(vim.api.nvim_buf_get_lines, vim.uri_to_bufnr(target_uri), target_range.start.line, target_range['end'].line + 1, false)
         if not success then
-            print("Error fetching code lines for URI: " .. target_uri)
+            print('Error fetching code lines for URI: ' .. target_uri)
             return prompt
         end
 
         local code = compress_code(code_lines)
-        local symbol_type = node:type():find('identifier') and 'variable' or 'function'
+        local header = ''
+        local symbol = ''
 
-        local header = string.format(
-            title,
-            target_uri,
-            symbol_type,
-            context_symbol.name
-        )
+        if self.format == 'concise' then
+            header = Format.format(title_template, comment_pattern, target_uri)
+        elseif self.format == 'redundant' then
+            header = Format.format(title_template, comment_pattern, target_uri, symbol)
+        end
 
         prompt = prompt .. header .. '\n' .. code .. '\n\n'
         count = count + 1
@@ -147,4 +131,4 @@ function M.get_prompt()
     return prompt
 end
 
-return M
+return ProjectCompletion

@@ -31,3 +31,12 @@ class UserDAO:
             cur.execute("SELECT * FROM users WHERE id=%s", (uid,))
             ...
 --]]
+
+local M = {
+    format = {
+        ['concise'] = '{} Below is partial code of {}:',
+        ['redundant'] = '{} Below is partical code of {} for the variable or function {}:'
+    }
+}
+
+return M
