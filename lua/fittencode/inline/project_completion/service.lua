@@ -51,12 +51,14 @@ function ProjectCompletionService:get_project_completion_chosen()
     return handle.promise():forward(function(_)
         local response = _.text()
         if Fn.startswith(response, 'yes-') then
-            local u = response:split('-')[1] or '0'
-            local ty = tonumber(u:sub(1, 1))
-            return ty
-        else
-            return Promise.reject()
+            local _, ty = pcall(function()
+                return tonumber((response:split('-')[1]):sub(1, 1))
+            end)
+            if _ then
+                return ty
+            end
         end
+        return Promise.reject()
     end)
 end
 
