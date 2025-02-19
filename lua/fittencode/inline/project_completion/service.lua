@@ -63,8 +63,14 @@ function ProjectCompletionService:generate_prompt(buf, position)
     return self.project_completion:generate_prompt(buf, position)
 end
 
+function ProjectCompletionService:_get_chosen()
+end
+
 ---@return FittenCode.Concurrency.Promise
 function ProjectCompletionService:get_chosen()
+    if Config.server.fitten_version ~= 'default' then
+        return Promise.resolve(2)
+    end
     self:abort_request()
     local handle = Client.request(Protocal.Methods.pc_check_auth)
     if not handle then
