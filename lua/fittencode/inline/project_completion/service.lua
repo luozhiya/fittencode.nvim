@@ -64,7 +64,7 @@ function ProjectCompletionService:generate_prompt(buf, position)
 end
 
 ---@return FittenCode.Concurrency.Promise
-function ProjectCompletionService:get_project_completion_chosen()
+function ProjectCompletionService:get_chosen()
     self:abort_request()
     local handle = Client.request(Protocal.Methods.pc_check_auth)
     if not handle then
@@ -97,7 +97,7 @@ end
 -- * reject 代表不可用或者未知出错
 ---@param lsp number
 ---@return FittenCode.Concurrency.Promise
-function ProjectCompletionService:check_project_completion_available(lsp)
+function ProjectCompletionService:check_available(lsp)
     local _is_available = function(chosen)
         local open = Config.use_project_completion.open
         local available = false
@@ -115,7 +115,7 @@ function ProjectCompletionService:check_project_completion_available(lsp)
         end
         return available
     end
-    return self:get_project_completion_chosen():forward(function(chosen)
+    return self:get_chosen():forward(function(chosen)
         if _is_available(chosen) then
             return chosen
         else
