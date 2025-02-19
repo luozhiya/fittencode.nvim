@@ -40,10 +40,6 @@ function ProjectCompletionService:abort_request()
     end
 end
 
-function ProjectCompletionService:start_heartbeat()
-
-end
-
 ---@return FittenCode.Concurrency.Promise
 function ProjectCompletionService:get_project_completion_chosen()
     self:abort_request()

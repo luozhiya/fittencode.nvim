@@ -6,6 +6,7 @@ HeartBeater.__index = HeartBeater
 
 function HeartBeater.new()
     local self = setmetatable({}, HeartBeater)
+    self:__reset()
     return self
 end
 
@@ -18,7 +19,6 @@ function HeartBeater:__reset()
     self.status = 0
     self.last_ban_time = 0
     self.gaps = {}
-    self.last_call_time = Perf.tick()
     self.timer = nil
     self.buffer = nil
 end
@@ -31,6 +31,7 @@ function HeartBeater:start(force)
         self:stop()
         self:__reset()
     end
+    self.last_call_time = Perf.tick()
     self.timer = vim.uv.new_timer()
     local on_timeout = vim.schedule_wrap(function()
         local now = Perf.tick()
@@ -50,10 +51,10 @@ function HeartBeater:start(force)
             local start_time = Perf.tick()
             vim.lsp.buf_request(self.buffer, 'textDocument/documentSymbol', {
                 textDocument = {
-                    uri = vim.uri_from_bufnr(0),
+                    uri = vim.uri_from_bufnr(self.buffer),
                 },
             }, function(err, result)
-                local total_elapsed = (Perf.tick() - start_time) + gap_time
+                local total_elapsed = Perf.tok(start_time) + gap_time
                 table.insert(self.gaps, total_elapsed)
                 if #self.gaps > self.check_times then
                     table.remove(self.gaps, 1)

@@ -89,6 +89,7 @@ end
 
 local tick = function(precision)
     precision = precision or 1e6 -- 默认精度：微秒
+    assert(precision > 0, 'Precision must be positive')
     return vim.uv.hrtime() / precision
 end
 
