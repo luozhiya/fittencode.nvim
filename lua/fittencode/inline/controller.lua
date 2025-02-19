@@ -29,7 +29,7 @@ end
 
 function Controller:__initialize(options)
     options = options or {}
-    self.project_completion_service = ProjectCompletionService:new()
+    self.project_completion_service = ProjectCompletionService.new()
     self.prompt_generator = PromptGenerator:new({
         project_completion_service = self.project_completion_service
     })

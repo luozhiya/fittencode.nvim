@@ -8,44 +8,30 @@
   - Precise 模式可能是指精确检索，需要较长时间来响应，但准确性较高。
 - 有两种输出模式，分别对应 VSCode 中的 ProjectCompletionOld 和 ProjectCompletion
 
+模式预先设计如下，具体实现还需要根据实际情况进行调整：
+
 Fast 模式：
 - 仅使用 LSP 进行符号检索，尽量减少使用 Tree-sitter (限制文档大小)
+- LSP
+    - { 'textDocument/definition', 'textDocument/typeDefinition' }
+- Tree-sitter
+    - < 1000 characters
+    - 捕获当前符合的最大range，不做更细的分析
 
-local sc = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'vscode' })
-local scold = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'vscode_old' })
+Balance 模式：
+- 使用 LSP 进行符号检索，放开 Tree-sitter 的限制，但仍然会有一些限制
+- { 'textDocument/definition', 'textDocument/typeDefinition', 'textDocument/references', 'textDocument/documentSymbol' }
+- Tree-sitter
+    - < 10000 characters
+    - 捕获当前符合的最大range，并分析其范围内的符号
 
---]]
+Precise 模式：
+- 使用 LSP 进行符号检索，放开 Tree-sitter 的限制
+- { 'textDocument/definition', 'textDocument/typeDefinition', 'textDocument/references', 'textDocument/documentSymbol', 'textDocument/implementation' }
 
---[[
-// Below is partial code of /project/utils.js:
-function calculate(a, b) {
-  return a + b;
-}
+local sc = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'concise' })
+local scold = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'redundant' })
 
-// Below is partial code of /project/main.js:
-const result = calculate(3, 5);
-
-// Below is partial code of /project/helper.ts:
-interface Helper {
-  id: number;
-  name: string;
-}
-...
---]]
-
---[[
-# Below is partical code of file:///src/user.py for the variable or function User::getName:
-class User:
-    def getName(self):  # Returns formatted user name
-        ...
-        return f"{self.last}, {self.first}"
-
-# Below is partical code of file:///src/db/dao.py for the variable or function UserDAO::find_by_id:
-class UserDAO:
-    def find_by_id(self, uid):  # Core query method
-        with self.conn.cursor() as cur:
-            cur.execute("SELECT * FROM users WHERE id=%s", (uid,))
-            ...
 --]]
 
 local Promise = require('fittencode.concurrency.promise')

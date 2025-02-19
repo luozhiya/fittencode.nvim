@@ -5,10 +5,11 @@ local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local Protocal = require('fittencode.client.protocol')
 local HeartBeater = require('fittencode.inline.project_completion.heart_beater')
+local LspService = require('fittencode.functional.lsp_service')
 
 local ProjectCompletionService = {}
 
-function ProjectCompletionService:new(options)
+function ProjectCompletionService.new(options)
     local obj = {}
     setmetatable(obj, { __index = ProjectCompletionService })
     obj:__initialize(options)
@@ -25,7 +26,7 @@ function ProjectCompletionService:__initialize(options)
         self.project_completion = require('fittencode.inline.project_completion.versions.semantic_context').new()
     end
     self.heart_beater = HeartBeater.new()
-    self.request_handle = nil
+    self.request_handles = {}
 end
 
 ---@return string
@@ -34,10 +35,32 @@ function ProjectCompletionService:get_last_chosen_prompt_type()
 end
 
 function ProjectCompletionService:abort_request()
-    if self.request_handle then
-        self.request_handle.abort()
-        self.request_handle = nil
+    for _, handle in pairs(self.request_handles or {}) do
+        handle.abort()
     end
+    self.request_handles = {}
+end
+
+function ProjectCompletionService:push_request_handle(handle)
+    self.request_handles[#self.request_handles + 1] = handle
+end
+
+-- 检测 LSP 客户端是否支持 `textDocument/documentSymbol`
+-- * 1  代表可用
+-- * 0  代表不可用
+-- * -1 代表没有 LSP 客户端
+function ProjectCompletionService:get_file_lsp(buf)
+    if not LspService.has_lsp_client(buf) then
+        return -1
+    end
+    if LspService.supports_method('textDocument/documentSymbol', buf) then
+        return 1
+    end
+    return 0
+end
+
+function ProjectCompletionService:generate_prompt(buf, position)
+    return self.project_completion:generate_prompt(buf, position)
 end
 
 ---@return FittenCode.Concurrency.Promise
@@ -47,7 +70,7 @@ function ProjectCompletionService:get_project_completion_chosen()
     if not handle then
         return Promise.reject()
     end
-    self.request_handle = handle
+    self:push_request_handle(handle)
     return handle.promise():forward(function(_)
         local response = _.text()
         if Fn.startswith(response, 'yes-') then
