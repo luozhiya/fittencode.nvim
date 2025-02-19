@@ -18,6 +18,7 @@ function HeartBeater:__reset()
     self.timeout_limit = 5
     self.status = 0
     self.last_ban_time = 0
+    self.last_call_time = 0
     self.gaps = {}
     self.timer = nil
     self.buffer = nil
