@@ -26,11 +26,12 @@ function ProjectCompletionService:__initialize(options)
     end
     self.heart_beater = HeartBeater.new()
     self.request_handles = {}
+    self.last_chosen_prompt_type = '0'
 end
 
 ---@return string
 function ProjectCompletionService:get_last_chosen_prompt_type()
-    return self.project_completion.last_chosen_prompt_type
+    return self.last_chosen_prompt_type
 end
 
 function ProjectCompletionService:abort_request()
@@ -74,10 +75,17 @@ function ProjectCompletionService:get_project_completion_chosen()
         local response = _.text()
         if Fn.startswith(response, 'yes-') then
             local _, ty = pcall(function()
-                return tonumber((response:split('-')[1]):sub(1, 1))
+                local ver = (response:split('-')[1] or '0'):sub(1, 1)
+                return { ver, tonumber(ver) }
             end)
             if _ then
-                return ty
+                -- 记录上一次选择的类型
+                self.last_chosen_prompt_type = ty[1]
+                return ty[2]
+            else
+                self.last_chosen_prompt_type = '0'
+                -- VSCode 中是返回的 1 哈!
+                return 1
             end
         end
         return Promise.reject()

@@ -41,7 +41,6 @@ local SemanticContext = {}
 SemanticContext.__index = SemanticContext
 
 function SemanticContext.new(options)
-    options = options or {}
     local self = setmetatable({}, SemanticContext)
     self:__initialize(options)
     return self
@@ -55,21 +54,21 @@ local MODE_TIMEOUT = {
 }
 
 function SemanticContext:__initialize(options)
-    self.last_chosen_prompt_type = '0'
+    options = options or {}
     self.mode = options.mode or 'balance'
     self.timeout = options.timeout or MODE_TIMEOUT[self.mode]
-    self.format = options.format or 'vscode'
+    self.format = options.format or 'concise'
     self.engine = ProjectCompletion.new(self.mode, self.format)
 end
 
 -- 异步获取项目级别的 Prompt
 -- resolve: 超时返回 nil，否则返回提示内容
--- reject: 超时返回
+-- reject: 出错
 ---@return FittenCode.Concurrency.Promise
 function SemanticContext:generate_prompt(buf, position)
     return Promise.race({
         Promise.async(function(resolve, reject)
-            local result = self.engine:get_prompt(buf, position)
+            local result = self.engine:get_prompt_sync(buf, position)
             resolve(result)
         end),
         Promise.delay(self.timeout)

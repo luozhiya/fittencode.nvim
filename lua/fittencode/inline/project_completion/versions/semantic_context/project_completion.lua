@@ -75,10 +75,24 @@ function ProjectCompletion.new(mode, format)
     return self
 end
 
+-- 定义不同模式下需要执行的操作
+local pipes = {
+    ['fast'] = {
+    },
+    ['balanced'] = {
+    },
+    ['precise'] = {
+    }
+}
+
 -- 生成提示内容
-function ProjectCompletion:get_prompt(buf, postion, mode, format)
+function ProjectCompletion:get_prompt_sync(buf, postion, mode, format)
     mode = mode or self.mode
     format = format or self.format
+
+    -- 1 根据 mode 选择不同的流水线
+    -- 2 执行流水线
+    -- 3 根据 format 生成 prompt
 
     local context_symbol = get_context_symbol(buf, postion)
     if not context_symbol then
