@@ -55,21 +55,31 @@ local MODE_TIMEOUT = {
 
 function SemanticContext:__initialize(options)
     options = options or {}
+    self.get_chosen = options.get_chosen
+    assert(self.get_chosen, 'get_chosen is required')
     self.mode = options.mode or 'balance'
     self.timeout = options.timeout or MODE_TIMEOUT[self.mode]
     self.format = options.format or 'concise'
     self.engine = ProjectCompletion.new(self.mode, self.format)
 end
 
--- 异步获取项目级别的 Prompt
 -- resolve: 超时返回 nil，否则返回提示内容
 -- reject: 出错
 ---@return FittenCode.Concurrency.Promise
 function SemanticContext:generate_prompt(buf, position)
     return Promise.race({
-        Promise.async(function(resolve, reject)
-            local result = self.engine:get_prompt_sync(buf, position)
-            resolve(result)
+        self.get_chosen():forward(function(chosen)
+            return Promise.async(function(resolve, reject)
+                local prompt = self.engine:get_prompt_sync(buf, position, {
+                    order = chosen == '3' and 'reversed' or 'forward',
+                })
+                local meta = {
+                    pc_available = true,
+                    pc_prompt = prompt,
+                    pc_prompt_type = chosen
+                }
+                resolve(meta)
+            end)
         end),
         Promise.delay(self.timeout)
     })

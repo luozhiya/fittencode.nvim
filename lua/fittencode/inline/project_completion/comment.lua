@@ -160,9 +160,6 @@ local COMMENT_DEFS = {
         line = '\" {}',
         block = { left = '\"\"', right = '\"\"', middle = '\"' }
     },
-
-    -- Add more file types below this line --
-    -- (至少可以继续添加更多文件类型到 100+)
 }
 
 function Comment.line_pattern(ft)

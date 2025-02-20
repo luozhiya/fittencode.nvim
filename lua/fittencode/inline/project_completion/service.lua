@@ -8,64 +8,48 @@ local HeartBeater = require('fittencode.inline.project_completion.heart_beater')
 local LspService = require('fittencode.functional.lsp_service')
 local Perf = require('fittencode.functional.performance')
 
-local ProjectCompletionService = {}
+local Service = {}
 
-function ProjectCompletionService.new(options)
+function Service.new(options)
     local obj = {}
-    setmetatable(obj, { __index = ProjectCompletionService })
+    setmetatable(obj, { __index = Service })
     obj:__initialize(options)
     return obj
 end
 
-function ProjectCompletionService:__initialize(options)
+function Service:__initialize(options)
     options = options or {}
     self.provider = options.provider or 'semantic_context'
-    if self.provider == 'vscode' then
-        self.project_completion = require('fittencode.inline.project_completion.versions.vscode').new()
-    elseif self.provider == 'semantic_context' then
-        self.project_completion = require('fittencode.inline.project_completion.versions.semantic_context').new()
-    end
-    self.heart_beater = HeartBeater.new()
+    local ProjectCompletion = require('fittencode.inline.project_completion.versions.' .. self.provider)
+    self.project_completion = ProjectCompletion.new({
+        get_chosen = function() return self:get_chosen() end,
+    })
     self.request_handles = {}
     self.last_chosen_prompt_type = '0'
 end
 
 ---@return string
-function ProjectCompletionService:get_last_chosen_prompt_type()
+function Service:get_last_chosen_prompt_type()
     return self.last_chosen_prompt_type
 end
 
-function ProjectCompletionService:abort_request()
+function Service:abort_request()
     for _, handle in pairs(self.request_handles or {}) do
         handle.abort()
     end
     self.request_handles = {}
 end
 
-function ProjectCompletionService:push_request_handle(handle)
+function Service:push_request_handle(handle)
     self.request_handles[#self.request_handles + 1] = handle
 end
 
--- 检测 LSP 客户端是否支持 `textDocument/documentSymbol`
--- * 1  代表可用
--- * 0  代表不可用
--- * -1 代表没有 LSP 客户端
-function ProjectCompletionService:get_file_lsp(buf)
-    if not LspService.has_lsp_client(buf) then
-        return -1
-    end
-    if LspService.supports_method('textDocument/documentSymbol', buf) then
-        return 1
-    end
-    return 0
-end
-
-function ProjectCompletionService:generate_prompt(buf, position)
+function Service:generate_prompt(buf, position)
     return self.project_completion:generate_prompt(buf, position)
 end
 
 ---@return FittenCode.Concurrency.Promise
-function ProjectCompletionService:get_chosen()
+function Service:get_chosen()
     -- 0. 清理过期请求
     self:abort_request()
     -- 1. 非标准版
@@ -98,37 +82,4 @@ function ProjectCompletionService:get_chosen()
     end)
 end
 
--- 检测是否可使用 Project Completion
--- * resolve 代表可以
--- * reject 代表不可用或者未知出错
----@param lsp number
----@return FittenCode.Concurrency.Promise
-function ProjectCompletionService:check_available(lsp)
-    local _is_available = function(chosen)
-        chosen = tonumber(chosen)
-        local open = Config.use_project_completion.open
-        local available = false
-        local heart = self.heart_beater:get_status()
-        if open == 'auto' then
-            if chosen >= 1 and lsp == 1 and heart ~= 2 then
-                available = true
-            end
-        elseif open == 'on' then
-            if lsp == 1 and heart ~= 2 then
-                available = true
-            end
-        elseif open == 'off' then
-            available = false
-        end
-        return available
-    end
-    return self:get_chosen():forward(function(chosen)
-        if _is_available(chosen) then
-            return chosen
-        else
-            return Promise.reject()
-        end
-    end)
-end
-
-return ProjectCompletionService
+return Service
