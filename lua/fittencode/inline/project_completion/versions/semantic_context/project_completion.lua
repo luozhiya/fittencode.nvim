@@ -12,18 +12,6 @@ ProjectCompletion.__index = ProjectCompletion
 local MAX_LENGTH = 20000 -- 最大提示长度
 local MAX_ITEMS = 5
 
--- 压缩代码
-local function compress_code(lines)
-    local compressed = {}
-    for _, line in ipairs(lines) do
-        local trimmed = line:gsub('^%s+', ''):gsub('%s+$', '')
-        if #trimmed > 0 and not trimmed:match('^%-%-') and not trimmed:match('^//') and not trimmed:match('^#') and not trimmed:match('^%%') and not trimmed:match('^/%*') then
-            table.insert(compressed, trimmed)
-        end
-    end
-    return table.concat(compressed, '\n')
-end
-
 -- 获取符号定义
 local function get_symbol_definitions(bufnr, pos)
     local params = vim.lsp.util.make_position_params(pos, bufnr)
@@ -98,6 +86,40 @@ int main() {
     a.<cursor>
 }
 --]]
+
+--[[
+Item
+    uri
+    definition
+    compressed_code
+--]]
+
+local function compose_prompt(items, format, order)
+    local title_template = Spec.format[format]
+
+    local prompts = {}
+    for _, item in ipairs(items) do
+        if not item.compressed_code or #item.compressed_code == 0 then
+            ::continue::
+        end
+        local title = Format.format(title_template, item.uri, item.definition)
+        local prompt = title .. '\n' .. table.concat(item.compressed_code, '\n')
+        table.insert(prompts, prompt)
+    end
+
+    if order == 'reversed' then
+        prompts = Fn.reverse(prompts)
+    end
+
+    return table.concat(prompts, '\n\n')
+end
+
+-- 利用 TreeSitter 获取指定代码块的最简描述
+local function compressed_code(buf, range)
+    -- 1. 如果 Range 是类，则返回类成员+方法
+    -- 2. 如果 Range 是函数，则返回函数声明+精简函数体
+    --
+end
 
 -- 生成提示内容
 function ProjectCompletion:get_prompt_sync(buf, postion, mode, format)

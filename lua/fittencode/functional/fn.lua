@@ -179,6 +179,15 @@ local function get_unique_identifier(tbl)
     return unique_id
 end
 
+local function reverse(tbl)
+    local reversed = {}
+    local size = #tbl
+    for i = 1, size do
+        reversed[i] = tbl[size - i + 1]
+    end
+    return reversed
+end
+
 return {
     clamp = clamp,
     debounce = debounce,
@@ -192,4 +201,5 @@ return {
     uuid_v4 = uuid_v4,
     tbl_keep_events = tbl_keep_events,
     get_unique_identifier = get_unique_identifier,
+    reverse = reverse,
 }
