@@ -85,14 +85,37 @@ local pipes = {
     }
 }
 
+--[[
+// a.h
+struct A {
+    int a;
+};
+
+// main.cpp
+#include "a.h"
+int main() {
+    A a;
+    a.<cursor>
+}
+--]]
+
 -- 生成提示内容
 function ProjectCompletion:get_prompt_sync(buf, postion, mode, format)
     mode = mode or self.mode
     format = format or self.format
 
+    -- 1.0 流程
     -- 1 根据 mode 选择不同的流水线
     -- 2 执行流水线
     -- 3 根据 format 生成 prompt
+
+    -- 2.0 流程
+    -- 1. TS 分析当前 cursor 所属的 block （block有各种范围？）
+    -- 2. 提取 TS 中的函数、类型 (T0)
+    -- 3. 通过 LSP 获取当前文档中符号 (过滤，保留函数、类型) T1
+    -- 4. 对不属于 T1 的 T0 中的每一个元素，通过 LSP 获取定义位置
+    -- 5. 加载定义位置代码，TS 分析代码块 (TS 会很慢？)，生成模块最简描述
+    -- 6. 合成 Prompt
 
     local context_symbol = get_context_symbol(buf, postion)
     if not context_symbol then

@@ -26,6 +26,7 @@ function Service:__initialize(options)
     self.last_chosen_prompt_type = '0'
 end
 
+-- 返回一个 last_chosen_prompt_type，统计接口需要
 ---@return string
 function Service:get_last_chosen_prompt_type()
     return self.last_chosen_prompt_type
@@ -38,10 +39,11 @@ function Service:abort_request()
     self.request_handles = {}
 end
 
-function Service:push_request_handle(handle)
+function Service:__push_request_handle(handle)
     self.request_handles[#self.request_handles + 1] = handle
 end
 
+---@return FittenCode.Concurrency.Promise
 function Service:generate_prompt(buf, position)
     return self.project_completion:generate_prompt(buf, position)
 end
@@ -64,7 +66,7 @@ function Service:get_chosen()
     if not handle then
         return Promise.reject()
     end
-    self:push_request_handle(handle)
+    self:__push_request_handle(handle)
     return handle.promise():forward(function(_)
         local response = _.text()
         -- 只要是前缀为 `yes-` 的字符串，就认为是合法的

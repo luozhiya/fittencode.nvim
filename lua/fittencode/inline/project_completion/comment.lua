@@ -1,5 +1,11 @@
 local Comment = {}
 
+-- 格式说明：
+-- - `line`: 行注释模式，`{}` 表示被注释代码的位置
+-- - `block`: 块注释结构
+--     - `left`: 块注释起始符号
+--     - `right`: 块注释结束符号
+--     - `middle`: 中间行前缀（可选）
 local COMMENT_DEFS = {
     -- Programming Languages --
     c = {

@@ -64,6 +64,9 @@ function SemanticContext:__initialize(options)
     self.engine = ProjectCompletion.new(self.mode, self.format)
 end
 
+-- 是否可以进行 Project Completion
+-- * resolve 返回 pc_prompt_type
+-- * reject 失败
 ---@return FittenCode.Concurrency.Promise
 function SemanticContext:preflight()
     local open = Config.use_project_completion.open
@@ -73,8 +76,8 @@ function SemanticContext:preflight()
     return Promise.reject()
 end
 
--- resolve: 超时返回 nil，否则返回提示内容
--- reject: 出错
+-- * resolve: 超时返回 nil，否则返回提示内容
+-- * reject: 出错
 ---@return FittenCode.Concurrency.Promise
 function SemanticContext:generate_prompt(buf, position)
     return Promise.race({
