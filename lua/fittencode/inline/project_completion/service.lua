@@ -4,8 +4,6 @@ local Fn = require('fittencode.functional.fn')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local Protocal = require('fittencode.client.protocol')
-local HeartBeater = require('fittencode.inline.project_completion.heart_beater')
-local LspService = require('fittencode.functional.lsp_service')
 local Perf = require('fittencode.functional.performance')
 
 local Service = {}

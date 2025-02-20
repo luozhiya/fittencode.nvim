@@ -36,6 +36,7 @@ local scold = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'red
 
 local Promise = require('fittencode.concurrency.promise')
 local ProjectCompletion = require('fittencode.inline.project_completion.versions.semantic_context.project_completion')
+local Config = require('fittencode.config')
 
 local SemanticContext = {}
 SemanticContext.__index = SemanticContext
@@ -63,12 +64,21 @@ function SemanticContext:__initialize(options)
     self.engine = ProjectCompletion.new(self.mode, self.format)
 end
 
+---@return FittenCode.Concurrency.Promise
+function SemanticContext:preflight()
+    local open = Config.use_project_completion.open
+    if open == 'auto' or open == 'on' then
+        return self.get_chosen()
+    end
+    return Promise.reject()
+end
+
 -- resolve: 超时返回 nil，否则返回提示内容
 -- reject: 出错
 ---@return FittenCode.Concurrency.Promise
 function SemanticContext:generate_prompt(buf, position)
     return Promise.race({
-        self.get_chosen():forward(function(chosen)
+        self:preflight():forward(function(chosen)
             return Promise.async(function(resolve, reject)
                 local prompt = self.engine:get_prompt_sync(buf, position, {
                     order = chosen == '3' and 'reversed' or 'forward',

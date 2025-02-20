@@ -1,4 +1,7 @@
 local Promise = require('fittencode.concurrency.promise')
+local HeartBeater = require('fittencode.inline.project_completion.versions.vscode.heart_beater')
+local LspService = require('fittencode.functional.lsp_service')
+local Config = require('fittencode.config')
 
 local VSCode = {}
 VSCode.__index = VSCode
@@ -10,18 +13,37 @@ function VSCode.new(options)
 end
 
 function VSCode:__initialize(options)
+    options = options or {}
+    self.get_chosen = options.get_chosen
+    assert(self.get_chosen, 'get_chosen is required')
     self.heart_beater = HeartBeater.new()
+    self.engine = {
+        default = nil,
+        old = nil,
+    }
 end
 
--- 异步获取项目级别的 Prompt
--- resolve: 超时返回 nil，否则返回提示内容
--- reject: 超时返回
----@return FittenCode.Concurrency.Promise
 function VSCode:generate_prompt(buf, position)
+    local function which_engine(chosen)
+        if chosen == '5' then
+            return self.engine.old
+        end
+        return self.engine.default
+    end
     return Promise.race({
-        Promise.async(function(resolve, reject)
-            local result = self.engine:get_prompt_sync(buf, position)
-            resolve(result)
+        self:preflight(buf):forward(function(chosen)
+            return Promise.async(function(resolve, reject)
+                local e = which_engine(chosen)
+                local prompt = e:get_prompt_sync(buf, position, {
+                    order = chosen == '3' and 'reversed' or 'forward',
+                })
+                local meta = {
+                    pc_available = true,
+                    pc_prompt = prompt,
+                    pc_prompt_type = chosen
+                }
+                resolve(meta)
+            end)
         end),
         Promise.delay(self.timeout)
     })
@@ -41,8 +63,8 @@ function VSCode:get_file_lsp(buf)
     return 0
 end
 
-function VSCode:is_available(buf)
-    local lsp = self.project_completion_service:get_file_lsp(buf)
+function VSCode:preflight(buf)
+    local lsp = self:get_file_lsp(buf)
     local _is_available = function(chosen)
         chosen = tonumber(chosen)
         local open = Config.use_project_completion.open
@@ -61,7 +83,7 @@ function VSCode:is_available(buf)
         end
         return available
     end
-    return self:get_chosen():forward(function(chosen)
+    return self.get_chosen():forward(function(chosen)
         if _is_available(chosen) then
             return chosen
         else
