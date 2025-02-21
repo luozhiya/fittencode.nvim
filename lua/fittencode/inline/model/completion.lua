@@ -10,8 +10,6 @@ model.words = model:convert_segments_to_words(custom_segments)
 
 --]]
 
-local M = {}
-
 local function merge_ranges(ranges)
     if #ranges == 0 then
         return {}
@@ -94,20 +92,20 @@ end
 local Model = {}
 Model.__index = Model
 
-function Model.new(s, placeholder_ranges)
+function Model.new(source, placeholder_ranges)
     local self = setmetatable({}, Model)
-    self.s = s
+    self.source = source
     self.cursor = 0 -- 初始位置在文本开始前
     self.commit_history = {}
 
     -- 新增 placeholder 范围验证
     local merged_ph = merge_ranges(placeholder_ranges or {})
     for _, r in ipairs(merged_ph) do
-        if r.start < 1 or r.end_ > #s then
+        if r.start < 1 or r.end_ > #source then
             error('Placeholder ranges out of bounds')
         end
         -- 检查是否出现在两端
-        if r.start == 1 or r.end_ == #s then
+        if r.start == 1 or r.end_ == #source then
             error('Placeholder cannot be at text boundaries')
         end
         -- 检查范围有效性
@@ -118,9 +116,9 @@ function Model.new(s, placeholder_ranges)
     self.placeholder_ranges = merged_ph
 
     -- 解析基础结构
-    self.chars = parse_chars(s)
-    self.words = parse_words(s, self.chars)
-    self.lines = parse_lines(s)
+    self.chars = parse_chars(source)
+    self.words = parse_words(source, self.chars)
+    self.lines = parse_lines(source)
 
     -- 初始化移动列表（end positions）
     self.char_list = {}
@@ -372,4 +370,4 @@ function Model:convert_segments_to_words(segments)
     return words
 end
 
-return M
+return Model
