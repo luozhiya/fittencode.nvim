@@ -137,7 +137,7 @@ end
 
 function CompletionModel:update_stage_ranges()
     -- 总范围减去commit和placeholder
-    local total = { { start = 1, end_ = #self.s } }
+    local total = { { start = 1, end_ = #self.source } }
     local exclude = merge_ranges(vim.list_extend(
         vim.deepcopy(self.commit_ranges),
         vim.deepcopy(self.placeholder_ranges)
@@ -220,7 +220,7 @@ function CompletionModel:accept(scope)
         local new_commit = vim.deepcopy(self.stage_ranges)
         table.insert(self.commit_history, new_commit)
         self.commit_ranges = merge_ranges(vim.list_extend(self.commit_ranges, new_commit))
-        self.cursor = #self.s
+        self.cursor = #self.source
         self:update_stage_ranges()
         return
     end
@@ -264,7 +264,7 @@ function CompletionModel:get_state()
             type = 'commit',
             start = r.start,
             end_ = r.end_,
-            text = self.s:sub(r.start, r.end_)  -- 新增文本内容
+            text = self.source:sub(r.start, r.end_)  -- 新增文本内容
         })
     end
     for _, r in ipairs(self.stage_ranges) do
@@ -272,7 +272,7 @@ function CompletionModel:get_state()
             type = 'stage',
             start = r.start,
             end_ = r.end_,
-            text = self.s:sub(r.start, r.end_)
+            text = self.source:sub(r.start, r.end_)
         })
     end
     for _, r in ipairs(self.placeholder_ranges) do
@@ -280,7 +280,7 @@ function CompletionModel:get_state()
             type = 'placeholder',
             start = r.start,
             end_ = r.end_,
-            text = self.s:sub(r.start, r.end_)
+            text = self.source:sub(r.start, r.end_)
         })
     end
     table.sort(all_ranges, function(a, b) return a.start < b.start end)
@@ -317,7 +317,7 @@ function CompletionModel:get_state()
                         -- 添加原始范围和文本内容
                         range_start = start,
                         range_end = end_,
-                        text = self.s:sub(start, end_)
+                        text = self.source:sub(start, end_)
                     })
                 end
             end
@@ -347,7 +347,7 @@ function CompletionModel:convert_segments_to_words(segments)
         -- 验证分词匹配实际字符
         local expected = table.concat(
             vim.tbl_map(function(c)
-                return self.s:sub(c.start, c.end_)
+                return self.source:sub(c.start, c.end_)
             end, { table.unpack(self.chars, ptr, end_idx) })
         )
 
@@ -359,6 +359,7 @@ function CompletionModel:convert_segments_to_words(segments)
             start = self.chars[ptr].start,
             end_ = self.chars[end_idx].end_
         })
+
         ptr = end_idx + 1
     end
 

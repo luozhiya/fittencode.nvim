@@ -1,4 +1,3 @@
----@class FittenCode.Inline.State
 local State = {}
 State.__index = State
 

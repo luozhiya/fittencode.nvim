@@ -9,37 +9,33 @@ local Client = require('fittencode.client')
 local SessionStatus = require('fittencode.inline.session_status')
 local ResponseParser = require('fittencode.inline.fim_protocol.versions.comprehensive_context.response').ResponseParser
 local Protocol = require('fittencode.client.protocol')
-local WordSegmentation = require('fittencode.prompts.word_segmentation')
 local ZipFlow = require('fittencode.zipflow')
+local AdvanceSegmentation = require('fittencode.inline.model.advance_segmentation')
 
 -- 一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
 -- * 一个会话的生命周期为：创建 -> 开始（交互模式） -> 结束
 -- * 通过配置交互模式来实现延时补全 (delay_completion)
----@class FittenCode.Inline.Session
 local Session = {}
 
----@return FittenCode.Inline.Session
-function Session:new(options)
-    local obj = {
-        buf = options.buf,
-        position = options.position,
-        id = options.id,
-        timing = {},
-        request_handles = {},
-        keymaps = {},
-        terminated = false,
-        interactive = false,
-        prompt_generator = options.prompt_generator,
-        triggering_completion = options.triggering_completion,
-        update_inline_status = options.update_inline_status,
-        set_interactive_session_debounced = options.set_interactive_session_debounced,
-    }
-    setmetatable(obj, { __index = self })
-    obj:__initialize(options)
-    return obj
+function Session.new(options)
+    local self = setmetatable({}, Session)
+    self:__initialize(options)
+    return self
 end
 
 function Session:__initialize(options)
+    self.buf = options.buf
+    self.position = options.position
+    self.id = options.id
+    self.timing = {}
+    self.request_handles = {}
+    self.keymaps = {}
+    self.terminated = false
+    self.interactive = false
+    self.prompt_generator = options.prompt_generator
+    self.triggering_completion = options.triggering_completion
+    self.update_inline_status = options.update_inline_status
+    self.set_interactive_session_debounced = options.set_interactive_session_debounced
     self.status = SessionStatus:new({ gc = self:gc(), on_update = function() self.update_inline_status(self.id) end })
 end
 
@@ -50,8 +46,15 @@ function Session:set_model(parsed_response)
         position = self.position,
         response = parsed_response,
     })
-    self.model:recalculate()
-    self:async_update_word_segmentation()
+    self:advance_segmentation()
+end
+
+function Session:advance_segmentation()
+    AdvanceSegmentation.run(self.model:get_text()):forward(function(segments)
+        self.model:update({
+            segments = segments
+        })
+    end)
 end
 
 -- 设置交互模式
@@ -67,73 +70,8 @@ function Session:is_interactive()
     return self.interactive
 end
 
-function Session:update_model(update)
-    self.model:update(update)
-end
-
-function Session:async_update_word_segmentation()
-    local computed = self.model.completion.computed
-    if not computed then
-        return
-    end
-    local generated_text = {}
-    for _, item in ipairs(computed) do
-        generated_text[#generated_text + 1] = item.generated_text
-    end
-    if Editor.onlyascii(generated_text) then
-        Log.debug('Generated text is only ascii, skip word segmentation')
-        return
-    end
-
-    local request_handle = Client.request(Protocol.Methods.chat_auth, {
-        body = assert(vim.fn.json_encode(WordSegmentation.generate(generated_text))),
-    })
-    if not request_handle then
-        Log.error('Failed to send request')
-        return
-    end
-
-    self:record_timing('word_segmentation.request')
-    self:request_handles_push(request_handle)
-
-    local function _process_response(response)
-        local deltas = {}
-        local stdout = response.text()
-
-        for _, bundle in ipairs(stdout) do
-            local lines = vim.split(bundle, '\n', { trimempty = true })
-            for _, line in ipairs(lines) do
-                local success, chunk = pcall(vim.fn.json_decode, line)
-                if success then
-                    table.insert(deltas, chunk.delta)
-                else
-                    Log.error('Failed to decode line: {}', line)
-                    return
-                end
-            end
-        end
-
-        local success, word_segmentation = pcall(vim.fn.json_decode, table.concat(deltas, ''))
-        if success then
-            return word_segmentation
-        else
-            Log.error('Failed to decode concatenated deltas: {}', deltas)
-            return nil
-        end
-    end
-
-    request_handle.promise():forward(function(response)
-        self:record_timing('word_segmentation.response')
-        local result, err = _process_response(response)
-        if result then
-            self:update_model({ word_segmentation = result })
-        else
-            return Promise.reject(err)
-        end
-    end):catch(function(err)
-        Log.error('Failed to parse response: {}', err)
-        self:record_timing('word_segmentation.error')
-    end)
+function Session:update_model(state)
+    self.model:update(state)
 end
 
 function Session:update_view()
@@ -143,7 +81,7 @@ end
 function Session:_accept(direction, range)
     self.model:accept(direction, range)
     self:update_view()
-    if self.model:is_everything_accepted() then
+    if self.model:is_complete() then
         self:terminate()
         vim.schedule(function() self.triggering_completion({ force = true }) end)
     end
@@ -258,7 +196,7 @@ end
 ---@return boolean
 function Session:lazy_completion(key)
     if self.model:eq_peek(key) then
-        self.model.accept('forward', 'char')
+        self.model:accept('forward', 'char')
         -- 此时不能立即刷新，因为还处于 on_key 的回调中，要等到下一个 main loop?
         vim.schedule(function()
             self:update_view()

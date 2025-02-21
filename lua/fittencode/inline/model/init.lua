@@ -1,4 +1,5 @@
 local CompletionModel = require('fittencode.inline.model.completion')
+local Log = require('fittencode.log')
 
 local Model = {}
 Model.__index = Model
@@ -24,7 +25,7 @@ function Model:__initialize(options)
             col_delta = vim.str_byteindex(completion.generated_text, 'utf-16', completion.character_delta),
         }
     end
-    self.computed = computed
+    self.computed_completions = computed
 
     -- 2. 解析 placeholder 范围
     local placeholder_ranges = {}
@@ -32,7 +33,7 @@ function Model:__initialize(options)
 
     -- 3. 创建 CompletionModel 实例
     self.completion_models = {}
-    for _, completion in ipairs(self.computed) do
+    for _, completion in ipairs(self.computed_completions) do
         self.completion_models[#self.completion_models + 1] = CompletionModel.new(
             completion.generated_text,
             self.placeholder_ranges
@@ -41,12 +42,19 @@ function Model:__initialize(options)
 end
 
 function Model:selected_completion_model()
-    return self.completion_models[self.selected_completion]
+    return assert(self.completion_models[self.selected_completion], 'No completion model selected')
+end
+
+function Model:get_text()
+    local text = {}
+    for _, completion in ipairs(self.computed_completions) do
+        text[#text + 1] = completion.generated_text
+    end
+    return text
 end
 
 function Model:accept(direction, scope)
     local model = self:selected_completion_model()
-    assert(model, 'No completion model selected')
     if direction == 'forward' then
         model:accept(scope)
     elseif direction == 'backward' then
@@ -54,38 +62,30 @@ function Model:accept(direction, scope)
     end
 end
 
-function Model:is_everything_accepted()
-    local model = self:selected_completion_model()
-    assert(model, 'No completion model selected')
-    return model:is_complete()
-end
-
-function Model:make_state()
+function Model:is_complete()
+    return self:selected_completion_model():is_complete()
 end
 
 function Model:clear()
 end
 
-function Model:validate_word_segments(word_segmentation)
-    for k, v in pairs(word_segmentation) do
-        if table.concat(v, '') ~= self.completion.computed[tonumber(k)].generated_text then
-            return false
-        end
+function Model:update(state)
+    state = state or {}
+    if state.segments then
+        self:update_segments(state.segments)
     end
-    return true
 end
 
 -- Update the model with the given state, only support word_segmentation for now.
-function Model:update(state)
-    if not state then
+function Model:update_segments(segments)
+    segments = segments or {}
+    if #segments ~= #self.completion_models then
+        Log.error('Invalid segments length')
         return
     end
-    if state.word_segmentation then
-        if not self:validate_word_segments(state.word_segmentation) then
-            return
-        end
-        self.word_segmentation = state.word_segmentation
-        self:recalculate()
+    for i, seg in ipairs(segments) do
+        local model = self.completion_models[i]
+        model.words = model:convert_segments_to_words(seg)
     end
 end
 
@@ -94,17 +94,7 @@ function Model:set_selected_completion(index)
     self.selected_completion = index
 end
 
-function Model:recalculate()
-    if not self.computed then
-
-    end
-end
-
 function Model:eq_peek(key)
-end
-
-function Model:get_state()
-    return self.completion_models[self.selected_completion]:get_state()
 end
 
 return Model
