@@ -1,5 +1,6 @@
 local Meta = require('fittencode.client.meta')
 local Fn = require('fittencode.functional.fn')
+local URLSearchParams = require('fittencode.network.url_search_params')
 
 local M = {}
 
@@ -35,7 +36,7 @@ function M.get_platform_info_as_url_params()
     -- 生成URL参数字符串
     local parts = {}
     for key, value in pairs(params) do
-        table.insert(parts, string.format('%s=%s', key, Fn.encode_uri_component(value)))
+        table.insert(parts, string.format('%s=%s', key, URLSearchParams.encode_form_value(value)))
     end
     platform_info_url_params = table.concat(parts, '&')
 
