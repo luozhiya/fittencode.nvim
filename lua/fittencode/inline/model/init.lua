@@ -99,7 +99,23 @@ function Model.new(s, placeholder_ranges)
     self.s = s
     self.cursor = 0 -- 初始位置在文本开始前
     self.commit_history = {}
-    self.placeholder_ranges = merge_ranges(placeholder_ranges or {})
+
+    -- 新增 placeholder 范围验证
+    local merged_ph = merge_ranges(placeholder_ranges or {})
+    for _, r in ipairs(merged_ph) do
+        if r.start < 1 or r.end_ > #s then
+            error('Placeholder ranges out of bounds')
+        end
+        -- 检查是否出现在两端
+        if r.start == 1 or r.end_ == #s then
+            error('Placeholder cannot be at text boundaries')
+        end
+        -- 检查范围有效性
+        if r.start > r.end_ then
+            error('Invalid placeholder range: start > end')
+        end
+    end
+    self.placeholder_ranges = merged_ph
 
     -- 解析基础结构
     self.chars = parse_chars(s)
@@ -157,6 +173,7 @@ function Model:find_valid_region(unit)
     local candidates = {}
     local list = ({ char = self.chars, word = self.words, line = self.lines })[unit]
 
+    -- 生成候选区域时包含跨过 cursor 的完整区域
     for _, item in ipairs(list) do
         if item.end_ > self.cursor then
             table.insert(candidates, item)
@@ -164,28 +181,39 @@ function Model:find_valid_region(unit)
     end
 
     for _, cand in ipairs(candidates) do
-        local valid = true
-        -- 检查是否在stage范围内
-        local in_stage = false
-        for _, sr in ipairs(self.stage_ranges) do
-            if cand.start >= sr.start and cand.end_ <= sr.end_ then
-                in_stage = true
-                break
-            end
-        end
-        if not in_stage then valid = false end
+        -- 创建可修改的副本
+        local region = vim.deepcopy(cand)
 
-        -- 检查是否与placeholder重叠
+        -- 阶段一：与 placeholder 的交集处理
         for _, ph in ipairs(self.placeholder_ranges) do
-            if cand.end_ >= ph.start and cand.start <= ph.end_ then
-                valid = false
-                break
+            if region.end_ >= ph.start and region.start <= ph.end_ then
+                -- 调整结束位置到 placeholder 起始位置前
+                region.end_ = math.min(region.end_, ph.start - 1)
+                -- 如果调整后无效则跳过
+                if region.end_ < region.start then break end
             end
         end
 
-        if valid then
-            return cand
+        -- 阶段二：验证是否在 stage 范围内
+        local valid = false
+        for _, sr in ipairs(self.stage_ranges) do
+            if region.start >= sr.start and region.end_ <= sr.end_ then
+                valid = true
+                break
+            end
         end
+        if not valid then goto continue end
+
+        -- 阶段三：最终有效性检查
+        if region.end_ > self.cursor then
+            return {
+                start = region.start,
+                end_ = region.end_,
+                original_end = cand.end_ -- 保留原始结束位置用于调试
+            }
+        end
+
+        ::continue::
     end
 end
 

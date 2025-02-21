@@ -100,11 +100,12 @@ local function compose_prompt(items, format, order)
     local prompts = {}
     for _, item in ipairs(items) do
         if not item.compressed_code or #item.compressed_code == 0 then
-            ::continue::
+            goto continue
         end
         local title = Format.format(title_template, item.uri, item.definition)
         local prompt = title .. '\n' .. table.concat(item.compressed_code, '\n')
         table.insert(prompts, prompt)
+        ::continue::
     end
 
     if order == 'reversed' then
