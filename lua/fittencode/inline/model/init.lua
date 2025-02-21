@@ -1,0 +1,324 @@
+--[[
+
+-----------------------------------
+-- 分词转换方法 convert_segments_to_words
+-----------------------------------
+
+local custom_segments = {'我', '吃', '苹果'}
+local model = Model.new(s, placeholder_ranges)
+model.words = model:convert_segments_to_words(custom_segments)
+
+--]]
+
+local M = {}
+
+local function merge_ranges(ranges)
+    if #ranges == 0 then
+        return {}
+    end
+    table.sort(ranges, function(a, b) return a.start < b.start end)
+    local merged = { ranges[1] }
+    for i = 2, #ranges do
+        local last = merged[#merged]
+        local current = ranges[i]
+        if current.start <= last.end_ + 1 then
+            last.end_ = math.max(last.end_, current.end_)
+        else
+            table.insert(merged, current)
+        end
+    end
+    return merged
+end
+
+local function parse_chars(s)
+    local chars = {}
+    local i = 1
+    while i <= #s do
+        local b = s:byte(i)
+        local len = 1
+        if b >= 0xF0 then     -- 4-byte char
+            len = 4
+        elseif b >= 0xE0 then -- 3-byte char
+            len = 3
+        elseif b >= 0xC0 then -- 2-byte char
+            len = 2
+        end
+        table.insert(chars, { start = i, end_ = i + len - 1 })
+        i = i + len
+    end
+    return chars
+end
+
+local function parse_words(s, chars)
+    local words = {}
+    local current_word = nil
+    for i, char in ipairs(chars) do
+        local c = s:sub(char.start, char.end_)
+        if c:match('%w') then
+            if not current_word then
+                current_word = { start = char.start, end_ = char.end_ }
+            else
+                current_word.end_ = char.end_
+            end
+        else
+            if current_word then
+                table.insert(words, current_word)
+                current_word = nil
+            end
+        end
+    end
+    if current_word then
+        table.insert(words, current_word)
+    end
+    return words
+end
+
+local function parse_lines(s)
+    local lines = {}
+    local line_start = 1
+    while true do
+        local line_end = s:find('\n', line_start, true) or #s
+        if s:sub(line_end, line_end) == '\n' then
+            line_end = line_end - 1
+        end
+        table.insert(lines, { start = line_start, end_ = line_end })
+        line_start = line_end + 1
+        if line_start > #s then break end
+        if s:sub(line_start, line_start) == '\n' then
+            line_start = line_start + 1
+        end
+    end
+    return lines
+end
+
+local Model = {}
+Model.__index = Model
+
+function Model.new(s, placeholder_ranges)
+    local self = setmetatable({}, Model)
+    self.s = s
+    self.cursor = 0 -- 初始位置在文本开始前
+    self.commit_history = {}
+    self.placeholder_ranges = merge_ranges(placeholder_ranges or {})
+
+    -- 解析基础结构
+    self.chars = parse_chars(s)
+    self.words = parse_words(s, self.chars)
+    self.lines = parse_lines(s)
+
+    -- 初始化移动列表（end positions）
+    self.char_list = {}
+    for _, c in ipairs(self.chars) do table.insert(self.char_list, c.end_) end
+    self.word_list = {}
+    for _, w in ipairs(self.words) do table.insert(self.word_list, w.end_) end
+    self.line_list = {}
+    for _, l in ipairs(self.lines) do table.insert(self.line_list, l.end_) end
+
+    -- 初始化范围
+    self.commit_ranges = {}
+    self:update_stage_ranges()
+
+    return self
+end
+
+function Model:update_stage_ranges()
+    -- 总范围减去commit和placeholder
+    local total = { { start = 1, end_ = #self.s } }
+    local exclude = merge_ranges(vim.list_extend(
+        vim.deepcopy(self.commit_ranges),
+        vim.deepcopy(self.placeholder_ranges)
+    ))
+
+    local stage = {}
+    for _, t in ipairs(total) do
+        local remains = { t }
+        for _, ex in ipairs(exclude) do
+            local new_remains = {}
+            for _, r in ipairs(remains) do
+                if r.end_ < ex.start or r.start > ex.end_ then
+                    table.insert(new_remains, r)
+                else
+                    if r.start < ex.start then
+                        table.insert(new_remains, { start = r.start, end_ = ex.start - 1 })
+                    end
+                    if r.end_ > ex.end_ then
+                        table.insert(new_remains, { start = ex.end_ + 1, end_ = r.end_ })
+                    end
+                end
+            end
+            remains = new_remains
+        end
+        stage = vim.list_extend(stage, remains)
+    end
+    self.stage_ranges = merge_ranges(stage)
+end
+
+function Model:find_valid_region(unit)
+    local candidates = {}
+    local list = ({ char = self.chars, word = self.words, line = self.lines })[unit]
+
+    for _, item in ipairs(list) do
+        if item.end_ > self.cursor then
+            table.insert(candidates, item)
+        end
+    end
+
+    for _, cand in ipairs(candidates) do
+        local valid = true
+        -- 检查是否在stage范围内
+        local in_stage = false
+        for _, sr in ipairs(self.stage_ranges) do
+            if cand.start >= sr.start and cand.end_ <= sr.end_ then
+                in_stage = true
+                break
+            end
+        end
+        if not in_stage then valid = false end
+
+        -- 检查是否与placeholder重叠
+        for _, ph in ipairs(self.placeholder_ranges) do
+            if cand.end_ >= ph.start and cand.start <= ph.end_ then
+                valid = false
+                break
+            end
+        end
+
+        if valid then
+            return cand
+        end
+    end
+end
+
+function Model:accept(unit)
+    if unit == 'all' then
+        local new_commit = vim.deepcopy(self.stage_ranges)
+        table.insert(self.commit_history, new_commit)
+        self.commit_ranges = merge_ranges(vim.list_extend(self.commit_ranges, new_commit))
+        self.cursor = #self.s
+        self:update_stage_ranges()
+        return
+    end
+
+    local region = self:find_valid_region(unit)
+    if not region then return end
+
+    table.insert(self.commit_history, { region })
+    self.commit_ranges = merge_ranges(vim.list_extend(self.commit_ranges, { region }))
+    self.cursor = region.end_
+    self:update_stage_ranges()
+end
+
+function Model:revoke()
+    if #self.commit_history == 0 then return end
+
+    -- 移除最后一次commit
+    local last_commit = table.remove(self.commit_history)
+    self.commit_ranges = {}
+    for _, c in ipairs(self.commit_history) do
+        self.commit_ranges = merge_ranges(vim.list_extend(self.commit_ranges, c))
+    end
+
+    -- 恢复cursor
+    if #self.commit_history > 0 then
+        local last = self.commit_history[#self.commit_history]
+        self.cursor = last[#last].end_
+    else
+        self.cursor = 0
+    end
+    self:update_stage_ranges()
+end
+
+function Model:get_state()
+    local state = {}
+
+    -- 合并所有范围并排序
+    local all_ranges = {}
+    for _, r in ipairs(self.commit_ranges) do
+        table.insert(all_ranges, { type = 'commit', start = r.start, end_ = r.end_ })
+    end
+    for _, r in ipairs(self.stage_ranges) do
+        table.insert(all_ranges, { type = 'stage', start = r.start, end_ = r.end_ })
+    end
+    for _, r in ipairs(self.placeholder_ranges) do
+        table.insert(all_ranges, { type = 'placeholder', start = r.start, end_ = r.end_ })
+    end
+    table.sort(all_ranges, function(a, b) return a.start < b.start end)
+
+    -- 按行分组
+    for line_num, line in ipairs(self.lines) do
+        local line_state = {}
+        for _, range in ipairs(all_ranges) do
+            local start = math.max(range.start, line.start)
+            local end_ = math.min(range.end_, line.end_)
+            if start <= end_ then
+                -- 转换为行内字符位置
+                local start_char, end_char
+                for i, c in ipairs(self.chars) do
+                    if c.start >= line.start and c.end_ <= line.end_ then
+                        if c.start <= start and c.end_ >= start then
+                            start_char = i - 1 -- 0-based
+                        end
+                        if c.start <= end_ and c.end_ >= end_ then
+                            end_char = i - 1
+                            break
+                        end
+                    end
+                end
+                if start_char and end_char then
+                    table.insert(line_state, {
+                        type = range.type,
+                        start = start_char,
+                        ['end'] = end_char,
+                    })
+                end
+            end
+        end
+        state[line_num] = line_state
+    end
+    return state
+end
+
+-- 实现三阶段验证：
+-- 1. 长度验证（字符数量）
+-- 2. 内容验证（实际字符匹配）
+-- 3. 总量验证（总字符数一致）
+-- 返回与self.words结构相同的分词范围
+function Model:convert_segments_to_words(segments)
+    local words = {}
+    local ptr = 1 -- 字符指针（基于chars数组索引）
+
+    for _, seg in ipairs(segments) do
+        local char_count = vim.fn.strchars(seg)
+        local end_idx = ptr + char_count - 1
+
+        if end_idx > #self.chars then
+            error('Segment exceeds text length')
+        end
+
+        -- 验证分词匹配实际字符
+        local expected = table.concat(
+            vim.tbl_map(function(c)
+                return self.s:sub(c.start, c.end_)
+            end, { table.unpack(self.chars, ptr, end_idx) })
+        )
+
+        if expected ~= seg then
+            error('Segment mismatch at position ' .. ptr .. ": '" .. expected .. "' vs '" .. seg .. "'")
+        end
+
+        table.insert(words, {
+            start = self.chars[ptr].start,
+            end_ = self.chars[end_idx].end_
+        })
+        ptr = end_idx + 1
+    end
+
+    -- 验证总字符数匹配
+    if ptr - 1 ~= #self.chars then
+        error('Total segments length mismatch')
+    end
+
+    return words
+end
+
+return M
