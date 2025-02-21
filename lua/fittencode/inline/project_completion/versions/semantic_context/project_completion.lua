@@ -119,7 +119,7 @@ end
 local function compressed_code(buf, range)
     -- 1. 如果 Range 是类，则返回类成员+方法
     -- 2. 如果 Range 是函数，则返回函数声明+精简函数体
-    --
+    -- 3. 压缩代码块，去除空白行和注释行
 end
 
 -- 生成提示内容
