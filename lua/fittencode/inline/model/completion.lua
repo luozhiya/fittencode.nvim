@@ -5,8 +5,8 @@
 -----------------------------------
 
 local custom_segments = {'我', '吃', '苹果'}
-local model = Model.new(s, placeholder_ranges)
-model.words = model:convert_segments_to_words(custom_segments)
+local model = CompletionModel.new(s, placeholder_ranges)
+model.words = CompletionModel:convert_segments_to_words(custom_segments)
 
 --]]
 
@@ -89,11 +89,11 @@ local function parse_lines(s)
     return lines
 end
 
-local Model = {}
-Model.__index = Model
+local CompletionModel = {}
+CompletionModel.__index = CompletionModel
 
-function Model.new(source, placeholder_ranges)
-    local self = setmetatable({}, Model)
+function CompletionModel.new(source, placeholder_ranges)
+    local self = setmetatable({}, CompletionModel)
     self.source = source
     self.cursor = 0 -- 初始位置在文本开始前
     self.commit_history = {}
@@ -135,7 +135,7 @@ function Model.new(source, placeholder_ranges)
     return self
 end
 
-function Model:update_stage_ranges()
+function CompletionModel:update_stage_ranges()
     -- 总范围减去commit和placeholder
     local total = { { start = 1, end_ = #self.s } }
     local exclude = merge_ranges(vim.list_extend(
@@ -167,9 +167,9 @@ function Model:update_stage_ranges()
     self.stage_ranges = merge_ranges(stage)
 end
 
-function Model:find_valid_region(unit)
+function CompletionModel:find_valid_region(scope)
     local candidates = {}
-    local list = ({ char = self.chars, word = self.words, line = self.lines })[unit]
+    local list = ({ char = self.chars, word = self.words, line = self.lines })[scope]
 
     -- 生成候选区域时包含跨过 cursor 的完整区域
     for _, item in ipairs(list) do
@@ -215,8 +215,8 @@ function Model:find_valid_region(unit)
     end
 end
 
-function Model:accept(unit)
-    if unit == 'all' then
+function CompletionModel:accept(scope)
+    if scope == 'all' then
         local new_commit = vim.deepcopy(self.stage_ranges)
         table.insert(self.commit_history, new_commit)
         self.commit_ranges = merge_ranges(vim.list_extend(self.commit_ranges, new_commit))
@@ -225,7 +225,7 @@ function Model:accept(unit)
         return
     end
 
-    local region = self:find_valid_region(unit)
+    local region = self:find_valid_region(scope)
     if not region then return end
 
     table.insert(self.commit_history, { region })
@@ -234,7 +234,7 @@ function Model:accept(unit)
     self:update_stage_ranges()
 end
 
-function Model:revoke()
+function CompletionModel:revoke()
     if #self.commit_history == 0 then return end
 
     -- 移除最后一次commit
@@ -254,7 +254,7 @@ function Model:revoke()
     self:update_stage_ranges()
 end
 
-function Model:get_state()
+function CompletionModel:get_state()
     local state = {}
 
     -- 合并所有范围并排序
@@ -332,7 +332,7 @@ end
 -- 2. 内容验证（实际字符匹配）
 -- 3. 总量验证（总字符数一致）
 -- 返回与self.words结构相同的分词范围
-function Model:convert_segments_to_words(segments)
+function CompletionModel:convert_segments_to_words(segments)
     local words = {}
     local ptr = 1 -- 字符指针（基于chars数组索引）
 
@@ -370,4 +370,4 @@ function Model:convert_segments_to_words(segments)
     return words
 end
 
-return Model
+return CompletionModel

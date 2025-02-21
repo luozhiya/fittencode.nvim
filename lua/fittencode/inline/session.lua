@@ -45,14 +45,10 @@ end
 
 -- 设置 Model，计算补全数据
 function Session:set_model(parsed_response)
-    ---@type FittenCode.Inline.Completion
-    local completion = {
-        response = parsed_response,
-        position = self.position,
-    }
-    self.model = Model:new({
+    self.model = Model.new({
         buf = self.buf,
-        completion = completion,
+        position = self.position,
+        response = parsed_response,
     })
     self.model:recalculate()
     self:async_update_word_segmentation()

@@ -1,19 +1,45 @@
----@class FittenCode.Inline.Model
+local CompletionModel = require('fittencode.inline.model.completion')
+
 local Model = {}
 Model.__index = Model
 
----@return FittenCode.Inline.Model
-function Model:new(opts)
-    local obj = {
-        buf = opts.buf,
-        completion = opts.completion or {},
-        selected_completion = 1, -- default to the first completion
-    }
-    setmetatable(obj, Model)
-    return obj
+function Model.new(options)
+    local self = setmetatable({}, Model)
+    self:__initialize(options)
+    return self
 end
 
-function Model:accept(direction, range)
+function Model:__initialize(options)
+    self.buf = options.buf
+    self.position = options.position
+    self.response = options.response or {}
+    self.selected_completion = 1
+
+    -- 1. 转换 delta
+    local computed = {}
+    for _, completion in ipairs(self.response.completions) do
+        computed[#computed + 1] = {
+            generated_text = completion.generated_text,
+            row_delta = completion.line_delta,
+            col_delta = vim.str_byteindex(completion.generated_text, 'utf-16', completion.character_delta),
+        }
+    end
+    self.computed = computed
+
+    -- 2. 解析 placeholder 范围
+    local placeholder_ranges = {}
+
+    -- 3. 创建 CompletionModel 实例
+    self.completion_models = {}
+    for _, completion in ipairs(self.computed) do
+        self.completion_models[#self.completion_models + 1] = CompletionModel.new(
+            completion.generated_text,
+            self.placeholder_ranges
+        )
+    end
+end
+
+function Model:accept(direction, scope)
 end
 
 function Model:is_everything_accepted()
@@ -54,20 +80,16 @@ function Model:set_selected_completion(index)
 end
 
 function Model:recalculate()
-    if not self.completion.computed then
-        local computed = {}
-        for _, completion in ipairs(self.completion.response.completions) do
-            computed[#computed + 1] = {
-                generated_text = completion.generated_text,
-                row_delta = completion.line_delta,
-                col_delta = vim.str_byteindex(completion.generated_text, 'utf-16', completion.character_delta),
-            }
-        end
-        self.completion.computed = computed
+    if not self.computed then
+
     end
 end
 
 function Model:eq_peek(key)
+end
+
+function Model:get_state()
+    return self.completion_models[self.selected_completion]:get_state()
 end
 
 return Model
