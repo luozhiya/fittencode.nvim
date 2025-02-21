@@ -4,7 +4,7 @@
 
 ]]
 
-local CodeCVT = require("fittencode.unicode.codecvt")
+local CodeCVT = require('fittencode.unicode.codecvt')
 
 local M = {}
 
