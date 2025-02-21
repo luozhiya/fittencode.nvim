@@ -28,6 +28,7 @@ function Model:__initialize(options)
 
     -- 2. 解析 placeholder 范围
     local placeholder_ranges = {}
+    self.placeholder_ranges = placeholder_ranges
 
     -- 3. 创建 CompletionModel 实例
     self.completion_models = {}
@@ -39,10 +40,24 @@ function Model:__initialize(options)
     end
 end
 
+function Model:selected_completion_model()
+    return self.completion_models[self.selected_completion]
+end
+
 function Model:accept(direction, scope)
+    local model = self:selected_completion_model()
+    assert(model, 'No completion model selected')
+    if direction == 'forward' then
+        model:accept(scope)
+    elseif direction == 'backward' then
+        model:revoke(scope)
+    end
 end
 
 function Model:is_everything_accepted()
+    local model = self:selected_completion_model()
+    assert(model, 'No completion model selected')
+    return model:is_complete()
 end
 
 function Model:make_state()

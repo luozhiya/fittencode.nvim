@@ -370,4 +370,9 @@ function CompletionModel:convert_segments_to_words(segments)
     return words
 end
 
+function CompletionModel:is_complete()
+    -- 通过检查 stage_ranges 是否为空来判断是否全部完成
+    return #self.stage_ranges == 0
+end
+
 return CompletionModel
