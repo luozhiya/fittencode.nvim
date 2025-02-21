@@ -57,7 +57,7 @@ local function parse_words(s, chars)
 
     local function is_chinese(c)
         -- 中文字符的Unicode范围: 0x4E00-0x9FFF
-        local code = utf8.codepoint(c, 1)
+        local code = utf8.codepoint(c)
         return code >= 0x4E00 and code <= 0x9FFF
     end
 
