@@ -23,7 +23,7 @@ local function load_translations(lang_code)
         return true
     end
 
-    Log.warn('Translation for {} not found', lang_code)
+    Log.dev_warn('Translation for {} not found', lang_code)
     return false
 end
 
@@ -47,8 +47,8 @@ function M.translate(key, ...)
     local value = translations[key] or key
 
     -- 开发模式警告缺失翻译
-    if Config.developer_mode and lang ~= 'en' and value == key then
-        Log.debug('Missing translation: {}', key)
+    if lang ~= 'en' and value == key then
+        Log.dev_warn('Missing translation: {}', key)
     end
 
     return Format.format(value, ...)

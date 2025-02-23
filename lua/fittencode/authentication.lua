@@ -67,21 +67,17 @@ function M.login(username, password, options)
     abort_all_operations() -- 终止其他操作
 
     if not username or not password then
-        Fn.schedule_call(options.on_error)
         return
     end
 
     local api_key_manager = Client.get_api_key_manager()
     if api_key_manager:get_fitten_user_id() then
         Log.notify_info(Translate.translate('[Fitten Code] You are already logged in'))
-        Fn.schedule_call(options.on_success)
         return
     end
 
     ---@type FittenCode.Protocol.Methods.Login.Body
     local body = { username = username, password = password }
-
-    Log.info('Login request: {}', body)
 
     request_handle = Client.request(Protocol.Methods.login, {
         body = assert(vim.fn.json_encode(body)),
@@ -95,12 +91,13 @@ function M.login(username, password, options)
             api_key_manager:update(Keyring.make(response))
             Log.notify_info(Translate.translate('[Fitten Code] Login successful'))
             Client.request(Protocol.Methods.click_count, { variables = { click_count_type = 'login' } })
-            Fn.schedule_call(options.on_success)
         else
-            return Promise.reject()
+            -- {"data":"","status_code":2,"msg":"用户名或密码不正确"}
+            local error_msg = response and response.msg or Translate.translate('Failed to login')
+            Log.notify_error(error_msg)
         end
-    end):catch(function()
-        Fn.schedule_call(options.on_error)
+    end):catch(function(err)
+        Log.notify_error(Translate.translate('Failed to login. Please check your network.'))
     end)
 end
 
@@ -112,20 +109,17 @@ function M.login3rd(source, options)
     local api_key_manager = Client.get_api_key_manager()
     if api_key_manager:get_fitten_user_id() then
         Log.notify_info(Translate.translate('[Fitten Code] You are already logged in'))
-        Fn.schedule_call(options.on_success)
         return
     end
 
     if not source or not vim.tbl_contains(M.login3rd_providers, source) then
         Log.notify_error(Translate.translate('[Fitten Code] Invalid 3rd-party login source'))
-        Fn.schedule_call(options.on_error)
         return
     end
 
     local client_token = Fn.uuid_v4()
     if not client_token then
         Log.error('Failed to generate client token')
-        Fn.schedule_call(options.on_error)
         return
     end
 
@@ -147,7 +141,6 @@ function M.login3rd(source, options)
         if login3rd.total_time > login3rd.total_time_limit then
             login3rd.start_check = false
             Log.info('Login timeout')
-            Fn.schedule_call(options.on_error)
             abort_all_operations()
             return
         end
@@ -165,7 +158,6 @@ function M.login3rd(source, options)
                 abort_all_operations() -- 成功时清理资源
                 api_key_manager:update(Keyring.make(response))
                 Log.notify_info(Translate.translate('[Fitten Code] Login successful'))
-                Fn.schedule_call(options.on_success)
 
                 -- 发送统计信息
                 Client.request(Protocol.Methods.click_count, {

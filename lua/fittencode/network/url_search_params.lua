@@ -45,21 +45,15 @@ function URLSearchParams.decode_form_value(str)
 end
 
 -- 构造函数
-function URLSearchParams.new(init)
+function URLSearchParams.new(input)
     local self = setmetatable({}, URLSearchParams)
     self._params = {}
 
-    if type(init) == 'string' then
-        self:_parse_query(init)
-    elseif type(init) == 'table' then
-        for k, v in pairs(init) do
-            if type(v) == 'table' then
-                for _, val in ipairs(v) do
-                    self:append(k, val)
-                end
-            else
-                self:append(k, v)
-            end
+    if type(input) == 'string' then
+        self:_parse_query(input)
+    elseif type(input) == 'table' then
+        for k, v in pairs(input) do
+            self:append(k, v)
         end
     end
 
@@ -68,10 +62,18 @@ end
 
 -- 解析查询字符串
 function URLSearchParams:_parse_query(query)
+    if type(query) ~= 'string' or #query == 0 then
+        error("Invalid query string provided for parsing")
+    end
     for pair in query:gmatch('[^&]+') do
-        local key, value = pair:match('^([^=]*)=?(.*)$')
+        -- 使用 match 提取键和值
+        local key, value = pair:match('^(.-)=(.*)$')
         if key then
+            -- 解码键和值
             self:append(URLSearchParams.decode_form_value(key), URLSearchParams.decode_form_value(value))
+        elseif pair:match('^.+$') then
+            -- 如果没有等号，但有键，则添加一个空值
+            self:append(URLSearchParams.decode_form_value(pair), URLSearchParams.decode_form_value(''))
         end
     end
 end

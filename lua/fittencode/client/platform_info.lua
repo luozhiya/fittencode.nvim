@@ -36,7 +36,7 @@ function M.get_platform_info_as_url_params()
     -- 生成URL参数字符串
     local parts = {}
     for key, value in pairs(params) do
-        table.insert(parts, string.format('%s=%s', key, URLSearchParams.encode_form_value(value)))
+        table.insert(parts, string.format('%s=%s', URLSearchParams.encode_form_value(key), URLSearchParams.encode_form_value(value)))
     end
     platform_info_url_params = table.concat(parts, '&')
 

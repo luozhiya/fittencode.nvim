@@ -106,7 +106,7 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/signup',
-        query = '?_=0&username={{signup_username}}&phone={{signup_phone}}&email={{signup_email}}&lang={{langs}}&timezone={{timezone}}'
+        query = '_=0&username={{signup_username}}&phone={{signup_phone}}&email={{signup_email}}&lang={{langs}}&timezone={{timezone}}'
     },
     -- 帐号密码登录接口
     -- * `method = POST`

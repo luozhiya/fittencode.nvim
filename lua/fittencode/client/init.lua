@@ -84,7 +84,7 @@ function M.request(protocol, options)
     local variables = encode_variables(options.variables)
 
     local _, evaluated = pcall(EvaluateRequest.reevaluate_method, protocol, variables)
-    if not evaluated then
+    if not _ then
         Log.error('Failed to evaluate method: {}, variables: {}', protocol.method, variables)
         return
     end
@@ -97,11 +97,6 @@ function M.request(protocol, options)
     if protocol.method == 'OPENLINK' then
         return openlink(evaluated.url)
     end
-
-    Log.debug('Requesting URL: {}', evaluated.url)
-    Log.debug('Requesting headers: {}', evaluated.headers)
-    Log.debug('Requesting body: {}', options.body)
-    Log.debug('Requesting timeout: {}', options.timeout)
 
     return HTTP.fetch(evaluated.url, {
         method = protocol.method,

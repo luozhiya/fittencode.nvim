@@ -5,7 +5,7 @@ local Log = require('fittencode.log')
 local M = {}
 
 -- 通过 stderr 输出获取 curl 计时信息
-local CURL_TIMING_FORMAT = [[%{stderr}
+local CURL_TIMING_FORMAT = [[%{stderr}<|FittenCodeTimings|>
 {
   "timing": {
     "namelookup": %{time_namelookup},
@@ -16,7 +16,7 @@ local CURL_TIMING_FORMAT = [[%{stderr}
     "total": %{time_total},
     "size_download": %{size_download}
   }
-}]]
+}<|FittenCodeTimings|>]]
 
 local CURL_ERROR_CODES = {
     [6]  = 'DNS_RESOLUTION_FAILED',
@@ -43,32 +43,80 @@ local function create_stream()
     }
 end
 
--- 假定 `write-out` 是一个单独完整的 chunk，需要调查 curl 源码确定是否真的如此
+-- E5560: Vimscript function must not be called in a fast event context
 ---@param chunk string
 local function parse_timing(chunk)
-    -- 尝试解析整个chunk
-    local ok, data = pcall(vim.fn.json_decode, chunk)
-    if not ok or type(data) ~= 'table' then return nil end
-
-    -- 验证timing字段结构
-    local timing = data.timing
-    if type(timing) ~= 'table' then return nil end
-
-    -- 检查所有必需的计时字段是否存在且为数值类型
-    local required_fields = {
-        'namelookup', 'connect', 'appconnect',
-        'pretransfer', 'starttransfer', 'total', 'size_download'
-    }
-
-    for _, field in ipairs(required_fields) do
-        local value = timing[field]
-        if type(value) ~= 'number' then
-            return nil
+    -- 利用闭包缓存解析结果
+    local computed_timing
+    return function()
+        if computed_timing then
+            return computed_timing
         end
+
+        -- 尝试解析整个chunk
+        local ok, data = pcall(vim.fn.json_decode, chunk)
+        if not ok or type(data) ~= 'table' then
+            Log.warn('curl timing data is not a valid json: {}, error: {}', chunk, data)
+            return
+        end
+
+        -- 验证timing字段结构
+        local timing = data.timing
+        if type(timing) ~= 'table' then
+            Log.warn('curl timing data is not a table: {}', data)
+            return
+        end
+
+        -- 检查所有必需的计时字段是否存在且为数值类型
+        local required_fields = {
+            'namelookup', 'connect', 'appconnect',
+            'pretransfer', 'starttransfer', 'total', 'size_download'
+        }
+
+        for _, field in ipairs(required_fields) do
+            local value = timing[field]
+            if type(value) ~= 'number' then
+                Log.warn('curl timing field {} is not a number: {}', field, value)
+                return
+            end
+        end
+
+        computed_timing = {
+            dns = data.timing.namelookup * 1000,
+            tcp = (data.timing.connect - data.timing.namelookup) * 1000,
+            ssl = (data.timing.appconnect - data.timing.connect) * 1000,
+            ttfb = (data.timing.starttransfer - data.timing.pretransfer) * 1000,
+            total = data.timing.total * 1000
+        }
+        return computed_timing
+    end
+end
+
+---@return function?, string
+local function parse_stderr(stderr_buffer)
+    local timing
+    local stderr_data = table.concat(stderr_buffer)
+
+    -- 定义标签
+    local start_tag = '<|FittenCodeTimings|>'
+    local end_tag = '<|FittenCodeTimings|>'
+
+    -- 查找标签的起始和结束位置
+    local start_pos, end_pos = stderr_data:find(start_tag .. '(.-)' .. end_tag)
+
+    -- 如果找到标签，则提取并解析 JSON 数据
+    if start_pos and end_pos then
+        local json_data = stderr_data:sub(start_pos + #start_tag, end_pos - #end_tag)
+        timing = parse_timing(json_data)
     end
 
-    -- 所有验证通过后返回有效数据
-    return data
+    -- 移除 stderr_data 中 timing 部分
+    if start_pos and end_pos then
+        stderr_data = stderr_data:sub(1, start_pos - 1) .. stderr_data:sub(end_pos + #end_tag + 1)
+    end
+
+    -- 返回解析后的 timing 和原始的 stderr_data
+    return timing, stderr_data
 end
 
 ---@param url string
@@ -82,6 +130,7 @@ function M.fetch(url, options)
     -- 构建 curl 参数
     local args = {
         '-s', '-L', '--compressed',
+        '-i',
         '--no-buffer', '--tcp-fastopen',
         '--show-error',
         '--write-out', CURL_TIMING_FORMAT,
@@ -108,11 +157,8 @@ function M.fetch(url, options)
     table.insert(args, url)
 
     -- 初始化收集器
-    local timing = {}
     local stderr_buffer = {}
     local headers_processed = false
-
-    Log.debug('curl args: {}', args)
 
     -- 使用新进程模块
     local process = Process.spawn('curl', args, {
@@ -121,8 +167,6 @@ function M.fetch(url, options)
 
     -- 标准输出处理
     process:on('stdout', function(chunk)
-        Log.debug('curl stdout: {}', chunk)
-
         if handle.aborted then return end
 
         if not headers_processed then
@@ -164,31 +208,18 @@ function M.fetch(url, options)
 
     -- 标准错误处理
     process:on('stderr', function(chunk)
-        Log.debug('curl stderr: {}', chunk)
-
-        if handle.aborted then return end
-
-        local timing_data = parse_timing(chunk)
-        -- 收集计时信息
-        if timing_data then
-            timing = {
-                dns = timing_data.timing.namelookup * 1000,
-                tcp = (timing_data.timing.connect - timing_data.timing.namelookup) * 1000,
-                ssl = (timing_data.timing.appconnect - timing_data.timing.connect) * 1000,
-                ttfb = (timing_data.timing.starttransfer - timing_data.timing.pretransfer) * 1000,
-                total = timing_data.timing.total * 1000
-            }
-        else
-            -- 收集原始错误信息
-            table.insert(stderr_buffer, chunk)
+        if handle.aborted then
+            return
         end
+        table.insert(stderr_buffer, chunk)
     end)
 
     -- 退出处理
     process:on('exit', function(code, signal)
-        Log.debug('curl exit: {} {}', code, signal)
-
-        if handle.aborted then return end
+        if handle.aborted then
+            return
+        end
+        local timing, stderr_data = parse_stderr(stderr_buffer)
 
         if code == 0 then
             ---@class FittenCode.HTTP.Request.Stream.EndEvent
@@ -203,6 +234,7 @@ function M.fetch(url, options)
                     if _ then return json end
                 end
             }
+            Log.debug('curl response: {}', response)
             stream:_emit('end', response)
         else
             ---@class FittenCode.HTTP.Request.Stream.ErrorEvent
@@ -210,7 +242,7 @@ function M.fetch(url, options)
                 type = 'CURL_ERROR',
                 code = code,
                 signal = signal,
-                message = table.concat(stderr_buffer),
+                message = stderr_data,
                 timing = timing,
                 readable_type = CURL_ERROR_CODES[code] or 'UNKNOWN_ERROR'
             }
@@ -258,7 +290,9 @@ function M.fetch(url, options)
                     end
                 end)
 
-                stream:on('error', reject)
+                stream:on('error', function(error)
+                    reject(error)
+                end)
 
                 stream:on('abort', function()
                     reject({ type = 'USER_ABORT' })

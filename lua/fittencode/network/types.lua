@@ -5,6 +5,7 @@
 ---@field method? string @HTTP 方法 (默认: 'GET')
 ---@field headers? table<string, string> @请求头
 ---@field body? string @请求体内容
+---@field body_file? string @请求体文件路径
 ---@field timeout? number @超时时间（毫秒）
 ---@field follow_redirects? boolean @是否跟随重定向 (默认: true)
 
@@ -36,7 +37,7 @@
 ---@field status integer @HTTP 状态码
 ---@field headers table<string, string> @响应头表
 ---@field ok boolean @是否成功状态码 (200-299)
----@field timing FittenCode.Network.Timing @请求计时信息
+---@field timing? fun(): FittenCode.Network.Timing @请求计时信息
 ---@field text fun(): string @获取响应文本方法
 ---@field json fun(): any? @解析响应JSON方法
 
@@ -45,7 +46,7 @@
 ---@field code? integer @CURL 错误码
 ---@field signal? integer @系统信号码
 ---@field message string @错误描述
----@field timing FittenCode.Network.Timing @请求计时信息
+---@field timing? fun(): FittenCode.Network.Timing @请求计时信息
 ---@field readable_type string @可读错误类型
 
 ---@class FittenCode.Network.Timing
