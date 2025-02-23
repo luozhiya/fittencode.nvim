@@ -34,7 +34,7 @@ function M.reevaluate_method(protocol, variables)
         query = protocol.query or ''
     end
     query = assert(VM:new():run(env, query))
-    if query[1] ~= '?' then
+    if protocol.query and query[1] ~= '?' then
         query = '?' .. query
     end
     local url = table.concat({ method_url, query }, '')

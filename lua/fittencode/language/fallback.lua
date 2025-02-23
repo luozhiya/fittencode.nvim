@@ -63,7 +63,7 @@ end
 function M.generate_chain(lang, final_fallback)
     lang = lang:gsub('_', '-'):lower()
     local tag = parse_lang_tag(lang)
-    Log.debug('Fallback chain for language tag: {}', tag)
+    Log.trace('Fallback chain for language tag: {}', tag)
     local variants = generate_variants(tag)
 
     -- 构建完整链

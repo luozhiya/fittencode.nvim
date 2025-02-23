@@ -10,6 +10,7 @@ local SecretStorage = require('fittencode.client.secret_storage')
 local Config = require('fittencode.config')
 local PlatformInfo = require('fittencode.client.platform_info')
 local Path = require('fittencode.functional.path')
+local Log = require('fittencode.log')
 
 ---@class FittenCode.Client
 local M = {}
@@ -84,6 +85,7 @@ function M.request(protocol, options)
 
     local _, evaluated = pcall(EvaluateRequest.reevaluate_method, protocol, variables)
     if not evaluated then
+        Log.error('Failed to evaluate method: {}, variables: {}', protocol.method, variables)
         return
     end
 
@@ -95,6 +97,11 @@ function M.request(protocol, options)
     if protocol.method == 'OPENLINK' then
         return openlink(evaluated.url)
     end
+
+    Log.debug('Requesting URL: {}', evaluated.url)
+    Log.debug('Requesting headers: {}', evaluated.headers)
+    Log.debug('Requesting body: {}', options.body)
+    Log.debug('Requesting timeout: {}', options.timeout)
 
     return HTTP.fetch(evaluated.url, {
         method = protocol.method,

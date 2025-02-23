@@ -25,37 +25,12 @@ function M.run(text)
         return Promise.reject()
     end
 
-    local function _process_response(response)
-        local deltas = {}
-        local stdout = response.text()
-
-        for _, bundle in ipairs(stdout) do
-            local lines = vim.split(bundle, '\n', { trimempty = true })
-            for _, line in ipairs(lines) do
-                local success, chunk = pcall(vim.fn.json_decode, line)
-                if success then
-                    table.insert(deltas, chunk.delta)
-                else
-                    Log.error('Failed to decode line: {}', line)
-                    return
-                end
-            end
-        end
-
-        local success, segments = pcall(vim.fn.json_decode, table.concat(deltas, ''))
-        if success then
-            return segments
-        else
-            Log.error('Failed to decode concatenated deltas: {}', deltas)
-            return
-        end
-    end
-
     return request_handle.promise():forward(function(response)
-        local segments = _process_response(response)
+        local segments = response.json()
         if segments then
             return segments
         else
+            Log.error('Failed to parse: {}', response)
             return Promise.reject()
         end
     end), request_handle

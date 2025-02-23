@@ -81,6 +81,8 @@ function M.login(username, password, options)
     ---@type FittenCode.Protocol.Methods.Login.Body
     local body = { username = username, password = password }
 
+    Log.info('Login request: {}', body)
+
     request_handle = Client.request(Protocol.Methods.login, {
         body = assert(vim.fn.json_encode(body)),
     })

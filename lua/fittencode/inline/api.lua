@@ -6,3 +6,7 @@
 -- 'revoke_line',
 -- 'accept_word',
 -- 'revoke_word'
+
+local api = {}
+
+return api

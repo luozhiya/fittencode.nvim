@@ -15,6 +15,8 @@ p:on('exit', function(code)
 end)
 --]]
 
+local Log = require('fittencode.log')
+
 local M = {}
 
 ---@return FittenCode.UV.Process
@@ -90,7 +92,10 @@ function M.spawn(command, args, options)
         process:_emit('exit', code, signal)
     end)
 
+    Log.debug('Spawned process {}', handle)
+
     stdout:read_start(function(err, chunk)
+        Log.debug('Read stdout chunk {}', chunk)
         if err then
             process:_emit('error', err)
             return
@@ -101,6 +106,7 @@ function M.spawn(command, args, options)
     end)
 
     stderr:read_start(function(err, chunk)
+        Log.debug('Read stderr chunk {}', chunk)
         if err then
             process:_emit('error', err)
             return

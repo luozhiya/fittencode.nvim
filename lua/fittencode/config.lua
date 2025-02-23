@@ -186,7 +186,7 @@ local defaults = {
         ['NoMoreSuggestion'] = {},
         ['SuggestionCommit'] = {},
     },
-    network = {
+    http = {
         -- Avaiable options:
         -- * 'curl'
         -- * 'libcurl' (Only available on Linux)

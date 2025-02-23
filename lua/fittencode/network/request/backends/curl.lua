@@ -1,9 +1,11 @@
 local Promise = require('fittencode.concurrency.promise')
 local Process = require('fittencode.vim.promisify.uv.process')
+local Log = require('fittencode.log')
 
 local M = {}
 
-local CURL_TIMING_FORMAT = [[
+-- 通过 stderr 输出获取 curl 计时信息
+local CURL_TIMING_FORMAT = [[%{stderr}
 {
   "timing": {
     "namelookup": %{time_namelookup},
@@ -41,11 +43,32 @@ local function create_stream()
     }
 end
 
----@param stderr string
-local function parse_timing(stderr)
-    local json_str = stderr:match('{%b{}}')
-    if not json_str then return nil, 'Failed to parse timing data' end
-    return vim.json.decode(json_str)
+-- 假定 `write-out` 是一个单独完整的 chunk，需要调查 curl 源码确定是否真的如此
+---@param chunk string
+local function parse_timing(chunk)
+    -- 尝试解析整个chunk
+    local ok, data = pcall(vim.fn.json_decode, chunk)
+    if not ok or type(data) ~= 'table' then return nil end
+
+    -- 验证timing字段结构
+    local timing = data.timing
+    if type(timing) ~= 'table' then return nil end
+
+    -- 检查所有必需的计时字段是否存在且为数值类型
+    local required_fields = {
+        'namelookup', 'connect', 'appconnect',
+        'pretransfer', 'starttransfer', 'total', 'size_download'
+    }
+
+    for _, field in ipairs(required_fields) do
+        local value = timing[field]
+        if type(value) ~= 'number' then
+            return nil
+        end
+    end
+
+    -- 所有验证通过后返回有效数据
+    return data
 end
 
 ---@param url string
@@ -60,6 +83,7 @@ function M.fetch(url, options)
     local args = {
         '-s', '-L', '--compressed',
         '--no-buffer', '--tcp-fastopen',
+        '--show-error',
         '--write-out', CURL_TIMING_FORMAT,
         '-X', options.method or 'GET',
     }
@@ -88,6 +112,8 @@ function M.fetch(url, options)
     local stderr_buffer = {}
     local headers_processed = false
 
+    Log.debug('curl args: {}', args)
+
     -- 使用新进程模块
     local process = Process.spawn('curl', args, {
         stdin = options.body
@@ -95,6 +121,8 @@ function M.fetch(url, options)
 
     -- 标准输出处理
     process:on('stdout', function(chunk)
+        Log.debug('curl stdout: {}', chunk)
+
         if handle.aborted then return end
 
         if not headers_processed then
@@ -136,10 +164,12 @@ function M.fetch(url, options)
 
     -- 标准错误处理
     process:on('stderr', function(chunk)
+        Log.debug('curl stderr: {}', chunk)
+
         if handle.aborted then return end
 
-        -- 收集计时信息
         local timing_data = parse_timing(chunk)
+        -- 收集计时信息
         if timing_data then
             timing = {
                 dns = timing_data.timing.namelookup * 1000,
@@ -148,14 +178,16 @@ function M.fetch(url, options)
                 ttfb = (timing_data.timing.starttransfer - timing_data.timing.pretransfer) * 1000,
                 total = timing_data.timing.total * 1000
             }
+        else
+            -- 收集原始错误信息
+            table.insert(stderr_buffer, chunk)
         end
-
-        -- 收集原始错误信息
-        table.insert(stderr_buffer, chunk)
     end)
 
     -- 退出处理
     process:on('exit', function(code, signal)
+        Log.debug('curl exit: {} {}', code, signal)
+
         if handle.aborted then return end
 
         if code == 0 then
@@ -188,6 +220,8 @@ function M.fetch(url, options)
 
     -- 错误处理
     process:on('error', function(err)
+        Log.error('curl error: {}', err)
+
         stream:_emit('error', {
             type = 'PROCESS_ERROR',
             message = err
