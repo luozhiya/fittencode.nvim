@@ -79,7 +79,7 @@ function M.login(username, password, options)
     ---@type FittenCode.Protocol.Methods.Login.Body
     local body = { username = username, password = password }
 
-    request_handle = Client.request(Protocol.login, {
+    request_handle = Client.request(Protocol.Methods.login, {
         body = assert(vim.fn.json_encode(body)),
     })
     if not request_handle then return end
@@ -90,7 +90,7 @@ function M.login(username, password, options)
         if response and response.access_token and response.refresh_token and response.user_info then
             api_key_manager:update(Keyring.make(response))
             Log.notify_info(Translate.translate('[Fitten Code] Login successful'))
-            Client.request(Protocol.click_count, { variables = { click_count_type = 'login' } })
+            Client.request(Protocol.Methods.click_count, { variables = { click_count_type = 'login' } })
         else
             -- {"data":"","status_code":2,"msg":"用户名或密码不正确"}
             local error_msg = response and response.msg or Translate.translate('Failed to login')
@@ -128,7 +128,7 @@ function M.login3rd(source, options)
     login3rd.total_time = 0
 
     -- 发起第三方登录请求
-    request_handle = Client.request(Protocol.fb_sign_in, {
+    request_handle = Client.request(Protocol.Methods.fb_sign_in, {
         variables = { sign_in_source = source, client_token = client_token }
     })
     if not request_handle then return end
@@ -146,7 +146,7 @@ function M.login3rd(source, options)
         end
 
         -- 发起状态检查请求
-        request_handle = Client.request(Protocol.fb_check_login_auth, {
+        request_handle = Client.request(Protocol.Methods.fb_check_login_auth, {
             variables = { client_token = client_token }
         })
         if not request_handle then return end
@@ -160,7 +160,7 @@ function M.login3rd(source, options)
                 Log.notify_info(Translate.translate('[Fitten Code] Login successful'))
 
                 -- 发送统计信息
-                Client.request(Protocol.click_count, {
+                Client.request(Protocol.Methods.click_count, {
                     variables = { click_count_type = response.create and 'register_fb' or 'login_fb' }
                 })
                 if response.create then

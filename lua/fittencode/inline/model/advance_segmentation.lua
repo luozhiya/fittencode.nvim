@@ -17,7 +17,7 @@ function M.run(text)
         return Promise.resolve()
     end
 
-    local request_handle = Client.request(Protocol.chat_auth, {
+    local request_handle = Client.request(Protocol.Methods.chat_auth, {
         body = assert(vim.fn.json_encode(Segmentation.generate(text))),
     })
     if not request_handle then

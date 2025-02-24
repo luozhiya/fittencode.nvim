@@ -279,7 +279,7 @@ end
 -- 获取补全版本号
 ---@return FittenCode.Concurrency.Promise
 function Session:get_completion_version()
-    local request_handle = Client.request(Protocol.get_completion_version)
+    local request_handle = Client.request(Protocol.Methods.get_completion_version)
     if not request_handle then
         return Promise.reject()
     end
