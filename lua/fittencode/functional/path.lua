@@ -150,7 +150,7 @@ function Path:clone()
     return new_path
 end
 
-function Path:tostring()
+function Path:to_string()
     local sep = self._separator or '/'
     local parts = {}
 
@@ -196,11 +196,11 @@ setmetatable(Path, {
 })
 
 function M.join(...)
-    return Path.new():join(...):normalize():tostring()
+    return Path.new():join(...):normalize():to_string()
 end
 
 function M.normalize(path)
-    return Path.new(path):normalize():tostring()
+    return Path.new(path):normalize():to_string()
 end
 
 return M

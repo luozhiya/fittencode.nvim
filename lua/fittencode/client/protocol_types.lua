@@ -386,3 +386,36 @@
 ------------------------------------------------
 
 ---@alias FittenCode.Protocol.Methods.GrayTest.Response number
+
+---@class FittenCode.Protocol.Methods
+---@field login FittenCode.Protocol.Element
+---@field auto_login FittenCode.Protocol.Element
+---@field refresh_refresh_token FittenCode.Protocol.Element
+---@field refresh_access_token FittenCode.Protocol.Element
+---@field fb_sign_in FittenCode.Protocol.Element
+---@field fb_check_login_auth FittenCode.Protocol.Element
+---@field click_count FittenCode.Protocol.Element
+---@field statistic_log FittenCode.Protocol.Element
+---@field gray_test FittenCode.Protocol.Element
+---@field pc_check_auth FittenCode.Protocol.Element
+---@field get_completion_version FittenCode.Protocol.Element
+---@field accept FittenCode.Protocol.Element
+---@field generate_one_stage_auth FittenCode.Protocol.Element
+---@field chat_auth FittenCode.Protocol.Element
+---@field feedback FittenCode.Protocol.Element
+---@field check_invite_code FittenCode.Protocol.Element
+---@field rag_chat FittenCode.Protocol.Element
+---@field knowledge_base_info FittenCode.Protocol.Element
+---@field get_local_knowledge_base_refs FittenCode.Protocol.Element
+---@field create_knowledge_base FittenCode.Protocol.Element
+---@field join_knowledge_base FittenCode.Protocol.Element
+---@field get_knowledge_base FittenCode.Protocol.Element
+---@field update_knowledge_base FittenCode.Protocol.Element
+---@field delete_knowledge_base FittenCode.Protocol.Element
+---@field files_name_list FittenCode.Protocol.Element
+---@field upload_large_file FittenCode.Protocol.Element
+---@field delete_file FittenCode.Protocol.Element
+---@field need_update_project FittenCode.Protocol.Element
+---@field update_project FittenCode.Protocol.Element
+---@field save_file_and_directory_names FittenCode.Protocol.Element
+---@field add_files_and_directories FittenCode.Protocol.Element

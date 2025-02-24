@@ -1,16 +1,16 @@
 local VM = require('fittencode.open_promot_language.vm')
-local LocalizationAPI = require('fittencode.client.localization_api')
-local PlatformInfo = require('fittencode.client.platform_info')
+local LangPerference = require('fittencode.language.preference')
+local URLSearchParams = require('fittencode.network.url_search_params')
 
 local M = {}
 
 -- 根据时区信息，提供对应的本地化接口
 ---@param method FittenCode.Protocol.Element.URL
-function M.localize(method)
+local function localize(method)
     if type(method) ~= 'table' then
         return method
     end
-    local locale = Fn.get_timezone_based_language()
+    local locale = LangPerference.display_preference()
     return method[locale] or method['en']
 end
 
@@ -25,36 +25,33 @@ end
 function M.reevaluate_method(protocol, variables)
     variables = variables or {}
     local env = vim.tbl_deep_extend('force', {}, variables)
+    local vm = VM:new()
 
     -- headers
     local headers = {}
     for k, v in pairs(protocol.headers or {}) do
-        headers[k] = assert(VM:new():run(env, v))
+        headers[k] = assert(vm:run(env, v))
     end
 
     -- url
-    local method_url = assert(VM:new():run(env, M.localize(protocol.url)))
+    local method_url = assert(vm:run(env, localize(protocol.url)))
 
     -- query
-    -- 1.
+    local query_params = URLSearchParams.new()
+    for k, v in pairs(protocol.query.dynamic) do
+        query_params.append(k, assert(vm:run(env, v)))
+    end
+    local query = ''
+    for _, v in ipairs(protocol.query.ref or {}) do
+        query = query .. assert(vm:run(env, v))
+    end
+    query = query .. query_params:to_string()
+    if query[1] ~= '?' then
+        query = '?' .. query
+    end
 
-    -- -- query
-    -- local query = ''
-    -- --
-    -- if type(protocol.query) == 'table' then
-    --     query = variables.query or ''
-    --     query = protocol.query[query] or query
-    -- elseif type(protocol.query) == 'string' then
-    --     ---@diagnostic disable-next-line: cast-local-type
-    --     query = protocol.query or ''
-    -- end
-    -- query = assert(VM:new():run(env, query))
-    -- if protocol.query and query[1] ~= '?' then
-    --     query = '?' .. query
-    -- end
-    -- local url = table.concat({ method_url, query }, '')
-
-    -- return { headers = headers, url = url }
+    local url = table.concat({ method_url, query }, '')
+    return { headers = headers, url = url }
 end
 
 ---@param code string

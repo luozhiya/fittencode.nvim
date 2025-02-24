@@ -55,55 +55,16 @@ for _, url in pairs(Protocol.URLs) do
     url.type = 'url'
 end
 
----@class FittenCode.Protocol.Methods
----@field login FittenCode.Protocol.Element
----@field auto_login FittenCode.Protocol.Element
----@field refresh_refresh_token FittenCode.Protocol.Element
----@field refresh_access_token FittenCode.Protocol.Element
----@field fb_sign_in FittenCode.Protocol.Element
----@field fb_check_login_auth FittenCode.Protocol.Element
----@field click_count FittenCode.Protocol.Element
----@field privacy FittenCode.Protocol.Element
----@field agreement FittenCode.Protocol.Element
----@field statistic_log FittenCode.Protocol.Element
----@field gray_test FittenCode.Protocol.Element
----@field pc_check_auth FittenCode.Protocol.Element
----@field get_completion_version FittenCode.Protocol.Element
----@field accept FittenCode.Protocol.Element
----@field generate_one_stage_auth FittenCode.Protocol.Element
----@field chat_auth FittenCode.Protocol.Element
----@field feedback FittenCode.Protocol.Element
----@field check_invite_code FittenCode.Protocol.Element
----@field rag_chat FittenCode.Protocol.Element
----@field knowledge_base_info FittenCode.Protocol.Element
----@field get_local_knowledge_base_refs FittenCode.Protocol.Element
----@field create_knowledge_base FittenCode.Protocol.Element
----@field join_knowledge_base FittenCode.Protocol.Element
----@field get_knowledge_base FittenCode.Protocol.Element
----@field update_knowledge_base FittenCode.Protocol.Element
----@field delete_knowledge_base FittenCode.Protocol.Element
----@field files_name_list FittenCode.Protocol.Element
----@field upload_large_file FittenCode.Protocol.Element
----@field delete_file FittenCode.Protocol.Element
----@field need_update_project FittenCode.Protocol.Element
----@field update_project FittenCode.Protocol.Element
----@field save_file_and_directory_names FittenCode.Protocol.Element
----@field add_files_and_directories FittenCode.Protocol.Element
-
 -- 接口列表
+-- 单一、明确的参数格式更优
 ---@class FittenCode.Protocol.Methods
 Protocol.Methods = {
     -- 注册接口
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `query = ?username={}&phone={}&email={}&lang={}&timezone={}`
+    -- * `query = username={}&phone={}&email={}&lang={}&timezone={}`
     -- * `body = @FittenCode.Protocol.Methods.Signup.Body`
     -- * `response = @FittenCode.Protocol.Methods.Signup.Response`
-    --
-    -- 注: lang 和 timezone 需使用 uri 编码，如
-    -- * "en-US,en,en"
-    -- * "asia/shanghai"
-    -- * "?_=0&username=1&phone=1&email=&lang=en-US%2Cen%2Cen&timezone=asia%2Fshanghai"
     signup = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
@@ -164,7 +125,6 @@ Protocol.Methods = {
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/email_code',
         query = {
-            ref = {},
             dynamic = {
                 email = '{{email}}'
             },
@@ -181,7 +141,6 @@ Protocol.Methods = {
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/phone_code',
         query = {
-            ref = {},
             dynamic = {
                 phone = '{{phone}}'
             },
@@ -243,7 +202,6 @@ Protocol.Methods = {
         method = 'OPENLINK',
         url = '/codeuser/fb_sign_in',
         query = {
-            ref = {},
             dynamic = {
                 source = '{{sign_in_source}}',
                 client_token = '{{client_token}}',
