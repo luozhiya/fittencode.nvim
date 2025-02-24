@@ -1,5 +1,5 @@
 ---@class FittenCode.Protocol.URLs
-local Protocol = {}
+local M = {}
 
 local URLs = {
     -- Account
@@ -33,10 +33,11 @@ for _, url in pairs(URLs) do
     url.type = 'url'
 end
 
-Protocol.__index = function(_, k)
+M.__index = function(_, k)
     if URLs[k] then
         return vim.deepcopy(URLs[k])
     end
 end
+setmetatable(M, M)
 
-return Protocol
+return M

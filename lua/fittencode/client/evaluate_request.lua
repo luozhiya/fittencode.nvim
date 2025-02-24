@@ -56,12 +56,4 @@ function M.reevaluate_method(protocol, variables)
     return { headers = headers, url = url }
 end
 
----@param code string
----@param variables table<string, any>?
----@return string
-function M.evaluate(code, variables)
-    local env = vim.tbl_deep_extend('force', {}, variables or {})
-    return assert(VM:new():run(env, code or ''))
-end
-
 return M

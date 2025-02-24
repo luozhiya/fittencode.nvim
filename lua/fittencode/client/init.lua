@@ -1,7 +1,4 @@
 local HTTP = require('fittencode.network.request')
-local LocalizationAPI = require('fittencode.client.localization_api')
-local URLSearchParams = require('fittencode.network.url_search_params')
-local Fn = require('fittencode.functional.fn')
 local APIKeyManager = require('fittencode.client.api_key_manager')
 local EvaluateRequest = require('fittencode.client.evaluate_request')
 local Server = require('fittencode.client.server')
@@ -100,6 +97,14 @@ function M.request(protocol, options)
         body = options.body,
         timeout = options.timeout,
     })
+end
+
+function M.request2(protocol, options)
+    local handle = M.request(protocol, options)
+    if handle then
+        handle:run()
+    end
+    return handle
 end
 
 return M

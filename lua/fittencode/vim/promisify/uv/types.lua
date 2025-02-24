@@ -4,6 +4,7 @@
 ---@field on function
 ---@field _emit function
 ---@field abort function
+---@field run function
 
 ---@class FittenCode.UV.FS
 ---@field close function

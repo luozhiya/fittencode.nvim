@@ -15,7 +15,7 @@
 -- * 插件地址： https://marketplace.visualstudio.com/items?itemName=FittenTech.Fitten-Code
 
 ---@class FittenCode.Protocol.Methods
-local Protocol = {}
+local M = {}
 
 -- 接口列表
 -- 单一、明确的参数格式更优
@@ -586,10 +586,11 @@ for _, method in pairs(Methods) do
     method.type = 'method'
 end
 
-Protocol.__index = function(_, k)
+M.__index = function(_, k)
     if Methods[k] then
         return vim.deepcopy(Methods[k])
     end
 end
+setmetatable(M, M)
 
-return Protocol
+return M

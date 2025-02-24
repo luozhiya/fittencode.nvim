@@ -45,19 +45,19 @@ local function abort_all_operations()
 end
 
 function M.register()
-    Client.request(Protocol.URLs.register)
+    Client.request2(Protocol.URLs.register)
 end
 
 function M.tutor()
-    Client.request(Protocol.URLs.tutor)
+    Client.request2(Protocol.URLs.tutor)
 end
 
 function M.question()
-    Client.request(Protocol.URLs.question)
+    Client.request2(Protocol.URLs.question)
 end
 
 function M.try_web()
-    Client.request(Protocol.URLs.try)
+    Client.request2(Protocol.URLs.try)
 end
 
 ---@param username string
@@ -90,14 +90,14 @@ function M.login(username, password, options)
         if response and response.access_token and response.refresh_token and response.user_info then
             api_key_manager:update(Keyring.make(response))
             Log.notify_info(Translate.translate('[Fitten Code] Login successful'))
-            Client.request(Protocol.Methods.click_count, { variables = { click_count_type = 'login' } })
+            Client.request2(Protocol.Methods.click_count, { variables = { click_count_type = 'login' } })
         else
             -- {"data":"","status_code":2,"msg":"用户名或密码不正确"}
             local error_msg = response and response.msg or Translate.translate('Failed to login')
             Log.notify_error(error_msg)
         end
     end):catch(function(err)
-        Log.notify_error(Translate.translate('Failed to login. Please check your network.'))
+        Log.notify_error((err or {}) and err.message or Translate.translate('Failed to login. Please check your network.'))
     end)
 end
 
@@ -128,7 +128,7 @@ function M.login3rd(source, options)
     login3rd.total_time = 0
 
     -- 发起第三方登录请求
-    request_handle = Client.request(Protocol.Methods.fb_sign_in, {
+    request_handle = Client.request2(Protocol.Methods.fb_sign_in, {
         variables = { sign_in_source = source, client_token = client_token }
     })
     if not request_handle then return end
@@ -160,11 +160,11 @@ function M.login3rd(source, options)
                 Log.notify_info(Translate.translate('[Fitten Code] Login successful'))
 
                 -- 发送统计信息
-                Client.request(Protocol.Methods.click_count, {
+                Client.request2(Protocol.Methods.click_count, {
                     variables = { click_count_type = response.create and 'register_fb' or 'login_fb' }
                 })
                 if response.create then
-                    Client.request(Protocol.URLs.register_cvt)
+                    Client.request2(Protocol.URLs.register_cvt)
                 end
             end
         end)

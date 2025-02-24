@@ -84,7 +84,7 @@ function CompletionStatistics:check_accept(e, r, n, i)
 end
 
 function CompletionStatistics:send_one_status(tracker_msg)
-    Client.request(Protocol.Methods.statistic_log, {
+    Client.request2(Protocol.Methods.statistic_log, {
         variables = {
             query = tracker_msg
         }

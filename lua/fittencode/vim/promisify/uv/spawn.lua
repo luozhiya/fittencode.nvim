@@ -19,37 +19,14 @@ local Log = require('fittencode.log')
 
 local M = {}
 
----@return FittenCode.UV.Process
-local function create_process()
-    return {
-        _callbacks = { stdout = {}, stderr = {}, exit = {}, error = {}, abort = {} },
-        aborted = false,
-        on = function(self, event, cb)
-            if self._callbacks[event] then
-                table.insert(self._callbacks[event], cb)
-            end
-            return self
-        end,
-        _emit = function(self, event, ...)
-            local cbs = self._callbacks[event]
-            if cbs then
-                for _, cb in ipairs(cbs) do
-                    cb(...)
-                end
-            end
-        end
-    }
-end
-
 -- 需要更大的控制权，可以用这个版本
 -- * 支持对 spawn 完整生命周期的控制
 -- * 支持流输出，适用于 Chat 类型的应用场景
 ---@param command string
 ---@param args string[]
 ---@param options? { stdin?: string, env?: table, cwd?: string }
-function M.spawn(command, args, options)
+local function run(process, command, args, options)
     options = options or {}
-    local process = create_process()
 
     local stdin = vim.uv.new_pipe(false)
     assert(stdin, 'Failed to create stdin pipe')
@@ -92,6 +69,10 @@ function M.spawn(command, args, options)
         process:_emit('exit', code, signal)
     end)
 
+    if not handle.process then
+        process:_emit('error', string.format('Failed to spawn process: %s', command))
+    end
+
     stdout:read_start(function(err, chunk)
         if err then
             process:_emit('error', err)
@@ -126,5 +107,32 @@ function M.spawn(command, args, options)
 
     return process
 end
+
+---@return FittenCode.UV.Process
+local function create_process()
+    return {
+        _callbacks = { stdout = {}, stderr = {}, exit = {}, error = {}, abort = {} },
+        aborted = false,
+        on = function(self, event, cb)
+            if self._callbacks[event] then
+                table.insert(self._callbacks[event], cb)
+            end
+            return self
+        end,
+        _emit = function(self, event, ...)
+            local cbs = self._callbacks[event]
+            if cbs then
+                for _, cb in ipairs(cbs) do
+                    cb(...)
+                end
+            end
+        end,
+        run = function(self, command, args, options)
+            return run(self, command, args, options)
+        end,
+    }
+end
+
+M.create = create_process
 
 return M

@@ -161,9 +161,8 @@ function M.fetch(url, options)
     local headers_processed = false
 
     -- 使用新进程模块
-    local process = Process.spawn('curl', args, {
-        stdin = options.body
-    })
+    local process = Process.create()
+    Log.debug('process: {}', process)
 
     -- 标准输出处理
     process:on('stdout', function(chunk)
@@ -276,6 +275,11 @@ function M.fetch(url, options)
     return {
         stream = stream,
         abort = handle.abort,
+        run = function()
+            process:run('curl', args, {
+                stdin = options.body
+            })
+        end,
         promise = function()
             return Promise.new(function(resolve, reject)
                 stream:on('end', function(response)
@@ -291,12 +295,17 @@ function M.fetch(url, options)
                 end)
 
                 stream:on('error', function(error)
+                    Log.error('stream error: {}', error)
                     reject(error)
                 end)
 
                 stream:on('abort', function()
                     reject({ type = 'USER_ABORT' })
                 end)
+
+                process:run('curl', args, {
+                    stdin = options.body
+                })
             end)
         end
     }
