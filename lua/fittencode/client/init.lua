@@ -68,7 +68,7 @@ local function preset_variables()
         username = api_key_manager:get_username(),
         access_token = api_key_manager:get_fitten_access_token(),
         -- ref
-        platform_info = PlatformInfo.get_platform_info_as_url_params():to_string()
+        platform_info = PlatformInfo.get_platform_info_as_url_params()
     }
     return variables
 end

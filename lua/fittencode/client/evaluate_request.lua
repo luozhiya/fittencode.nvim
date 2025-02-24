@@ -37,17 +37,19 @@ function M.reevaluate_method(protocol, variables)
     local method_url = assert(vm:run(env, localize(protocol.url)))
 
     -- query
-    local query_params = URLSearchParams.new()
-    for k, v in pairs(protocol.query.dynamic) do
-        query_params.append(k, assert(vm:run(env, v)))
-    end
     local query = ''
-    for _, v in ipairs(protocol.query.ref or {}) do
-        query = query .. assert(vm:run(env, v))
-    end
-    query = query .. query_params:to_string()
-    if query[1] ~= '?' then
-        query = '?' .. query
+    if protocol.query then
+        local query_params = URLSearchParams.new()
+        for k, v in pairs(protocol.query.dynamic or {}) do
+            query_params.append(k, assert(vm:run(env, v)))
+        end
+        for _, v in ipairs(protocol.query.ref or {}) do
+            query = query .. assert(vm:run(env, v))
+        end
+        query = query .. query_params:to_string()
+        if query[1] ~= '?' then
+            query = '?' .. query
+        end
     end
 
     local url = table.concat({ method_url, query }, '')

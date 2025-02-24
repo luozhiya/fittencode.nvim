@@ -419,3 +419,10 @@
 ---@field update_project FittenCode.Protocol.Element
 ---@field save_file_and_directory_names FittenCode.Protocol.Element
 ---@field add_files_and_directories FittenCode.Protocol.Element
+
+---@class FittenCode.Protocol.URLs
+---@field register FittenCode.Protocol.Element
+---@field register_cvt FittenCode.Protocol.Element
+---@field question FittenCode.Protocol.Element
+---@field tutor FittenCode.Protocol.Element
+---@field try FittenCode.Protocol.Element

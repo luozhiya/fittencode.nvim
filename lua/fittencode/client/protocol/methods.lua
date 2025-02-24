@@ -13,52 +13,13 @@
 -- 引用资料
 -- * VSCode 插件版本：`fittentech.fitten-code 0.10.119`
 -- * 插件地址： https://marketplace.visualstudio.com/items?itemName=FittenTech.Fitten-Code
----@class FittenCode.Protocol
+
+---@class FittenCode.Protocol.Methods
 local Protocol = {}
-
----@class FittenCode.Protocol.URLs
----@field register FittenCode.Protocol.Element
----@field register_cvt FittenCode.Protocol.Element
----@field question FittenCode.Protocol.Element
----@field tutor FittenCode.Protocol.Element
----@field try FittenCode.Protocol.Element
-
-Protocol.URLs = {
-    -- Account
-    register = {
-        method = 'OPENLINK',
-        url = 'https://fc.fittentech.com/',
-        query = {
-            ref = { '{{platform_info}}' },
-        }
-    },
-    -- 通过第三方注册后需要调用此接口，后台做统计
-    register_cvt = {
-        method = 'GET',
-        url = 'https://fc.fittentech.com/cvt/register'
-    },
-    question = {
-        method = 'OPENLINK',
-        url = 'https://code.fittentech.com/assets/images/blog/QR.jpg'
-    },
-    tutor = {
-        method = 'OPENLINK',
-        url = 'https://code.fittentech.com/desc-vim'
-    },
-    try = {
-        method = 'OPENLINK',
-        url = 'https://code.fittentech.com/try'
-    },
-}
-
-for _, url in pairs(Protocol.URLs) do
-    url.type = 'url'
-end
 
 -- 接口列表
 -- 单一、明确的参数格式更优
----@class FittenCode.Protocol.Methods
-Protocol.Methods = {
+local Methods = {
     -- 注册接口
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
@@ -621,8 +582,14 @@ Protocol.Methods = {
     },
 }
 
-for _, method in pairs(Protocol.Methods) do
+for _, method in pairs(Methods) do
     method.type = 'method'
+end
+
+Protocol.__index = function(_, k)
+    if Methods[k] then
+        return vim.deepcopy(Methods[k])
+    end
 end
 
 return Protocol
