@@ -37,6 +37,9 @@ function M.init()
         key = 'FittenCode',
         storage = storage,
     })
+    if api_key_manager and api_key_manager:has_fitten_access_token() then
+        Log.info('Load API key from storage successfully')
+    end
 end
 
 ---@return FittenCode.APIKeyManager

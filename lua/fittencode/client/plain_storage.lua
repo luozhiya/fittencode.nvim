@@ -82,7 +82,9 @@ function PlainStorage:get(key)
         result = data[key]
         return false -- 不执行保存操作
     end)
-    return ok and result or nil, err
+    if ok then
+        return result
+    end
 end
 
 function PlainStorage:purge_storage()

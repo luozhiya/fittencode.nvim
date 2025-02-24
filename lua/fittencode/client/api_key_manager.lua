@@ -10,19 +10,19 @@ local Keyring = require('fittencode.client.keyring')
 ---@class FittenCode.APIKeyManager
 local APIKeyManager = {}
 
----@return FittenCode.APIKeyManager
+---@return FittenCode.APIKeyManager?
 function APIKeyManager.new(options)
     ---@class FittenCode.APIKeyManager
     local self = {
         key = options.key,
         storage = options.storage,
     }
+    setmetatable(self, { __index = APIKeyManager })
     local _, keyring = pcall(vim.fn.json_decode, self.storage:get(self.key))
     if keyring then
         self.keyring = keyring
+        return self
     end
-
-    return setmetatable(self, { __index = APIKeyManager })
 end
 
 ---@return string?
