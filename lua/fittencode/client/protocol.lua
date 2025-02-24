@@ -5,7 +5,7 @@
 --   * method: HTTP 请求方法，如 GET、POST、PUT、DELETE, 以及自定义的 OPENLINK
 --   * url: 对含有多语言版本的，采用 { en = '', ['zh-cn'] = '' } 的形式
 --   * headers: HTTP 请求头，如 { 'Content-Type' = 'application/json' }
---   * query: URL 查询参数，如 `?user_id={{user_id}}&{{platform_info}}`
+--   * query: URL 查询参数，如 `?user_id={{user_id}}&{{platform_info}}` 约定一个接口只能有一种query参数形式
 --   * body: 请求体，如 `@FittenCode.Protocol.Methods.Login.Body`
 --   * response: 响应体，如 `@FittenCode.Protocol.Methods.Login.Response`
 --   * 注：(`url`/`headers`/`query`) 均支持模版参数，可动态解析，如 `{{user_id}}`、`{{platform_info}}`、`{{access_token}}`、`{{refresh_token}}`、`{{client_token}}`、`{{source}}`
@@ -28,7 +28,9 @@ Protocol.URLs = {
     register = {
         method = 'OPENLINK',
         url = 'https://fc.fittentech.com/',
-        query = '?{{platform_info}}'
+        query = {
+            ref = { '{{platform_info}}' },
+        }
     },
     -- 通过第三方注册后需要调用此接口，后台做统计
     register_cvt = {
@@ -106,7 +108,17 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/signup',
-        query = '_=0&username={{signup_username}}&phone={{signup_phone}}&email={{signup_email}}&lang={{langs}}&timezone={{timezone}}'
+        query = {
+            ref = { '{{platform_info}}' },
+            dynamic = {
+                ['_'] = 0,
+                username = '{{signup_username}}',
+                phone = '{{signup_phone}}',
+                email = '{{signup_email}}',
+                lang = '{{langs}}',
+                timezone = '{{timezone}}',
+            },
+        }
     },
     -- 帐号密码登录接口
     -- * `method = POST`
@@ -151,7 +163,12 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/email_code',
-        query = '?email={{email}}'
+        query = {
+            ref = {},
+            dynamic = {
+                email = '{{email}}'
+            },
+        }
     },
     -- 发送手机验证码接口
     -- * `method = POST`
@@ -163,7 +180,12 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/phone_code',
-        query = '?phone={{phone}}'
+        query = {
+            ref = {},
+            dynamic = {
+                phone = '{{phone}}'
+            },
+        }
     },
     -- 获取用户信息接口
     -- * `method = GET`
@@ -185,7 +207,11 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/auth/auto_login',
-        query = '?ft_token={{ft_token}}'
+        query = {
+            dynamic = {
+                ft_token = '{{ft_token}}'
+            }
+        }
     },
     -- 刷新 refresh_token
     -- * `method = POST`
@@ -216,7 +242,13 @@ Protocol.Methods = {
     fb_sign_in = {
         method = 'OPENLINK',
         url = '/codeuser/fb_sign_in',
-        query = '?source={{sign_in_source}}&client_token={{client_token}}'
+        query = {
+            ref = {},
+            dynamic = {
+                source = '{{sign_in_source}}',
+                client_token = '{{client_token}}',
+            },
+        }
     },
     -- 监听第三方登录状态接口
     -- * `method = GET`
@@ -227,7 +259,11 @@ Protocol.Methods = {
     fb_check_login_auth = {
         method = 'GET',
         url = '/codeuser/fb_check_login_auth',
-        query = '?client_token={{client_token}}'
+        query = {
+            dynamic = {
+                client_token = '{{client_token}}',
+            },
+        }
     },
     -- 当用户点击登录或者注册按钮时，用于后台统计用户行为
     -- * `method = GET`
@@ -255,7 +291,12 @@ Protocol.Methods = {
     click_count = {
         method = 'GET',
         url = '/codeuser/click_count',
-        query = '&type={{click_count_type}}?user_id={{user_id}}'
+        query = {
+            dynamic = {
+                type = '{{click_count_type}}',
+                user_id = '{{user_id}}',
+            },
+        }
     },
     privacy = {
         method = 'OPENLINK',
@@ -283,7 +324,9 @@ Protocol.Methods = {
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/statistic_log',
         query = {
-            tracker = '?tracker={{tracker}}',
+            dynamic = {
+                tracker = '{{tracker}}',
+            },
         }
     },
     -- 参加灰度测试接口
@@ -296,7 +339,13 @@ Protocol.Methods = {
         method = 'GET',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/gray_test',
-        query = '?plan_name={{plan_name}}&ft_token={{ft_token}}&{{platform_info}}'
+        query = {
+            ref = { '{{platform_info}}' },
+            dynamic = {
+                plan_name = '{{plan_name}}',
+                ft_token = '{{ft_token}}',
+            },
+        }
     },
     -- 检查用户是否有 Project Completion 权限
     -- * `method = GET`
@@ -308,7 +357,12 @@ Protocol.Methods = {
         method = 'GET',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/pc_check_auth',
-        query = '?user_id={{user_id}}&{{platform_info}}'
+        query = {
+            ref = { '{{platform_info}}' },
+            dynamic = {
+                user_id = '{{user_id}}',
+            },
+        }
     },
     -- 获取用户的 Completion 版本号，该值影响 generate_one_stage_auth 接口
     -- * `method = GET`
@@ -320,7 +374,11 @@ Protocol.Methods = {
         method = 'GET',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeuser/get_completion_version',
-        query = '?ft_token={{ft_token}}'
+        query = {
+            dynamic = {
+                ft_token = '{{ft_token}}',
+            },
+        }
     },
     -- 当用户 Accept 代码补全时，向服务器发送事件
     -- * `method = POST`
@@ -337,7 +395,9 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeapi/completion/generate_one_stage/{{user_id}}',
-        query = '?{{platform_info}}',
+        query = {
+            ref = { '{{platform_info}}' },
+        }
     },
     -- 生成一阶段补全代码，有多个版本
     -- * `method = POST`
@@ -350,7 +410,9 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json', ['Content-Encoding'] = 'gzip' },
         url = '/codeapi/completion{{completion_version}}/generate_one_stage_auth/{{user_id}}',
-        query = '?{{platform_info}}',
+        query = {
+            ref = { '{{platform_info}}' },
+        }
     },
     -- 对话接口 Chat (Fast/Search @FCPS)，以流的形式接受数据
     -- * `method = POST`
@@ -362,7 +424,12 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeapi/chat_auth',
-        query = '?ft_token={{ft_token}}&{{platform_info}}'
+        query = {
+            ref = { '{{platform_info}}' },
+            dynamic = {
+                ft_token = '{{ft_token}}',
+            },
+        }
     },
     -- 当用户选择插入或复制对话内容时，向服务器发送事件
     -- * `method = POST`
@@ -374,7 +441,12 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeapi/chat/feedback',
-        query = '?ft_token={{ft_token}}&{{platform_info}}'
+        query = {
+            ref = { '{{platform_info}}' },
+            dynamic = {
+                ft_token = '{{ft_token}}',
+            },
+        }
     },
     -- 检测用户的邀请码
     -- * `method = POST`
@@ -386,7 +458,11 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeapi/chat/check_invite_code',
-        query = '?code={{invite_code}}'
+        query = {
+            dynamic = {
+                code = '{{invite_code}}',
+            },
+        }
     },
     -- 发送 RAG 聊天信息，当使用 @project/@workspace 时，调用此接口
     -- * `method = POST`
@@ -398,7 +474,12 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeapi/rag/chat',
-        query = '?ft_token={{ft_token}}&{{platform_info}}'
+        query = {
+            ref = { '{{platform_info}}' },
+            dynamic = {
+                ft_token = '{{ft_token}}',
+            },
+        }
     },
     -- 获取知识库信息
     -- * `method = GET`
@@ -408,8 +489,13 @@ Protocol.Methods = {
     -- * `response = @FittenCode.Protocol.Methods.KnowledgeBaseInfo.Response`
     knowledge_base_info = {
         method = 'GET',
+        headers = { ['Content-Type'] = 'application/json' },
         url = '/codeapi/rag/knowledgeBaseInfo',
-        query = '?FT_Token={{ft_token}}'
+        query = {
+            dynamic = {
+                FT_Token = '{{ft_token}}',
+            },
+        }
     },
     -- 获取本地知识库的引用
     -- * `method = POST`
@@ -485,7 +571,12 @@ Protocol.Methods = {
         method = 'GET',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeapi/rag/filesNameList',
-        query = '?FT_Token={{ft_token}}&targetDirId={{target_dir_id}}'
+        query = {
+            dynamic = {
+                FT_Token = '{{ft_token}}',
+                targetDirId = '{{target_dir_id}}',
+            }
+        }
     },
     -- 上传文件
     -- * `method = POST`
@@ -530,7 +621,11 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeapi/rag/update_project',
-        query = '?ft_token={{ft_token}}'
+        query = {
+            dynamic = {
+                ft_token = '{{ft_token}}',
+            },
+        }
     },
     -- 保存文件和目录名
     -- * `method = POST`
@@ -542,7 +637,12 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeapi/rag/save_file_and_directory_names',
-        query = '?ft_token={{ft_token}}&{{platform_info}}'
+        query = {
+            ref = { '{{platform_info}}' },
+            dynamic = {
+                ft_token = '{{ft_token}}',
+            },
+        }
     },
     -- 添加文件和目录
     -- * `method = POST`
@@ -554,7 +654,12 @@ Protocol.Methods = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
         url = '/codeapi/rag/add_files_and_directories',
-        query = '?ft_token={{ft_token}}&{{platform_info}}'
+        query = {
+            ref = { '{{platform_info}}' },
+            dynamic = {
+                ft_token = '{{ft_token}}',
+            },
+        }
     },
 }
 

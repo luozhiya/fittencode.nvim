@@ -44,16 +44,22 @@ function URLSearchParams.decode_form_value(str)
     return pattern
 end
 
--- 构造函数
-function URLSearchParams.new(input)
+---@param query? string 查询字符串，如 key1=value1&key2=value2&key3=value3
+function URLSearchParams.new(query)
     local self = setmetatable({}, URLSearchParams)
     self._params = {}
 
-    if type(input) == 'string' then
-        self:_parse_query(input)
-    elseif type(input) == 'table' then
-        for k, v in pairs(input) do
-            self:append(k, v)
+    if type(query) == 'string' then
+        self:_parse_query(query)
+    elseif type(query) == 'table' then
+        for k, v in pairs(query) do
+            if type(v) == 'table' then
+                for _, val in ipairs(v) do
+                    self:append(k, val)
+                end
+            else
+                self:append(k, v)
+            end
         end
     end
 
@@ -63,7 +69,7 @@ end
 -- 解析查询字符串
 function URLSearchParams:_parse_query(query)
     if type(query) ~= 'string' or #query == 0 then
-        error("Invalid query string provided for parsing")
+        error('Invalid query string provided for parsing')
     end
     for pair in query:gmatch('[^&]+') do
         -- 使用 match 提取键和值
@@ -153,6 +159,18 @@ function URLSearchParams:entries()
         local key = keys[i]
         if key then
             return key, self._params[key]
+        end
+    end
+end
+
+-- 相同 key 的不会覆盖，只会追加到一个 table 中
+function URLSearchParams:merge(other)
+    for k, v in pairs(other._params) do
+        if not self._params[k] then
+            self._params[k] = {}
+        end
+        for _, value in ipairs(v) do
+            table.insert(self._params[k], value)
         end
     end
 end

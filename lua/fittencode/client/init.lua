@@ -59,21 +59,15 @@ local function openlink(url)
     end
 end
 
-local function encode_variables(variables)
+local function preset_variables()
     assert(api_key_manager, 'APIKeyManager not initialized')
     local user_id = api_key_manager:get_fitten_user_id()
-    variables = vim.tbl_extend('force', variables or {}, {
+    local variables = {
         user_id = user_id,
         ft_token = user_id,
         username = api_key_manager:get_username(),
         access_token = api_key_manager:get_fitten_access_token(),
-    })
-    variables = vim.tbl_map(function(v)
-        return URLSearchParams.encode_form_value(v)
-    end, variables)
-    variables = vim.tbl_extend('force', variables, {
-        platform_info = PlatformInfo.get_platform_info_as_url_params(),
-    })
+    }
     return variables
 end
 
@@ -81,7 +75,7 @@ end
 ---@param protocol FittenCode.Protocol.Element
 ---@return FittenCode.HTTP.Response?
 function M.request(protocol, options)
-    local variables = encode_variables(options.variables)
+    local variables = vim.tbl_deep_extend('force', preset_variables(), options.variables or {})
 
     local _, evaluated = pcall(EvaluateRequest.reevaluate_method, protocol, variables)
     if not _ then
