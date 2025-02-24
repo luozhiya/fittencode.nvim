@@ -17,12 +17,11 @@ function APIKeyManager.new(options)
         key = options.key,
         storage = options.storage,
     }
-    setmetatable(self, { __index = APIKeyManager })
     local _, keyring = pcall(vim.fn.json_decode, self.storage:get(self.key))
     if keyring then
         self.keyring = keyring
-        return self
     end
+    return setmetatable(self, { __index = APIKeyManager })
 end
 
 ---@return string?
