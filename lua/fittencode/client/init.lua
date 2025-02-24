@@ -102,7 +102,8 @@ end
 function M.request2(protocol, options)
     local handle = M.request(protocol, options)
     if handle then
-        handle:run()
+        handle.run()
+        handle.promise = nil
     end
     return handle
 end
