@@ -2,6 +2,12 @@
 -- Part 2 - Parser
 -- Part 3 - Compiler
 
+-- local Log = require('fittencode.log')
+
+local Log = {
+    debug = function(...) end
+}
+
 ---@param name string
 ---@param content string
 local function write_file(name, content)
@@ -468,7 +474,7 @@ function y.lex_inline_scheme_component(state)
         end
 
         local function is_identifier_part(ch)
-            return ch:match('%a') or ch:match('%d')
+            return ch:match('%a') or ch:match('%d') or ch == '_'
         end
 
         if is_identifier_start(state.lexchar) then
@@ -1214,7 +1220,12 @@ local fn = {
 ---@return string, string
 local function CompilerRunner(env, source)
     local env_name = '___env_' .. random_name()
-    local code = Compiler:new(env_name, Parser:new(source):parse()):compile();
+    Log.debug('opl env_name {}', env_name)
+    Log.debug('opl source {}', source)
+    local ast = Parser:new(source):parse()
+    Log.debug('opl ast {}', ast)
+    local code = Compiler:new(env_name, ast):compile();
+    Log.debug('opl code {}', code)
     return env_name, code
 end
 
@@ -1256,10 +1267,12 @@ end
 
 local function sample()
     local env = {
+        a_b = '004ed41f-ee4b-e4a1-07f4-5c0dd0a74d5e',
         messages = { { author = 'alice', content = 'hello\n' }, { author = 'bot', content = 'hi\n' } },
         -- messages = { { author = vim.inspect(1), content = vim.inspect(vim) }, { author = 'bot', content = 'hi' } },
     }
-    local env_name, code = CompilerRunner(env, read_file('source.txt'))
+    local env_name, code = CompilerRunner(env, '{{a_b}}')
+    -- local env_name, code = CompilerRunner(env, read_file('source.txt'))
     local stdout, stderr = CodeRunner(env_name, env, nil, code)
     if stderr then
         print(stderr)
@@ -1269,7 +1282,7 @@ local function sample()
     write_file('generated.lua', code)
 end
 
--- sample()
+sample()
 
 return {
     Lexer = Lexer,

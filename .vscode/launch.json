@@ -8,7 +8,7 @@
             "type": "lua",
             "request": "launch",
             "name": "Debug",
-            "program": "${workspaceFolder}/lua/fittencode/functional/path.lua"
+            "program": "${workspaceFolder}/lua/fittencode/open_promot_language/opl.lua"
         }
     ]
 }

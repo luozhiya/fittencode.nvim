@@ -167,7 +167,7 @@ function M.login3rd(source, options)
         login3rd.total_time = login3rd.total_time + login3rd.time_delta
         if login3rd.total_time > login3rd.total_time_limit then
             login3rd.start_check = false
-            Log.info('Login timeout')
+            Log.notify_info('[Fitten Code] Login timeout')
             abort_all_operations()
             return
         end

@@ -1,6 +1,7 @@
 local VM = require('fittencode.open_promot_language.vm')
 local LangPerference = require('fittencode.language.preference')
 local URLSearchParams = require('fittencode.network.url_search_params')
+local Log = require('fittencode.log')
 
 local M = {}
 
@@ -19,31 +20,41 @@ end
 function M.eval(protocol, variables)
     variables = variables or {}
     local env = vim.tbl_deep_extend('force', {}, variables)
+    Log.debug('env {}', env)
+
     local vm = VM:new()
 
     -- headers
     local headers = {}
     for k, v in pairs(protocol.headers or {}) do
-        headers[k] = assert(vm:run(env, v))
+        headers[k] = assert(vm:run(vim.deepcopy(env), v))
     end
+    Log.debug('headers {}', headers)
 
     -- url
-    local method_url = assert(vm:run(env, localize(protocol.url)))
+    local method_url = assert(vm:run(vim.deepcopy(env), localize(protocol.url)))
+    Log.debug('method_url {}', method_url)
 
     -- query
     local query = ''
     if protocol.query then
         local query_params = URLSearchParams.new()
         for k, v in pairs(protocol.query.dynamic or {}) do
-            query_params.append(k, assert(vm:run(env, v)))
+            Log.debug('dynamic query {}', k)
+            Log.debug('dynamic query value {}', v)
+            Log.debug('env {}', env)
+            local v2 = vm:run(vim.deepcopy(env), v)
+            Log.debug('dynamic query value {}', v2)
+            query_params:append(k, v2)
         end
+        Log.debug('query_params {}', query_params)
         query = query_params:to_string()
         local ref = ''
         for _, v in ipairs(protocol.query.ref or {}) do
             if #ref > 0 then
-                ref = ref .. '&' .. assert(vm:run(env, v))
+                ref = ref .. '&' .. assert(vm:run(vim.deepcopy(env), v))
             else
-                ref = assert(vm:run(env, v))
+                ref = assert(vm:run(vim.deepcopy(env), v))
             end
         end
         if #ref > 0 then
@@ -53,6 +64,7 @@ function M.eval(protocol, variables)
             query = '?' .. query
         end
     end
+    Log.debug('query {}', query)
 
     local url = table.concat({ method_url, query }, '')
     return { headers = headers, url = url }

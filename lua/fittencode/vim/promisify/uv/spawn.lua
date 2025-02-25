@@ -77,6 +77,8 @@ local function run(process, command, args, options)
     end
 
     stdout:read_start(function(err, chunk)
+        -- 在 read_start 中发送的错误都认为是不可恢复的错误，Neovim 中有使用 error 处理，但会终止 Neovim 进程
+        -- 这里通过 abort 处理不可恢复错误
         if err then
             process:_emit('error', {
                 type = 'StdoutError',
