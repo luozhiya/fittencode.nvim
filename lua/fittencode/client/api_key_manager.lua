@@ -25,6 +25,7 @@ function APIKeyManager.new(options)
         end
     else
         Log.error(err)
+        Log.error('Failed to load API key from storage.')
     end
     return setmetatable(self, { __index = APIKeyManager })
 end

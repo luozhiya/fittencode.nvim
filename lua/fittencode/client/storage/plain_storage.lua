@@ -83,6 +83,7 @@ function PlainStorage:get(key)
         return false -- 不执行保存操作
     end)
     if not ok then return nil, err end
+    if not result then return nil, 'Storage key<' .. key .. '> not found' end
     return result
 end
 

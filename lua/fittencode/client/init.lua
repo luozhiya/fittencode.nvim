@@ -39,6 +39,8 @@ function M.init()
     })
     if api_key_manager:has_fitten_access_token() then
         Log.info('Load API key from storage successfully')
+    else
+        Log.info('API key not found in storage, try login to get one')
     end
 end
 
