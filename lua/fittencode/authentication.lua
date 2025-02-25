@@ -96,12 +96,35 @@ function M.login(username, password)
             Log.notify_info(Tr.translate('[Fitten Code] Login successful'))
             Client.request(Protocol.Methods.click_count, { variables = { click_count_type = 'login' } })
         else
-            -- {"data":"","status_code":2,"msg":"用户名或密码不正确"}
-            local error_msg = response and response.msg or Tr.translate('Failed to login')
+            ---@type FittenCode.Protocol.Methods.Login.ResponseError
+            local re = _.json()
+            local error_msg = Tr.translate('Failed to login')
+            if re and re.msg and re.msg ~= '' then
+                error_msg = re.msg
+            end
             Log.notify_error(error_msg)
         end
     end):catch(function(err)
-        Log.notify_error((err or {}) and err.message or Tr.translate('Failed to login. Please check your network.'))
+        -- 底层错误
+        Log.error('Failed to login: {}', err)
+        if err then
+            if err.type == 'USER_ABORT' then
+                -- 用户取消操作
+                Log.info('User abort')
+            elseif err.type == 'PROCESS_ERROR' then
+                -- 找不到可执行文件或者程序运行意外错误
+                if err.message.type == 'SpawnError' then
+                    if vim.fn.filereadable(err.message.message) ~= 1 then
+                        Log.notify_error(Tr.translate('Failed to login. Unable to execute curl, please check your installation.'))
+                    end
+                else
+                    Log.notify_error(Tr.translate('Failed to login. Process unexpectedly exited.'))
+                end
+            elseif err.type == 'CURL_ERROR' then
+                -- Curl内部错误
+                Log.notify_error(Tr.translate('Failed to login. Curl internal error.'))
+            end
+        end
     end)
 end
 

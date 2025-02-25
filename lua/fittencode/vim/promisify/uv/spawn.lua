@@ -36,7 +36,7 @@ local function run(process, command, args, options)
     assert(stderr, 'Failed to create stderr pipe')
 
     local handle = {
-        process = nil,
+        uv_process = nil,
         stdin = stdin,
         stdout = stdout,
         stderr = stderr
@@ -46,15 +46,15 @@ local function run(process, command, args, options)
         if process.aborted then return end
         process.aborted = true
         process:_emit('abort')
-        if handle.process then
-            vim.uv.process_kill(handle.process, signal or 'sigterm')
+        if handle.uv_process then
+            vim.uv.process_kill(handle.uv_process, signal or 'sigterm')
         end
         vim.uv.close(stdin)
         vim.uv.close(stdout)
         vim.uv.close(stderr)
     end
 
-    handle.process = vim.uv.spawn(command, {
+    handle.uv_process = vim.uv.spawn(command, {
         args = args,
         stdio = { stdin, stdout, stderr },
         env = options.env,
@@ -63,19 +63,26 @@ local function run(process, command, args, options)
         vim.uv.close(stdin)
         vim.uv.close(stdout)
         vim.uv.close(stderr)
-        if handle.process then
-            handle.process:close()
+        if handle.uv_process then
+            handle.uv_process:close()
         end
         process:_emit('exit', code, signal)
     end)
 
-    if not handle.process then
-        process:_emit('error', string.format('Failed to spawn process: %s', command))
+    if not handle.uv_process then
+        process:_emit('error', {
+            type = 'SpawnError',
+            message = command
+        })
     end
 
     stdout:read_start(function(err, chunk)
         if err then
-            process:_emit('error', err)
+            process:_emit('error', {
+                type = 'StdoutError',
+                message = err
+            })
+            process.abort()
             return
         end
         if chunk then
@@ -85,7 +92,11 @@ local function run(process, command, args, options)
 
     stderr:read_start(function(err, chunk)
         if err then
-            process:_emit('error', err)
+            process:_emit('error', {
+                type = 'StderrError',
+                message = err
+            })
+            process.abort()
             return
         end
         if chunk then
@@ -96,7 +107,11 @@ local function run(process, command, args, options)
     if options.stdin then
         vim.uv.write(stdin, options.stdin, function(err)
             if err then
-                process:_emit('error', err)
+                process:_emit('error', {
+                    type = 'StdinError',
+                    message = err
+                })
+                process.abort()
                 return
             end
             vim.uv.shutdown(stdin)

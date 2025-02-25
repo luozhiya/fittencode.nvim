@@ -1,6 +1,7 @@
 local Promise = require('fittencode.concurrency.promise')
 local Process = require('fittencode.vim.promisify.uv.process')
 local Log = require('fittencode.log')
+local Config = require('fittencode.config')
 
 local M = {}
 
@@ -132,6 +133,8 @@ function M.fetch(url, options)
     local stream = create_stream()
     local handle = { aborted = false }
 
+    local curl_command = Config.http.curl.command or 'curl'
+
     -- 构建 curl 参数
     local args = {
         '-s', '-L', '--compressed',
@@ -254,8 +257,6 @@ function M.fetch(url, options)
 
     -- 错误处理
     process:on('error', function(err)
-        Log.error('curl error: {}', err)
-
         stream:_emit('error', {
             type = 'PROCESS_ERROR',
             message = err
@@ -264,7 +265,9 @@ function M.fetch(url, options)
 
     -- 中止处理
     process:on('abort', function()
-        stream:_emit('abort')
+        stream:_emit('abort', {
+            type = 'USER_ABORT'
+        })
     end)
 
     -- 请求控制方法
@@ -290,16 +293,15 @@ function M.fetch(url, options)
             end)
 
             stream:on('error', function(error)
-                Log.error('stream error: {}', error)
                 reject(error)
             end)
 
-            stream:on('abort', function()
-                reject({ type = 'USER_ABORT' })
+            stream:on('abort', function(error)
+                reject(error)
             end)
 
             vim.schedule(function()
-                process:run('curl', args, {
+                process:run(curl_command, args, {
                     stdin = options.body
                 })
             end)

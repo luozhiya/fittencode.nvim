@@ -67,6 +67,11 @@
 ---@field username string
 ---@field password string
 
+---@class FittenCode.Protocol.Methods.Login.ResponseError
+---@field data string
+---@field status_code number
+---@field msg string
+
 ---@class FittenCode.Protocol.Methods.Login.Response : FittenCode.Protocol.Types.Authorization
 
 ------------------------------------------------

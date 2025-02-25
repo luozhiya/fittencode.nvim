@@ -193,10 +193,9 @@ local defaults = {
         backend = 'curl',
         -- 0 (zero) which means request never times out during transfer
         timeout = 600, -- seconds
-        user_agent = '',
         curl = {
-            -- Default `curl`
-            command = '',
+            -- Set the path to the curl executable.
+            command = 'curl',
         },
         libcurl = {},
     },
