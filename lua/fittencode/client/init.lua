@@ -110,9 +110,10 @@ end
 
 function M.request(protocol, options)
     local req = M.make_request(protocol, options)
-    if req then
-        return req, req.run()
+    if req and req.run then
+        req.run()
     end
+    return req
 end
 
 return M

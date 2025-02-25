@@ -60,9 +60,15 @@ local function run(process, command, args, options)
         env = options.env,
         cwd = options.cwd,
     }, function(code, signal)
-        vim.uv.close(stdin)
-        vim.uv.close(stdout)
-        vim.uv.close(stderr)
+        if not vim.uv.is_closing(stdin) then
+            vim.uv.close(stdin)
+        end
+        if not vim.uv.is_closing(stdout) then
+            vim.uv.close(stdout)
+        end
+        if not vim.uv.is_closing(stderr) then
+            vim.uv.close(stderr)
+        end
         if handle.uv_process then
             handle.uv_process:close()
         end
