@@ -37,7 +37,7 @@ function M.init()
         key = 'FittenCode',
         storage = storage,
     })
-    if api_key_manager and api_key_manager:has_fitten_access_token() then
+    if api_key_manager:has_fitten_access_token() then
         Log.info('Load API key from storage successfully')
     end
 end
@@ -79,7 +79,7 @@ end
 function M.request(protocol, options)
     local variables = vim.tbl_deep_extend('force', preset_variables(), options.variables or {})
 
-    local _, evaluated = pcall(EvaluateRequest.reevaluate_method, protocol, variables)
+    local _, evaluated = pcall(EvaluateRequest.eval, protocol, variables)
     if not _ then
         Log.error('Failed to evaluate method: {}, variables: {}', protocol.method, variables)
         return

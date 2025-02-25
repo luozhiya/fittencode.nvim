@@ -119,6 +119,11 @@ local function parse_stderr(stderr_buffer)
     return timing, stderr_data
 end
 
+-- 返回一个可控制的句柄，有两种启动方式 (run / promise)
+-- * stream:   一个可订阅的事件流对象，用于监听请求过程中的各个事件
+-- * abort():  用于中止请求
+-- * run():    用于启动请求
+-- * promise(): 返回一个 Promise 对象，用于异步获取请求结果
 ---@param url string
 ---@param options? FittenCode.HTTP.Request
 ---@return FittenCode.HTTP.Response
@@ -161,8 +166,7 @@ function M.fetch(url, options)
     local headers_processed = false
 
     -- 使用新进程模块
-    local process = Process.create()
-    Log.debug('process: {}', process)
+    local process = Process.new()
 
     -- 标准输出处理
     process:on('stdout', function(chunk)
@@ -233,7 +237,6 @@ function M.fetch(url, options)
                     if _ then return json end
                 end
             }
-            Log.debug('curl response: {}', response)
             stream:_emit('end', response)
         else
             ---@class FittenCode.HTTP.Request.Stream.ErrorEvent
@@ -272,14 +275,18 @@ function M.fetch(url, options)
         end
     end
 
-    return {
-        stream = stream,
-        abort = handle.abort,
-        run = function()
+    local function run()
+        vim.schedule(function()
             process:run('curl', args, {
                 stdin = options.body
             })
-        end,
+        end)
+    end
+
+    return {
+        stream = stream,
+        abort = handle.abort,
+        run = run,
         promise = function()
             return Promise.new(function(resolve, reject)
                 stream:on('end', function(response)
@@ -303,9 +310,7 @@ function M.fetch(url, options)
                     reject({ type = 'USER_ABORT' })
                 end)
 
-                process:run('curl', args, {
-                    stdin = options.body
-                })
+                run()
             end)
         end
     }

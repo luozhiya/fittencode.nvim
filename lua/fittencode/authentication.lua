@@ -1,7 +1,7 @@
 local Protocol = require('fittencode.client.protocol')
 local Promise = require('fittencode.concurrency.promise')
 local Log = require('fittencode.log')
-local Translate = require('fittencode.translations')
+local Tr = require('fittencode.translations')
 local Fn = require('fittencode.functional.fn')
 local Client = require('fittencode.client')
 local Keyring = require('fittencode.client.keyring')
@@ -60,19 +60,23 @@ function M.try_web()
     Client.request2(Protocol.URLs.try)
 end
 
----@param username string
----@param password string
-function M.login(username, password, options)
-    options = options or {}
+---@param username? string
+---@param password? string
+function M.login(username, password)
     abort_all_operations() -- 终止其他操作
-
-    if not username or not password then
-        return
-    end
 
     local api_key_manager = Client.get_api_key_manager()
     if api_key_manager:get_fitten_user_id() then
-        Log.notify_info(Translate.translate('[Fitten Code] You are already logged in'))
+        Log.notify_info(Tr.translate('[Fitten Code] You are already logged in'))
+        return
+    end
+
+    if not username or not password then
+        username = vim.fn.input(Tr.translate('Username/Email/Phone(+CountryCode): '))
+        password = vim.fn.inputsecret(Tr.translate('Password: '))
+    end
+
+    if not username or not password then
         return
     end
 
@@ -89,15 +93,15 @@ function M.login(username, password, options)
         local response = _.json()
         if response and response.access_token and response.refresh_token and response.user_info then
             api_key_manager:update(Keyring.make(response))
-            Log.notify_info(Translate.translate('[Fitten Code] Login successful'))
+            Log.notify_info(Tr.translate('[Fitten Code] Login successful'))
             Client.request2(Protocol.Methods.click_count, { variables = { click_count_type = 'login' } })
         else
             -- {"data":"","status_code":2,"msg":"用户名或密码不正确"}
-            local error_msg = response and response.msg or Translate.translate('Failed to login')
+            local error_msg = response and response.msg or Tr.translate('Failed to login')
             Log.notify_error(error_msg)
         end
     end):catch(function(err)
-        Log.notify_error((err or {}) and err.message or Translate.translate('Failed to login. Please check your network.'))
+        Log.notify_error((err or {}) and err.message or Tr.translate('Failed to login. Please check your network.'))
     end)
 end
 
@@ -108,12 +112,12 @@ function M.login3rd(source, options)
 
     local api_key_manager = Client.get_api_key_manager()
     if api_key_manager:get_fitten_user_id() then
-        Log.notify_info(Translate.translate('[Fitten Code] You are already logged in'))
+        Log.notify_info(Tr.translate('[Fitten Code] You are already logged in'))
         return
     end
 
     if not source or not vim.tbl_contains(M.login3rd_providers, source) then
-        Log.notify_error(Translate.translate('[Fitten Code] Invalid 3rd-party login source'))
+        Log.notify_error(Tr.translate('[Fitten Code] Invalid 3rd-party login source'))
         return
     end
 
@@ -157,7 +161,7 @@ function M.login3rd(source, options)
             if response and response.access_token and response.refresh_token and response.user_info then
                 abort_all_operations() -- 成功时清理资源
                 api_key_manager:update(Keyring.make(response))
-                Log.notify_info(Translate.translate('[Fitten Code] Login successful'))
+                Log.notify_info(Tr.translate('[Fitten Code] Login successful'))
 
                 -- 发送统计信息
                 Client.request2(Protocol.Methods.click_count, {
@@ -179,12 +183,12 @@ function M.logout()
 
     local api_key_manager = Client.get_api_key_manager()
     if not api_key_manager:get_fitten_user_id() then
-        Log.notify_info(Translate.translate('[Fitten Code] You are already logged out'))
+        Log.notify_info(Tr.translate('[Fitten Code] You are already logged out'))
         return
     end
 
     api_key_manager:clear()
-    Log.notify_info(Translate.translate('[Fitten Code] Logout successful'))
+    Log.notify_info(Tr.translate('[Fitten Code] Logout successful'))
 end
 
 return M

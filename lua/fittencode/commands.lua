@@ -5,13 +5,7 @@ local Auth = require('fittencode.authentication')
 local commands = {
     -- Account
     register = Auth.register,
-    login = {
-        execute = function()
-            local username = vim.fn.input(Tr.translate('Username/Email/Phone(+CountryCode): '))
-            local password = vim.fn.inputsecret(Tr.translate('Password: '))
-            Auth.login(username, password)
-        end
-    },
+    login = Auth.login,
     login3rd = {
         execute = function(source) Auth.login3rd(source) end,
         complete = Auth.login3rd_providers

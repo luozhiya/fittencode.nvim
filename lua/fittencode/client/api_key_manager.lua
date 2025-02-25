@@ -10,7 +10,7 @@ local Keyring = require('fittencode.client.keyring')
 ---@class FittenCode.APIKeyManager
 local APIKeyManager = {}
 
----@return FittenCode.APIKeyManager?
+---@return FittenCode.APIKeyManager
 function APIKeyManager.new(options)
     ---@class FittenCode.APIKeyManager
     local self = {

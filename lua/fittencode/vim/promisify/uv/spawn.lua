@@ -109,7 +109,7 @@ local function run(process, command, args, options)
 end
 
 ---@return FittenCode.UV.Process
-local function create_process()
+local function new()
     return {
         _callbacks = { stdout = {}, stderr = {}, exit = {}, error = {}, abort = {} },
         aborted = false,
@@ -133,6 +133,7 @@ local function create_process()
     }
 end
 
-M.create = create_process
+-- new 完之后，用 run 方法启动进程
+M.new = new
 
 return M

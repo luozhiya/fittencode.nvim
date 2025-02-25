@@ -14,15 +14,9 @@ local function localize(method)
     return method[locale] or method['en']
 end
 
--- 目前仅 headers 和 url 字段支持动态模板
----@class FittenCode.Client.EvaluateMethodResult
----@field headers? table<string, string>
----@field url string
-
 ---@param protocol FittenCode.Protocol.Element
 ---@param variables table<string, any>?
----@return FittenCode.Client.EvaluateMethodResult
-function M.reevaluate_method(protocol, variables)
+function M.eval(protocol, variables)
     variables = variables or {}
     local env = vim.tbl_deep_extend('force', {}, variables)
     local vm = VM:new()
@@ -43,11 +37,19 @@ function M.reevaluate_method(protocol, variables)
         for k, v in pairs(protocol.query.dynamic or {}) do
             query_params.append(k, assert(vm:run(env, v)))
         end
+        query = query_params:to_string()
+        local ref = ''
         for _, v in ipairs(protocol.query.ref or {}) do
-            query = query .. assert(vm:run(env, v))
+            if #ref > 0 then
+                ref = ref .. '&' .. assert(vm:run(env, v))
+            else
+                ref = assert(vm:run(env, v))
+            end
         end
-        query = query .. query_params:to_string()
-        if query[1] ~= '?' then
+        if #ref > 0 then
+            query = query .. '&' .. ref
+        end
+        if #query > 0 and query[1] ~= '?' then
             query = '?' .. query
         end
     end
