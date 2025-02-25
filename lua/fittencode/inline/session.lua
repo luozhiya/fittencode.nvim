@@ -279,7 +279,7 @@ end
 -- 获取补全版本号
 ---@return FittenCode.Concurrency.Promise
 function Session:get_completion_version()
-    local request_handle = Client.request(Protocol.Methods.get_completion_version)
+    local request_handle = Client.make_request(Protocol.Methods.get_completion_version)
     if not request_handle then
         return Promise.reject()
     end
@@ -324,7 +324,7 @@ function Session:generate_one_stage_auth(completion_version, body)
         ['2'] = '2_2',
         ['3'] = '2_3',
     }
-    local request_handle = Client.request(Protocol.Methods.generate_one_stage_auth, {
+    local request_handle = Client.make_request(Protocol.Methods.generate_one_stage_auth, {
         variables = {
             completion_version = vu[completion_version],
         },

@@ -62,7 +62,7 @@ function Service:get_chosen()
         return Promise.resolve(self.last_chosen_prompt_type)
     end
     -- 3. 发送请求
-    local handle = Client.request(Protocal.Methods.pc_check_auth)
+    local handle = Client.make_request(Protocal.Methods.pc_check_auth)
     if not handle then
         return Promise.reject()
     end

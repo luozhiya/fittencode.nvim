@@ -197,7 +197,7 @@ function Conversation:execute_chat(options)
             }
         }
 
-        local res = Client.request(protocol, {
+        local res = Client.make_request(protocol, {
             body = assert(vim.fn.json_encode(body)),
         })
         if not res then

@@ -17,7 +17,7 @@ end
 
 function Headless:send_completions(buf, position, options)
     local prompt = Generator:new():generate(buf, position, { filename = options.filename })
-    local request_handle = Client.request(Protocol.Methods.generate_one_stage_auth, {
+    local request_handle = Client.make_request(Protocol.Methods.generate_one_stage_auth, {
         body = vim.fn.json_encode(prompt),
     })
     if not request_handle then

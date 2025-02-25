@@ -76,7 +76,7 @@ end
 -- 请求协议接口
 ---@param protocol FittenCode.Protocol.Element
 ---@return FittenCode.HTTP.Response?
-function M.request(protocol, options)
+function M.make_request(protocol, options)
     local variables = vim.tbl_deep_extend('force', preset_variables(), options.variables or {})
 
     local _, evaluated = pcall(EvaluateRequest.eval, protocol, variables)
@@ -102,13 +102,13 @@ function M.request(protocol, options)
     })
 end
 
-function M.request2(protocol, options)
-    local handle = M.request(protocol, options)
-    if handle then
-        handle.run()
-        handle.promise = nil
+function M.request(protocol, options)
+    local req = M.make_request(protocol, options)
+    if req then
+        req.run()
+        req.promise = nil
     end
-    return handle
+    return req
 end
 
 return M
