@@ -3,7 +3,6 @@
 -- Part 3 - Compiler
 
 -- local Log = require('fittencode.log')
-
 local Log = {
     debug = function(...) end
 }

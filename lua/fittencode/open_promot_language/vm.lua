@@ -18,13 +18,8 @@ end
 ---@return string?
 function VM:run(env, template)
     local function sample()
-        Log.debug('Running template: {}', template)
-        Log.debug('Environment: {}', env)
         local env_name, code = OPL.CompilerRunner(env, template)
-        Log.debug('Generated environment name: {}', env_name)
-        Log.debug('Compiled code: {}', code)
         local stdout, stderr = OPL.CodeRunner(env_name, env, nil, code)
-        Log.debug('Output: {}', stdout)
         if stderr then
             Log.error('Error evaluating template: {}', stderr)
         else
