@@ -222,7 +222,7 @@ function Conversation:execute_chat(options)
         end)
 
         -- 通过 Promise 统一处理请求结果与错误，简洁明了
-        res.promise():forward(function()
+        res.run():forward(function()
             self:handle_completion(completion)
         end, function(err)
             self:recovered_from_error(err)

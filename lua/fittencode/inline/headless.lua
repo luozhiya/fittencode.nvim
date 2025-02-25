@@ -24,7 +24,7 @@ function Headless:send_completions(buf, position, options)
         return nil, Promise.reject()
     end
 
-    return request_handle, request_handle.promise():forward(function(_)
+    return request_handle, request_handle.run():forward(function(_)
         local response = _:json()
         if not response then
             Log.error('Failed to decode completion response: {}', _)

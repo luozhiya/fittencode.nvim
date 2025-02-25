@@ -88,7 +88,7 @@ function M.login(username, password)
     })
     if not request_handle then return end
 
-    request_handle.promise():forward(function(_)
+    request_handle.run():forward(function(_)
         ---@type FittenCode.Protocol.Methods.Login.Response
         local response = _.json()
         if response and response.access_token and response.refresh_token and response.user_info then
@@ -155,7 +155,7 @@ function M.login3rd(source, options)
         })
         if not request_handle then return end
 
-        request_handle.promise():forward(function(res)
+        request_handle.run():forward(function(res)
             ---@type FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
             local response = res.json()
             if response and response.access_token and response.refresh_token and response.user_info then

@@ -15,7 +15,7 @@ local function fetch_with_retry(url, opts, attempt)
     attempt = attempt or 1
     local handle = M.fetch(url, opts)
 
-    handle.promise():catch(function(err, res)
+    handle.run():catch(function(err, res)
         if attempt < opts.retry.attempts and should_retry(err, res) then
             uv.sleep(opts.retry.delay)
             return fetch_with_retry(url, opts, attempt + 1)

@@ -276,43 +276,40 @@ function M.fetch(url, options)
     end
 
     local function run()
-        vim.schedule(function()
-            process:run('curl', args, {
-                stdin = options.body
-            })
+        return Promise.new(function(resolve, reject)
+            stream:on('end', function(response)
+                if response.ok then
+                    resolve(response)
+                else
+                    reject({
+                        type = 'HTTP_ERROR',
+                        status = response.status,
+                        response = response
+                    })
+                end
+            end)
+
+            stream:on('error', function(error)
+                Log.error('stream error: {}', error)
+                reject(error)
+            end)
+
+            stream:on('abort', function()
+                reject({ type = 'USER_ABORT' })
+            end)
+
+            vim.schedule(function()
+                process:run('curl', args, {
+                    stdin = options.body
+                })
+            end)
         end)
     end
 
     return {
         stream = stream,
         abort = handle.abort,
-        run = run,
-        promise = function()
-            return Promise.new(function(resolve, reject)
-                stream:on('end', function(response)
-                    if response.ok then
-                        resolve(response)
-                    else
-                        reject({
-                            type = 'HTTP_ERROR',
-                            status = response.status,
-                            response = response
-                        })
-                    end
-                end)
-
-                stream:on('error', function(error)
-                    Log.error('stream error: {}', error)
-                    reject(error)
-                end)
-
-                stream:on('abort', function()
-                    reject({ type = 'USER_ABORT' })
-                end)
-
-                run()
-            end)
-        end
+        run = run
     }
 end
 

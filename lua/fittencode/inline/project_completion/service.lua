@@ -67,7 +67,7 @@ function Service:get_chosen()
         return Promise.reject()
     end
     self:__push_request_handle(handle)
-    return handle.promise():forward(function(_)
+    return handle.run():forward(function(_)
         local response = _.text()
         -- 只要是前缀为 `yes-` 的字符串，就认为是合法的
         if Fn.startswith(response, 'yes-') then
