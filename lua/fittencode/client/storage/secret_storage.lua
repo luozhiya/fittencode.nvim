@@ -174,9 +174,8 @@ function SecretStorage:get(key)
         result = secrets[key]
         return false -- 不执行保存操作
     end)
-    if ok then
-        return result
-    end
+    if not ok then return nil, err end
+    return result
 end
 
 function SecretStorage:purge_storage()
