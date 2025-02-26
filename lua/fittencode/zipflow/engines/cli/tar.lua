@@ -1,4 +1,4 @@
-local Process = require('fittencode.vim.promisify.uv.process')
+local Process = require('fittencode.vim.promisify.uv.spawn_new')
 local Promise = require('fittencode.concurrency.promise')
 
 local M = {
@@ -45,7 +45,7 @@ function M.compress(input_dir, opts)
             '.'
         }
 
-        local p = Process.spawn('tar', args)
+        local p = Process.new('tar', args)
 
         p:on('exit', function(code)
             if code == 0 then
@@ -64,6 +64,8 @@ function M.compress(input_dir, opts)
                 })
             end
         end)
+
+        p:async()
     end)
 end
 

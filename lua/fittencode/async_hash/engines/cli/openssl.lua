@@ -1,4 +1,4 @@
-local Process = require('fittencode.vim.promisify.uv.process')
+local Process = require('fittencode.vim.promisify.uv.spawn_new')
 local Promise = require('fittencode.concurrency.promise')
 
 local algorithms = {
@@ -39,7 +39,7 @@ function M.hash(algorithm, data, options)
         data = nil
     end
 
-    local process = Process.spawn('openssl', args, { stdin = data })
+    local process = Process.new('openssl', args, { stdin = data })
 
     return Promise.new(function(resolve, reject)
         local stdout = ''
@@ -58,6 +58,7 @@ function M.hash(algorithm, data, options)
             end
         end)
         process:on('error', reject)
+        process:async()
     end)
 end
 

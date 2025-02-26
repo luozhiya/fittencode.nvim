@@ -207,12 +207,10 @@ local function new(command, args, options)
         end,
         -- async 方法用于异步启动进程
         async = function(self)
-            return run(self, self.command, self.args, self.options)
+            vim.schedule(function()
+                run(self, self.command, self.args, self.options)
+            end)
         end,
-        -- sync 方法用于同步启动进程，暂时不支持
-        sync = function(self)
-            -- 需要考虑如何返回结果的问题？
-        end
     }
 end
 

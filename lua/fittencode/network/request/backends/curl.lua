@@ -1,5 +1,5 @@
 local Promise = require('fittencode.concurrency.promise')
-local Process = require('fittencode.vim.promisify.uv.process')
+local Process = require('fittencode.vim.promisify.uv.spawn_new')
 local Log = require('fittencode.log')
 local Config = require('fittencode.config')
 
@@ -309,9 +309,7 @@ function M.fetch(url, options)
                 reject(error)
             end)
 
-            vim.schedule(function()
-                process:async()
-            end)
+            process:async()
         end)
     end
 

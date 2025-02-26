@@ -1,4 +1,4 @@
-local Process = require('fittencode.vim.promisify.uv.process')
+local Process = require('fittencode.vim.promisify.uv.spawn_new')
 local Promise = require('fittencode.concurrency.promise')
 
 local M = {
@@ -31,7 +31,7 @@ local function handle_data_input(input, opts)
             table.insert(args, '-' .. opts.level)
         end
 
-        local p = Process.spawn('gzip', args, {
+        local p = Process.new('gzip', args, {
             stdin = input,
         })
 
@@ -65,6 +65,8 @@ local function handle_data_input(input, opts)
                 })
             end
         end)
+
+        p:async()
     end)
 end
 

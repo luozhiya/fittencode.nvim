@@ -1,4 +1,4 @@
-local Process = require('fittencode.vim.promisify.uv.process')
+local Process = require('fittencode.vim.promisify.uv.spawn_new')
 local Promise = require('fittencode.concurrency.promise')
 
 local M = {
@@ -31,7 +31,7 @@ function M.hash(_, data, options)
         stdin_data = data
     end
 
-    local process = Process.spawn('md5sum', args, { stdin = stdin_data })
+    local process = Process.new('md5sum', args, { stdin = stdin_data })
 
     return Promise.new(function(resolve, reject)
         local stdout = ''
@@ -46,6 +46,7 @@ function M.hash(_, data, options)
             end
         end)
         process:on('error', reject)
+        process:async()
     end)
 end
 
