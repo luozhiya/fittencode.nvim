@@ -120,7 +120,7 @@ local function parse_stderr(stderr_buffer)
     return timing, stderr_data
 end
 
--- 返回一个可控制的句柄，有两种启动方式 (run / promise)
+-- 返回一个可控制的句柄
 -- * stream:   一个可订阅的事件流对象，用于监听请求过程中的各个事件
 -- * abort():  用于中止请求
 -- * run():    用于启动请求
@@ -287,7 +287,7 @@ function M.fetch(url, options)
         end
     end
 
-    local function run()
+    local function async()
         return Promise.new(function(resolve, reject)
             stream:on('end', function(response)
                 if response.ok then
@@ -317,8 +317,8 @@ function M.fetch(url, options)
 
     return {
         stream = stream,
-        abort = handle.abort,
-        run = run
+        abort = function(self) handle.abort() end,
+        async = function(self) return async() end,
     }
 end
 

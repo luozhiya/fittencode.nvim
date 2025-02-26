@@ -51,14 +51,16 @@ function M.get_api_key_manager()
 end
 
 local function openlink(url)
-    local obj = vim.ui.open(url)
-    if obj then
-        return {
-            abort = function()
-                obj:kill('sigterm')
-            end
-        }
-    end
+    return {
+        url = url,
+        -- 无法返回 Promise
+        async = function(self)
+            self.obj = vim.ui.open(self.url)
+        end,
+        abort = function(self)
+            self.obj:kill('sigterm')
+        end
+    }
 end
 
 local function preset_variables()
@@ -110,8 +112,9 @@ end
 
 function M.request(protocol, options)
     local req = M.make_request(protocol, options)
-    if req and req.run then
-        req.run()
+    if req then
+        assert(req.async, 'Request object must have async method')
+        req.async()
     end
     return req
 end
