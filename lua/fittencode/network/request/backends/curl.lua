@@ -145,6 +145,13 @@ function M.fetch(url, options)
         '-X', options.method or 'GET',
     }
 
+    -- curl 自带超时处理
+    if options.timeout and options.timeout > 0 then
+        -- connect-timeout
+        table.insert(args, '--max-time')
+        table.insert(args, tostring(options.timeout / 1000))
+    end
+
     -- 请求头处理
     if options.headers then
         for k, v in pairs(options.headers) do
@@ -169,7 +176,9 @@ function M.fetch(url, options)
     local headers_processed = false
 
     -- 使用新进程模块
-    local process = Process.new()
+    local process = Process.new(curl_command, args, {
+        stdin = options.body
+    })
 
     -- 标准输出处理
     process:on('stdout', function(chunk)
@@ -301,9 +310,7 @@ function M.fetch(url, options)
             end)
 
             vim.schedule(function()
-                process:run(curl_command, args, {
-                    stdin = options.body
-                })
+                process:async()
             end)
         end)
     end

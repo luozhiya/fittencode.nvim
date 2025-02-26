@@ -2,9 +2,10 @@
 ---@field _callbacks table<string, function[]>
 ---@field aborted boolean
 ---@field on function
+---@field off function
 ---@field _emit function
 ---@field abort function
----@field run function
+---@field async function
 
 ---@class FittenCode.UV.FS
 ---@field close function

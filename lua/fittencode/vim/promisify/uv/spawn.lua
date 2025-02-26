@@ -2,7 +2,7 @@
 -- 其他模块使用 spawn 示例
 local process = require('spawn')
 
-local p = process.spawn('ls', {'-l'}, {
+local p = process.new('ls', {'-l'}, {
     stdin = nil
 })
 
@@ -13,6 +13,8 @@ end)
 p:on('exit', function(code)
     print('Exit with code:', code)
 end)
+
+p:run()
 --]]
 
 local Log = require('fittencode.log')
@@ -102,7 +104,7 @@ local function run(process, command, args, options)
 
     stdout:read_start(function(err, chunk)
         -- 在 read_start 中发送的错误都认为是不可恢复的错误，Neovim 中有使用 error 处理，但会终止 Neovim 进程
-        -- 这里通过 abort 处理不可恢复错误
+        -- 这里通过 abort 处理不可恢复错误，单独的一个外部进程错误不应该影响 Neovim 进程
         if err then
             process:_emit('error', {
                 type = 'StdoutError',
@@ -168,14 +170,30 @@ local function run(process, command, args, options)
 end
 
 ---@return FittenCode.UV.Process
-local function new()
+local function new(command, args, options)
     return {
         _callbacks = { stdout = {}, stderr = {}, exit = {}, error = {}, abort = {} },
-        state = {},
+        state = {
+            command = command,
+            args = args,
+            options = options,
+        },
         aborted = false,
+        -- on 方法用于监听事件
         on = function(self, event, cb)
             if self._callbacks[event] then
                 table.insert(self._callbacks[event], cb)
+            end
+            return self
+        end,
+        -- off 方法用于取消事件监听
+        off = function(self, event, cb)
+            if self._callbacks[event] then
+                for i = #self._callbacks[event], 1, -1 do
+                    if self._callbacks[event][i] == cb then
+                        table.remove(self._callbacks[event], i)
+                    end
+                end
             end
             return self
         end,
@@ -187,9 +205,14 @@ local function new()
                 end
             end
         end,
-        run = function(self, command, args, options)
-            return run(self, command, args, options)
+        -- async 方法用于异步启动进程
+        async = function(self)
+            return run(self, self.command, self.args, self.options)
         end,
+        -- sync 方法用于同步启动进程，暂时不支持
+        sync = function(self)
+            -- 需要考虑如何返回结果的问题？
+        end
     }
 end
 
