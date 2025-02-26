@@ -182,7 +182,6 @@ function M.login3rd(source, options)
             ---@type FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
             local response = res.json()
             if response and response.access_token and response.refresh_token and response.user_info then
-                abort_all_operations() -- 成功时清理资源
                 api_key_manager:update(Keyring.make(response))
                 Log.notify_info(Tr.translate('[Fitten Code] Login successful'))
 

@@ -24,7 +24,7 @@ local M = {}
 -- * 支持流输出，适用于 Chat 类型的应用场景
 ---@param command string
 ---@param args string[]
----@param options? { stdin?: string, env?: table, cwd?: string }
+---@param options? { stdin?: string, env?: table, cwd?: string, timeout?: number }
 local function run(process, command, args, options)
     options = options or {}
 
@@ -35,26 +35,44 @@ local function run(process, command, args, options)
     local stderr = vim.uv.new_pipe(false)
     assert(stderr, 'Failed to create stderr pipe')
 
-    local handle = {
+    local state = {
         uv_process = nil,
         stdin = stdin,
         stdout = stdout,
-        stderr = stderr
+        stderr = stderr,
+        command = command,
+        args = args,
+        timeout = options.timeout,
     }
 
-    function process.abort(signal)
-        if process.aborted then return end
-        process.aborted = true
-        process:_emit('abort')
-        if handle.uv_process then
-            vim.uv.process_kill(handle.uv_process, signal or 'sigterm')
+    local function kill(signal)
+        if not vim.uv.is_active(state.uv_process) then
+            return
         end
-        vim.uv.close(stdin)
-        vim.uv.close(stdout)
-        vim.uv.close(stderr)
+        if state.uv_process then
+            vim.uv.process_kill(state.uv_process, signal or 'sigterm')
+        end
+        if not vim.uv.is_closing(stdin) then
+            vim.uv.close(stdin)
+        end
+        if not vim.uv.is_closing(stdout) then
+            vim.uv.close(stdout)
+        end
+        if not vim.uv.is_closing(stderr) then
+            vim.uv.close(stderr)
+        end
     end
 
-    handle.uv_process = vim.uv.spawn(command, {
+    function process.abort(signal)
+        if process.aborted or not vim.uv.is_active(state.uv_process) then
+            return
+        end
+        process.aborted = true
+        process:_emit('abort')
+        kill(signal or 'sigterm')
+    end
+
+    state.uv_process, state.pid = vim.uv.spawn(command, {
         args = args,
         stdio = { stdin, stdout, stderr },
         env = options.env,
@@ -69,13 +87,13 @@ local function run(process, command, args, options)
         if not vim.uv.is_closing(stderr) then
             vim.uv.close(stderr)
         end
-        if handle.uv_process then
-            handle.uv_process:close()
+        if state.uv_process then
+            state.uv_process:close()
         end
         process:_emit('exit', code, signal)
     end)
 
-    if not handle.uv_process then
+    if not state.uv_process then
         process:_emit('error', {
             type = 'SpawnError',
             message = command
@@ -90,7 +108,7 @@ local function run(process, command, args, options)
                 type = 'StdoutError',
                 message = err
             })
-            process.abort()
+            kill()
             return
         end
         if chunk then
@@ -104,7 +122,7 @@ local function run(process, command, args, options)
                 type = 'StderrError',
                 message = err
             })
-            process.abort()
+            kill()
             return
         end
         if chunk then
@@ -119,7 +137,7 @@ local function run(process, command, args, options)
                     type = 'StdinError',
                     message = err
                 })
-                process.abort()
+                kill()
                 return
             end
             vim.uv.shutdown(stdin)
@@ -128,6 +146,24 @@ local function run(process, command, args, options)
         vim.uv.close(stdin)
     end
 
+    if options.timeout and options.timeout > 0 then
+        process.timer = vim.loop.new_timer()
+        process.timer:start(options.timeout, 0, function()
+            if vim.uv.is_active(state.uv_process) then
+                process:_emit('error', {
+                    type = 'TimeoutError',
+                    message = 'Process timeout'
+                })
+                process.timer:stop()
+                process.timer:close()
+                process.timer = nil
+                kill()
+            end
+        end)
+    end
+
+    process.state = state
+
     return process
 end
 
@@ -135,6 +171,7 @@ end
 local function new()
     return {
         _callbacks = { stdout = {}, stderr = {}, exit = {}, error = {}, abort = {} },
+        state = {},
         aborted = false,
         on = function(self, event, cb)
             if self._callbacks[event] then
