@@ -287,7 +287,7 @@ function Session:get_completion_version()
     self:record_timing('get_completion_version.request')
     self:request_handles_push(request_handle)
 
-    return request_handle.run():forward(function(_)
+    return request_handle:async():forward(function(_)
         self:record_timing('get_completion_version.response')
         ---@type FittenCode.Protocol.Methods.GetCompletionVersion.Response
         local response = _.json()
@@ -337,7 +337,7 @@ function Session:generate_one_stage_auth(completion_version, body)
     self:record_timing('generate_one_stage_auth.request')
     self:request_handles_push(request_handle)
 
-    return request_handle.run():forward(function(_)
+    return request_handle:async():forward(function(_)
         self:record_timing('generate_one_stage_auth.response')
         local response = _.json()
         if not response then

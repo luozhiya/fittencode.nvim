@@ -14,6 +14,7 @@ local login3rd = {
     check_timer = nil,
     start_check = false,
     total_time = 0,
+    try_count = 0,         -- 尝试次数
     time_delta = 3,        -- 检查间隔（秒）
     total_time_limit = 600 -- 总超时时间（秒）
 }
@@ -42,6 +43,7 @@ local function abort_all_operations()
     -- 重置第三方登录状态
     login3rd.start_check = false
     login3rd.total_time = 0
+    login3rd.try_count = 0
 end
 
 function M.register()
@@ -88,7 +90,7 @@ function M.login(username, password)
     })
     if not request_handle then return end
 
-    request_handle.run():forward(function(_)
+    request_handle:async():forward(function(_)
         ---@type FittenCode.Protocol.Methods.Login.Response
         local response = _.json()
         if response and response.access_token and response.refresh_token and response.user_info then
@@ -115,7 +117,9 @@ function M.login(username, password)
                 -- 找不到可执行文件或者程序运行意外错误
                 if err.message.type == 'SpawnError' then
                     if vim.fn.filereadable(err.message.message) ~= 1 then
-                        Log.notify_error(Tr.translate('Failed to login. Unable to execute curl, please check your installation.'))
+                        Log.notify_error(Tr.translate('Failed to login. curl not found, please check your installation.'))
+                    else
+                        Log.notify_error(Tr.translate('Failed to login. Failed to execute curl.'))
                     end
                 else
                     Log.notify_error(Tr.translate('Failed to login. Process unexpectedly exited.'))
@@ -164,6 +168,8 @@ function M.login3rd(source, options)
     local function check_login()
         if not login3rd.start_check then return end
 
+        login3rd.try_count = login3rd.try_count + 1
+
         login3rd.total_time = login3rd.total_time + login3rd.time_delta
         if login3rd.total_time > login3rd.total_time_limit then
             login3rd.start_check = false
@@ -178,11 +184,12 @@ function M.login3rd(source, options)
         })
         if not request_handle then return end
 
-        request_handle.run():forward(function(res)
+        request_handle:async():forward(function(res)
             ---@type FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
             local response = res.json()
             if response and response.access_token and response.refresh_token and response.user_info then
                 api_key_manager:update(Keyring.make(response))
+                Log.info('Login with 3rd-party provider: {}, try count: {}', source, login3rd.try_count)
                 Log.notify_info(Tr.translate('[Fitten Code] Login successful'))
 
                 -- 发送统计信息
@@ -191,6 +198,27 @@ function M.login3rd(source, options)
                 })
                 if response.create then
                     Client.request(Protocol.URLs.register_cvt)
+                end
+            end
+        end):catch(function(err)
+            -- 底层错误
+            Log.error('Failed to login with 3rd-party provider: {}, try count: {}, error: {}', source, login3rd.try_count, err)
+            if err then
+                if err.type == 'PROCESS_ERROR' then
+                    -- 找不到可执行文件或者程序运行意外错误
+                    if err.message.type == 'SpawnError' then
+                        if vim.fn.filereadable(err.message.message) ~= 1 then
+                            Log.notify_error(Tr.translate('Failed to login. curl not found, please check your installation.'))
+                            abort_all_operations()
+                        else
+                            Log.error(Tr.translate('Failed to login. Failed to execute curl.'))
+                        end
+                    else
+                        Log.error(Tr.translate('Failed to login. Process unexpectedly exited.'))
+                    end
+                elseif err.type == 'CURL_ERROR' then
+                    -- Curl内部错误
+                    Log.error(Tr.translate('Failed to login. Curl internal error.'))
                 end
             end
         end)

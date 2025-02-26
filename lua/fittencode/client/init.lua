@@ -114,7 +114,7 @@ function M.request(protocol, options)
     local req = M.make_request(protocol, options)
     if req then
         assert(req.async, 'Request object must have async method')
-        req.async()
+        req:async()
     end
     return req
 end

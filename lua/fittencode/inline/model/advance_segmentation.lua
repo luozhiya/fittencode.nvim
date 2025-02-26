@@ -25,7 +25,7 @@ function M.run(text)
         return Promise.reject()
     end
 
-    return request_handle.run():forward(function(response)
+    return request_handle:async():forward(function(response)
         local segments = response.json()
         if segments then
             return segments
