@@ -227,7 +227,7 @@ function Promise:forward(on_fulfilled, on_rejected)
                     if Promise.is_promise(last_promise) then
                         last_promise:forward(resolve, reject)
                     else
-                        resolve(last_promise)
+                        reject(last_promise)
                     end
                 else
                     reject(promise.reason)
@@ -250,7 +250,7 @@ function Promise:forward(on_fulfilled, on_rejected)
                 if Promise.is_promise(last_promise) then
                     last_promise:forward(resolve, reject)
                 else
-                    resolve(last_promise)
+                    reject(last_promise)
                 end
             else
                 reject(self.reason)

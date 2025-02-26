@@ -63,7 +63,8 @@ function M.spawn_promise(cmd, args, options)
 
     stdout:read_start(function(err, data)
         if err then
-            promise:manually_reject({ error = err })
+            handle:kill('sigterm')
+            return
         elseif data then
             table.insert(stdout_data, data)
         end
@@ -71,7 +72,8 @@ function M.spawn_promise(cmd, args, options)
 
     stderr:read_start(function(err, data)
         if err then
-            promise:manually_reject({ error = err })
+            handle:kill('sigterm')
+            return
         elseif data then
             table.insert(stderr_data, data)
         end
@@ -80,7 +82,7 @@ function M.spawn_promise(cmd, args, options)
     if options.stdin then
         vim.uv.write(stdin, options.stdin, function(err)
             if err then
-                promise:manually_reject({ error = err })
+                handle:kill('sigterm')
                 return
             end
             vim.uv.shutdown(stdin)
