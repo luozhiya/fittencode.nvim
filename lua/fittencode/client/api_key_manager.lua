@@ -22,6 +22,9 @@ function APIKeyManager.new(options)
         local _, keyring = pcall(vim.fn.json_decode, key)
         if _ then
             self.keyring = keyring
+        else
+            self.storage:delete(self.key)
+            Log.error('Failed to decode API key from storage.')
         end
     else
         Log.error(err)
