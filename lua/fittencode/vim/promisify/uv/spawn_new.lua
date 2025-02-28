@@ -18,17 +18,22 @@ p:run()
 --]]
 
 local Log = require('fittencode.log')
+local Fn = require('fittencode.functional.fn')
 
 local M = {}
 
 -- 需要更大的控制权，可以用这个版本
 -- * 支持对 spawn 完整生命周期的控制
 -- * 支持流输出，适用于 Chat 类型的应用场景
----@param command string
----@param args string[]
----@param options? { stdin?: string, env?: table, cwd?: string, timeout?: number }
-local function run(process, command, args, options)
-    options = options or {}
+---@param process FittenCode.UV.Process
+local function run(process)
+    local state = process.state
+    ---@type string
+    local command = state.command
+    ---@type string[]
+    local args = state.args
+    ---@type { stdin?: string, env?: table, cwd?: string, timeout?: number }
+    local options = state.options or {}
 
     local stdin = vim.uv.new_pipe(false)
     assert(stdin, 'Failed to create stdin pipe')
@@ -37,15 +42,10 @@ local function run(process, command, args, options)
     local stderr = vim.uv.new_pipe(false)
     assert(stderr, 'Failed to create stderr pipe')
 
-    local state = {
-        uv_process = nil,
-        stdin = stdin,
-        stdout = stdout,
-        stderr = stderr,
-        command = command,
-        args = args,
-        timeout = options.timeout,
-    }
+    state.uv_process = nil
+    state.stdin = stdin
+    state.stdout = stdout
+    state.stderr = stderr
 
     local function kill(signal)
         if not vim.uv.is_active(state.uv_process) then
@@ -103,15 +103,8 @@ local function run(process, command, args, options)
     end
 
     stdout:read_start(function(err, chunk)
-        -- 在 read_start 中发送的错误都认为是不可恢复的错误，Neovim 中有使用 error 处理，但会终止 Neovim 进程
-        -- 这里通过 abort 处理不可恢复错误，单独的一个外部进程错误不应该影响 Neovim 进程
         if err then
-            process:_emit('error', {
-                type = 'StdoutError',
-                message = err
-            })
-            kill()
-            return
+            error(err)
         end
         if chunk then
             process:_emit('stdout', chunk)
@@ -120,12 +113,7 @@ local function run(process, command, args, options)
 
     stderr:read_start(function(err, chunk)
         if err then
-            process:_emit('error', {
-                type = 'StderrError',
-                message = err
-            })
-            kill()
-            return
+            error(err)
         end
         if chunk then
             process:_emit('stderr', chunk)
@@ -135,12 +123,7 @@ local function run(process, command, args, options)
     if options.stdin then
         vim.uv.write(stdin, options.stdin, function(err)
             if err then
-                process:_emit('error', {
-                    type = 'StdinError',
-                    message = err
-                })
-                kill()
-                return
+                error(err)
             end
             vim.uv.shutdown(stdin)
         end)
@@ -163,8 +146,6 @@ local function run(process, command, args, options)
             end
         end)
     end
-
-    process.state = state
 
     return process
 end
@@ -201,15 +182,13 @@ local function new(command, args, options)
             local cbs = self._callbacks[event]
             if cbs then
                 for _, cb in ipairs(cbs) do
-                    cb(...)
+                    Fn.schedule_call(cb, ...)
                 end
             end
         end,
         -- async 方法用于异步启动进程
         async = function(self)
-            vim.schedule(function()
-                run(self, self.command, self.args, self.options)
-            end)
+            Fn.schedule_call(run, self)
         end,
     }
 end

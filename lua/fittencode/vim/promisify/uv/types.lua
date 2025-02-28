@@ -6,6 +6,8 @@
 ---@field _emit function
 ---@field abort function
 ---@field async function
+---@field timer any
+---@field state any
 
 ---@class FittenCode.UV.FS
 ---@field close function

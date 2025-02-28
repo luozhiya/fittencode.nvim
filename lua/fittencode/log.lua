@@ -37,8 +37,10 @@ local function get_level_name(level)
 end
 
 local function format_timestamp()
-    local ms = string.format('%03d', math.floor((vim.uv.hrtime() / 1e6) % 1000))
-    return os.date('%Y-%m-%d %H:%M:%S') .. '.' .. ms
+    local ns = string.format('%09d', vim.uv.hrtime() % 1e9)
+    local date = os.date('%Y-%m-%d %H:%M:%S')
+    local timezone = os.date('%z')
+    return date .. '.' .. ns .. timezone
 end
 
 local function collect_neovim_info()
@@ -105,6 +107,17 @@ local function async_log(level, message)
         return
     end
 
+    -- 获取当前文件名
+    local info = debug.getinfo(3, 'Snl')
+    local file_name = info.source:sub(2) -- 去掉 '@' 符号
+    -- 找到 "lua/fittencode/" 的起始位置并截取
+    local prefix = 'lua/fittencode/'
+    local start_pos = file_name:find(prefix, 1, true)
+    if start_pos then
+        file_name = file_name:sub(start_pos + #prefix)
+    end
+    local line_number = info.currentline
+
     vim.schedule(function()
         -- 初始化检查
         if needs_preface then
@@ -115,9 +128,11 @@ local function async_log(level, message)
         end
 
         -- 格式化日志条目
-        local log_entry = string.format('[%-5s %s] %s',
-            get_level_name(level),
+        local log_entry = string.format('[%s %s:%d %s] %s',
             format_timestamp(),
+            file_name,
+            line_number,
+            get_level_name(level),
             message
         )
 

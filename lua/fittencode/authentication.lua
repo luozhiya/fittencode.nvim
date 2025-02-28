@@ -213,8 +213,6 @@ function M.login3rd(source, options)
                         else
                             Log.error(Tr.translate('Failed to login. Failed to execute curl.'))
                         end
-                    else
-                        Log.error(Tr.translate('Failed to login. Process unexpectedly exited.'))
                     end
                 elseif err.type == 'CURL_ERROR' then
                     -- Curl内部错误
