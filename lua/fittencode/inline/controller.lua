@@ -172,7 +172,7 @@ function Controller:triggering_completion(options)
 end
 
 function Controller:send_completions(buf, position, edit_mode)
-    local session = Session:new({
+    local session = Session.new({
         buf = buf,
         position = position,
         id = assert(Fn.uuid_v4()),

@@ -32,10 +32,13 @@
 ---@field edit_mode? boolean
 ---@field project_completion_service FittenCode.Inline.ProjectCompletionService
 ---@field prompt_generator FittenCode.Inline.PromptGenerator
+---@field get_status function
 ---@field generate_one_stage_auth function
 ---@field triggering_completion function
 ---@field update_inline_status function
----@field is_initialized function
+---@field terminate function
+---@field is_terminated function
+---@field is_interactive function
 ---@field set_interactive_session_debounced function
 
 -- Timing 放在回调里计时，和真实时间差距一个main loop的间隔，可以用来衡量相对性能
