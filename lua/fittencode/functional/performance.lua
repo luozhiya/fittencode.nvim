@@ -87,12 +87,14 @@ end
 -------------------------------------------------------
 -- 方法4
 
+---@return number
 local tick = function(precision)
     precision = precision or 1e6 -- 默认精度：微秒
     assert(precision > 0, 'Precision must be positive')
     return vim.uv.hrtime() / precision
 end
 
+---@return number
 local tok = function(start, precision)
     start = start or 0
     return tick(precision) - start
