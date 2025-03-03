@@ -10,7 +10,7 @@ local controller
 
 local function init()
     assert(not controller, 'Controller already initialized, should be singleton')
-    controller = Controller:new()
+    controller = Controller.new()
 end
 
 ---@return FittenCode.Inline.Status

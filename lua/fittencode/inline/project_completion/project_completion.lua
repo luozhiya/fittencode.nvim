@@ -61,7 +61,7 @@ function ProjectCompletion:__initialize(options)
     self.mode = options.mode or 'balance'
     self.timeout = options.timeout or MODE_TIMEOUT[self.mode]
     self.format = options.format or 'concise'
-    self.engine = SemanticContext.new(self.mode, self.format)
+    self.semantic_context = SemanticContext.new(self.mode, self.format)
 end
 
 -- 是否可以进行 Project Completion
@@ -83,7 +83,7 @@ function ProjectCompletion:generate_prompt(buf, position)
     return Promise.race({
         self:preflight():forward(function(chosen)
             return Promise.async(function(resolve, reject)
-                local prompt = self.engine:get_prompt_sync(buf, position, {
+                local prompt = self.semantic_context:get_prompt_sync(buf, position, {
                     order = chosen == '3' and 'reversed' or 'forward',
                 })
                 local meta = {

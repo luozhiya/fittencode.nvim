@@ -7,6 +7,7 @@ local Protocal = require('fittencode.client.protocol')
 local Perf = require('fittencode.functional.performance')
 local ProjectCompletion = require('fittencode.inline.project_completion.project_completion')
 
+---@class FittenCode.Inline.ProjectCompletionService
 local Service = {}
 
 function Service.new(options)

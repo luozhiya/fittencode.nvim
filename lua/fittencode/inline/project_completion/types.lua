@@ -1,0 +1,1 @@
+---@class FittenCode.Inline.ProjectCompletionService

@@ -17,14 +17,13 @@ local CompletionStatistics = require('fittencode.inline.completion_statistics')
 
 ---@class FittenCode.Inline.Controller
 local Controller = {}
+Controller.__index = Controller
 
 ---@return FittenCode.Inline.Controller
-function Controller:new(options)
-    ---@class FittenCode.Inline.Controller
-    local obj = {}
-    setmetatable(obj, { __index = self })
-    obj:__initialize(options)
-    return obj
+function Controller.new(options)
+    local self = setmetatable({}, Controller)
+    self:__initialize(options)
+    return self
 end
 
 function Controller:__initialize(options)
@@ -35,7 +34,9 @@ function Controller:__initialize(options)
     })
     -- self.completion_statistics = CompletionStatistics:new({
     --     check_accept = function() end,
-    --     get_project_completion_chosen = function() end,
+    --     get_project_completion_chosen = function()
+    --         return self.project_completion_service:get_chosen()
+    --     end,
     -- })
     self.observers = {}
     self.sessions = {}

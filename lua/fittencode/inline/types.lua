@@ -16,9 +16,6 @@
 ---@field destory function
 ---@field private __initialize function
 
----@class FittenCode.VM
----@field run function
-
 ---@class FittenCode.Inline.State
 
 ---@class FittenCode.Inline.Session
@@ -44,35 +41,10 @@
 -- Timing 放在回调里计时，和真实时间差距一个main loop的间隔，可以用来衡量相对性能
 ---@alias FittenCode.Inline.Session.Timing table<table<string, number>>
 
----@alias FittenCode.Inline.WordSegmentation table<string, table<string>>
-
 ---@class FittenCode.Inline.View
 ---@field state? FittenCode.Inline.State
 ---@field extmark_ids table
 ---@field buf number
-
----@class FittenCode.Inline.Prompt
----@field inputs string
----@field meta_datas FittenCode.Inline.Prompt.MetaDatas
-
--- 元信息
----@class FittenCode.Inline.Prompt.MetaDatas
----@field plen number 对比结果的相似前缀的长度 UTF-16
----@field slen number 对比结果的相似后缀的长度 UTF-16
----@field bplen number 前缀文本的 UTF-8 字节长度
----@field bslen number 后缀文本的 UTF-8 字节长度
----@field pmd5 string Prev MD5
----@field nmd5 string New MD5 (Prefix + Suffix)
----@field diff string 差异文本，如果是首次则是 Prefix + Suffix，后续则是对比结果
----@field filename string 文件名
----@field cpos number Prefix 的 UTF-16 长度
----@field bcpos number Prefix 的 UTF-8 字节长度
----@field pc_available boolean Project Completion 是否可用
----@field pc_prompt string Project Completion Prompt
----@field pc_prompt_type string Project Completion Prompt 类型
----@field edit_mode boolean|string 是否处于 Edit Completion 模式
----@field edit_mode_history string
----@field edit_mode_trigger_type string
 
 ---@class FittenCode.Inline.GenerateOneStageResponse
 ---@field request_id string
@@ -96,7 +68,6 @@
 ---@field event? any
 ---@field force? boolean
 ---@field edit_mode? boolean
-
 
 ---@class FittenCode.Inline.Tracker
 ---@field ft_token string
