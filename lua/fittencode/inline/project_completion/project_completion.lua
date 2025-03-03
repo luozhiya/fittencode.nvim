@@ -35,7 +35,7 @@ local scold = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'red
 --]]
 
 local Promise = require('fittencode.concurrency.promise')
-local Engine = require('fittencode.inline.project_completion.engine')
+local SemanticContext = require('fittencode.inline.project_completion.semantic_context')
 local Config = require('fittencode.config')
 
 local ProjectCompletion = {}
@@ -61,7 +61,7 @@ function ProjectCompletion:__initialize(options)
     self.mode = options.mode or 'balance'
     self.timeout = options.timeout or MODE_TIMEOUT[self.mode]
     self.format = options.format or 'concise'
-    self.engine = Engine.new(self.mode, self.format)
+    self.engine = SemanticContext.new(self.mode, self.format)
 end
 
 -- 是否可以进行 Project Completion

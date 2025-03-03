@@ -41,7 +41,7 @@ local function format_timestamp()
     local date = os.date('%Y-%m-%dT%H:%M:%S')
     -- +0800 -> +08:00
     local timezone = tostring(os.date('%z'))
-    timezone = timezone:sub(1, 3).. ':' .. timezone:sub(4, 5)
+    timezone = timezone:sub(1, 3) .. ':' .. timezone:sub(4, 5)
     return date .. '.' .. ns .. timezone
 end
 

@@ -5,6 +5,7 @@ local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local Protocal = require('fittencode.client.protocol')
 local Perf = require('fittencode.functional.performance')
+local ProjectCompletion = require('fittencode.inline.project_completion.project_completion')
 
 local Service = {}
 
@@ -17,8 +18,6 @@ end
 
 function Service:__initialize(options)
     options = options or {}
-    self.provider = options.provider or 'semantic_context'
-    local ProjectCompletion = require('fittencode.inline.project_completion.versions.' .. self.provider)
     self.project_completion = ProjectCompletion.new({
         get_chosen = function() return self:get_chosen() end,
     })
