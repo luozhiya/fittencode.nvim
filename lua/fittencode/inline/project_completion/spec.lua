@@ -1,4 +1,4 @@
--- 输出样式 1, format `concise`
+-- 输出样式 1, format `file`
 --[[
 // Below is partial code of /project/utils.js:
 function calculate(a, b) {
@@ -16,7 +16,7 @@ interface Helper {
 ...
 --]]
 
--- 输出样式 2, format `redundant`
+-- 输出样式 2, format `identifier`
 --[[
 # Below is partical code of file:///src/user.py for the variable or function User::getName:
 class User:
@@ -34,8 +34,8 @@ class UserDAO:
 
 local M = {
     format = {
-        ['concise'] = '{} Below is partial code of {}:',
-        ['redundant'] = '{} Below is partical code of {} for the variable or function {}:'
+        ['file'] = '{} Below is partial code of {}:',
+        ['identifier'] = '{} Below is partical code of {} for the variable or function {}:'
     }
 }
 

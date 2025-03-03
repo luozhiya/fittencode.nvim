@@ -176,9 +176,9 @@ function SemanticContext:get_prompt_sync(buf, postion, mode, format)
         local header = ''
         local symbol = ''
 
-        if format == 'concise' then
+        if format == 'file' then
             header = Format.format(title_template, comment_pattern, target_uri)
-        elseif format == 'redundant' then
+        elseif format == 'identifier' then
             header = Format.format(title_template, comment_pattern, target_uri, symbol)
         end
 

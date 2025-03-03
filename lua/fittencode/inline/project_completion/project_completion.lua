@@ -29,8 +29,8 @@ Precise 模式：
 - 使用 LSP 进行符号检索，放开 Tree-sitter 的限制
 - { 'textDocument/definition', 'textDocument/typeDefinition', 'textDocument/references', 'textDocument/documentSymbol', 'textDocument/implementation' }
 
-local sc = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'concise' })
-local scold = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'redundant' })
+local sc = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'file' })
+local scold = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'identifier' })
 
 --]]
 
@@ -60,7 +60,7 @@ function ProjectCompletion:__initialize(options)
     assert(self.get_chosen, 'get_chosen is required')
     self.mode = options.mode or 'balance'
     self.timeout = options.timeout or MODE_TIMEOUT[self.mode]
-    self.format = options.format or 'concise'
+    self.format = options.format or 'file'
     self.semantic_context = SemanticContext.new(self.mode, self.format)
 end
 
