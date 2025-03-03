@@ -5,8 +5,8 @@ local Comment = require('fittencode.inline.project_completion.comment')
 local Spec = require('fittencode.inline.project_completion.spec')
 local Format = require('fittencode.functional.format')
 
-local ProjectCompletion = {}
-ProjectCompletion.__index = ProjectCompletion
+local Engine = {}
+Engine.__index = Engine
 
 -- 配置参数
 local MAX_LENGTH = 20000 -- 最大提示长度
@@ -56,8 +56,8 @@ local function get_context_symbol(bufnr, pos)
     return nil
 end
 
-function ProjectCompletion.new(mode, format)
-    local self = setmetatable({}, ProjectCompletion)
+function Engine.new(mode, format)
+    local self = setmetatable({}, Engine)
     self.mode = mode
     self.format = format
     return self
@@ -123,7 +123,7 @@ local function compressed_code(buf, range)
 end
 
 -- 生成提示内容
-function ProjectCompletion:get_prompt_sync(buf, postion, mode, format)
+function Engine:get_prompt_sync(buf, postion, mode, format)
     mode = mode or self.mode
     format = format or self.format
 
@@ -194,4 +194,4 @@ function ProjectCompletion:get_prompt_sync(buf, postion, mode, format)
     return prompt
 end
 
-return ProjectCompletion
+return Engine

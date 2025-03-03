@@ -35,14 +35,14 @@ local scold = SemanticContext.new({ mode = 'fast', timeout = 1000, format = 'red
 --]]
 
 local Promise = require('fittencode.concurrency.promise')
-local ProjectCompletion = require('fittencode.inline.project_completion.versions.semantic_context.project_completion')
+local Engine = require('fittencode.inline.project_completion.engine')
 local Config = require('fittencode.config')
 
-local SemanticContext = {}
-SemanticContext.__index = SemanticContext
+local ProjectCompletion = {}
+ProjectCompletion.__index = ProjectCompletion
 
-function SemanticContext.new(options)
-    local self = setmetatable({}, SemanticContext)
+function ProjectCompletion.new(options)
+    local self = setmetatable({}, ProjectCompletion)
     self:__initialize(options)
     return self
 end
@@ -54,21 +54,21 @@ local MODE_TIMEOUT = {
     precise = 1000
 }
 
-function SemanticContext:__initialize(options)
+function ProjectCompletion:__initialize(options)
     options = options or {}
     self.get_chosen = options.get_chosen
     assert(self.get_chosen, 'get_chosen is required')
     self.mode = options.mode or 'balance'
     self.timeout = options.timeout or MODE_TIMEOUT[self.mode]
     self.format = options.format or 'concise'
-    self.engine = ProjectCompletion.new(self.mode, self.format)
+    self.engine = Engine.new(self.mode, self.format)
 end
 
 -- 是否可以进行 Project Completion
 -- * resolve 返回 pc_prompt_type
 -- * reject 失败
 ---@return FittenCode.Concurrency.Promise
-function SemanticContext:preflight()
+function ProjectCompletion:preflight()
     local open = Config.use_project_completion.open
     if open == 'auto' or open == 'on' then
         return self.get_chosen()
@@ -79,7 +79,7 @@ end
 -- * resolve: 超时返回 nil，否则返回提示内容
 -- * reject: 出错
 ---@return FittenCode.Concurrency.Promise
-function SemanticContext:generate_prompt(buf, position)
+function ProjectCompletion:generate_prompt(buf, position)
     return Promise.race({
         self:preflight():forward(function(chosen)
             return Promise.async(function(resolve, reject)
@@ -98,4 +98,4 @@ function SemanticContext:generate_prompt(buf, position)
     })
 end
 
-return SemanticContext
+return ProjectCompletion
