@@ -97,7 +97,8 @@ end
 
 function Controller:dismiss_suggestions(options)
     Log.debug('Dismissing suggestions')
-    if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
+    options = options or {}
+    if not options.force and options.event and vim.tbl_contains(self.filter_events, options.event.event) then
         return
     end
     self:cleanup_sessions()
