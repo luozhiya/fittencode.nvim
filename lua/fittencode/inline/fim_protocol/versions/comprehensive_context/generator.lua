@@ -27,29 +27,6 @@ function PromptGenerator:new(options)
     }, PromptGenerator)
 end
 
-local function compare_bytes(x, y)
-    local len = math.min(#x, #y)
-    local a = 0
-    while a < len and x:byte(a + 1) == y:byte(a + 1) do
-        a = a + 1
-    end
-
-    local b = 0
-    while b < len and x:byte(-b - 1) == y:byte(-b - 1) do
-        b = b + 1
-    end
-
-    return a, (b == len and 0 or b)
-end
-
-local function compare_bytes_order(prev, curr)
-    local leq, req = compare_bytes(prev, curr)
-    leq = Editor.round_col_end(curr, leq)
-    local rv = #curr - req
-    rv = Editor.round_col_end(curr, rv)
-    return leq, #curr - rv
-end
-
 local function _clean_fim_pattern(text)
     return text and vim.fn.substitute(text, FIM_PATTERN, '', 'g') or ''
 end
@@ -148,7 +125,7 @@ function PromptGenerator:_calculate_diff_meta(current_text, current_cipher, file
         }
     end
 
-    local lbytes, rbytes = compare_bytes_order(self.last.text, current_text)
+    local lbytes, rbytes = Editor.compare_bytes_order(self.last.text, current_text)
     local diff_meta = {
         plen = vim.str_utfindex(current_text:sub(1, lbytes), 'utf-16'),
         slen = vim.str_utfindex(current_text:sub(-rbytes), 'utf-16'),

@@ -9,11 +9,15 @@ local CodeCVT = require('fittencode.unicode.codecvt')
 local M = {}
 
 -- 获取 UTF-8 对应的 Unicode 码点
+---@param input string
 ---@return number
 function M.codepoint(input)
     return M.codepoints(input)[1]
 end
 
+-- 获取 UTF-8 字符串对应的 Unicode 码点列表
+---@param input string
+---@return number[]
 function M.codepoints(input)
     return CodeCVT.utf8_to_codepoints(input)
 end

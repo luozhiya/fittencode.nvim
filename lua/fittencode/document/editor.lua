@@ -413,4 +413,28 @@ function M.within_the_line(buf, position)
     return line.range.end_.col > position.col
 end
 
+local function compare_bytes(x, y)
+    local len = math.min(#x, #y)
+    local a = 0
+    while a < len and x:byte(a + 1) == y:byte(a + 1) do
+        a = a + 1
+    end
+
+    local b = 0
+    while b < len and x:byte(-b - 1) == y:byte(-b - 1) do
+        b = b + 1
+    end
+
+    return a, (b == len and 0 or b)
+end
+
+-- 对比两个UTF8字符串，以第二个字符串为基准，返回两个字符串左右两侧相等的字符个数（以字节为单位）
+function M.compare_bytes_order(prev, curr)
+    local leq, req = compare_bytes(prev, curr)
+    leq = M.round_col_end(curr, leq)
+    local rv = #curr - req
+    rv = M.round_col_end(curr, rv)
+    return leq, #curr - rv
+end
+
 return M

@@ -6,9 +6,13 @@
 
 local custom_segments = {'我', '吃', '苹果'}
 local model = CompletionModel.new(s, placeholder_ranges)
-model.words = CompletionModel:convert_segments_to_words(custom_segments)
+local words = CompletionModel:convert_segments_to_words(custom_segments)
+model:update_words(words)
 
 --]]
+
+local UTF8 = require('fittencode.unicode.utf8')
+local LangUnicode = require('fittencode.unicode.lang')
 
 local function merge_ranges(ranges)
     if #ranges == 0 then
@@ -55,24 +59,22 @@ local function parse_words(s, chars)
         return c == ' ' or c == '\t' -- 空格或制表符
     end
 
-    local function is_chinese(c)
-        -- 中文字符的Unicode范围: 0x4E00-0x9FFF
-        local code = utf8.codepoint(c)
-        return code >= 0x4E00 and code <= 0x9FFF
+    local function is_chinese(str)
+        return LangUnicode.is_chinese(UTF8.codepoint(str))
     end
 
     for i, char in ipairs(chars) do
-        local c_str = s:sub(char.start, char.end_)
+        local u8char = s:sub(char.start, char.end_)
         local char_type
 
         -- 确定字符类型优先级: 换行符 > 空格/制表符 > 中文 > 字母数字 > 其他
-        if c_str == '\n' then
+        if u8char == '\n' then
             char_type = 'newline'
-        elseif is_whitespace(c_str) then
+        elseif is_whitespace(u8char) then
             char_type = 'whitespace'
-        elseif is_chinese(c_str) then
+        elseif is_chinese(u8char) then
             char_type = 'chinese'
-        elseif c_str:match('%w') then
+        elseif u8char:match('%w') then
             char_type = 'alnum'
         else
             char_type = 'other'
@@ -424,6 +426,14 @@ end
 function CompletionModel:is_complete()
     -- 通过检查 stage_ranges 是否为空来判断是否全部完成
     return #self.stage_ranges == 0
+end
+
+function CompletionModel:update_words(words)
+    self.words = words
+end
+
+function CompletionModel:update_words_by_segments(segments)
+    self:update_words(self:convert_segments_to_words(segments))
 end
 
 return CompletionModel
