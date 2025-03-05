@@ -45,6 +45,11 @@ function ConversationTypesProvider:load_conversation_types()
     self:load_workspace_templates()
 end
 
+-- local EL = require('fittencode.vim.promisify.uv.event_loop')
+-- EL.set_interval(100, function()
+--     Log.debug('1')
+-- end)
+
 function ConversationTypesProvider:async_load_conversation_types()
     Log.trace('ConversationTypesProvider will load conversation types in background')
     return Promise.new(function(resolve)
