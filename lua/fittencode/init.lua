@@ -15,10 +15,10 @@ end
 ---@param opts? FittenCode.Config
 function M.setup(opts)
     if vim.fn.has('nvim-0.11') == 0 then
-        vim.api.nvim_echo({ { 'fittencode.nvim requires Neovim >= 0.11.0.' } }, false, { err = true })
+        vim.api.nvim_echo({ { 'FittenCode requires Neovim >= 0.11.0.' } }, false, { err = true })
         return
     end
-    assert(pipes == nil, 'fittencode.nvim has already been setup')
+    assert(pipes == nil, 'Fittencode has already been setup')
     pipes = {
         { name = 'config',   init = function(module) module.init(opts) end, destroy = true },
         { name = 'log',      init = true,                                   destroy = true },
@@ -32,10 +32,13 @@ function M.setup(opts)
     end
 end
 
--- 未来 Neovim 可能会实现插件的动态加载与卸载的机制
--- * 执行 teardown 后，所有状态将被重置，包括配置、缓存、会话等
--- * 届时将允许重新执行 setup 进行再次初始化
-function M.teardown()
+-- https://github.com/folke/lazy.nvim/issues/445
+-- * 通过 `:Lazy reload fittencode.nvim` 可以重新加载插件
+-- * 执行 deactivate 后
+--   * 申请的 Neovim 资源将被释放
+--   * 所有状态将被重置，包括配置、缓存、会话等
+-- * 允许重新执行 setup 进行再次初始化
+function M.deactivate()
     if not pipes then
         return
     end
