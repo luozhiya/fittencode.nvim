@@ -78,44 +78,41 @@ function Session:update_view()
     self.view.update(State:new():get_state_from_model(self.model))
 end
 
-function Session:_accept(direction, range)
+function Session:accept(direction, range)
     self.model:accept(direction, range)
     self:update_view()
-    if self.model:is_complete() then
+    if direction == 'forward' and self.model:is_complete() then
         self:terminate()
         vim.schedule(function() self.triggering_completion({ force = true }) end)
     end
 end
 
 function Session:accept_all_suggestions()
-    self:_accept('forward', 'all')
+    self:accept('forward', 'all')
 end
 
 function Session:accept_line()
-    self:_accept('forward', 'line')
+    self:accept('forward', 'line')
 end
 
 function Session:accept_word()
-    self:_accept('forward', 'word')
+    self:accept('forward', 'word')
 end
 
 function Session:accept_char()
-    self:_accept('forward', 'char')
+    self:accept('forward', 'char')
 end
 
 function Session:revoke_line()
-    self.model:accept('backward', 'line')
-    self:update_view()
+    self:accept('backward', 'line')
 end
 
 function Session:revoke_word()
-    self.model:accept('backward', 'word')
-    self:update_view()
+    self:accept('backward', 'word')
 end
 
 function Session:revoke_char()
-    self.model:accept('backward', 'char')
-    self:update_view()
+    self:accept('backward', 'char')
 end
 
 function Session:set_keymaps()

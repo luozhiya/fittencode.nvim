@@ -9,7 +9,7 @@ local LangPreference = require('fittencode.language.preference')
 local LangFallback = require('fittencode.language.fallback')
 local Extension = require('fittencode.extension')
 
----@type FittenCode.Chat.Controller
+---@type FittenCode.Chat.Controller?
 local controller = nil
 
 local function _init(conversation_types_provider)
@@ -59,41 +59,20 @@ local function init()
     end)
 end
 
-local function show_chat()
-    if controller:view_visible() then
-        return
-    end
-    controller:update_view(true)
-    controller:show_view()
-end
-
-local function hide_chat()
-    if not controller:view_visible() then
-        return
-    end
-    controller:hide_view()
-end
-
-local function toggle_chat()
-    if controller:view_visible() then
-        controller:hide_view()
-    else
-        controller:show_view()
+local function destroy()
+    if controller then
+        controller:destroy()
+        controller = nil
     end
 end
 
-local function reload_templates()
-    controller.conversation_types_provider:load_conversation_types()
-end
-
-local function get_status()
-    return controller:get_status()
+local function _get_controller()
+    assert(controller, 'Controller not initialized')
+    return controller
 end
 
 return {
     init = init,
-    reload_templates = reload_templates,
-    show_chat = show_chat,
-    hide_chat = hide_chat,
-    toggle_chat = toggle_chat,
+    destroy = destroy,
+    _get_controller = _get_controller,
 }

@@ -10,8 +10,8 @@ API函数列表：
 - revoke_word()：撤销当前单词补全建议
 ]]
 
-local Inline = require('fittencode.inline')
-local Chat = require('fittencode.chat')
+local Inline = require('fittencode.inline')._get_controller()
+local Chat = require('fittencode.chat')._get_controller()
 
 local M = {}
 
@@ -23,32 +23,38 @@ local base = {
 
 local inline = {
     ['trigger_completion'] = function()
-        Inline.trigger_completion()
+        Inline:triggering_completion({ force = true })
     end,
     ['has_suggestions'] = function()
-        return Inline.has_suggestions()
+        return Inline:has_suggestions()
     end,
     ['dismiss_suggestions'] = function()
-        Inline.dismiss_suggestions()
+        Inline:dismiss_suggestions({ force = true })
     end,
     ['accept_all_suggestions'] = function()
-        Inline.accept_all_suggestions()
+        Inline:accept('forward', 'all')
     end,
     ['accept_line'] = function()
-        Inline.accept('forward', 'line')
+        Inline:accept('forward', 'line')
     end,
     ['revoke_line'] = function()
-        Inline.accept('backward', 'line')
+        Inline:accept('backward', 'line')
     end,
     ['accept_word'] = function()
-        Inline.accept('forward', 'word')
+        Inline:accept('forward', 'word')
     end,
     ['revoke_word'] = function()
-        Inline.accept('backward', 'word')
+        Inline:accept('backward', 'word')
     end,
+    ['get_inline_status'] = function()
+        return Inline:get_status()
+    end
 }
 
 local chat = {
+    ['get_chat_status'] = function()
+        return Chat:get_status()
+    end,
 }
 
 M = vim.tbl_deep_extend('force', M, base, inline, chat)

@@ -13,46 +13,9 @@ local function init()
     controller = Controller.new()
 end
 
----@return FittenCode.Inline.Status
-local function get_status()
+local function destroy()
     assert(controller, 'Controller not initialized')
-    return controller:get_status()
-end
-
-local function enable()
-    assert(controller, 'Controller not initialized')
-    controller:set_suffix_permissions(true)
-    Log.notify_info(Translate.translate('Global completions are activated'))
-end
-
-local function disable()
-    assert(controller, 'Controller not initialized')
-    controller:set_suffix_permissions(false)
-    Log.notify_info(Translate.translate('Gloabl completions are deactivated'))
-end
-
----@param suffixes string[]
-local function onlyenable(suffixes)
-    assert(controller, 'Controller not initialized')
-    local prev = Config.inline_completion.enable
-    controller:set_suffix_permissions(true, suffixes)
-    if not prev then
-        Log.notify_info(Translate.translate('Completions for files with the extensions of {} are enabled, global completions have been automatically activated'), suffixes)
-    else
-        Log.notify_info(Translate.translate('Completions for files with the extensions of {} are enabled'), suffixes)
-    end
-end
-
----@param suffixes string[]
-local function onlydisable(suffixes)
-    assert(controller, 'Controller not initialized')
-    controller:set_suffix_permissions(false, suffixes)
-    Log.notify_info(Translate.translate('Completions for files with the extensions of {} are disabled'), suffixes)
-end
-
-local function destory()
-    assert(controller, 'Controller not initialized')
-    controller:destory()
+    controller:destroy()
     controller = nil
 end
 
@@ -63,10 +26,6 @@ end
 
 return {
     init = init,
-    get_status = get_status,
-    destory = destory,
-    enable = enable,
-    disable = disable,
-    onlyenable = onlyenable,
-    onlydisable = onlydisable,
+    destroy = destroy,
+    _get_controller = _get_controller,
 }

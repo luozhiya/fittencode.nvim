@@ -40,7 +40,7 @@ function Controller:init(options)
     end
 end
 
-function Controller:destory()
+function Controller:destroy()
     for _, id in pairs(self.augroups) do
         vim.api.nvim_del_augroup(id)
     end

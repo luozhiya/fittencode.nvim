@@ -61,7 +61,7 @@ function Controller:__initialize(options)
     self:set_suffix_permissions(Config.inline_completion.enable)
 end
 
-function Controller:destory()
+function Controller:destroy()
     self:set_suffix_permissions(false)
     for _, id in pairs(self.augroups) do
         vim.api.nvim_del_augroup(id)
@@ -92,6 +92,16 @@ function Controller:notify_observers(payload)
         Fn.schedule_call(function()
             observer:update(payload)
         end)
+    end
+end
+
+function Controller:has_suggestions()
+    return self.session() ~= nil
+end
+
+function Controller:accept(direction, scope)
+    if self.session() then
+        self.session():accept(direction, scope)
     end
 end
 

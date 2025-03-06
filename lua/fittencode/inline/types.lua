@@ -13,7 +13,7 @@
 ---@field session function
 ---@field selected_session_id string
 ---@field init function
----@field destory function
+---@field destroy function
 ---@field private __initialize function
 
 ---@class FittenCode.Inline.State
