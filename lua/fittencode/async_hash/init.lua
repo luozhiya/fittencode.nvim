@@ -14,6 +14,7 @@ local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.functional.fn')
 local Extension = require('fittencode.extension')
 local Path = require('fittencode.functional.path')
+local Log = require('fittencode.log')
 
 local engine_priority = {
     ['cc']      = 110, -- C实现的最高优先级
@@ -102,7 +103,10 @@ end
 function M.get_engine(algorithm, options)
     options = options or {}
     local entry = algorithm_engine_map[algorithm]
-    if not entry then return nil, 'Unsupported algorithm' end
+    if not entry then
+        Log.error('Unsupported hash algorithm: {}', algorithm)
+        return
+    end
 
     -- 根据选项动态选择
     if options.prefer then
@@ -119,7 +123,9 @@ end
 
 function M.hash(algorithm, data, options)
     local engine, err = M.get_engine(algorithm, options)
-    if not engine then return Promise.reject(err) end
+    if not engine then
+        return Promise.reject(err)
+    end
     return engine.hash(algorithm, data, options)
 end
 

@@ -188,6 +188,16 @@ local function reverse(tbl)
     return reversed
 end
 
+local function random(length)
+    local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    local result = {}
+    for i = 1, length do
+        local index = math.random(1, #chars)
+        table.insert(result, chars:sub(index, index))
+    end
+    return table.concat(result)
+end
+
 return {
     clamp = clamp,
     debounce = debounce,
@@ -202,4 +212,5 @@ return {
     tbl_keep_events = tbl_keep_events,
     get_unique_identifier = get_unique_identifier,
     reverse = reverse,
+    random = random
 }

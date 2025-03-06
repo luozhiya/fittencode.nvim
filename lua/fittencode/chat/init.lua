@@ -32,19 +32,17 @@ local function _init(conversation_types_provider)
         return
     end
     Log.info('Basic chat template: {}', basic_chat_template_id)
-    local model = Model:new()
-    local view = View:new({
+    local model = Model.new()
+    local view = View.new({
         model = model,
         mode = Config.chat.view.mode
     })
-    view:init()
-    controller = Controller:new({
+    controller = Controller.new({
         view = view,
         model = model,
         conversation_types_provider = conversation_types_provider,
         basic_chat_template_id = basic_chat_template_id
     })
-    controller:init()
     view:register_message_receiver(function(message)
         controller:receive_view_message(message)
     end)

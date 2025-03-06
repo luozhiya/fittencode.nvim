@@ -10,34 +10,32 @@ local Controller = {}
 Controller.__index = Controller
 
 ---@return FittenCode.Chat.Controller
-function Controller:new(opts)
-    local obj = setmetatable({
-        view = opts.view,
-        model = opts.model,
-        basic_chat_template_id = opts.basic_chat_template_id,
-        conversation_types_provider = opts.conversation_types_provider,
-        observers = {},
-        augroups = {},
-    }, Controller)
-    return obj
+function Controller.new(options)
+    local self = setmetatable({}, Controller)
+    self.init(options)
+    return self
 end
 
 function Controller:init(options)
     options = options or {}
-    local mode = options.mode or 'singleton'
+    self.view = options.view
+    self.model = options.model
+    self.basic_chat_template_id = options.basic_chat_template_id
+    self.conversation_types_provider = options.conversation_types_provider
+    self.observers = {}
+    self.augroups = {}
     self.status = Status:new()
     self:register_observer(self.status)
-    if mode == 'singleton' then
-        self.augroups.event = vim.api.nvim_create_augroup('Fittencode.Chat.Controller.Event', { clear = true })
-        vim.api.nvim_create_autocmd('User', {
-            pattern = 'Fittencode.SelectionChanged',
-            group = self.augroups.event,
-            once = false,
-            callback = function(args)
-                self:update_view()
-            end
-        })
-    end
+
+    self.augroups.event = vim.api.nvim_create_augroup('Fittencode.Chat.Controller.Event', { clear = true })
+    vim.api.nvim_create_autocmd('User', {
+        pattern = 'Fittencode.SelectionChanged',
+        group = self.augroups.event,
+        once = false,
+        callback = function(args)
+            self:update_view()
+        end
+    })
 end
 
 function Controller:destroy()
@@ -66,18 +64,7 @@ end
 
 ---@return string
 function Controller:generate_conversation_id()
-    local function random(length)
-        local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-        local result = {}
-
-        for i = 1, length do
-            local index = math.random(1, #chars)
-            table.insert(result, chars:sub(index, index))
-        end
-
-        return table.concat(result)
-    end
-    return random(36):sub(2, 10)
+    return Fn.random(36):sub(2, 10)
 end
 
 function Controller:update_view(force)
