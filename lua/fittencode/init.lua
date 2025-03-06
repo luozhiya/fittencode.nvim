@@ -23,9 +23,9 @@ function M.setup(opts)
         { name = 'config',   init = function(module) module.init(opts) end, destroy = true },
         { name = 'log',      init = true,                                   destroy = true },
         { name = 'client',   init = true,                                   destroy = true },
-        { name = 'commands', init = true,                                   destroy = true },
         { name = 'chat',     init = true,                                   destroy = true },
         { name = 'inline',   init = true,                                   destroy = true },
+        { name = 'commands', init = true,                                   destroy = true },
     }
     for _, module in ipairs(pipes) do
         _execute(module, 'init')

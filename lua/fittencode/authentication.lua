@@ -144,7 +144,7 @@ function M.login3rd(source, options)
     end
 
     if not source or not vim.tbl_contains(M.login3rd_providers, source) then
-        Log.notify_error(Tr.translate('[Fitten Code] Invalid 3rd-party login source'))
+        Log.notify_error(Tr.translate('[Fitten Code] Invalid 3rd-party login source: {}', source))
         return
     end
 
