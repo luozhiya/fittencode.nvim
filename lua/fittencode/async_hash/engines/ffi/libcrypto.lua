@@ -67,7 +67,7 @@ local function hex_encode(bin)
 end
 
 function M.hash(algorithm, data, options)
-    return Promise.new(function(resolve, reject, async)
+    return Promise.async(function(resolve, reject)
         local algo_name = algorithm_map[algorithm]
         if not algo_name then return reject('Unsupported algorithm') end
 
@@ -117,7 +117,7 @@ function M.hash(algorithm, data, options)
             libcrypto.EVP_MD_CTX_free(ctx)
             resolve(hex_encode(ffi.string(digest, len[0])))
         end
-    end, true) -- 异步模式
+    end)
 end
 
 return M
