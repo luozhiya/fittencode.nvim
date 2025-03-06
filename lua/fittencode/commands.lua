@@ -17,23 +17,31 @@ local base = {
     user_guide = Auth.tutor,
 }
 
+local function inline_controller()
+    return require('fittencode.inline')._get_controller()
+end
+
+local function chat_controller()
+    return require('fittencode.chat')._get_controller()
+end
+
 local inline = {
     enable_completions = {
         execute = function()
-            require('fittencode.inline')._get_controller():set_suffix_permissions(true)
+            inline_controller():set_suffix_permissions(true)
             Log.notify_info(Tr.translate('Global completions are activated'))
         end
     },
     disable_completions = {
         execute = function()
-            require('fittencode.inline')._get_controller():set_suffix_permissions(false)
+            inline_controller():set_suffix_permissions(false)
             Log.notify_info(Tr.translate('Gloabl completions are deactivated'))
         end
     },
     onlyenable_completions = {
         execute = function(suffixes)
             local prev = Config.inline_completion.enable
-            require('fittencode.inline')._get_controller():set_suffix_permissions(true, suffixes)
+            inline_controller():set_suffix_permissions(true, suffixes)
             if not prev then
                 Log.notify_info(Tr.translate('Completions for files with the extensions of {} are enabled, global completions have been automatically activated'), suffixes)
             else
@@ -43,7 +51,7 @@ local inline = {
     },
     onlydisable_completions = {
         execute = function(suffixes)
-            require('fittencode.inline')._get_controller():set_suffix_permissions(false, suffixes)
+            inline_controller():set_suffix_permissions(false, suffixes)
             Log.notify_info(Tr.translate('Completions for files with the extensions of {} are disabled'), suffixes)
         end
     }
@@ -52,7 +60,7 @@ local inline = {
 local chat = {
     show_chat = {
         execute = function()
-            local controller = require('fittencode.chat')._get_controller()
+            local controller = chat_controller()
             if controller:view_visible() then
                 return
             end
@@ -62,7 +70,7 @@ local chat = {
     },
     hide_chat = {
         execute = function()
-            local controller = require('fittencode.chat')._get_controller()
+            local controller = chat_controller()
             if not controller:view_visible() then
                 return
             end
@@ -71,7 +79,7 @@ local chat = {
     },
     toggle_chat = {
         execute = function()
-            local controller = require('fittencode.chat')._get_controller()
+            local controller = chat_controller()
             if controller:view_visible() then
                 controller:hide_view()
             else
@@ -79,23 +87,23 @@ local chat = {
             end
         end
     },
-    -- start_chat = { execute = function() require('fittencode.chat')._get_controller():start_chat() end },
-    -- reload_templates = { execute = function() require('fittencode.chat')._get_controller():reload_templates() end },
-    -- delete_all_chats = { execute = function() require('fittencode.chat')._get_controller():delete_all_chats() end },
-    -- edit_code = { execute = function() require('fittencode.chat')._get_controller():edit_code() end },
-    -- explain_code = { execute = function() require('fittencode.chat')._get_controller():explain_code() end },
-    -- find_bugs = { execute = function() require('fittencode.chat')._get_controller():find_bugs() end },
-    -- document_code = { execute = function() require('fittencode.chat')._get_controller():document_code() end },
-    -- generate_unit_test = { execute = function() require('fittencode.chat')._get_controller():generate_unit_test() end },
-    -- generate_code = { execute = function() require('fittencode.chat')._get_controller():generate_code() end },
-    -- optimize_code = { execute = function() require('fittencode.chat')._get_controller():optimize_code() end },
-    -- history = { execute = function() require('fittencode.chat')._get_controller():history() end },
-    -- favorites = { execute = function() require('fittencode.chat')._get_controller():favorites() end },
-    -- delete_conversation = { execute = function() require('fittencode.chat')._get_controller():delete_conversation() end },
-    -- delete_all_conversations = { execute = function() require('fittencode.chat')._get_controller():delete_all_conversations() end },
-    -- export_conversation = { execute = function() require('fittencode.chat')._get_controller():export_conversation() end },
-    -- share_conversation = { execute = function() require('fittencode.chat')._get_controller():share_conversation() end },
-    -- regenerate_response = { execute = function() require('fittencode.chat')._get_controller():regenerate_response() end },
+    -- start_chat = { execute = function() chat_controller():start_chat() end },
+    -- reload_templates = { execute = function() chat_controller():reload_templates() end },
+    -- delete_all_chats = { execute = function() chat_controller():delete_all_chats() end },
+    -- edit_code = { execute = function() chat_controller():edit_code() end },
+    -- explain_code = { execute = function() chat_controller():explain_code() end },
+    -- find_bugs = { execute = function() chat_controller():find_bugs() end },
+    -- document_code = { execute = function() chat_controller():document_code() end },
+    -- generate_unit_test = { execute = function() chat_controller():generate_unit_test() end },
+    -- generate_code = { execute = function() chat_controller():generate_code() end },
+    -- optimize_code = { execute = function() chat_controller():optimize_code() end },
+    -- history = { execute = function() chat_controller():history() end },
+    -- favorites = { execute = function() chat_controller():favorites() end },
+    -- delete_conversation = { execute = function() chat_controller():delete_conversation() end },
+    -- delete_all_conversations = { execute = function() chat_controller():delete_all_conversations() end },
+    -- export_conversation = { execute = function() chat_controller():export_conversation() end },
+    -- share_conversation = { execute = function() chat_controller():share_conversation() end },
+    -- regenerate_response = { execute = function() chat_controller():regenerate_response() end },
 }
 
 local Commands = vim.tbl_deep_extend('force', {}, base, inline, chat)
