@@ -2,7 +2,7 @@ local Log = require('fittencode.log')
 local Tr = require('fittencode.translations')
 local Auth = require('fittencode.authentication')
 
-local commands = {
+local base = {
     -- Account
     register = Auth.register,
     login = Auth.login,
@@ -16,17 +16,42 @@ local commands = {
     user_guide = Auth.tutor,
 }
 
--- Chat
-vim.tbl_deep_extend('force', commands, require('fittencode.chat.commands'))
--- Inline
-vim.tbl_deep_extend('force', commands, require('fittencode.inline.commands'))
+local inline = {
+    enable_completions = { execute = function(ext) Inline.enable_completions(ext) end },
+    disable_completions = { execute = function(ext) Inline.disable_completions(ext) end },
+}
+
+local chat = {
+    show_chat = { execute = function() Chat.show_chat() end },
+    hide_chat = { execute = function() Chat.hide_chat() end },
+    toggle_chat = { execute = function() Chat.toggle_chat() end },
+    start_chat = { execute = function() Chat.start_chat() end },
+    reload_templates = { execute = function() Chat.reload_templates() end },
+    delete_all_chats = { execute = function() Chat.delete_all_chats() end },
+    edit_code = { execute = function() Chat.edit_code() end },
+    explain_code = { execute = function() Chat.explain_code() end },
+    find_bugs = { execute = function() Chat.find_bugs() end },
+    document_code = { execute = function() Chat.document_code() end },
+    generate_unit_test = { execute = function() Chat.generate_unit_test() end },
+    generate_code = { execute = function() Chat.generate_code() end },
+    optimize_code = { execute = function() Chat.optimize_code() end },
+    history = { execute = function() Chat.history() end },
+    favorites = { execute = function() Chat.favorites() end },
+    delete_conversation = { execute = function() Chat.delete_conversation() end },
+    delete_all_conversations = { execute = function() Chat.delete_all_conversations() end },
+    export_conversation = { execute = function() Chat.export_conversation() end },
+    share_conversation = { execute = function() Chat.share_conversation() end },
+    regenerate_response = { execute = function() Chat.regenerate_response() end },
+}
+
+local Commands = vim.tbl_deep_extend('force', {}, base, inline, chat)
 
 local function execute(input)
-    if not commands[input.fargs[1]] then
+    if not Commands[input.fargs[1]] then
         Log.error('Command not found: {}', input.fargs[1])
         return
     end
-    local fn = type(commands[input.fargs[1]]) == 'table' and commands[input.fargs[1]].execute or commands[input.fargs[1]]
+    local fn = type(Commands[input.fargs[1]]) == 'table' and Commands[input.fargs[1]].execute or Commands[input.fargs[1]]
     fn(input.fargs[2])
 end
 
@@ -38,16 +63,16 @@ local function complete(arg_lead, cmd_line, cursor_pos)
     table.remove(eles, 1)
     local prefix = table.remove(eles, 1) or ''
     if #eles > 0 then
-        if commands[prefix] and type(commands[prefix]) == 'table' and commands[prefix].complete and #eles < 2 then
+        if Commands[prefix] and type(Commands[prefix]) == 'table' and Commands[prefix].complete and #eles < 2 then
             local next = table.remove(eles, 1) or ''
             return vim.tbl_filter(function(key)
                 return key:find(next, 1, true) == 1
-            end, commands[prefix].complete)
+            end, Commands[prefix].complete)
         end
     else
         return vim.tbl_filter(function(key)
             return key:find(prefix, 1, true) == 1
-        end, vim.tbl_keys(commands))
+        end, vim.tbl_keys(Commands))
     end
 end
 

@@ -56,6 +56,11 @@ local function destory()
     controller = nil
 end
 
+local function _get_controller()
+    assert(controller, 'Controller not initialized')
+    return controller
+end
+
 return {
     init = init,
     get_status = get_status,

@@ -164,14 +164,6 @@ function PromptGenerator:_recalculate_meta_datas(options)
     )
 end
 
-function PromptGenerator:_generate_project_completion_prompt(buf, position)
-    return self.project_completion_service:generate_prompt(buf, position):forward(function(prompt)
-        return prompt
-    end):catch(function()
-        return Promise.resolve()
-    end)
-end
-
 function PromptGenerator:_generate_base_prompt(buf, position, options)
     Promise.new(function(resolve)
         vim.schedule(function()
@@ -206,9 +198,20 @@ function PromptGenerator:generate(buf, position, options)
         (Config.use_project_completion.open ~= 'off' and
             Config.server.fitten_version ~= 'default')
 
-    if should_use_pc then
+    if should_use_pc and not LspService.has_lsp_client(buf) then
         LspService.async_notify_install_lsp(buf)
         return Promise.reject()
+    end
+
+    local function _generate_project_completion_prompt()
+        if not should_use_pc then
+            return Promise.resolve()
+        end
+        return self.project_completion_service:generate_prompt(buf, position):forward(function(prompt)
+            return prompt
+        end):catch(function()
+            return Promise.resolve()
+        end)
     end
 
     -- 可以同时计算基础 Prompt 和 Project Completion Prompt
@@ -217,7 +220,7 @@ function PromptGenerator:generate(buf, position, options)
             edit_mode = options.edit_mode,
             filename = options.filename
         }),
-        self:_generate_project_completion_prompt(buf, position)
+        _generate_project_completion_prompt()
     }):forward(function(results)
         return vim.tbl_deep_extend('force', results[1], results[2] or {})
     end)

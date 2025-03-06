@@ -66,12 +66,6 @@
 ---@field delta_char number
 ---@field delta_line number
 
----@class FittenCode.Inline.TriggeringCompletionOptions : FittenCode.AsyncResultCallbacks
----@field on_no_more_suggestion? function
----@field event? any
----@field force? boolean
----@field edit_mode? boolean
-
 ---@class FittenCode.Inline.Tracker
 ---@field ft_token string
 ---@field has_lsp boolean
