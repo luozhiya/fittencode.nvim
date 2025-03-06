@@ -1,6 +1,7 @@
 local Log = require('fittencode.log')
 local Tr = require('fittencode.translations')
 local Auth = require('fittencode.authentication')
+local Config = require('fittencode.config')
 
 local base = {
     -- Account
@@ -17,14 +18,67 @@ local base = {
 }
 
 local inline = {
-    -- enable_completions = { execute = function(ext) require('fittencode.inline')._get_controller():enable_completions(ext) end },
-    -- disable_completions = { execute = function(ext) require('fittencode.inline')._get_controller():disable_completions(ext) end },
+    enable_completions = {
+        execute = function()
+            require('fittencode.inline')._get_controller():set_suffix_permissions(true)
+            Log.notify_info(Tr.translate('Global completions are activated'))
+        end
+    },
+    disable_completions = {
+        execute = function()
+            require('fittencode.inline')._get_controller():set_suffix_permissions(false)
+            Log.notify_info(Tr.translate('Gloabl completions are deactivated'))
+        end
+    },
+    onlyenable_completions = {
+        execute = function(suffixes)
+            local prev = Config.inline_completion.enable
+            require('fittencode.inline')._get_controller():set_suffix_permissions(true, suffixes)
+            if not prev then
+                Log.notify_info(Tr.translate('Completions for files with the extensions of {} are enabled, global completions have been automatically activated'), suffixes)
+            else
+                Log.notify_info(Tr.translate('Completions for files with the extensions of {} are enabled'), suffixes)
+            end
+        end
+    },
+    onlydisable_completions = {
+        execute = function(suffixes)
+            require('fittencode.inline')._get_controller():set_suffix_permissions(false, suffixes)
+            Log.notify_info(Tr.translate('Completions for files with the extensions of {} are disabled'), suffixes)
+        end
+    }
 }
 
 local chat = {
-    -- show_chat = { execute = function() require('fittencode.chat')._get_controller():show_chat() end },
-    -- hide_chat = { execute = function() require('fittencode.chat')._get_controller():hide_chat() end },
-    -- toggle_chat = { execute = function() require('fittencode.chat')._get_controller():toggle_chat() end },
+    show_chat = {
+        execute = function()
+            local controller = require('fittencode.chat')._get_controller()
+            if controller:view_visible() then
+                return
+            end
+            controller:update_view(true)
+            controller:show_view()
+        end
+    },
+    hide_chat = {
+        execute = function()
+            local controller = require('fittencode.chat')._get_controller()
+            if not controller:view_visible() then
+                return
+            end
+            controller:hide_view()
+        end
+    },
+    toggle_chat = {
+        execute = function()
+            local controller = require('fittencode.chat')._get_controller()
+            if controller:view_visible() then
+                controller:hide_view()
+            else
+                controller:show_view()
+            end
+        end
+    },
     -- start_chat = { execute = function() require('fittencode.chat')._get_controller():start_chat() end },
     -- reload_templates = { execute = function() require('fittencode.chat')._get_controller():reload_templates() end },
     -- delete_all_chats = { execute = function() require('fittencode.chat')._get_controller():delete_all_chats() end },
