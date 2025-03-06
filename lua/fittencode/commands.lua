@@ -113,8 +113,12 @@ local function execute(input)
         Log.error('Command not found: {}', input.fargs[1])
         return
     end
-    local fn = type(Commands[input.fargs[1]]) == 'table' and Commands[input.fargs[1]].execute or Commands[input.fargs[1]]
     local args = vim.list_slice(input.frags, 2, #input.frags)
+    local fn = type(Commands[input.fargs[1]]) == 'table' and Commands[input.fargs[1]].execute or Commands[input.fargs[1]]
+    if not fn then
+        Log.error('Command not executable: {}', Commands[input.fargs[1]])
+        return
+    end
     fn(unpack(args))
 end
 
