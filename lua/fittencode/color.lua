@@ -6,17 +6,29 @@ local PRESET_COLORS = {
     yellow2 = '#E2C07C'
 }
 
+--[[
+Suggestion
+- 补全建议
+Commit
+- 提交补全
+InfoNotify
+- No more suggestion
+]]
 local PRESET_THEME = {
     ['Suggestion'] = { fg = PRESET_COLORS.gray, ctermfg = 'LightGrey' },
-    ['NoMoreSuggestion'] = { fg = PRESET_COLORS.yellow, ctermfg = 'LightYellow' },
-    ['SuggestionCommit'] = { fg = PRESET_COLORS.yellow2, ctermfg = 'LightYellow' }
+    ['Commit'] = { fg = PRESET_COLORS.yellow2, ctermfg = 'LightYellow' },
+    ['InfoNotify'] = { fg = PRESET_COLORS.yellow, ctermfg = 'LightYellow' }
 }
 
 local M = {}
 
+local self = {
+    name = 'FittenCode.ColorScheme',
+}
+
 function M.init()
     vim.api.nvim_create_autocmd({ 'ColorScheme', 'VimEnter' }, {
-        group = vim.api.nvim_create_augroup('FittenCode.ColorScheme', { clear = true }),
+        group = vim.api.nvim_create_augroup(self.name, { clear = true }),
         pattern = '*',
         callback = function()
             for name, color in pairs(PRESET_THEME) do
@@ -28,6 +40,10 @@ function M.init()
             end
         end,
     })
+end
+
+function M.destroy()
+    vim.api.nvim_del_augroup_by_name(self.name)
 end
 
 return M

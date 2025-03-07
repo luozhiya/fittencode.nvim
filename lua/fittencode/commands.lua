@@ -145,8 +145,12 @@ end
 
 local M = {}
 
+local self = {
+    name = 'FittenCode',
+}
+
 function M.init()
-    vim.api.nvim_create_user_command('FittenCode', function(input)
+    vim.api.nvim_create_user_command(self.name, function(input)
         execute(input)
     end, {
         nargs = '*',
@@ -155,6 +159,10 @@ function M.init()
         end,
         desc = 'FittenCode',
     })
+end
+
+function M.destroy()
+    vim.api.nvim_del_user_command(self.name)
 end
 
 return M

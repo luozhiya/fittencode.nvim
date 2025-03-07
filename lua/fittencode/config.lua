@@ -183,8 +183,8 @@ local Defaults = {
     colors = {
         -- { fg = '#ffffff', bg = '#000000', style = 'bold' }
         ['Suggestion'] = {},
-        ['NoMoreSuggestion'] = {},
-        ['SuggestionCommit'] = {},
+        ['InfoNotify'] = {},
+        ['Commit'] = {},
     },
     http = {
         -- Avaiable options:
