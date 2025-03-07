@@ -59,13 +59,13 @@ View.__index = View
 ---@return FittenCode.Chat.View
 function View.new(options)
     local self = setmetatable({}, View)
-    self:init(options)
+    self:__initialize(options)
     return self
 end
 
-function View:init(opts)
-    opts = opts or {}
-    self.mode = opts.mode or 'panel'
+function View:__initialize(options)
+    options = options or {}
+    self.mode = options.mode or 'panel'
     self.messages_exchange.buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_call(self.messages_exchange.buf, function()
         vim.api.nvim_set_option_value('filetype', 'markdown', { buf = self.messages_exchange.buf })

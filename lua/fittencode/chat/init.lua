@@ -20,7 +20,7 @@ local function _init(conversation_types_provider)
     local fallback = LangFallback.generate_chain(lang)
     Log.info('Language fallback chain: {}', fallback)
     for _, fb in ipairs(fallback) do
-        Log.info('Try to load basic chat template for {}', fb)
+        Log.info('Try to load basic chat template with fallback language: {}', fb)
         local conversation_type = conversation_types_provider:get_conversation_type('chat-' .. fb)
         if conversation_type then
             basic_chat_template_id = 'chat-' .. fb
@@ -31,15 +31,13 @@ local function _init(conversation_types_provider)
         Log.notify_error('Failed to load basic chat template')
         return
     end
-    Log.info('Basic chat template: {}', basic_chat_template_id)
-    local model = Model.new()
+    Log.info('Successfully Loaded basic chat template with id: {}', basic_chat_template_id)
     local view = View.new({
-        model = model,
         mode = Config.chat.view.mode
     })
     controller = Controller.new({
         view = view,
-        model = model,
+        model = Model.new(),
         conversation_types_provider = conversation_types_provider,
         basic_chat_template_id = basic_chat_template_id
     })

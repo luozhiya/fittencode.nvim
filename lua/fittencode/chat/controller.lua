@@ -12,11 +12,11 @@ Controller.__index = Controller
 ---@return FittenCode.Chat.Controller
 function Controller.new(options)
     local self = setmetatable({}, Controller)
-    self.init(options)
+    self:__initialize(options)
     return self
 end
 
-function Controller:init(options)
+function Controller:__initialize(options)
     options = options or {}
     self.view = options.view
     self.model = options.model
