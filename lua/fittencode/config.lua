@@ -2,7 +2,7 @@
 local M = {}
 
 ---@class FittenCode.Config
-local defaults = {
+local Defaults = {
     server = {
         package_name = 'Fitten-Code',
         ---@type FittenCode.Version
@@ -214,19 +214,20 @@ local defaults = {
 }
 
 ---@type FittenCode.Config
-local options
+local CurrentConfiguration
 
----@param opts? FittenCode.Config
-function M.init(opts)
-    opts = opts or {}
-    if opts.use_default_keymaps == false then
-        defaults.keymaps.inline = {}
+---@param options? FittenCode.Config
+function M.init(options)
+    options = options or {}
+    CurrentConfiguration = vim.tbl_deep_extend('force', Defaults, options)
+    if options.use_default_keymaps == false then
+        CurrentConfiguration.keymaps.inline = {}
+        CurrentConfiguration.keymaps.chat = {}
     end
-    options = vim.tbl_deep_extend('force', defaults, opts)
 end
 
 return setmetatable(M, {
     __index = function(_, key)
-        return options[key]
+        return CurrentConfiguration[key]
     end,
 })
