@@ -23,9 +23,10 @@ function M.setup(options)
     end
     assert(self.pipelines == nil, 'Fittencode has already been setup')
     self.pipelines = {
-        { name = 'config',  init = function(module) module.init(options) end },
+        { name = 'config',        init = function(module) module.init(options) end },
         { name = 'log' },
         { name = 'client' },
+        { name = 'authentication' },
         { name = 'chat' },
         { name = 'inline' },
         { name = 'commands' },

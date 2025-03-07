@@ -46,6 +46,10 @@ local function abort_all_operations()
     login3rd.try_count = 0
 end
 
+function M.destroy()
+    abort_all_operations()
+end
+
 function M.register()
     Client.request(Protocol.URLs.register)
 end

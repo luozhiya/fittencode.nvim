@@ -10,53 +10,57 @@ API函数列表：
 - revoke_word()：撤销当前单词补全建议
 ]]
 
-local Inline = require('fittencode.inline')._get_controller()
-local Chat = require('fittencode.chat')._get_controller()
+-- 通用控制器方法生成器
+local function create_controller_fn(module_path, method, ...)
+    local pre_args = { ... }
+    return function()
+        local controller = require(module_path)._get_controller()
+        controller[method](controller, unpack(pre_args))
+    end
+end
 
-local M = {}
+-- 带参数的控制器方法生成器
+local function create_controller_fn_with_args(module_path, method)
+    return function(...)
+        local controller = require(module_path)._get_controller()
+        controller[method](controller, ...)
+    end
+end
+
+-- 专用方法生成器
+local function inline_accept_fn(direction, scope)
+    return function()
+        local Inline = require('fittencode.inline')._get_controller()
+        Inline:accept(direction, scope)
+    end
+end
 
 local base = {
-    ['set_log_level'] = function(level)
+    set_log_level = function(level)
         require('fittencode.log').set_level(level)
     end,
 }
 
 local inline = {
-    ['trigger_completion'] = function()
-        Inline:triggering_completion({ force = true })
-    end,
-    ['has_suggestions'] = function()
-        return Inline:has_suggestions()
-    end,
-    ['dismiss_suggestions'] = function()
-        Inline:dismiss_suggestions({ force = true })
-    end,
-    ['accept_all_suggestions'] = function()
-        Inline:accept('forward', 'all')
-    end,
-    ['accept_line'] = function()
-        Inline:accept('forward', 'line')
-    end,
-    ['revoke_line'] = function()
-        Inline:accept('backward', 'line')
-    end,
-    ['accept_word'] = function()
-        Inline:accept('forward', 'word')
-    end,
-    ['revoke_word'] = function()
-        Inline:accept('backward', 'word')
-    end,
-    ['get_inline_status'] = function()
-        return Inline:get_status()
-    end
+    trigger_completion  = create_controller_fn('fittencode.inline', 'triggering_completion', { force = true }),
+    has_suggestions     = create_controller_fn('fittencode.inline', 'has_suggestions'),
+    dismiss_suggestions = create_controller_fn('fittencode.inline', 'dismiss_suggestions', { force = true }),
+
+    accept_all          = inline_accept_fn('forward', 'all'),
+    accept_line         = inline_accept_fn('forward', 'line'),
+    revoke_line         = inline_accept_fn('backward', 'line'),
+    accept_word         = inline_accept_fn('forward', 'word'),
+    revoke_word         = inline_accept_fn('backward', 'word'),
+
+    get_inline_status   = create_controller_fn_with_args('fittencode.inline', 'get_status')
 }
 
 local chat = {
-    ['get_chat_status'] = function()
-        return Chat:get_status()
-    end,
+    get_chat_status = create_controller_fn_with_args('fittencode.chat', 'get_status')
 }
 
-M = vim.tbl_deep_extend('force', M, base, inline, chat)
+local M = {}
+
+M = vim.tbl_deep_extend('force', {}, base, inline, chat)
 
 return M
