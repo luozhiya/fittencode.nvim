@@ -4,22 +4,24 @@ StateConversation.__index = StateConversation
 
 ---@param conversation FittenCode.Chat.Conversation
 ---@return FittenCode.Chat.State.Conversation
-function StateConversation:new(conversation)
-    local obj = {
-        id = conversation.id,
-        reference = { select_text = nil, select_range = nil },
-        header = {
-            title = conversation:get_title(),
-            is_title_message = conversation:is_title_message(),
-            codicon = conversation:get_codicon()
-        },
-        content = {},
-        timestamp = conversation.creation_timestamp,
-        is_favorited = conversation.is_favorited,
-        mode = conversation.mode
+function StateConversation.new(conversation)
+    local self = setmetatable({}, StateConversation)
+    self:_initialize(conversation)
+    return self
+end
+
+function StateConversation:_initialize(conversation)
+    self.id = conversation.id
+    self.reference = { select_text = nil, select_range = nil }
+    self.header = {
+        title = conversation:get_title(),
+        is_title_message = conversation:is_title_message(),
+        codicon = conversation:get_codicon()
     }
-    setmetatable(obj, StateConversation)
-    return obj
+    self.content = {}
+    self.timestamp = conversation.creation_timestamp
+    self.is_favorited = conversation.is_favorited
+    self.mode = conversation.mode
 end
 
 function StateConversation:is_empty()

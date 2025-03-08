@@ -1,4 +1,4 @@
-local URLSearchParams = require('fittencode.network.url_search_params')
+local URLSearchParams = require('fittencode.net.url_search_params')
 local Extension = require('fittencode.extension')
 
 local M = {}

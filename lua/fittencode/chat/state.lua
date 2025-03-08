@@ -10,17 +10,20 @@ local State = {}
 State.__index = State
 
 ---@return FittenCode.Chat.State
-function State:new(opts)
-    local obj = {}
-    setmetatable(obj, State)
-    return obj
+function State.new(options)
+    local self = setmetatable({}, State)
+    self:_initialize(options)
+    return self
+end
+
+function State:_initialize(options)
 end
 
 ---@param conversation FittenCode.Chat.Conversation
 ---@return FittenCode.Chat.State.Conversation
 local function to_state(conversation)
     local chat_interface = conversation.template.chatInterface or 'message-exchange'
-    local sc = StateConversation:new(conversation)
+    local sc = StateConversation.new(conversation)
     if chat_interface == 'message-exchange' then
         sc.content.type = 'messageExchange'
         sc.content.messages = conversation:is_title_message() and Fn.slice(conversation.messages, 2) or conversation.messages

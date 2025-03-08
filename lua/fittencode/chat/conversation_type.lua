@@ -23,7 +23,7 @@ end
 function ConversationType:create_conversation(opts)
     return {
         type = 'success',
-        conversation = Conversation:new({
+        conversation = Conversation.new({
             id = opts.conversation_id,
             template = self.template,
             init_variables = opts.init_variables,

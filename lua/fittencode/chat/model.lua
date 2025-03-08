@@ -5,11 +5,16 @@ local Model = {}
 Model.__index = Model
 
 ---@return FittenCode.Chat.Model
-function Model.new()
+function Model.new(options)
     local self = setmetatable({}, Model)
+    self:_initialize(options)
+    return self
+end
+
+function Model:_initialize(options)
+    self.options = options or {}
     self.conversations = {}
     self.selected_conversation_id = nil
-    return self
 end
 
 function Model:destroy()

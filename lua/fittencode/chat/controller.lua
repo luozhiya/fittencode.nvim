@@ -24,7 +24,7 @@ function Controller:_initialize(options)
     self.conversation_types_provider = options.conversation_types_provider
     self.observers = {}
     self.augroups = {}
-    self.status = Status:new()
+    self.status = Status.new()
     self:register_observer(self.status)
 
     self.augroups.event = vim.api.nvim_create_augroup('Fittencode.Chat.Controller.Event', { clear = true })
@@ -72,7 +72,7 @@ end
 function Controller:update_view(force)
     force = force or false
     if self:view_visible() or force then
-        self.view:update(State:new():get_state_from_model(self.model))
+        self.view:update(State.new():get_state_from_model(self.model))
     end
 end
 

@@ -11,12 +11,10 @@ Headless.__index = Headless
 local function make_controller()
 end
 
-function Headless:new()
-    local obj = {
-        controller = make_controller()
-    }
-    setmetatable(obj, self)
-    return obj
+function Headless.new()
+    local self = setmetatable({}, Headless)
+    -- self.controller = make_controller()
+    return self
 end
 
 -- local ch = fittencode.chat.headless:new()

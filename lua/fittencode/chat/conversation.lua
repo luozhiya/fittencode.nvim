@@ -13,19 +13,28 @@ local Token = require('fittencode.client.token')
 local Conversation = {}
 Conversation.__index = Conversation
 
----@param opts table
+---@param options table
 ---@return FittenCode.Chat.Conversation
-function Conversation:new(opts)
-    local obj = {
-        id = opts.id,
-        template = opts.template,
-        init_variables = opts.init_variables,
-        messages = {},
-        update_view = Fn.schedule_call_wrap_fn(opts.update_view),
-        update_status = Fn.schedule_call_wrap_fn(opts.update_status)
+function Conversation.new(options)
+    local self = setmetatable({}, Conversation)
+    self:_initialize(options)
+    return self
+end
+
+function Conversation:_initialize(options)
+    self.id = options.id
+    self.template = options.template
+    self.init_variables = options.init_variables
+    self.messages = {}
+    self.update_view = Fn.schedule_call_wrap_fn(options.update_view)
+    self.update_status = Fn.schedule_call_wrap_fn(options.update_status)
+    self.variables = options.variables or {}
+    self.temporary_editor_content = nil
+    self.is_favorited = false
+    self.state = {
+        type = 'user_can_reply',
     }
-    setmetatable(obj, Conversation)
-    return obj
+    self.request_handle = nil
 end
 
 function Conversation:get_select_text()

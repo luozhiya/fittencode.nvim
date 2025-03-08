@@ -5,12 +5,14 @@ local Fn = require('fittencode.functional.fn')
 local Status = {}
 Status.__index = Status
 
-function Status:new(opts)
-    local obj = {
-        conversations = {},
-    }
-    setmetatable(obj, self)
-    return obj
+function Status.new(options)
+    local self = setmetatable({}, Status)
+    self:_initialize(options)
+    return self
+end
+
+function Status:_initialize(options)
+    self.conversations = {}
 end
 
 function Status:update(event, data)

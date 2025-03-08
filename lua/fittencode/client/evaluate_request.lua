@@ -1,6 +1,6 @@
 local VM = require('fittencode.open_promot_language.vm')
 local LangPerference = require('fittencode.language.preference')
-local URLSearchParams = require('fittencode.network.url_search_params')
+local URLSearchParams = require('fittencode.net.url_search_params')
 local Log = require('fittencode.log')
 
 local M = {}

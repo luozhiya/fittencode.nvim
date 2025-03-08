@@ -6,21 +6,27 @@ local Editor = require('fittencode.document.editor')
 
 local M = {}
 
--- 定义 state 表
-local record_state = {
-    last_active_buffer = nil,
-    selection = nil,
-    filter_buffers = {}
+local S = {
+    augroups = {
+        active_editor_changed = 'FittenCode.ActiveEditorChanged',
+        selection_changed = 'FittenCode.SelectionChanged',
+    },
+    -- 定义 state 表
+    record_state = {
+        last_active_buffer = nil,
+        selection = nil,
+        filter_buffers = {}
+    }
 }
 
 function M.register_filter_buf(buf)
-    table.insert(record_state.filter_buffers, buf)
+    table.insert(S.record_state.filter_buffers, buf)
 end
 
 function M.unregister_filter_buf(buf)
-    for i, v in ipairs(record_state.filter_buffers) do
+    for i, v in ipairs(S.record_state.filter_buffers) do
         if v == buf then
-            table.remove(record_state.filter_buffers, i)
+            table.remove(S.record_state.filter_buffers, i)
             break
         end
     end
@@ -28,26 +34,26 @@ end
 
 ---@return integer?
 function M.active_text_editor()
-    if Editor.is_filebuf(record_state.last_active_buffer) then
-        return record_state.last_active_buffer
+    if Editor.is_filebuf(S.record_state.last_active_buffer) then
+        return S.record_state.last_active_buffer
     else
         M.clear_state()
     end
 end
 
 function M.selection()
-    return record_state.selection
+    return S.record_state.selection
 end
 
 -- Chat 界面选择清除 Selection
 function M.clear_selection()
-    record_state.selection = nil
+    S.record_state.selection = nil
 end
 
 -- 清除选中状态
 function M.clear_state()
-    record_state.last_active_buffer = nil
-    record_state.selection = nil
+    S.record_state.last_active_buffer = nil
+    S.record_state.selection = nil
 end
 
 function M.selected_text()
@@ -110,15 +116,15 @@ end
 
 function M.init()
     vim.api.nvim_create_autocmd({ 'BufEnter' }, {
-        group = vim.api.nvim_create_augroup('FittenCode.Editor.Active', { clear = true }),
+        group = vim.api.nvim_create_augroup(S.augroups.active_editor_changed, { clear = true }),
         pattern = '*',
         callback = function(args)
-            if vim.tbl_contains(record_state.filter_buffers, args.buf) then
+            if vim.tbl_contains(S.record_state.filter_buffers, args.buf) then
                 return
             end
             if Editor.is_filebuf(args.buf) then
-                record_state.last_active_buffer = args.buf
-                vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.ActiveChanged', modeline = false, data = args.buf })
+                S.record_state.last_active_buffer = args.buf
+                vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.ActiveEditorChanged', modeline = false, data = args.buf })
             end
         end
     })
@@ -127,7 +133,7 @@ function M.init()
     -- 只有当在活动文档中输入状态下则清除Selection
     -- 还要继续测试一下
     vim.api.nvim_create_autocmd({ 'CursorMoved', 'InsertEnter' }, {
-        group = vim.api.nvim_create_augroup('FittenCode.Editor.Selection', { clear = true }),
+        group = vim.api.nvim_create_augroup(S.augroups.selection_changed, { clear = true }),
         pattern = '*',
         callback = function(args)
             if args.buf ~= M.active_text_editor() then
@@ -138,14 +144,14 @@ function M.init()
                 return modes[vim.api.nvim_get_mode().mode]
             end
             if not _check_v() then
-                record_state.selection = nil
-                vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.SelectionChanged', modeline = false, data = record_state.selection })
+                S.record_state.selection = nil
+                vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.SelectionChanged', modeline = false, data = S.record_state.selection })
             else
                 local region = vim.fn.getregion(vim.fn.getpos('.'), vim.fn.getpos('v'), { type = vim.fn.mode() })
                 local pos = vim.fn.getregionpos(vim.fn.getpos('.'), vim.fn.getpos('v'))
                 local start = { pos[1][1][2], pos[1][1][3] }
                 local end_ = { pos[#pos][2][2], pos[#pos][2][3] }
-                record_state.selection = {
+                S.record_state.selection = {
                     buf = args.buf,
                     name = vim.api.nvim_buf_get_name(args.buf),
                     text = region,
@@ -156,7 +162,7 @@ function M.init()
                         end_col = end_[2],
                     }
                 }
-                vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.SelectionChanged', modeline = false, data = record_state.selection })
+                vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.SelectionChanged', modeline = false, data = S.record_state.selection })
             end
         end,
         desc = 'Fittencode editor selection event',
@@ -164,6 +170,9 @@ function M.init()
 end
 
 function M.destroy()
+    for _, group in pairs(S.augroups) do
+        vim.api.nvim_del_augroup_by_name(group)
+    end
 end
 
 return M

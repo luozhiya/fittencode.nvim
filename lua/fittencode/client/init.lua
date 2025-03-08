@@ -1,4 +1,4 @@
-local HTTP = require('fittencode.network.request')
+local HTTP = require('fittencode.net.request')
 local APIKeyManager = require('fittencode.client.api_key_manager')
 local EvaluateRequest = require('fittencode.client.evaluate_request')
 local Server = require('fittencode.client.server')
