@@ -22,19 +22,24 @@ function Record.new()
 end
 
 function Record:reset()
+    -- VSCode standard
     self.delete_cnt = 0
     self.insert_without_paste_cnt = 0
     self.insert_cnt = 0
-    self.accept_cnt = 0
+    self.accept_cnt = 0 -- 总的采纳次数
     self.insert_with_completion_without_paste_cnt = 0
     self.insert_with_completion_cnt = 0
-    self.completion_times = 0
-    self.completion_total_time = 0
-    self.is_pc_cnt = 0
-    self.edit_show_cnt = 0
-    self.edit_cancel_cnt = 0
-    self.edit_accept_cnt = 0
-    self.edit_change_config = 0
+    self.completion_times = 0 -- 补全的总次数
+    self.completion_total_time = 0 -- 补全的总时间
+    self.is_pc_cnt = 0 -- Project Completion 的次数
+    self.edit_show_cnt = 0 -- Edit Completion 的次数
+    self.edit_cancel_cnt = 0 -- Edit Completion 的取消次数
+    self.edit_accept_cnt = 0 -- Edit Completion 的采纳次数
+    self.edit_change_config = 0 -- Edit Completion 的配置
+    -- Neovim only
+    self.accept_all_suggestion_cnt = 0 -- 采纳所有建议的次数
+    self.suggestion_chars_total_cnt = 0 -- 补全的总字符数
+    self.accept_chars_total_cnt = 0 -- 采纳的总字符数
 end
 
 --[[
@@ -42,13 +47,13 @@ end
 CompletionStatistics
 - 通过监听 Inline 的事件，非侵入式地记录用户的输入行为
 - 和 VSCode 版本的不一致的地方：
-  - 只统计在存在补全的情况下的输入行为
+  - 在 Neovim 中只统计在存在补全的情况下的输入行为
 - 统计数据：
   - 对补全的接纳字符数
   - 补全的总次数
   - 补全的总时间
   - 补全的总字符数
-  - Accept-All 的次数
+  - 采纳所有补全建议的次数
 ]]
 local CompletionStatistics = {}
 CompletionStatistics.__index = CompletionStatistics
@@ -81,6 +86,16 @@ function CompletionStatistics:_set_global_statistic()
     elseif open == 'off' then
         self.statistic_dict['global'].edit_change_config = 3
     end
+end
+
+--[[
+
+CompletionStatistics:_set_inline_event_handler
+- 触发时，可以记录 completion_times 数据
+- 根据返回的数据时间，可以记录 completion_total_time 数据
+- 当 inline session 结束时，可以记录 accept_cnt/accept_all_suggestion_cnt/suggestion_chars_total_cnt/accept_chars_total_cnt 数据
+]]
+function CompletionStatistics:_set_inline_event_handler(event)
 end
 
 function CompletionStatistics:_set_document_change_handler()
