@@ -13,11 +13,11 @@ local Service = {}
 function Service.new(options)
     local obj = {}
     setmetatable(obj, { __index = Service })
-    obj:__initialize(options)
+    obj:_initialize(options)
     return obj
 end
 
-function Service:__initialize(options)
+function Service:_initialize(options)
     options = options or {}
     self.project_completion = ProjectCompletion.new({
         get_chosen = function() return self:get_chosen() end,

@@ -4,13 +4,15 @@ local Conversation = require('fittencode.chat.conversation')
 local ConversationType = {}
 ConversationType.__index = ConversationType
 
-function ConversationType:new(opts)
-    local obj = {
-        source = opts.source,
-        template = opts.template,
-    }
-    setmetatable(obj, ConversationType)
-    return obj
+function ConversationType.new(options)
+    local self = setmetatable({}, ConversationType)
+    self:_initialize(options)
+    return self
+end
+
+function ConversationType:_initialize(options)
+    self.source = options.source
+    self.template = options.template
 end
 
 function ConversationType:tags()

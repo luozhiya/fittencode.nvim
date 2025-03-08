@@ -16,11 +16,11 @@ Model.__index = Model
 
 function Model.new(options)
     local self = setmetatable({}, Model)
-    self:__initialize(options)
+    self:_initialize(options)
     return self
 end
 
-function Model:__initialize(options)
+function Model:_initialize(options)
     self.buf = options.buf
     self.position = options.position
     self.response = options.response or {}

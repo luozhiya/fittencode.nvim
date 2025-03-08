@@ -12,11 +12,11 @@ Controller.__index = Controller
 ---@return FittenCode.Chat.Controller
 function Controller.new(options)
     local self = setmetatable({}, Controller)
-    self:__initialize(options)
+    self:_initialize(options)
     return self
 end
 
-function Controller:__initialize(options)
+function Controller:_initialize(options)
     options = options or {}
     self.view = options.view
     self.model = options.model
@@ -40,8 +40,10 @@ end
 
 function Controller:destroy()
     for _, id in pairs(self.augroups) do
-        vim.api.nvim_del_augroup(id)
+        vim.api.nvim_del_augroup_by_id(id)
     end
+    self.model:destroy()
+    self.view:destroy()
 end
 
 function Controller:register_observer(observer)

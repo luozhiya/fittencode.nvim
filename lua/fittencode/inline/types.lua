@@ -14,7 +14,7 @@
 ---@field selected_session_id string
 ---@field init function
 ---@field destroy function
----@field private __initialize function
+---@field private _initialize function
 
 ---@class FittenCode.Inline.State
 

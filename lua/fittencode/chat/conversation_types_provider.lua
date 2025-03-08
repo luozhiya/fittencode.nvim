@@ -12,14 +12,16 @@ local ConversationTypesProvider = {}
 ConversationTypesProvider.__index = ConversationTypesProvider
 
 ---@return FittenCode.Chat.ConversationTypeProvider
-function ConversationTypesProvider:new(opts)
-    local obj = {
-        extension_templates = {},
-        conversation_types = {},
-        extension_uri = opts.extension_uri
-    }
-    setmetatable(obj, ConversationTypesProvider)
-    return obj
+function ConversationTypesProvider.new(options)
+    local self = setmetatable({}, ConversationTypesProvider)
+    self:_initialize(options)
+    return self
+end
+
+function ConversationTypesProvider:_initialize(options)
+    self.extension_templates = {}
+    self.conversation_types = {}
+    self.extension_uri = options.extension_uri
 end
 
 ---@param id string
@@ -85,7 +87,7 @@ function ConversationTypesProvider:load_builtin_template(type, file)
     Log.info('Loading built-in template from: {}', resource)
     local t = TemplateResolver.load_from_file(resource)
     if t then
-        return ConversationType:new({ template = t, source = 'built-in' })
+        return ConversationType.new({ template = t, source = 'built-in' })
     end
 end
 
@@ -93,7 +95,7 @@ function ConversationTypesProvider:load_extension_templates()
     for _, e in ipairs(self.extension_templates) do
         local t = TemplateResolver.load_from_file(e)
         if t then
-            self.conversation_types[t.id] = ConversationType:new({ template = t, source = 'extension' })
+            self.conversation_types[t.id] = ConversationType.new({ template = t, source = 'extension' })
         end
     end
 end
@@ -115,7 +117,7 @@ function ConversationTypesProvider:load_workspace_templates()
     local e = TemplateResolver.load_from_directory(resource)
     for _, r in ipairs(e) do
         if r and r.isEnabled then
-            self.conversation_types[r.id] = ConversationType:new({ template = r, source = 'local-workspace' })
+            self.conversation_types[r.id] = ConversationType.new({ template = r, source = 'local-workspace' })
         end
     end
 end

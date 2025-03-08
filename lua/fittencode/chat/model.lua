@@ -12,6 +12,13 @@ function Model.new()
     return self
 end
 
+function Model:destroy()
+    for _, r in ipairs(self.conversations) do
+        r:destroy()
+    end
+    self:delete_all_conversations()
+end
+
 ---@param e FittenCode.Chat.Conversation
 function Model:add_and_select_conversation(e)
     if #self.conversations > 0 then
@@ -41,7 +48,8 @@ end
 ---@param id string
 function Model:delete_conversation(id)
     for i = #self.conversations, 1, -1 do
-        if self.conversations[i].id == id then
+        local r = self.conversations[i]
+        if r.id == id then
             table.remove(self.conversations, i)
         end
     end
@@ -49,7 +57,8 @@ end
 
 function Model:delete_all_conversations()
     for i = #self.conversations, 1, -1 do
-        if not self.conversations[i].is_favorited then
+        local r = self.conversations[i]
+        if not r.is_favorited then
             table.remove(self.conversations, i)
         end
     end

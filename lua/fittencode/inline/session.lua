@@ -19,11 +19,11 @@ local Session = {}
 
 function Session.new(options)
     local self = setmetatable({}, Session)
-    self:__initialize(options)
+    self:_initialize(options)
     return self
 end
 
-function Session:__initialize(options)
+function Session:_initialize(options)
     self.buf = options.buf
     self.position = options.position
     self.id = options.id

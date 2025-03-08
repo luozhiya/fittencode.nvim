@@ -43,7 +43,7 @@ ProjectCompletion.__index = ProjectCompletion
 
 function ProjectCompletion.new(options)
     local self = setmetatable({}, ProjectCompletion)
-    self:__initialize(options)
+    self:_initialize(options)
     return self
 end
 
@@ -54,7 +54,7 @@ local MODE_TIMEOUT = {
     precise = 1000
 }
 
-function ProjectCompletion:__initialize(options)
+function ProjectCompletion:_initialize(options)
     options = options or {}
     self.get_chosen = options.get_chosen
     assert(self.get_chosen, 'get_chosen is required')

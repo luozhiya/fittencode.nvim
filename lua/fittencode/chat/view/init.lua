@@ -59,11 +59,11 @@ View.__index = View
 ---@return FittenCode.Chat.View
 function View.new(options)
     local self = setmetatable({}, View)
-    self:__initialize(options)
+    self:_initialize(options)
     return self
 end
 
-function View:__initialize(options)
+function View:_initialize(options)
     options = options or {}
     self.mode = options.mode or 'panel'
     self.messages_exchange.buf = vim.api.nvim_create_buf(false, true)
@@ -92,6 +92,13 @@ function View:__initialize(options)
     EditorStateMonitor.register_filter_buf(self.messages_exchange.buf)
     EditorStateMonitor.register_filter_buf(self.reference.buf)
     EditorStateMonitor.register_filter_buf(self.char_input.buf)
+end
+
+function View:destroy()
+    EditorStateMonitor.unregister_filter_buf(self.messages_exchange.buf)
+    EditorStateMonitor.unregister_filter_buf(self.reference.buf)
+    EditorStateMonitor.unregister_filter_buf(self.char_input.buf)
+    self:_destroy_win()
 end
 
 function View:_destroy_win()

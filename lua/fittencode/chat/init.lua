@@ -8,6 +8,7 @@ local Config = require('fittencode.config')
 local LangPreference = require('fittencode.language.preference')
 local LangFallback = require('fittencode.language.fallback')
 local Extension = require('fittencode.extension')
+local EditorStateMonitor = require('fittencode.chat.editor_state_monitor')
 
 ---@type FittenCode.Chat.Controller?
 local controller = nil
@@ -39,16 +40,16 @@ local function _init(conversation_types_provider)
         view = view,
         model = Model.new(),
         conversation_types_provider = conversation_types_provider,
-        basic_chat_template_id = basic_chat_template_id
+        basic_chat_template_id = basic_chat_template_id,
     })
     view:register_message_receiver(function(message)
         controller:receive_view_message(message)
     end)
-    require('fittencode.chat.editor_state_monitor').init()
+    EditorStateMonitor.init()
 end
 
 local function init()
-    local conversation_types_provider = ConversationTypesProvider:new({ extension_uri = Extension.extension_uri })
+    local conversation_types_provider = ConversationTypesProvider.new({ extension_uri = Extension.extension_uri })
     conversation_types_provider:async_load_conversation_types():forward(function()
         _init(conversation_types_provider)
     end)
@@ -59,6 +60,7 @@ local function destroy()
         controller:destroy()
         controller = nil
     end
+    EditorStateMonitor.destroy()
 end
 
 local function _get_controller()

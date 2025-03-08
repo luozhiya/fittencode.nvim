@@ -33,11 +33,11 @@ function CompletionStatistics:new(e, r, n, i)
         logger = i,
     }
     setmetatable(object, { __index = CompletionStatistics })
-    object:__initialize()
+    object:_initialize()
     return object
 end
 
-function CompletionStatistics:__initialize()
+function CompletionStatistics:_initialize()
     self.handle_text_document_change = function(buf)
         local uri = buf.uri
         if self.completion_status_dict[uri] then

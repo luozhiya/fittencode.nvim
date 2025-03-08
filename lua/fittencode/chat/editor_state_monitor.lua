@@ -163,4 +163,7 @@ function M.init()
     })
 end
 
+function M.destroy()
+end
+
 return M

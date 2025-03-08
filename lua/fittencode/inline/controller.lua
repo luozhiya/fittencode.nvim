@@ -22,11 +22,11 @@ Controller.__index = Controller
 ---@return FittenCode.Inline.Controller
 function Controller.new(options)
     local self = setmetatable({}, Controller)
-    self:__initialize(options)
+    self:_initialize(options)
     return self
 end
 
-function Controller:__initialize(options)
+function Controller:_initialize(options)
     options = options or {}
     self.project_completion_service = ProjectCompletionService.new()
     self.prompt_generator = PromptGenerator:new({

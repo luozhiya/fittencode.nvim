@@ -118,17 +118,27 @@ function Conversation:recovered_from_error(error)
     })
 end
 
+function Conversation:abort()
+    if self.request_handle then
+        self.request_handle:abort()
+        self.request_handle = nil
+    end
+end
+
+function Conversation:destroy()
+    self:abort()
+end
+
 ---@param content? string
 function Conversation:answer(content)
     content = Token.remove_special_token(content)
     if not content or content == '' then
         return
     end
-    self:add_user_message(content)
-
     -- 中断之前的请求
-    self.request_handle:abort()
-    self.request_handle = nil
+    self:abort()
+
+    self:add_user_message(content)
 
     -- 发送请求
     local request_handle, err = self:execute_chat({

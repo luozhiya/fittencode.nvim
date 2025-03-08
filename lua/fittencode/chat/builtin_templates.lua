@@ -1,4 +1,4 @@
-local list = {
+local LIST = {
     chat = {
         'chat-en.rdt.md',
         'chat-zh-cn.rdt.md'
@@ -30,4 +30,4 @@ local list = {
     }
 }
 
-return list
+return LIST
