@@ -33,6 +33,11 @@ function APIKeyManager.new(options)
     return setmetatable(self, { __index = APIKeyManager })
 end
 
+function APIKeyManager:destroy()
+    self.keyring = nil
+    self.storage = nil
+end
+
 ---@return string?
 function APIKeyManager:get_fitten_access_token()
     local _, access_token = pcall(function() return self.keyring.access_token end)

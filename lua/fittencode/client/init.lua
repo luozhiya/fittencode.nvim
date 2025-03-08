@@ -44,6 +44,12 @@ function M.init()
     end
 end
 
+function M.destroy()
+    assert(api_key_manager, 'APIKeyManager not initialized')
+    api_key_manager:destroy()
+    api_key_manager = nil
+end
+
 ---@return FittenCode.APIKeyManager
 function M.get_api_key_manager()
     assert(api_key_manager, 'APIKeyManager not initialized')

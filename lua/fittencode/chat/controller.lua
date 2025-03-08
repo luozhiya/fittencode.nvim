@@ -23,14 +23,16 @@ function Controller:_initialize(options)
     self.basic_chat_template_id = options.basic_chat_template_id
     self.conversation_types_provider = options.conversation_types_provider
     self.observers = {}
-    self.augroups = {}
     self.status = Status.new()
     self:register_observer(self.status)
+    self.augroup_name = 'Fittencode.Chat.Controller'
+    self:_set_selection_changed_handler()
+end
 
-    self.augroups.event = vim.api.nvim_create_augroup('Fittencode.Chat.Controller.Event', { clear = true })
+function Controller:_set_selection_changed_handler()
     vim.api.nvim_create_autocmd('User', {
         pattern = 'Fittencode.SelectionChanged',
-        group = self.augroups.event,
+        group = vim.api.nvim_create_augroup(self.augroup_name, { clear = true }),
         once = false,
         callback = function(args)
             self:update_view()
@@ -39,9 +41,7 @@ function Controller:_initialize(options)
 end
 
 function Controller:destroy()
-    for _, id in pairs(self.augroups) do
-        vim.api.nvim_del_augroup_by_id(id)
-    end
+    vim.api.nvim_del_augroup_by_name(self.augroup_name)
     self.model:destroy()
     self.view:destroy()
 end

@@ -12,7 +12,7 @@
 ---@class FittenCode.Chat.Controller
 ---@field view FittenCode.Chat.View
 ---@field model FittenCode.Chat.Model
----@field augroups table
+---@field augroup table
 ---@field basic_chat_template_id string
 ---@field conversation_types_provider FittenCode.Chat.ConversationTypeProvider
 ---@field status fittencode.Chat.Status
