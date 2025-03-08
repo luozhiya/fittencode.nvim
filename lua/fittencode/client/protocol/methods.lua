@@ -236,8 +236,23 @@ local Methods = {
     -- * `mode = cors`
     -- * `headers = { 'Content-Type' = 'application/json' }`
     -- * `body = {}`
-    -- * `query = ?tracker={}`
+    -- * `query = ?{{completion_statistics}}`
     statistic_log = {
+        method = 'GET',
+        mode = 'cors',
+        headers = { ['Content-Type'] = 'application/json' },
+        url = '/codeuser/statistic_log',
+        query = {
+            ref = { '{{completion_statistics}}' },
+        }
+    },
+    -- 发送统计日志接口
+    -- * `method = GET`
+    -- * `mode = cors`
+    -- * `headers = { 'Content-Type' = 'application/json' }`
+    -- * `body = {}`
+    -- * `query = ?tracker={}` tracker=后面接一个json字符串
+    statistic_log_v2 = {
         method = 'GET',
         mode = 'cors',
         headers = { ['Content-Type'] = 'application/json' },

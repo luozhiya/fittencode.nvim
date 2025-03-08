@@ -6,7 +6,7 @@ local function extension_uri()
     return Path.join(debug.getinfo(1, 'S').source:sub(2), '../../../')
 end
 
-local M = {
+local META = {
     ide = 'nvim',
     ide_name = 'neovim',
     extension_version = '0.2.0',
@@ -14,4 +14,8 @@ local M = {
     extension_uri = extension_uri(),
 }
 
-return M
+return {
+    __index = function(_, key)
+        return META[key]
+    end,
+}

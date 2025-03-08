@@ -401,6 +401,7 @@
 ---@field fb_check_login_auth FittenCode.Protocol.Element
 ---@field click_count FittenCode.Protocol.Element
 ---@field statistic_log FittenCode.Protocol.Element
+---@field statistic_log_v2 FittenCode.Protocol.Element
 ---@field gray_test FittenCode.Protocol.Element
 ---@field pc_check_auth FittenCode.Protocol.Element
 ---@field get_completion_version FittenCode.Protocol.Element

@@ -19,12 +19,16 @@ local login3rd = {
     total_time_limit = 600 -- 总超时时间（秒）
 }
 -- 第三方登录提供商
-M.login3rd_providers = {
+local login3rd_providers = {
     'google',
     'github',
     'twitter',
     'microsoft'
 }
+
+function M.supported_login3rd_providers()
+    return vim.deepcopy(login3rd_providers)
+end
 
 local function abort_all_operations()
     -- 终止所有可能的请求
@@ -146,7 +150,7 @@ function M.login3rd(source, options)
         return
     end
 
-    if not source or not vim.tbl_contains(M.login3rd_providers, source) then
+    if not source or not vim.tbl_contains(login3rd_providers, source) then
         Log.notify_error(Tr.translate('[Fitten Code] Invalid 3rd-party login source: {}', source))
         return
     end

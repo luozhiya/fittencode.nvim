@@ -1,114 +1,236 @@
 local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
+local URLSearchParams = require('fittencode.net.url_search_params')
+local Config = require('fittencode.config')
+local GrayTestHelper = require('fittencode.inline.gray_test_helper')
+local EventLoop = require('fittencode.vim.promisify.uv.event_loop')
+local Fn = require('fittencode.functional.fn')
+local Tracker = require('fittencode.services.tracker')
+local Extension = require('fittencode.extension')
 
-local SENDING_TIME_INTERVAL = 1e3 * 60 * 10
-local SEND_TIME_INTERVAL = 1e3 * 60 * 5
-local MAX_TEXT_LENGTH = 5
+local STATISTIC_SENDING_GAP = 1e3 * 60 * 10
+local MAX_ACCEPT_LENGTH = 5
 
 local Record = {}
+Record.__index = Record
 
-function Record:new()
-    local object = {
-        delete_cnt = 0,
-        insert_without_paste_cnt = 0,
-        insert_cnt = 0,
-        accept_cnt = 0,
-        insert_with_completion_without_paste_cnt = 0,
-        insert_with_completion_cnt = 0,
-        completion_times = 0,
-        completion_total_time = 0
-    }
-    setmetatable(object, { __index = Record })
-    return object
+function Record.new()
+    local self = {}
+    setmetatable(self, Record)
+    self:reset()
+    return self
 end
 
+function Record:reset()
+    self.delete_cnt = 0
+    self.insert_without_paste_cnt = 0
+    self.insert_cnt = 0
+    self.accept_cnt = 0
+    self.insert_with_completion_without_paste_cnt = 0
+    self.insert_with_completion_cnt = 0
+    self.completion_times = 0
+    self.completion_total_time = 0
+    self.is_pc_cnt = 0
+    self.edit_show_cnt = 0
+    self.edit_cancel_cnt = 0
+    self.edit_accept_cnt = 0
+    self.edit_change_config = 0
+end
+
+--[[
+
+CompletionStatistics
+- 通过监听 Inline 的事件，非侵入式地记录用户的输入行为
+- 和 VSCode 版本的不一致的地方：
+  - 只统计在存在补全的情况下的输入行为
+- 统计数据：
+  - 对补全的接纳字符数
+  - 补全的总次数
+  - 补全的总时间
+  - 补全的总字符数
+  - Accept-All 的次数
+]]
 local CompletionStatistics = {}
+CompletionStatistics.__index = CompletionStatistics
 
-function CompletionStatistics:new(e, r, n, i)
-    local object = {
-        completion_status_dict = e,
-        statistic_dict = {},
-        file_code_tree_dict = r,
-        user_id = n,
-        logger = i,
-    }
-    setmetatable(object, { __index = CompletionStatistics })
-    object:_initialize()
-    return object
+function CompletionStatistics.new(options)
+    local self = {}
+    setmetatable(self, CompletionStatistics)
+    self:_initialize(options)
+    return self
 end
 
-function CompletionStatistics:_initialize()
-    self.handle_text_document_change = function(buf)
-        local uri = buf.uri
-        if self.completion_status_dict[uri] then
-            local completion_status = self.completion_status_dict[uri]
-            if vim.uv.now() - completion_status.sending_time > SEND_TIME_INTERVAL then
-                return
+function CompletionStatistics:_initialize(options)
+    options = options or {}
+    self.completion_status_dict = options.completion_status_dict or {}
+    self.statistic_dict = options.statistic_dict or {}
+    self.user_id = options.user_id
+    self.get_chosen = options.get_chosen
+    self:_set_global_statistic()
+    self:_set_document_change_handler()
+    self.timer = EventLoop.set_interval(STATISTIC_SENDING_GAP, Fn.schedule_call_wrap_fn(function() self:send_status() end))
+end
+
+function CompletionStatistics:_set_global_statistic()
+    self.statistic_dict['global'] = Record.new()
+    local open = Config.use_project_completion.open
+    if open == 'auto' then
+        self.statistic_dict['global'].edit_change_config = 1
+    elseif open == 'on' then
+        self.statistic_dict['global'].edit_change_config = 2
+    elseif open == 'off' then
+        self.statistic_dict['global'].edit_change_config = 3
+    end
+end
+
+function CompletionStatistics:_set_document_change_handler()
+end
+
+function CompletionStatistics:handle_text_document_change(s)
+    local o = s.document
+    local a = o.uri:toString()
+    if self.completion_status_dict[a] then
+        if not self.statistic_dict[a] then
+            self.statistic_dict[a] = Record.new()
+        end
+        local entry = self.completion_status_dict[a]
+        if (os.clock() * 1000 - entry.sending_time) > STATISTIC_SENDING_GAP then
+            return
+        end
+        for _, l in ipairs(s.contentChanges) do
+            local c = self:check_accept(o, entry, l.rangeOffset, l.text)
+            local u = #l.text
+            self.statistic_dict[a].insert_cnt = self.statistic_dict[a].insert_cnt + u
+            if u <= MAX_ACCEPT_LENGTH or c == 1 then
+                self.statistic_dict[a].insert_without_paste_cnt = self.statistic_dict[a].insert_without_paste_cnt + u
             end
-            for _, l in ipairs(buf.contentChanges) do
-                local h = self:check_accept(buf, completion_status, l.rangeOffset, l.text)
-                local d = #l.text
-                self.statistic_dict[uri].insert_cnt = self.statistic_dict[uri].insert_cnt + d
-                if d <= MAX_TEXT_LENGTH or h == 1 then
-                    self.statistic_dict[uri].insert_without_paste_cnt = self.statistic_dict[uri].insert_without_paste_cnt + d
-                end
-                self.statistic_dict[uri].delete_cnt = self.statistic_dict[uri].delete_cnt + l.rangeLength
-                if h <= 1 then
-                    self.statistic_dict[uri].insert_with_completion_cnt = self.statistic_dict[uri].insert_with_completion_cnt + d
-                    if d <= MAX_TEXT_LENGTH or h == 1 then
-                        self.statistic_dict[uri].insert_with_completion_without_paste_cnt = self.statistic_dict[uri].insert_with_completion_without_paste_cnt + d
-                    end
-                end
-                if h == 1 then
-                    self.statistic_dict[uri].accept_cnt = self.statistic_dict[uri].accept_cnt + d
+            if c == 1 then
+                self.statistic_dict[a].accept_cnt = self.statistic_dict[a].accept_cnt + u
+            end
+            self.statistic_dict[a].delete_cnt = self.statistic_dict[a].delete_cnt + l.rangeLength
+            if c <= 1 then
+                self.statistic_dict[a].insert_with_completion_cnt = self.statistic_dict[a].insert_with_completion_cnt + u
+                if u <= MAX_ACCEPT_LENGTH or c == 1 then
+                    self.statistic_dict[a].insert_with_completion_without_paste_cnt = self.statistic_dict[a].insert_with_completion_without_paste_cnt + u
                 end
             end
         end
     end
-    -- on_did_change_text_document = self.handle_text_document_change
-end
-
-function CompletionStatistics:update_user_id(e)
-    self.user_id = e
 end
 
 function CompletionStatistics:check_accept(e, r, n, i)
     if r.current_completion then
-        local s = e.offsetAt(r.current_completion.position)
-        local a = r.current_completion.response.completions[0].generated_text
-        local substring = a:sub(n - s + 1, n - s + #i)
-        return i == substring and 1 or 0
-    else
-        return 2
+        local s = e:offsetAt(r.current_completion.position)
+        local completion = r.current_completion.response.completions[1]
+        if completion then
+            local generated_text = completion.generated_text
+            local start_pos = n - s + 1
+            local end_pos = start_pos + #i - 1
+            local a = generated_text:sub(start_pos, end_pos)
+            return i == a and 1 or 0
+        end
+    end
+    return 2
+end
+
+function CompletionStatistics:update_user_id(user_id)
+    self.user_id = user_id
+end
+
+function CompletionStatistics:update_edit_mode_status(uri, action)
+    if not self.statistic_dict[uri] then
+        self.statistic_dict[uri] = Record.new()
+    end
+
+    if action == 0 then
+        self.statistic_dict[uri].edit_show_cnt = self.statistic_dict[uri].edit_show_cnt + 1
+    elseif action == 1 then
+        self.statistic_dict[uri].edit_cancel_cnt = self.statistic_dict[uri].edit_cancel_cnt + 1
+    elseif action == 2 then
+        self.statistic_dict[uri].edit_accept_cnt = self.statistic_dict[uri].edit_accept_cnt + 1
     end
 end
 
-function CompletionStatistics:send_one_status(tracker_msg)
-    Client.request2(Protocol.Methods.statistic_log, {
+function CompletionStatistics:update_completion_time(uri, time, is_pc)
+    if not self.statistic_dict[uri] then
+        self.statistic_dict[uri] = Record.new()
+    end
+    if is_pc then
+        self.statistic_dict[uri].is_pc_cnt = self.statistic_dict[uri].is_pc_cnt + 1
+    else
+        self.statistic_dict[uri].is_pc_cnt = self.statistic_dict[uri].is_pc_cnt - 1
+    end
+    self.statistic_dict[uri].completion_times = self.statistic_dict[uri].completion_times + 1
+    self.statistic_dict[uri].completion_total_time = self.statistic_dict[uri].completion_total_time + time
+end
+
+function CompletionStatistics:send_one_status(status)
+    Client.request(Protocol.Methods.statistic_log, {
         variables = {
-            query = tracker_msg
+            completion_statistics = status
         }
     })
 end
 
+-- "2025-03-08"
+function CompletionStatistics:get_current_date()
+    return vim.fn.strftime('%Y-%m-%d')
+end
+
+function CompletionStatistics:update_tracker(current)
+    local completion_tracker = Tracker.mutable_completion()
+    local time = self:get_current_date()
+    local entry = completion_tracker[time]
+    if not entry then
+        completion_tracker[time] = current
+    else
+        entry.accept_cnt = entry.accept_cnt and entry.accept_cnt + current.accept_cnt or current.accept_cnt
+        entry.insert_without_paste_cnt = entry.insert_without_paste_cnt and entry.insert_without_paste_cnt + current.insert_without_paste_cnt or current.insert_without_paste_cnt
+    end
+end
+
 function CompletionStatistics:send_status()
-    local e = Me.workspace.getConfiguration('fittencode.useProjectCompletion').get('open')
-    local r = oM(self.user_id)
-    -- pc_check_auth
+    local open = Config.use_project_completion.open
+    local user_id = Client.get_api_key_manager():get_fitten_user_id()
+    local chosen = self.get_chosen(self.user_id)
+
     for uri, stats in pairs(self.statistic_dict) do
         if self.completion_status_dict[uri] then
             local a = self.completion_status_dict[uri]
-            if vim.uv.now() - a.sending_time > SENDING_TIME_INTERVAL then
-                ::continue::
+            if vim.uv.now() - a.sending_time > STATISTIC_SENDING_GAP then
+                goto continue
             end
         end
-        if stats.completion_times == 0 then
-            ::continue::
+        if stats.completion_times == 0 and stats.edit_show_cnt == 0 and stats.edit_cancel_cnt == 0 and stats.edit_accept_cnt == 0 and stats.edit_change_config == 0 then
+            goto continue
         end
+
+        local i = 0
+        if uri == 'global' then
+            i = 0
+        else
+            i = self.get_file_lsp(uri)
+        end
+
+        local completion_type = 0
+        local last_chosen_prompt_type = 0
+        local use_project_completion = 0
+
+        local tag = {
+            gray_status = vim.json.encode((GrayTestHelper.get_all_results())),
+            chosen = tostring(chosen),
+            is_pc = stats.is_pc_cnt > 0 and '1' or '0',
+            completion_type = completion_type,
+            pc_prompt_type = last_chosen_prompt_type,
+            ide = Extension.ide_name
+        }
         local s = {
-            user_id = self.user_id,
-            enabled = tostring(e),
-            chosen = tostring(r),
+            user_id = user_id,
+            has_lsp = tostring(i == 1),
+            enabled = open,
+            tag = vim.json.encode(tag),
+            chosen = tostring(chosen),
+            use_project_completion = tostring(use_project_completion),
             uri = uri,
             accept_cnt = tostring(stats.accept_cnt),
             insert_without_paste_cnt = tostring(stats.insert_without_paste_cnt),
@@ -117,31 +239,22 @@ function CompletionStatistics:send_status()
             completion_times = tostring(stats.completion_times),
             completion_total_time = tostring(stats.completion_total_time),
             insert_with_completion_without_paste_cnt = tostring(stats.insert_with_completion_without_paste_cnt),
-            insert_with_completion_cnt = tostring(stats.insert_with_completion_cnt)
+            insert_with_completion_cnt = tostring(stats.insert_with_completion_cnt),
+            edit_show_cnt = tostring(stats.edit_show_cnt),
+            edit_cancel_cnt = tostring(stats.edit_cancel_cnt),
+            edit_accept_cnt = tostring(stats.edit_accept_cnt),
+            edit_change_config = tostring(stats.edit_change_config)
         }
-        local o = ''
+        self:update_tracker(s)
+        local query = URLSearchParams.new()
         for k, v in pairs(s) do
-            o = o .. k .. '=' .. v .. '&'
+            query:append(k, v)
         end
-        o = o:sub(1, -2)
-        self:send_one_status(o)
-        stats.accept_cnt = 0
-        stats.insert_without_paste_cnt = 0
-        stats.insert_cnt = 0
-        stats.delete_cnt = 0
-        stats.completion_times = 0
-        stats.completion_total_time = 0
-        stats.insert_with_completion_without_paste_cnt = 0
-        stats.insert_with_completion_cnt = 0
+        local status = query:to_string()
+        self:send_one_status(status)
+        stats:reset()
+        ::continue::
     end
-end
-
-function CompletionStatistics:update_completion_time(e, r)
-    if not self.statistic_dict[e] then
-        self.statistic_dict[e] = Record:new()
-    end
-    self.statistic_dict[e].completion_times = self.statistic_dict[e].completion_times + 1
-    self.statistic_dict[e].completion_total_time = self.statistic_dict[e].completion_total_time + r
 end
 
 return CompletionStatistics
