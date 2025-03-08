@@ -145,12 +145,10 @@ end
 
 local M = {}
 
-local S = {
-    name = 'FittenCode',
-}
+local user_commands_name = 'FittenCode.ColorScheme'
 
 function M.init()
-    vim.api.nvim_create_user_command(S.name, function(input)
+    vim.api.nvim_create_user_command(user_commands_name, function(input)
         execute(input)
     end, {
         nargs = '*',
@@ -162,7 +160,7 @@ function M.init()
 end
 
 function M.destroy()
-    vim.api.nvim_del_user_command(S.name)
+    vim.api.nvim_del_user_command(user_commands_name)
 end
 
 return M

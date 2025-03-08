@@ -22,13 +22,11 @@ local PRESET_THEME = {
 
 local M = {}
 
-local S = {
-    name = 'FittenCode.ColorScheme',
-}
+local augroup_name = 'FittenCode.ColorScheme'
 
 function M.init()
     vim.api.nvim_create_autocmd({ 'ColorScheme', 'VimEnter' }, {
-        group = vim.api.nvim_create_augroup(S.name, { clear = true }),
+        group = vim.api.nvim_create_augroup(augroup_name, { clear = true }),
         pattern = '*',
         callback = function()
             for name, color in pairs(PRESET_THEME) do
@@ -43,7 +41,7 @@ function M.init()
 end
 
 function M.destroy()
-    vim.api.nvim_del_augroup_by_name(S.name)
+    vim.api.nvim_del_augroup_by_name(augroup_name)
 end
 
 return M

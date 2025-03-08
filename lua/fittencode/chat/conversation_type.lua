@@ -11,6 +11,7 @@ function ConversationType.new(options)
 end
 
 function ConversationType:_initialize(options)
+    options = options or {}
     self.source = options.source
     self.template = options.template
 end

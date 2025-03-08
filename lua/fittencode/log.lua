@@ -29,9 +29,7 @@ local LOG_FILE = Path.join(vim.fn.stdpath('log'), 'fittencode', 'fittencode.log'
 local MAX_LOG_SIZE = 2 * 1024 * 1024 -- 2MB
 local DEVELOPER_DOCUMENT = 'FittenDocument-FT-ozlpsknq83720108429'
 
-local S = {
-    needs_preface = true
-}
+local needs_preface = true
 
 local function get_level_name(level)
     return LOG_LEVEL_NAMES[level + 1] or 'UNKNOWN'
@@ -131,11 +129,11 @@ local function async_log(level, message)
 
     vim.schedule(function()
         -- 初始化检查
-        if S.needs_preface then
+        if needs_preface then
             ensure_log_directory()
             rotate_log_if_needed()
             write_to_log(prepare_log_header())
-            S.needs_preface = false
+            needs_preface = false
         end
 
         -- 格式化日志条目
@@ -185,7 +183,7 @@ function M.init()
 end
 
 function M.destroy()
-    S.needs_preface = true
+    needs_preface = true
 end
 
 return M

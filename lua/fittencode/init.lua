@@ -1,9 +1,7 @@
 ---@class Fittencode.API
 local M = {}
 
-local S = {
-    pipelines = nil,
-}
+local pipelines = nil
 
 local function _execute(pipeline, action)
     local module = require('fittencode.' .. pipeline.name)
@@ -21,8 +19,8 @@ function M.setup(options)
         vim.api.nvim_echo({ { 'FittenCode requires Neovim >= 0.11.0.' } }, false, { err = true })
         return
     end
-    assert(S.pipelines == nil, 'Fittencode has already been setup')
-    S.pipelines = {
+    assert(pipelines == nil, 'Fittencode has already been setup')
+    pipelines = {
         { name = 'config',        init = function(module) module.init(options) end },
         { name = 'log' },
         { name = 'client' },
@@ -31,7 +29,7 @@ function M.setup(options)
         { name = 'inline' },
         { name = 'commands' },
     }
-    for _, pipeline in ipairs(S.pipelines) do
+    for _, pipeline in ipairs(pipelines) do
         _execute(pipeline, 'init')
     end
 end
@@ -43,13 +41,13 @@ end
 --   * 所有状态将被重置，包括配置、缓存、会话等
 -- * 允许重新执行 setup 进行再次初始化
 function M.deactivate()
-    if not S.pipelines then
+    if not pipelines then
         return
     end
-    for i = #S.pipelines, 1, -1 do
-        _execute(S.pipelines[i], 'destroy')
+    for i = #pipelines, 1, -1 do
+        _execute(pipelines[i], 'destroy')
     end
-    S.pipelines = nil
+    pipelines = nil
 end
 
 return setmetatable(M, {

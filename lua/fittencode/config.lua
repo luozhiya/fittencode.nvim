@@ -1,10 +1,8 @@
 ---@class FittenCode.Config
 local M = {}
 
-local S = {
-    ---@type FittenCode.Config?
-    current_configuation = nil,
-}
+---@type FittenCode.Config?
+local current_configuation = nil
 
 ---@class FittenCode.Config
 local DEFAULTS = {
@@ -221,20 +219,20 @@ local DEFAULTS = {
 ---@param options? FittenCode.Config
 function M.init(options)
     options = options or {}
-    S.current_configuation = vim.tbl_deep_extend('force', DEFAULTS, options)
+    current_configuation = vim.tbl_deep_extend('force', DEFAULTS, options)
     if options.use_default_keymaps == false then
-        S.current_configuation.keymaps.inline = {}
-        S.current_configuation.keymaps.chat = {}
+        current_configuation.keymaps.inline = {}
+        current_configuation.keymaps.chat = {}
     end
 end
 
 function M.destroy()
-    S.current_configuation = nil
+    current_configuation = nil
 end
 
 return setmetatable(M, {
     __index = function(_, key)
-        assert(S.current_configuation, 'Config not initialized')
-        return S.current_configuation[key]
+        assert(current_configuation, 'Config not initialized')
+        return current_configuation[key]
     end,
 })
