@@ -10,7 +10,6 @@ API函数列表：
 - revoke_word()：撤销当前单词补全建议
 ]]
 
--- 通用控制器方法生成器
 local function create_controller_fn(module_path, method, ...)
     local pre_args = { ... }
     return function()
@@ -19,7 +18,6 @@ local function create_controller_fn(module_path, method, ...)
     end
 end
 
--- 带参数的控制器方法生成器
 local function create_controller_fn_with_args(module_path, method)
     return function(...)
         local controller = require(module_path)._get_controller()
@@ -27,7 +25,6 @@ local function create_controller_fn_with_args(module_path, method)
     end
 end
 
--- 专用方法生成器
 local function inline_accept_fn(direction, scope)
     return function()
         local Inline = require('fittencode.inline')._get_controller()
@@ -35,13 +32,13 @@ local function inline_accept_fn(direction, scope)
     end
 end
 
-local base = {
+local BASE = {
     set_log_level = function(level)
         require('fittencode.log').set_level(level)
     end,
 }
 
-local inline = {
+local INLINE = {
     trigger_completion  = create_controller_fn('fittencode.inline', 'triggering_completion', { force = true }),
     has_suggestions     = create_controller_fn('fittencode.inline', 'has_suggestions'),
     dismiss_suggestions = create_controller_fn('fittencode.inline', 'dismiss_suggestions', { force = true }),
@@ -55,12 +52,12 @@ local inline = {
     get_inline_status   = create_controller_fn_with_args('fittencode.inline', 'get_status')
 }
 
-local chat = {
+local CHAT = {
     get_chat_status = create_controller_fn_with_args('fittencode.chat', 'get_status')
 }
 
 local M = {}
 
-M = vim.tbl_deep_extend('force', {}, base, inline, chat)
+M = vim.tbl_deep_extend('force', {}, BASE, INLINE, CHAT)
 
 return M

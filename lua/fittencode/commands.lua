@@ -3,7 +3,7 @@ local Tr = require('fittencode.translations')
 local Auth = require('fittencode.authentication')
 local Config = require('fittencode.config')
 
-local base = {
+local BASE = {
     -- Account
     register = Auth.register,
     login = Auth.login,
@@ -25,7 +25,7 @@ local function chat_controller()
     return require('fittencode.chat')._get_controller()
 end
 
-local inline = {
+local INLINE = {
     enable_completions = {
         execute = function()
             inline_controller():set_suffix_permissions(true)
@@ -57,7 +57,7 @@ local inline = {
     }
 }
 
-local chat = {
+local CHAT = {
     show_chat = {
         execute = function()
             local controller = chat_controller()
@@ -106,17 +106,17 @@ local chat = {
     -- regenerate_response = { execute = function() chat_controller():regenerate_response() end },
 }
 
-local Commands = vim.tbl_deep_extend('force', {}, base, inline, chat)
+local commands = vim.tbl_deep_extend('force', {}, BASE, INLINE, CHAT)
 
 local function execute(input)
-    if not Commands[input.fargs[1]] then
+    if not commands[input.fargs[1]] then
         Log.error('Command not found: {}', input.fargs[1])
         return
     end
     local args = vim.list_slice(input.frags, 2, #input.frags)
-    local fn = type(Commands[input.fargs[1]]) == 'table' and Commands[input.fargs[1]].execute or Commands[input.fargs[1]]
+    local fn = type(commands[input.fargs[1]]) == 'table' and commands[input.fargs[1]].execute or commands[input.fargs[1]]
     if not fn then
-        Log.error('Command not executable: {}', Commands[input.fargs[1]])
+        Log.error('Command not executable: {}', commands[input.fargs[1]])
         return
     end
     fn(unpack(args))
@@ -130,16 +130,16 @@ local function complete(arg_lead, cmd_line, cursor_pos)
     table.remove(eles, 1)
     local prefix = table.remove(eles, 1) or ''
     if #eles > 0 then
-        if Commands[prefix] and type(Commands[prefix]) == 'table' and Commands[prefix].complete and #eles < 2 then
+        if commands[prefix] and type(commands[prefix]) == 'table' and commands[prefix].complete and #eles < 2 then
             local next = table.remove(eles, 1) or ''
             return vim.tbl_filter(function(key)
                 return key:find(next, 1, true) == 1
-            end, Commands[prefix].complete)
+            end, commands[prefix].complete)
         end
     else
         return vim.tbl_filter(function(key)
             return key:find(prefix, 1, true) == 1
-        end, vim.tbl_keys(Commands))
+        end, vim.tbl_keys(commands))
     end
 end
 

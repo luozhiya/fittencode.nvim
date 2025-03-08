@@ -9,14 +9,16 @@ local EventLoop = require('fittencode.vim.promisify.uv.event_loop')
 
 local M = {}
 
-local request_handle = nil
-local login3rd = {
-    check_timer = nil,
-    start_check = false,
-    total_time = 0,
-    try_count = 0,         -- 尝试次数
-    time_delta = 3,        -- 检查间隔（秒）
-    total_time_limit = 600 -- 总超时时间（秒）
+local S = {
+    request = nil,
+    login3rd = {
+        check_timer = nil,
+        start_check = false,
+        total_time = 0,
+        try_count = 0,         -- 尝试次数
+        time_delta = 3,        -- 检查间隔（秒）
+        total_time_limit = 600 -- 总超时时间（秒）
+    }
 }
 
 -- 第三方登录提供商
@@ -29,21 +31,21 @@ M.login3rd_providers = {
 
 local function abort_all_operations()
     -- 终止所有可能的请求
-    if request_handle then
-        request_handle.abort()
-        request_handle = nil
+    if S.request then
+        S.request.abort()
+        S.request = nil
     end
 
     -- 清除第三方登录的定时器
-    if login3rd.check_timer then
-        EventLoop.clear_interval(login3rd.check_timer)
-        login3rd.check_timer = nil
+    if S.login3rd.check_timer then
+        EventLoop.clear_interval(S.login3rd.check_timer)
+        S.login3rd.check_timer = nil
     end
 
     -- 重置第三方登录状态
-    login3rd.start_check = false
-    login3rd.total_time = 0
-    login3rd.try_count = 0
+    S.login3rd.start_check = false
+    S.login3rd.total_time = 0
+    S.login3rd.try_count = 0
 end
 
 function M.destroy()
@@ -89,12 +91,12 @@ function M.login(username, password)
     ---@type FittenCode.Protocol.Methods.Login.Body
     local body = { username = username, password = password }
 
-    request_handle = Client.make_request(Protocol.Methods.login, {
+    S.request = Client.make_request(Protocol.Methods.login, {
         body = assert(vim.fn.json_encode(body)),
     })
-    if not request_handle then return end
+    if not S.request then return end
 
-    request_handle:async():forward(function(_)
+    S.request:async():forward(function(_)
         ---@type FittenCode.Protocol.Methods.Login.Response
         local response = _.json()
         if response and response.access_token and response.refresh_token and response.user_info then
@@ -159,41 +161,41 @@ function M.login3rd(source, options)
     end
 
     -- 初始化第三方登录状态
-    login3rd.start_check = true
-    login3rd.total_time = 0
+    S.login3rd.start_check = true
+    S.login3rd.total_time = 0
 
     -- 发起第三方登录请求
-    request_handle = Client.request(Protocol.Methods.fb_sign_in, {
+    S.request = Client.request(Protocol.Methods.fb_sign_in, {
         variables = { sign_in_source = source, client_token = client_token }
     })
-    if not request_handle then return end
+    if not S.request then return end
 
     -- 定时检查登录状态
     local function check_login()
-        if not login3rd.start_check then return end
+        if not S.login3rd.start_check then return end
 
-        login3rd.try_count = login3rd.try_count + 1
+        S.login3rd.try_count = S.login3rd.try_count + 1
 
-        login3rd.total_time = login3rd.total_time + login3rd.time_delta
-        if login3rd.total_time > login3rd.total_time_limit then
-            login3rd.start_check = false
+        S.login3rd.total_time = S.login3rd.total_time + S.login3rd.time_delta
+        if S.login3rd.total_time > S.login3rd.total_time_limit then
+            S.login3rd.start_check = false
             Log.notify_info('[Fitten Code] Login timeout')
             abort_all_operations()
             return
         end
 
         -- 发起状态检查请求
-        request_handle = Client.make_request(Protocol.Methods.fb_check_login_auth, {
+        S.request = Client.make_request(Protocol.Methods.fb_check_login_auth, {
             variables = { client_token = client_token }
         })
-        if not request_handle then return end
+        if not S.request then return end
 
-        request_handle:async():forward(function(res)
+        S.request:async():forward(function(res)
             ---@type FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
             local response = res.json()
             if response and response.access_token and response.refresh_token and response.user_info then
                 api_key_manager:update(Keyring.make(response))
-                Log.info('Login with 3rd-party provider: {}, try count: {}', source, login3rd.try_count)
+                Log.info('Login with 3rd-party provider: {}, try count: {}', source, S.login3rd.try_count)
                 Log.notify_info(Tr.translate('[Fitten Code] Login successful'))
 
                 -- 发送统计信息
@@ -206,7 +208,7 @@ function M.login3rd(source, options)
             end
         end):catch(function(err)
             -- 底层错误
-            Log.error('Failed to login with 3rd-party provider: {}, try count: {}, error: {}', source, login3rd.try_count, err)
+            Log.error('Failed to login with 3rd-party provider: {}, try count: {}, error: {}', source, S.login3rd.try_count, err)
             if err then
                 if err.type == 'PROCESS_ERROR' then
                     -- 找不到可执行文件或者程序运行意外错误
@@ -227,7 +229,7 @@ function M.login3rd(source, options)
     end
 
     -- 启动定时检查
-    login3rd.check_timer = EventLoop.set_interval(login3rd.time_delta * 1000, check_login)
+    S.login3rd.check_timer = EventLoop.set_interval(S.login3rd.time_delta * 1000, check_login)
 end
 
 function M.logout()
