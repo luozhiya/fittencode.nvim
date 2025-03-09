@@ -9,8 +9,8 @@ local Tracker = require('fittencode.services.tracker')
 local Extension = require('fittencode.extension')
 local Log = require('fittencode.log')
 
+-- ms
 local STATISTIC_SENDING_GAP = 1e3 * 60 * 10
-local MAX_ACCEPT_LENGTH = 5
 
 --[[
 
@@ -62,6 +62,10 @@ end
 function StatisticRecord:reset()
     local r = StatisticRecord.new()
     self._data = r._data
+end
+
+function StatisticRecord:raw()
+    return vim.deepcopy(self._data)
 end
 
 local CompletionRecord = {}
@@ -129,16 +133,8 @@ function CompletionRecord:merge(other)
     end
 end
 
-function CompletionRecord:to_query_string()
-    local query = URLSearchParams.new()
-    for k, v in pairs(self._data) do
-        if type(v) == 'table' then
-            query:append(k, vim.json.encode(v))
-        else
-            query:append(k, v)
-        end
-    end
-    return query:to_string()
+function CompletionRecord:raw()
+    return vim.deepcopy(self._data)
 end
 
 --[[
@@ -287,7 +283,18 @@ function CompletionStatistics:update_completion_time(uri, time, is_pc)
 end
 
 function CompletionStatistics:send_one_status(completion_record)
-    local status = completion_record:to_query_string()
+    local function _to_query(data)
+        local query = URLSearchParams.new()
+        for k, v in pairs(data) do
+            if type(v) == 'table' then
+                query:append(k, vim.json.encode(v))
+            else
+                query:append(k, v)
+            end
+        end
+        return query:to_string()
+    end
+    local status = _to_query(completion_record:raw())
     Client.request(Protocol.Methods.statistic_log, {
         variables = { completion_statistics = status }
     })

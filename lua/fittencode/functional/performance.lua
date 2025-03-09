@@ -28,7 +28,23 @@ end
 local ns = timer:stop()
 print(string.format('Concatenation took: %.3f ms', ns / 1e6))
 
+------------------------------------
+--- 手动控制计时器（适合测量代码块）(优化版)
+------------------------------------
+
+local start = smart_timer()
+local elapsed = start()
+
+
 ]]
+
+-- 与 ns 的比率
+local PRECISIONS = {
+    ns = 1e0, -- 纳秒
+    us = 1e3, -- 微秒
+    ms = 1e6, -- 毫秒
+    s  = 1e9  -- 秒
+}
 
 -- 方法1：函数式测量（自动执行并返回时间）
 local measure = function(func, ...)
@@ -69,9 +85,10 @@ end
 -------------------------------------------------------
 -- 方法3：手动控制计时器（适合测量代码块）(优化版)
 
+-- 返回毫秒
 local smart_timer = function()
     local start = vim.uv.hrtime()
-    return function() return (vim.uv.hrtime() - start) / 1e6 end -- 直接返回毫秒
+    return function() return (vim.uv.hrtime() - start) / PRECISIONS.ms end
 end
 
 local smart_timer_format = function()
@@ -79,21 +96,23 @@ local smart_timer_format = function()
     return function()
         local ns = vim.uv.hrtime() - start
         return ns < 1e3 and ns .. ' ns'
-            or ns < 1e6 and ('%.2f μs'):format(ns / 1e3)
-            or ('%.2f ms'):format(ns / 1e6)
+            or ns < 1e6 and ('%.2f us'):format(ns / PRECISIONS.us)
+            or ('%.2f ms'):format(ns / PRECISIONS.ms)
     end
 end
 
 -------------------------------------------------------
 -- 方法4
 
+-- 默认精度：1ms
 ---@return number
 local tick = function(precision)
-    precision = precision or 1e6 -- 默认精度：微秒
+    precision = precision or PRECISIONS.ms
     assert(precision > 0, 'Precision must be positive')
     return vim.uv.hrtime() / precision
 end
 
+-- 精度应维持和 tick 相同
 ---@return number
 local tok = function(start, precision)
     start = start or 0
@@ -101,6 +120,7 @@ local tok = function(start, precision)
 end
 
 return {
+    PRECISIONS = PRECISIONS,
     measure = measure,
     Timer = Timer,
     smart_timer = smart_timer,
