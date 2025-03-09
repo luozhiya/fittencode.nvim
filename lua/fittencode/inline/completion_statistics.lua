@@ -19,56 +19,126 @@ StatisticRecord
 
 ]]
 local StatisticRecord = {}
-StatisticRecord.__index = function (self, key)
-    return self._data[key]
+
+-- 修改后的 __index 元方法，优先检查类方法，再检查 _data 字段
+StatisticRecord.__index = function(self, key)
+    -- 先检查类中是否存在该方法或字段（如 reset）
+    local class_value = StatisticRecord[key]
+    if class_value ~= nil then
+        return class_value
+    end
+    -- 若类中没有，则从 _data 中获取数据字段
+    return rawget(self._data, key)
+end
+
+-- 新增的 __newindex 方法（写入时触发）
+StatisticRecord.__newindex = function(self, key, value)
+    -- 将赋值操作重定向到 _data 表中
+    rawset(self._data, key, value)
 end
 
 function StatisticRecord.new()
-    local self = {}
+    local self = {
+        _data = {
+            -- VSCode standard
+            accept_cnt = 0,                            -- 总的采纳次数
+            insert_with_completion_cnt = 0,            -- 采纳的总字符数
+            completion_times = 0,                      -- 补全的总次数
+            completion_total_time = 0,                 -- 补全的总时间
+            is_pc_cnt = 0,                             -- Project Completion 的次数
+            edit_show_cnt = 0,                         -- Edit Completion 的次数
+            edit_cancel_cnt = 0,                       -- Edit Completion 的取消次数
+            edit_accept_cnt = 0,                       -- Edit Completion 的采纳次数
+            edit_change_config = 0,                    -- Edit Completion 的配置
+            -- Neovim only
+            accept_all_completion_suggestions_cnt = 0, -- 采纳所有建议的次数
+            completion_suggestions_cnt = 0             -- 补全的总字符数
+        }
+    }
     setmetatable(self, StatisticRecord)
-    self:reset()
     return self
 end
 
 function StatisticRecord:reset()
-    self._data = {
-        -- VSCode standard
-        accept_cnt = 0,                            -- 总的采纳次数
-        insert_with_completion_cnt = 0,            -- 采纳的总字符数
-        completion_times = 0,                      -- 补全的总次数
-        completion_total_time = 0,                 -- 补全的总时间
-        is_pc_cnt = 0,                             -- Project Completion 的次数
-        edit_show_cnt = 0,                         -- Edit Completion 的次数
-        edit_cancel_cnt = 0,                       -- Edit Completion 的取消次数
-        edit_accept_cnt = 0,                       -- Edit Completion 的采纳次数
-        edit_change_config = 0,                    -- Edit Completion 的配置
-        -- Neovim only
-        accept_all_completion_suggestions_cnt = 0, -- 采纳所有建议的次数
-        completion_suggestions_cnt = 0             -- 补全的总字符数
-    }
+    local r = StatisticRecord.new()
+    self._data = r._data
 end
 
 local CompletionRecord = {}
-CompletionRecord.__index = function (self, key)
-    return self._data[key]
+
+-- 修改后的 __index 元方法，优先检查类方法，再检查 _data 字段
+CompletionRecord.__index = function(self, key)
+    -- 先检查类中是否存在该方法或字段（如 merge）
+    local class_value = CompletionRecord[key]
+    if class_value ~= nil then
+        return class_value
+    end
+    -- 若类中没有，则从 _data 中获取数据字段
+    return rawget(self._data, key)
 end
 
-function CompletionRecord.from_statitics_record(record)
-    local self = {}
+-- 新增的 __newindex 方法（写入时触发）
+CompletionRecord.__newindex = function(self, key, value)
+    -- 将赋值操作重定向到 _data 表中
+    rawset(self._data, key, value)
+end
+
+function CompletionRecord.from_statitics_record(record, specific_record)
+    local self = {
+        _data = vim.tbl_deep_extend('force', specific_record or {
+            user_id = '',
+            has_lsp = false,
+            enabled = 'auto',
+            tag = {},
+            chosen = 0,
+            use_project_completion = 0,
+            uri = '',
+        }, record._data)
+    }
     setmetatable(self, CompletionRecord)
-    self._data = vim.tbl_deep_extend('force', {
-        user_id = '',
-        has_lsp = false,
-        enabled = 'auto',
-        tag = {},
-        chosen = 0,
-        use_project_completion = 0,
-        uri = '',
-    }, record._data)
     return self
 end
 
+function CompletionRecord:reset()
+    local r = CompletionRecord.new()
+    self._data = r._data
+end
+
 function CompletionRecord:merge(other)
+    if not other then
+        return
+    end
+    if self.uri ~= other.uri then
+        return
+    end
+    -- 累加数据
+    local accumulatable_fields = {
+        'accept_cnt',
+        'insert_with_completion_cnt',
+        'completion_times',
+        'completion_total_time',
+        'is_pc_cnt',
+        'edit_show_cnt',
+        'edit_cancel_cnt',
+        'edit_accept_cnt',
+        'accept_all_completion_suggestions_cnt',
+        'completion_suggestions_cnt'
+    }
+    for _, field in ipairs(accumulatable_fields) do
+        self._data[field] = self._data[field] + (other._data[field] or 0)
+    end
+end
+
+function CompletionRecord:to_query_string()
+    local query = URLSearchParams.new()
+    for k, v in pairs(self._data) do
+        if type(v) == 'table' then
+            query:append(k, vim.json.encode(v))
+        else
+            query:append(k, v)
+        end
+    end
+    return query:to_string()
 end
 
 --[[
@@ -166,7 +236,7 @@ end
 
 function CompletionStatistics:update_edit_mode_status(uri, action)
     if not uri or not action then
-        Log.error("Error: uri and action must be provided.")
+        Log.error('Error: uri and action must be provided.')
         return
     end
 
@@ -189,10 +259,9 @@ function CompletionStatistics:update_edit_mode_status(uri, action)
     end
 end
 
-
 function CompletionStatistics:update_completion_time(uri, time, is_pc)
     if not uri or not time then
-        Log.error("Error: uri and time must be provided.")
+        Log.error('Error: uri and time must be provided.')
         return
     end
 
@@ -203,7 +272,7 @@ function CompletionStatistics:update_completion_time(uri, time, is_pc)
     local uri_stats = self.statistic_dict[uri]
 
     if is_pc == nil then
-        Log.warn("Warning: is_pc is not provided. Defaulting to false.")
+        Log.warn('Warning: is_pc is not provided. Defaulting to false.')
         is_pc = false
     end
 
@@ -217,10 +286,10 @@ function CompletionStatistics:update_completion_time(uri, time, is_pc)
     uri_stats.completion_total_time = uri_stats.completion_total_time + time
 end
 
-
-function CompletionStatistics:send_one_status(status)
+function CompletionStatistics:send_one_status(completion_record)
+    local status = completion_record:to_query_string()
     Client.request(Protocol.Methods.statistic_log, {
-        variables = {             completion_statistics = status        }
+        variables = { completion_statistics = status }
     })
 end
 
@@ -235,7 +304,7 @@ end
 ]]
 function CompletionStatistics:update_tracker(current)
     if not current or not current.uri then
-        Log.error("current and current.uri must be provided.")
+        Log.error('current and current.uri must be provided.')
         return
     end
 
@@ -255,7 +324,6 @@ function CompletionStatistics:update_tracker(current)
         end
     end)
 end
-
 
 function CompletionStatistics:send_status()
     local open = Config.use_project_completion.open
@@ -293,34 +361,20 @@ function CompletionStatistics:send_status()
             ide = Extension.ide_name
         }
 
-        -- TrackerCompletionRecord
-        -- local s = {
-        --     user_id = user_id,
-        --     has_lsp = tostring(i == 1),
-        --     enabled = open,
-        --     tag = vim.json.encode(tag),
-        --     chosen = tostring(chosen),
-        --     use_project_completion = tostring(use_project_completion),
-        --     uri = uri,
-        --     accept_cnt = tostring(stats.accept_cnt),
-        --     completion_times = tostring(stats.completion_times),
-        --     completion_total_time = tostring(stats.completion_total_time),
-        --     insert_with_completion_cnt = tostring(stats.insert_with_completion_cnt),
-        --     edit_show_cnt = tostring(stats.edit_show_cnt),
-        --     edit_cancel_cnt = tostring(stats.edit_cancel_cnt),
-        --     edit_accept_cnt = tostring(stats.edit_accept_cnt),
-        --     edit_change_config = tostring(stats.edit_change_config)
-        -- }
-        local tracker_completion_record = vim.tbl_deep_extend('force', stats, {})
+        local completion_record = CompletionRecord.from_statitics_record(stats, {
+            user_id = user_id,
+            has_lsp = (i == 1),
+            enabled = open,
+            tag = tag,
+            chosen = chosen,
+            use_project_completion = use_project_completion,
+            uri = uri,
+        })
 
-        self:update_tracker(s)
-        local query = URLSearchParams.new()
-        for k, v in pairs(s) do
-            query:append(k, v)
-        end
-        local status = query:to_string()
-        self:send_one_status(status)
+        self:update_tracker(completion_record)
+        self:send_one_status(completion_record)
         stats:reset()
+
         ::continue::
     end
 end
