@@ -11,47 +11,46 @@ local Fn = require('fittencode.functional.fn')
 ---@field on_update function
 
 ---@class FittenCode.Inline.Session.Status
-local Status = {}
-Status.__index = Status
+local SessionStatus = {}
+SessionStatus.__index = SessionStatus
 
 ---@return FittenCode.Inline.Session.Status
-function Status:new(options)
-    local obj = {
+function SessionStatus.new(options)
+    local self = setmetatable({
         gc = options.gc,
         on_update = options.on_update,
-    }
-    setmetatable(obj, Status)
-    obj:set('new')
-    return obj
+    }, SessionStatus)
+    self:set('new')
+    return self
 end
 
-function Status:set(value)
+function SessionStatus:set(value)
     self.value = value
     Fn.schedule_call(self.on_update)
 end
 
-function Status:get()
+function SessionStatus:get()
     return self.value
 end
 
-function Status:generating_prompt()
+function SessionStatus:generating_prompt()
     self:set('generating_prompt')
 end
 
-function Status:requesting_completion()
+function SessionStatus:requesting_completion()
     self:set('requesting_completion')
 end
 
-function Status:no_more_suggestions()
+function SessionStatus:no_more_suggestions()
     self:set('no_more_suggestions')
     self.gc()
 end
 
-function Status:suggesstions_ready()
+function SessionStatus:suggesstions_ready()
     self:set('suggesstions_ready')
 end
 
-function Status:error()
+function SessionStatus:error()
     self:set('error')
     self.gc()
 end
