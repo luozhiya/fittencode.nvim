@@ -89,9 +89,9 @@ end
 ---@param payload table
 function Controller:notify_observers(payload)
     for _, observer in pairs(self.observers) do
-        Fn.schedule_call(function()
-            observer:update(payload)
-        end)
+        if observer.events == '*' or vim.tbl_contains(observer.events, payload.event) then
+            Fn.schedule_call(function() observer:callback(payload) end)
+        end
     end
 end
 

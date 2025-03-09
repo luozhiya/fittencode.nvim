@@ -11,6 +11,12 @@ local Extension = require('fittencode.extension')
 local STATISTIC_SENDING_GAP = 1e3 * 60 * 10
 local MAX_ACCEPT_LENGTH = 5
 
+--[[
+
+Record
+- 单个 uri 的统计数据
+
+]]
 local Record = {}
 Record.__index = Record
 
@@ -23,23 +29,35 @@ end
 
 function Record:reset()
     -- VSCode standard
-    self.delete_cnt = 0
-    self.insert_without_paste_cnt = 0
-    self.insert_cnt = 0
-    self.accept_cnt = 0 -- 总的采纳次数
-    self.insert_with_completion_without_paste_cnt = 0
-    self.insert_with_completion_cnt = 0
-    self.completion_times = 0 -- 补全的总次数
-    self.completion_total_time = 0 -- 补全的总时间
-    self.is_pc_cnt = 0 -- Project Completion 的次数
-    self.edit_show_cnt = 0 -- Edit Completion 的次数
-    self.edit_cancel_cnt = 0 -- Edit Completion 的取消次数
-    self.edit_accept_cnt = 0 -- Edit Completion 的采纳次数
-    self.edit_change_config = 0 -- Edit Completion 的配置
+    self.accept_cnt = 0                            -- 总的采纳次数
+    self.insert_with_completion_cnt = 0            -- 采纳的总字符数
+    self.completion_times = 0                      -- 补全的总次数
+    self.completion_total_time = 0                 -- 补全的总时间
+    self.is_pc_cnt = 0                             -- Project Completion 的次数
+    self.edit_show_cnt = 0                         -- Edit Completion 的次数
+    self.edit_cancel_cnt = 0                       -- Edit Completion 的取消次数
+    self.edit_accept_cnt = 0                       -- Edit Completion 的采纳次数
+    self.edit_change_config = 0                    -- Edit Completion 的配置
     -- Neovim only
-    self.accept_all_suggestion_cnt = 0 -- 采纳所有建议的次数
-    self.suggestion_chars_total_cnt = 0 -- 补全的总字符数
-    self.accept_chars_total_cnt = 0 -- 采纳的总字符数
+    self.accept_all_completion_suggestions_cnt = 0 -- 采纳所有建议的次数
+    self.completion_suggestions_cnt = 0            -- 补全的总字符数
+end
+
+local TrackerCompletionEntry = {}
+TrackerCompletionEntry.__index = TrackerCompletionEntry
+
+function TrackerCompletionEntry.new()
+    local self = {}
+    setmetatable(self, TrackerCompletionEntry)
+    self:reset()
+    return self
+end
+
+function TrackerCompletionEntry:reset()
+    self.accept_cnt = 0
+end
+
+function TrackerCompletionEntry:merge(other)
 end
 
 --[[
@@ -49,11 +67,12 @@ CompletionStatistics
 - 和 VSCode 版本的不一致的地方：
   - 在 Neovim 中只统计在存在补全的情况下的输入行为
 - 统计数据：
-  - 对补全的接纳字符数
-  - 补全的总次数
-  - 补全的总时间
-  - 补全的总字符数
-  - 采纳所有补全建议的次数
+  - 对补全的接纳字符数 insert_with_completion_cnt
+  - 补全的总次数 completion_times
+  - 补全的总时间 completion_total_time
+  - 补全的总字符数 completion_suggestions_cnt
+  - 采纳的总次数 accept_cnt
+  - 采纳所有补全建议的次数 accept_all_completion_suggestions_cnt
 ]]
 local CompletionStatistics = {}
 CompletionStatistics.__index = CompletionStatistics
@@ -67,9 +86,7 @@ end
 
 function CompletionStatistics:_initialize(options)
     options = options or {}
-    self.completion_status_dict = options.completion_status_dict or {}
     self.statistic_dict = options.statistic_dict or {}
-    self.user_id = options.user_id
     self.get_chosen = options.get_chosen
     self:_set_global_statistic()
     self:_set_document_change_handler()
@@ -94,74 +111,57 @@ CompletionStatistics:_set_inline_event_handler
 - 触发时，可以记录 completion_times 数据
 - 根据返回的数据时间，可以记录 completion_total_time 数据
 - 当 inline session 结束时，可以记录 accept_cnt/accept_all_suggestion_cnt/suggestion_chars_total_cnt/accept_chars_total_cnt 数据
+
+InlineController.register_observer({
+    id = 'completion_statistics',
+    event = '*',
+    callback = function(payload)
+        self:_set_inline_event_handler(payload)
+    end
+})
+
 ]]
-function CompletionStatistics:_set_inline_event_handler(event)
-end
+function CompletionStatistics:_set_inline_event_handler(payload)
+    local event = payload.event
+    local data = payload.data
 
-function CompletionStatistics:_set_document_change_handler()
-end
+    local uri = data.uri
+    if not self.statistic_dict[uri] then
+        self.statistic_dict[uri] = Record.new()
+    end
+    local uri_stats = self.statistic_dict[uri]
 
-function CompletionStatistics:handle_text_document_change(s)
-    local o = s.document
-    local a = o.uri:toString()
-    if self.completion_status_dict[a] then
-        if not self.statistic_dict[a] then
-            self.statistic_dict[a] = Record.new()
+    if event == 'Completion.Requested' then
+        uri_stats.completion_times = uri_stats.completion_times + 1
+    elseif event == 'Completion.Received' then
+        local time = data.time
+        uri_stats.completion_total_time = uri_stats.completion_total_time + time
+        local suggestions = data.suggestions
+        if suggestions then
+            uri_stats.completion_suggestions_cnt = uri_stats.completion_suggestions_cnt + #suggestions
         end
-        local entry = self.completion_status_dict[a]
-        if (os.clock() * 1000 - entry.sending_time) > STATISTIC_SENDING_GAP then
-            return
-        end
-        for _, l in ipairs(s.contentChanges) do
-            local c = self:check_accept(o, entry, l.rangeOffset, l.text)
-            local u = #l.text
-            self.statistic_dict[a].insert_cnt = self.statistic_dict[a].insert_cnt + u
-            if u <= MAX_ACCEPT_LENGTH or c == 1 then
-                self.statistic_dict[a].insert_without_paste_cnt = self.statistic_dict[a].insert_without_paste_cnt + u
+    elseif event == 'Completion.Completed' then
+        local accept = data.accept
+        local suggestions = data.suggestions
+        if suggestions and accept and accept ~= '' then
+            if accept == suggestions then
+                uri_stats.accept_all_completion_suggestions_cnt = uri_stats.accept_all_completion_suggestions_cnt + 1
             end
-            if c == 1 then
-                self.statistic_dict[a].accept_cnt = self.statistic_dict[a].accept_cnt + u
-            end
-            self.statistic_dict[a].delete_cnt = self.statistic_dict[a].delete_cnt + l.rangeLength
-            if c <= 1 then
-                self.statistic_dict[a].insert_with_completion_cnt = self.statistic_dict[a].insert_with_completion_cnt + u
-                if u <= MAX_ACCEPT_LENGTH or c == 1 then
-                    self.statistic_dict[a].insert_with_completion_without_paste_cnt = self.statistic_dict[a].insert_with_completion_without_paste_cnt + u
-                end
-            end
+            uri_stats.accept_cnt = uri_stats.accept_cnt + 1
+            uri_stats.insert_with_completion_cnt = uri_stats.insert_with_completion_cnt + #accept
         end
     end
-end
-
-function CompletionStatistics:check_accept(e, r, n, i)
-    if r.current_completion then
-        local s = e:offsetAt(r.current_completion.position)
-        local completion = r.current_completion.response.completions[1]
-        if completion then
-            local generated_text = completion.generated_text
-            local start_pos = n - s + 1
-            local end_pos = start_pos + #i - 1
-            local a = generated_text:sub(start_pos, end_pos)
-            return i == a and 1 or 0
-        end
-    end
-    return 2
-end
-
-function CompletionStatistics:update_user_id(user_id)
-    self.user_id = user_id
 end
 
 function CompletionStatistics:update_edit_mode_status(uri, action)
     if not self.statistic_dict[uri] then
         self.statistic_dict[uri] = Record.new()
     end
-
-    if action == 0 then
+    if action == 'show' then
         self.statistic_dict[uri].edit_show_cnt = self.statistic_dict[uri].edit_show_cnt + 1
-    elseif action == 1 then
+    elseif action == 'cancel' then
         self.statistic_dict[uri].edit_cancel_cnt = self.statistic_dict[uri].edit_cancel_cnt + 1
-    elseif action == 2 then
+    elseif action == 'accept' then
         self.statistic_dict[uri].edit_accept_cnt = self.statistic_dict[uri].edit_accept_cnt + 1
     end
 end
@@ -199,8 +199,7 @@ function CompletionStatistics:update_tracker(current)
     if not entry then
         completion_tracker[time] = current
     else
-        entry.accept_cnt = entry.accept_cnt and entry.accept_cnt + current.accept_cnt or current.accept_cnt
-        entry.insert_without_paste_cnt = entry.insert_without_paste_cnt and entry.insert_without_paste_cnt + current.insert_without_paste_cnt or current.insert_without_paste_cnt
+        entry:merge(current)
     end
 end
 
@@ -239,6 +238,8 @@ function CompletionStatistics:send_status()
             pc_prompt_type = last_chosen_prompt_type,
             ide = Extension.ide_name
         }
+
+        -- TrackerCompletionEntry
         local s = {
             user_id = user_id,
             has_lsp = tostring(i == 1),
@@ -248,12 +249,8 @@ function CompletionStatistics:send_status()
             use_project_completion = tostring(use_project_completion),
             uri = uri,
             accept_cnt = tostring(stats.accept_cnt),
-            insert_without_paste_cnt = tostring(stats.insert_without_paste_cnt),
-            insert_cnt = tostring(stats.insert_cnt),
-            delete_cnt = tostring(stats.delete_cnt),
             completion_times = tostring(stats.completion_times),
             completion_total_time = tostring(stats.completion_total_time),
-            insert_with_completion_without_paste_cnt = tostring(stats.insert_with_completion_without_paste_cnt),
             insert_with_completion_cnt = tostring(stats.insert_with_completion_cnt),
             edit_show_cnt = tostring(stats.edit_show_cnt),
             edit_cancel_cnt = tostring(stats.edit_cancel_cnt),
