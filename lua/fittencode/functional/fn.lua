@@ -198,6 +198,11 @@ local function random(length)
     return table.concat(result)
 end
 
+-- "2025-03-08"
+local function get_current_date()
+    return vim.fn.strftime('%Y-%m-%d')
+end
+
 return {
     clamp = clamp,
     debounce = debounce,
@@ -212,5 +217,6 @@ return {
     tbl_keep_events = tbl_keep_events,
     get_unique_identifier = get_unique_identifier,
     reverse = reverse,
-    random = random
+    random = random,
+    get_current_date = get_current_date,
 }

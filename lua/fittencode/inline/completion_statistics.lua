@@ -7,57 +7,68 @@ local EventLoop = require('fittencode.vim.promisify.uv.event_loop')
 local Fn = require('fittencode.functional.fn')
 local Tracker = require('fittencode.services.tracker')
 local Extension = require('fittencode.extension')
+local Log = require('fittencode.log')
 
 local STATISTIC_SENDING_GAP = 1e3 * 60 * 10
 local MAX_ACCEPT_LENGTH = 5
 
 --[[
 
-Record
+StatisticRecord
 - 单个 uri 的统计数据
 
 ]]
-local Record = {}
-Record.__index = Record
+local StatisticRecord = {}
+StatisticRecord.__index = function (self, key)
+    return self._data[key]
+end
 
-function Record.new()
+function StatisticRecord.new()
     local self = {}
-    setmetatable(self, Record)
+    setmetatable(self, StatisticRecord)
     self:reset()
     return self
 end
 
-function Record:reset()
-    -- VSCode standard
-    self.accept_cnt = 0                            -- 总的采纳次数
-    self.insert_with_completion_cnt = 0            -- 采纳的总字符数
-    self.completion_times = 0                      -- 补全的总次数
-    self.completion_total_time = 0                 -- 补全的总时间
-    self.is_pc_cnt = 0                             -- Project Completion 的次数
-    self.edit_show_cnt = 0                         -- Edit Completion 的次数
-    self.edit_cancel_cnt = 0                       -- Edit Completion 的取消次数
-    self.edit_accept_cnt = 0                       -- Edit Completion 的采纳次数
-    self.edit_change_config = 0                    -- Edit Completion 的配置
-    -- Neovim only
-    self.accept_all_completion_suggestions_cnt = 0 -- 采纳所有建议的次数
-    self.completion_suggestions_cnt = 0            -- 补全的总字符数
+function StatisticRecord:reset()
+    self._data = {
+        -- VSCode standard
+        accept_cnt = 0,                            -- 总的采纳次数
+        insert_with_completion_cnt = 0,            -- 采纳的总字符数
+        completion_times = 0,                      -- 补全的总次数
+        completion_total_time = 0,                 -- 补全的总时间
+        is_pc_cnt = 0,                             -- Project Completion 的次数
+        edit_show_cnt = 0,                         -- Edit Completion 的次数
+        edit_cancel_cnt = 0,                       -- Edit Completion 的取消次数
+        edit_accept_cnt = 0,                       -- Edit Completion 的采纳次数
+        edit_change_config = 0,                    -- Edit Completion 的配置
+        -- Neovim only
+        accept_all_completion_suggestions_cnt = 0, -- 采纳所有建议的次数
+        completion_suggestions_cnt = 0             -- 补全的总字符数
+    }
 end
 
-local TrackerCompletionEntry = {}
-TrackerCompletionEntry.__index = TrackerCompletionEntry
+local CompletionRecord = {}
+CompletionRecord.__index = function (self, key)
+    return self._data[key]
+end
 
-function TrackerCompletionEntry.new()
+function CompletionRecord.from_statitics_record(record)
     local self = {}
-    setmetatable(self, TrackerCompletionEntry)
-    self:reset()
+    setmetatable(self, CompletionRecord)
+    self._data = vim.tbl_deep_extend('force', {
+        user_id = '',
+        has_lsp = false,
+        enabled = 'auto',
+        tag = {},
+        chosen = 0,
+        use_project_completion = 0,
+        uri = '',
+    }, record._data)
     return self
 end
 
-function TrackerCompletionEntry:reset()
-    self.accept_cnt = 0
-end
-
-function TrackerCompletionEntry:merge(other)
+function CompletionRecord:merge(other)
 end
 
 --[[
@@ -94,7 +105,7 @@ function CompletionStatistics:_initialize(options)
 end
 
 function CompletionStatistics:_set_global_statistic()
-    self.statistic_dict['global'] = Record.new()
+    self.statistic_dict['global'] = StatisticRecord.new()
     local open = Config.use_project_completion.open
     if open == 'auto' then
         self.statistic_dict['global'].edit_change_config = 1
@@ -127,7 +138,7 @@ function CompletionStatistics:_set_inline_event_handler(payload)
 
     local uri = data.uri
     if not self.statistic_dict[uri] then
-        self.statistic_dict[uri] = Record.new()
+        self.statistic_dict[uri] = StatisticRecord.new()
     end
     local uri_stats = self.statistic_dict[uri]
 
@@ -154,54 +165,97 @@ function CompletionStatistics:_set_inline_event_handler(payload)
 end
 
 function CompletionStatistics:update_edit_mode_status(uri, action)
-    if not self.statistic_dict[uri] then
-        self.statistic_dict[uri] = Record.new()
+    if not uri or not action then
+        Log.error("Error: uri and action must be provided.")
+        return
     end
-    if action == 'show' then
-        self.statistic_dict[uri].edit_show_cnt = self.statistic_dict[uri].edit_show_cnt + 1
-    elseif action == 'cancel' then
-        self.statistic_dict[uri].edit_cancel_cnt = self.statistic_dict[uri].edit_cancel_cnt + 1
-    elseif action == 'accept' then
-        self.statistic_dict[uri].edit_accept_cnt = self.statistic_dict[uri].edit_accept_cnt + 1
+
+    if not self.statistic_dict[uri] then
+        self.statistic_dict[uri] = StatisticRecord.new()
+    end
+
+    local uri_stats = self.statistic_dict[uri]
+    local action_to_counter = {
+        show = 'edit_show_cnt',
+        cancel = 'edit_cancel_cnt',
+        accept = 'edit_accept_cnt'
+    }
+
+    local counter = action_to_counter[action]
+    if counter then
+        uri_stats[counter] = uri_stats[counter] + 1
+    else
+        Log.warn("Warning: Unrecognized action '" .. action .. "' for uri '" .. uri .. "'.")
     end
 end
 
+
 function CompletionStatistics:update_completion_time(uri, time, is_pc)
+    if not uri or not time then
+        Log.error("Error: uri and time must be provided.")
+        return
+    end
+
     if not self.statistic_dict[uri] then
-        self.statistic_dict[uri] = Record.new()
+        self.statistic_dict[uri] = StatisticRecord.new()
     end
+
+    local uri_stats = self.statistic_dict[uri]
+
+    if is_pc == nil then
+        Log.warn("Warning: is_pc is not provided. Defaulting to false.")
+        is_pc = false
+    end
+
     if is_pc then
-        self.statistic_dict[uri].is_pc_cnt = self.statistic_dict[uri].is_pc_cnt + 1
+        uri_stats.is_pc_cnt = uri_stats.is_pc_cnt + 1
     else
-        self.statistic_dict[uri].is_pc_cnt = self.statistic_dict[uri].is_pc_cnt - 1
+        uri_stats.is_pc_cnt = uri_stats.is_pc_cnt - 1
     end
-    self.statistic_dict[uri].completion_times = self.statistic_dict[uri].completion_times + 1
-    self.statistic_dict[uri].completion_total_time = self.statistic_dict[uri].completion_total_time + time
+
+    uri_stats.completion_times = uri_stats.completion_times + 1
+    uri_stats.completion_total_time = uri_stats.completion_total_time + time
 end
+
 
 function CompletionStatistics:send_one_status(status)
     Client.request(Protocol.Methods.statistic_log, {
-        variables = {
-            completion_statistics = status
-        }
+        variables = {             completion_statistics = status        }
     })
 end
 
--- "2025-03-08"
-function CompletionStatistics:get_current_date()
-    return vim.fn.strftime('%Y-%m-%d')
+--[[
+
+按日期分组，按 URI 分组，记录每个 URI 的统计数据。
+
+两级索引：
+- Date
+- URI
+
+]]
+function CompletionStatistics:update_tracker(current)
+    if not current or not current.uri then
+        Log.error("current and current.uri must be provided.")
+        return
+    end
+
+    Tracker.mut_completion(function(completion_tracker)
+        local date = Fn.get_current_date()
+        local rec = completion_tracker[date]
+
+        if not rec then
+            completion_tracker[date] = {}
+            rec = completion_tracker[date]
+        end
+
+        if not rec[current.uri] then
+            rec[current.uri] = current
+        else
+            rec[current.uri]:merge(current)
+        end
+    end)
 end
 
-function CompletionStatistics:update_tracker(current)
-    local completion_tracker = Tracker.mutable_completion()
-    local time = self:get_current_date()
-    local entry = completion_tracker[time]
-    if not entry then
-        completion_tracker[time] = current
-    else
-        entry:merge(current)
-    end
-end
 
 function CompletionStatistics:send_status()
     local open = Config.use_project_completion.open
@@ -231,32 +285,34 @@ function CompletionStatistics:send_status()
         local use_project_completion = 0
 
         local tag = {
-            gray_status = vim.json.encode((GrayTestHelper.get_all_results())),
-            chosen = tostring(chosen),
-            is_pc = stats.is_pc_cnt > 0 and '1' or '0',
+            gray_status = GrayTestHelper.get_all_results(),
+            chosen = chosen,
+            is_pc = stats.is_pc_cnt > 0 and 1 or 0,
             completion_type = completion_type,
             pc_prompt_type = last_chosen_prompt_type,
             ide = Extension.ide_name
         }
 
-        -- TrackerCompletionEntry
-        local s = {
-            user_id = user_id,
-            has_lsp = tostring(i == 1),
-            enabled = open,
-            tag = vim.json.encode(tag),
-            chosen = tostring(chosen),
-            use_project_completion = tostring(use_project_completion),
-            uri = uri,
-            accept_cnt = tostring(stats.accept_cnt),
-            completion_times = tostring(stats.completion_times),
-            completion_total_time = tostring(stats.completion_total_time),
-            insert_with_completion_cnt = tostring(stats.insert_with_completion_cnt),
-            edit_show_cnt = tostring(stats.edit_show_cnt),
-            edit_cancel_cnt = tostring(stats.edit_cancel_cnt),
-            edit_accept_cnt = tostring(stats.edit_accept_cnt),
-            edit_change_config = tostring(stats.edit_change_config)
-        }
+        -- TrackerCompletionRecord
+        -- local s = {
+        --     user_id = user_id,
+        --     has_lsp = tostring(i == 1),
+        --     enabled = open,
+        --     tag = vim.json.encode(tag),
+        --     chosen = tostring(chosen),
+        --     use_project_completion = tostring(use_project_completion),
+        --     uri = uri,
+        --     accept_cnt = tostring(stats.accept_cnt),
+        --     completion_times = tostring(stats.completion_times),
+        --     completion_total_time = tostring(stats.completion_total_time),
+        --     insert_with_completion_cnt = tostring(stats.insert_with_completion_cnt),
+        --     edit_show_cnt = tostring(stats.edit_show_cnt),
+        --     edit_cancel_cnt = tostring(stats.edit_cancel_cnt),
+        --     edit_accept_cnt = tostring(stats.edit_accept_cnt),
+        --     edit_change_config = tostring(stats.edit_change_config)
+        -- }
+        local tracker_completion_record = vim.tbl_deep_extend('force', stats, {})
+
         self:update_tracker(s)
         local query = URLSearchParams.new()
         for k, v in pairs(s) do
