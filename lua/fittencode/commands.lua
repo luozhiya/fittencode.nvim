@@ -2,6 +2,7 @@ local Log = require('fittencode.log')
 local Tr = require('fittencode.translations')
 local Auth = require('fittencode.authentication')
 local Config = require('fittencode.config')
+local Stateful = require('fittencode.stateful')
 
 local BASE = {
     -- Account
@@ -15,6 +16,8 @@ local BASE = {
     -- Help
     ask_question = Auth.question,
     user_guide = Auth.tutor,
+    -- Log
+    open_log_file = Log.open_log_file,
 }
 
 local function inline_controller()
@@ -113,12 +116,12 @@ local function execute(input)
         Log.error('Command not found: {}', input.fargs[1])
         return
     end
-    local args = vim.list_slice(input.frags, 2, #input.frags)
     local fn = type(commands[input.fargs[1]]) == 'table' and commands[input.fargs[1]].execute or commands[input.fargs[1]]
     if not fn then
         Log.error('Command not executable: {}', commands[input.fargs[1]])
         return
     end
+    local args = vim.list_slice(input.fargs, 2, #input.fargs)
     fn(unpack(args))
 end
 
@@ -163,4 +166,4 @@ function M.destroy()
     vim.api.nvim_del_user_command(user_commands_name)
 end
 
-return M
+return Stateful.make_stateful(M)

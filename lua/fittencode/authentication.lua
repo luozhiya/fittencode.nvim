@@ -6,6 +6,7 @@ local Fn = require('fittencode.functional.fn')
 local Client = require('fittencode.client')
 local Keyring = require('fittencode.client.keyring')
 local EventLoop = require('fittencode.vim.promisify.uv.event_loop')
+local Stateful = require('fittencode.stateful')
 
 local M = {}
 
@@ -246,4 +247,4 @@ function M.logout()
     Log.notify_info(Tr.translate('[Fitten Code] Logout successful'))
 end
 
-return M
+return Stateful.make_stateful(M)

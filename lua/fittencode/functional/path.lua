@@ -196,11 +196,11 @@ setmetatable(Path, {
 })
 
 function M.join(...)
-    return Path.new():join(...):normalize():to_string()
+    return Path():join(...):normalize():to_string()
 end
 
 function M.normalize(path)
-    return Path.new(path):normalize():to_string()
+    return Path(path):normalize():to_string()
 end
 
 return M

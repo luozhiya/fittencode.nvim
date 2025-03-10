@@ -1,6 +1,7 @@
 local Config = require('fittencode.config')
 local Format = require('fittencode.functional.format')
 local Path = require('fittencode.functional.path')
+local Stateful = require('fittencode.stateful')
 
 ---@class FittenCode.Log
 ---@field error function
@@ -182,8 +183,12 @@ function M.init()
     end
 end
 
+function M.open_log_file()
+    vim.cmd.edit(LOG_FILE)
+end
+
 function M.destroy()
     needs_preface = true
 end
 
-return M
+return Stateful.make_stateful(M)

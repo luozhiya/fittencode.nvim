@@ -1,4 +1,5 @@
 local Config = require('fittencode.config')
+local Stateful = require('fittencode.stateful')
 
 local PRESET_COLORS = {
     gray = '#808080',
@@ -50,4 +51,4 @@ function M.destroy()
     end
 end
 
-return M
+return Stateful.make_stateful(M)

@@ -1,3 +1,5 @@
+local Stateful = require('fittencode.stateful')
+
 ---@class FittenCode.Config
 local M = {}
 
@@ -230,9 +232,11 @@ function M.destroy()
     current_configuation = nil
 end
 
-return setmetatable(M, {
+setmetatable(M, {
     __index = function(_, key)
         assert(current_configuation, 'Config not initialized')
         return current_configuation[key]
     end,
 })
+
+return Stateful.make_stateful(M)

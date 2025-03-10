@@ -11,12 +11,12 @@ local END_OF_TEXT_TOKEN = '<|endoftext|>' -- 文本结束标记
 local ContextBuilder = {}
 ContextBuilder.__index = ContextBuilder
 
-function ContextBuilder:new(options)
+function ContextBuilder.new(options)
     options = options or {}
-    local instance = setmetatable({}, self)
-    -- 仅允许自定义上下文阈值
-    instance._context_threshold = options.context_threshold or DEFAULT_CONTEXT_THRESHOLD
-    return instance
+    local self = setmetatable({
+        _context_threshold = options.context_threshold or DEFAULT_CONTEXT_THRESHOLD
+    }, ContextBuilder)
+    return self
 end
 
 ---@param buf number
