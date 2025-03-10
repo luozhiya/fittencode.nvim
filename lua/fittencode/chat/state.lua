@@ -42,34 +42,34 @@ end
 ---@param model FittenCode.Chat.Model
 ---@param selected_state? boolean
 ---@return FittenCode.Chat.State
-function State:get_state_from_model(model, selected_state)
+function State.get_state_from_model(model, selected_state)
     selected_state = selected_state == nil and true or selected_state
-    local n = {}
+    local state = State.new()
 
-    for _, a in pairs(model.conversations) do
-        local A = to_state(a)
+    for _, conv in pairs(model.conversations) do
+        local sc = to_state(conv)
         if selected_state then
-            if a.id == model.selected_conversation_id then
-                A.reference = {
+            if conv.id == model.selected_conversation_id then
+                sc.reference = {
                     select_text = EditorStateMonitor.selected_text(),
                     select_range = EditorStateMonitor.selected_range()
                 }
             else
-                if A.content.type == 'messageExchange' then
-                    A.content.messages = {}
-                    if #A.header.title > 100 then
-                        A.header.title = A.header.title:sub(1, 100) .. '...'
+                if sc.content.type == 'messageExchange' then
+                    sc.content.messages = {}
+                    if #sc.header.title > 100 then
+                        sc.header.title = sc.header.title:sub(1, 100) .. '...'
                     end
                 end
             end
         end
-        n[A.id] = A
+        state[sc.id] = sc
     end
 
     return {
         type = 'chat',
         selected_conversation_id = model.selected_conversation_id,
-        conversations = n,
+        conversations = state,
     }
 end
 

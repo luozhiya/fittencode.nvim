@@ -11,8 +11,7 @@ model:update_words(words)
 
 --]]
 
-local UTF8 = require('fittencode.unicode.utf8')
-local LangUnicode = require('fittencode.unicode.lang')
+local Preprocessing = require('fittencode.inline.model.preprocessing')
 
 local function merge_ranges(ranges)
     if #ranges == 0 then
@@ -30,115 +29,6 @@ local function merge_ranges(ranges)
         end
     end
     return merged
-end
-
-local function parse_chars(s)
-    local chars = {}
-    local i = 1
-    while i <= #s do
-        local b = s:byte(i)
-        local len = 1
-        if b >= 0xF0 then     -- 4-byte char
-            len = 4
-        elseif b >= 0xE0 then -- 3-byte char
-            len = 3
-        elseif b >= 0xC0 then -- 2-byte char
-            len = 2
-        end
-        table.insert(chars, { start = i, end_ = i + len - 1 })
-        i = i + len
-    end
-    return chars
-end
-
-local function parse_words(s, chars)
-    local words = {}
-    local current_word = nil
-
-    local function is_whitespace(c)
-        return c == ' ' or c == '\t' -- 空格或制表符
-    end
-
-    local function is_chinese(str)
-        return LangUnicode.is_chinese(UTF8.codepoint(str))
-    end
-
-    for i, char in ipairs(chars) do
-        local u8char = s:sub(char.start, char.end_)
-        local char_type
-
-        -- 确定字符类型优先级: 换行符 > 空格/制表符 > 中文 > 字母数字 > 其他
-        if u8char == '\n' then
-            char_type = 'newline'
-        elseif is_whitespace(u8char) then
-            char_type = 'whitespace'
-        elseif is_chinese(u8char) then
-            char_type = 'chinese'
-        elseif u8char:match('%w') then
-            char_type = 'alnum'
-        else
-            char_type = 'other'
-        end
-
-        -- 处理不同字符类型
-        if char_type == 'newline' then
-            -- 换行符单独成词
-            if current_word then
-                table.insert(words, current_word)
-                current_word = nil
-            end
-            table.insert(words, { start = char.start, end_ = char.end_ })
-        elseif char_type == 'chinese' or char_type == 'other' then
-            -- 中文和特殊字符单独成词
-            if current_word then
-                table.insert(words, current_word)
-                current_word = nil
-            end
-            table.insert(words, { start = char.start, end_ = char.end_ })
-        else
-            -- 处理可合并类型: 空白符和字母数字
-            if current_word and current_word.type == char_type then
-                -- 合并到当前词
-                current_word.end_ = char.end_
-            else
-                -- 类型变化时结束当前词
-                if current_word then
-                    table.insert(words, current_word)
-                    current_word = nil
-                end
-                current_word = {
-                    start = char.start,
-                    end_ = char.end_,
-                    type = char_type -- 记录类型用于合并判断
-                }
-            end
-        end
-    end
-
-    -- 处理最后一个未完成的词
-    if current_word then
-        table.insert(words, current_word)
-    end
-
-    return words
-end
-
-local function parse_lines(s)
-    local lines = {}
-    local line_start = 1
-    while true do
-        local line_end = s:find('\n', line_start, true) or #s
-        if s:sub(line_end, line_end) == '\n' then
-            line_end = line_end - 1
-        end
-        table.insert(lines, { start = line_start, end_ = line_end })
-        line_start = line_end + 1
-        if line_start > #s then break end
-        if s:sub(line_start, line_start) == '\n' then
-            line_start = line_start + 1
-        end
-    end
-    return lines
 end
 
 local CompletionModel = {}
@@ -168,9 +58,9 @@ function CompletionModel.new(source, placeholder_ranges)
     self.placeholder_ranges = merged_ph
 
     -- 解析基础结构
-    self.chars = parse_chars(source)
-    self.words = parse_words(source, self.chars)
-    self.lines = parse_lines(source)
+    self.chars = Preprocessing.parse_chars(source)
+    self.words = Preprocessing.parse_words(source, self.chars)
+    self.lines = Preprocessing.parse_lines(source)
 
     -- 初始化移动列表（end positions）
     self.char_list = {}
@@ -306,123 +196,6 @@ function CompletionModel:revoke()
     self:update_stage_ranges()
 end
 
-function CompletionModel:get_state()
-    local state = {}
-
-    -- 合并所有范围并排序
-    local all_ranges = {}
-    for _, r in ipairs(self.commit_ranges) do
-        table.insert(all_ranges, {
-            type = 'commit',
-            start = r.start,
-            end_ = r.end_,
-            text = self.source:sub(r.start, r.end_) -- 新增文本内容
-        })
-    end
-    for _, r in ipairs(self.stage_ranges) do
-        table.insert(all_ranges, {
-            type = 'stage',
-            start = r.start,
-            end_ = r.end_,
-            text = self.source:sub(r.start, r.end_)
-        })
-    end
-    for _, r in ipairs(self.placeholder_ranges) do
-        table.insert(all_ranges, {
-            type = 'placeholder',
-            start = r.start,
-            end_ = r.end_,
-            text = self.source:sub(r.start, r.end_)
-        })
-    end
-    table.sort(all_ranges, function(a, b) return a.start < b.start end)
-
-    -- 按行分组
-    for line_num, line in ipairs(self.lines) do
-        local line_state = {}
-        for _, range in ipairs(all_ranges) do
-            -- 计算行内交集范围
-            local start = math.max(range.start, line.start)
-            local end_ = math.min(range.end_, line.end_)
-            if start <= end_ then
-                -- 转换为1-based行内字符位置
-                local start_char, end_char
-                for i, c in ipairs(self.chars) do
-                    -- 仅处理当前行的字符
-                    if c.start >= line.start and c.end_ <= line.end_ then
-                        -- 查找起始字符位置
-                        if not start_char and c.start <= start and c.end_ >= start then
-                            start_char = i -- 改为1-based
-                        end
-                        -- 查找结束字符位置
-                        if c.start <= end_ and c.end_ >= end_ then
-                            end_char = i -- 改为1-based
-                        end
-                    end
-                end
-
-                if start_char and end_char then
-                    table.insert(line_state, {
-                        type = range.type,
-                        start = start_char,
-                        end_ = end_char,
-                        -- 添加原始范围和文本内容
-                        range_start = start,
-                        range_end = end_,
-                        text = self.source:sub(start, end_)
-                    })
-                end
-            end
-        end
-        state[line_num] = line_state
-    end
-    return state
-end
-
--- 实现三阶段验证：
--- 1. 长度验证（字符数量）
--- 2. 内容验证（实际字符匹配）
--- 3. 总量验证（总字符数一致）
--- 返回与self.words结构相同的分词范围
-function CompletionModel:convert_segments_to_words(segments)
-    local words = {}
-    local ptr = 1 -- 字符指针（基于chars数组索引）
-
-    for _, seg in ipairs(segments) do
-        local char_count = vim.fn.strchars(seg)
-        local end_idx = ptr + char_count - 1
-
-        if end_idx > #self.chars then
-            error('Segment exceeds text length')
-        end
-
-        -- 验证分词匹配实际字符
-        local expected = table.concat(
-            vim.tbl_map(function(c)
-                return self.source:sub(c.start, c.end_)
-            end, { table.unpack(self.chars, ptr, end_idx) })
-        )
-
-        if expected ~= seg then
-            error('Segment mismatch at position ' .. ptr .. ": '" .. expected .. "' vs '" .. seg .. "'")
-        end
-
-        table.insert(words, {
-            start = self.chars[ptr].start,
-            end_ = self.chars[end_idx].end_
-        })
-
-        ptr = end_idx + 1
-    end
-
-    -- 验证总字符数匹配
-    if ptr - 1 ~= #self.chars then
-        error('Total segments length mismatch')
-    end
-
-    return words
-end
-
 function CompletionModel:is_complete()
     -- 通过检查 stage_ranges 是否为空来判断是否全部完成
     return #self.stage_ranges == 0
@@ -432,8 +205,18 @@ function CompletionModel:update_words(words)
     self.words = words
 end
 
-function CompletionModel:update_words_by_segments(segments)
-    self:update_words(self:convert_segments_to_words(segments))
+function CompletionModel:snapshot()
+    local result = {}
+    local fields_for_snapshot = { 'source', 'chars', 'words', 'lines', 'commit_ranges', 'placeholder_ranges', 'stage_ranges' }
+    for _, field in ipairs(fields_for_snapshot) do
+        local value = self[field]
+        if type(value) == 'table' then
+            result[field] = vim.deepcopy(value)
+        else
+            result[field] = value
+        end
+    end
+    return result
 end
 
 return CompletionModel

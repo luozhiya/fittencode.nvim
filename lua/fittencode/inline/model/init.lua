@@ -10,6 +10,7 @@ local Log = require('fittencode.log')
 local Editor = require('fittencode.document.editor')
 local Range = require('fittencode.document.range')
 local Position = require('fittencode.document.position')
+local Convert = require('fittencode.inline.model.convert')
 
 local Model = {}
 Model.__index = Model
@@ -142,7 +143,6 @@ function Model:update(state)
     end
 end
 
--- Update the model with the given state, only support word_segmentation for now.
 function Model:update_segments(segments)
     segments = segments or {}
     if #segments ~= #self.completion_models then
@@ -150,7 +150,9 @@ function Model:update_segments(segments)
         return
     end
     for i, seg in ipairs(segments) do
-        self.completion_models[i]:update_words_by_segments(seg)
+        local impl = self.completion_models[i]
+        local words = Convert.convert_segments_to_words_by_model(impl:snapshot(), seg)
+        impl:update_words(words)
     end
 end
 

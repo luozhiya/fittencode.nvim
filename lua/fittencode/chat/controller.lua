@@ -72,7 +72,7 @@ end
 function Controller:update_view(force)
     force = force or false
     if self:view_visible() or force then
-        self.view:update(State.new():get_state_from_model(self.model))
+        self.view:update(State.get_state_from_model(self.model))
     end
 end
 

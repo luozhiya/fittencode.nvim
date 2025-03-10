@@ -39,4 +39,19 @@ function M.byte_len(input)
     end
 end
 
+function M.len_by_first_byte(first_byte)
+    if first_byte <= 0x7F then
+        return 1
+    elseif first_byte <= 0xDF then
+        return 2
+    elseif first_byte <= 0xEF then
+        return 3
+    elseif first_byte <= 0xF7 then
+        return 4
+    else
+        -- Error: invalid input
+        return 0
+    end
+end
+
 return M

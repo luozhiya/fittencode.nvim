@@ -75,7 +75,7 @@ function Session:update_model(state)
 end
 
 function Session:update_view()
-    self.view.update(State:new():get_state_from_model(self.model))
+    self.view.update(State.get_state_from_model(self.model:snapshot()))
 end
 
 function Session:accept(direction, range)
