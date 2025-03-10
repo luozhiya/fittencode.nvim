@@ -42,6 +42,12 @@ end
 
 function M.destroy()
     vim.api.nvim_del_augroup_by_name(augroup_name)
+    -- clear highlights
+    for name in pairs(PRESET_THEME) do
+        -- vim.api.nvim_command('hi clear FittenCode' .. name)
+        -- `cleared`
+        vim.api.nvim_set_hl(0, 'FittenCode' .. name, {})
+    end
 end
 
 return M

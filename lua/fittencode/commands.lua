@@ -106,7 +106,7 @@ local CHAT = {
     -- regenerate_response = { execute = function() chat_controller():regenerate_response() end },
 }
 
-local commands = vim.tbl_deep_extend('force', {}, BASE, INLINE, CHAT)
+local commands = vim.tbl_deep_extend('error', {}, BASE, INLINE, CHAT)
 
 local function execute(input)
     if not commands[input.fargs[1]] then
@@ -145,7 +145,7 @@ end
 
 local M = {}
 
-local user_commands_name = 'FittenCode.ColorScheme'
+local user_commands_name = 'FittenCode'
 
 function M.init()
     vim.api.nvim_create_user_command(user_commands_name, function(input)

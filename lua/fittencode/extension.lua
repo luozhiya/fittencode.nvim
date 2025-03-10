@@ -14,8 +14,8 @@ local META = {
     extension_uri = extension_uri(),
 }
 
-return {
+return setmetatable({}, {
     __index = function(_, key)
         return META[key]
-    end,
-}
+    end
+})

@@ -61,10 +61,10 @@ end
 local ResponseParser = {}
 ResponseParser.__index = ResponseParser
 
-function ResponseParser:new(context_builder)
+function ResponseParser.new(context_builder)
     return setmetatable({
         _context_builder = context_builder or ContextBuilder:new()
-    }, self)
+    }, ResponseParser)
 end
 
 ---@private

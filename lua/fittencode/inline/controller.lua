@@ -12,7 +12,7 @@ local Position = require('fittencode.document.position')
 local ProjectCompletionService = require('fittencode.inline.project_completion.service')
 local Status = require('fittencode.inline.status')
 local NotifyLogin = require('fittencode.client.notify_login')
-local PromptGenerator = require('fittencode.inline.fim_protocol.versions.comprehensive_context.generator')
+local PromptGenerator = require('fittencode.inline.fim_protocol.comprehensive_context.generator')
 local CompletionStatistics = require('fittencode.inline.completion_statistics')
 
 ---@class FittenCode.Inline.Controller
@@ -32,8 +32,7 @@ function Controller:_initialize(options)
     self.prompt_generator = PromptGenerator:new({
         project_completion_service = self.project_completion_service
     })
-    -- self.completion_statistics = CompletionStatistics:new({
-    --     check_accept = function() end,
+    -- self.completion_statistics = CompletionStatistics.new({
     --     get_project_completion_chosen = function()
     --         return self.project_completion_service:get_chosen()
     --     end,
@@ -408,12 +407,12 @@ function Controller:get_status()
     -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
     local selected_session = self.sessions[self.selected_session_id]
     if selected_session and not selected_session:is_terminated() then
-        return Status:new({ inline = 'running', session = selected_session:get_status() })
+        return Status.new({ inline = 'running', session = selected_session:get_status() })
     end
     if self:is_enabled(vim.api.nvim_get_current_buf()) then
-        return Status:new({ inline = 'idle', session = nil })
+        return Status.new({ inline = 'idle', session = nil })
     else
-        return Status:new({ inline = 'disabled', session = nil })
+        return Status.new({ inline = 'disabled', session = nil })
     end
 end
 

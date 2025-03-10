@@ -10,14 +10,13 @@ local Status = {}
 Status.__index = Status
 
 ---@return FittenCode.Inline.Status
-function Status:new(options)
+function Status.new(options)
     options = options or {}
-    local obj = {
+    local self = setmetatable({
         inline = options.inline,
         session = options.session
-    }
-    setmetatable(obj, self)
-    return obj
+    }, Status)
+    return self
 end
 
 return Status

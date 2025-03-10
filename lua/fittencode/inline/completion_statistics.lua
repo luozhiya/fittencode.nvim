@@ -164,7 +164,7 @@ end
 function CompletionStatistics:_initialize(options)
     options = options or {}
     self.statistic_dict = options.statistic_dict or {}
-    self.get_chosen = options.get_chosen
+    self.get_project_completion_chosen = options.get_project_completion_chosen
     self:_set_global_statistic()
     self:_set_document_change_handler()
     self.timer = EventLoop.set_interval(STATISTIC_SENDING_GAP, Fn.schedule_call_wrap_fn(function() self:send_status() end))
@@ -335,7 +335,7 @@ end
 function CompletionStatistics:send_status()
     local open = Config.use_project_completion.open
     local user_id = Client.get_api_key_manager():get_fitten_user_id()
-    local chosen = self.get_chosen(self.user_id)
+    local chosen = self.get_project_completion_chosen(self.user_id)
 
     for uri, stats in pairs(self.statistic_dict) do
         if self.completion_status_dict[uri] then

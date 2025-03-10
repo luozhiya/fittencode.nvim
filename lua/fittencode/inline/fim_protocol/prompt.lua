@@ -3,13 +3,13 @@ local Prompt = {}
 Prompt.__index = Prompt
 
 ---@return FittenCode.Inline.Prompt
-function Prompt:new(options)
-    local obj = {
+function Prompt.new(options)
+    local self = {
         inputs = options.inputs or '',
         meta_datas = options.meta_datas or {}
     }
-    setmetatable(obj, Prompt)
-    return obj
+    setmetatable(self, Prompt)
+    return self
 end
 
 return Prompt

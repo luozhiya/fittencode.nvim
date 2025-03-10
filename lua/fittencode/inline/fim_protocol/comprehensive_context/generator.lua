@@ -16,7 +16,7 @@ local FIM_PATTERN = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 local PromptGenerator = {}
 PromptGenerator.__index = PromptGenerator
 
-function PromptGenerator:new(options)
+function PromptGenerator.new(options)
     return setmetatable({
         last = {
             filename = '',

@@ -3,8 +3,8 @@ local END_OF_TEXT_TOKEN = '<|endoftext|>' -- 文本结束标记
 local ResponseParser = {}
 ResponseParser.__index = ResponseParser
 
-function ResponseParser:new()
-    return setmetatable({}, self)
+function ResponseParser.new()
+    return setmetatable({}, ResponseParser)
 end
 
 -- 这是 Vim 版本的代码补全数据

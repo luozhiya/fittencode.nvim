@@ -7,10 +7,8 @@ local Range = require('fittencode.document.range')
 local ImmediateContextGenerator = {}
 ImmediateContextGenerator.__index = ImmediateContextGenerator
 
-function ImmediateContextGenerator:new()
-    local obj = {}
-    setmetatable(obj, ImmediateContextGenerator)
-    return obj
+function ImmediateContextGenerator.new()
+    return setmetatable({}, ImmediateContextGenerator)
 end
 
 function ImmediateContextGenerator:generate(buf, position, options)
