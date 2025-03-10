@@ -3,8 +3,8 @@ local Promise = require('fittencode.concurrency.promise')
 local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
 local Log = require('fittencode.log')
-local Generator = require('fittencode.inline.fim_protocol.immediate_context.generator')
-local ResponseParser = require('fittencode.inline.fim_protocol.immediate_context.response').ResponseParser
+local Generator = require('fittencode.inline.fim_protocol.context.immediate.generator')
+local ResponseParser = require('fittencode.inline.fim_protocol.context.immediate.response').ResponseParser
 
 local Headless = {}
 Headless.__index = Headless

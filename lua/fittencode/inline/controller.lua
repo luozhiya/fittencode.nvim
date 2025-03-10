@@ -12,7 +12,7 @@ local Position = require('fittencode.document.position')
 local ProjectCompletionService = require('fittencode.inline.project_completion.service')
 local Status = require('fittencode.inline.status')
 local NotifyLogin = require('fittencode.client.notify_login')
-local PromptGenerator = require('fittencode.inline.fim_protocol.comprehensive_context.generator')
+local PromptGenerator = require('fittencode.inline.fim_protocol.context.comprehensive.generator')
 local CompletionStatistics = require('fittencode.inline.completion_statistics')
 
 ---@class FittenCode.Inline.Controller
@@ -29,7 +29,7 @@ end
 function Controller:_initialize(options)
     options = options or {}
     self.project_completion_service = ProjectCompletionService.new()
-    self.prompt_generator = PromptGenerator:new({
+    self.prompt_generator = PromptGenerator.new({
         project_completion_service = self.project_completion_service
     })
     -- self.completion_statistics = CompletionStatistics.new({
