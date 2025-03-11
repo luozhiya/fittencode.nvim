@@ -1,0 +1,8 @@
+describe("My Neovim Plugin", function()
+    it("should do something", function()
+        print("Hello, World!")
+        print(vim.fn.getpid())
+    end)
+    it("should do something else", function()
+    end)
+end)
