@@ -69,10 +69,6 @@ function Controller:destroy()
     self:cleanup_sessions()
 end
 
----@class FittenCode.Inline.Controller.Observer
----@field update function
----@field id string
-
 -- 外界可以通过注册观察者来监听 InlineController 的事件
 -- * `Inline.StatusUpdated`
 ---@param observer FittenCode.Inline.Controller.Observer

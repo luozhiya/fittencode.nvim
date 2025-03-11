@@ -5,11 +5,11 @@
 
 ]]
 local function make_stateful(module)
-    -- 防止重复包装
-    if module._wrapped_initialized then
-        return module
-    end
-    module._wrapped_initialized = true
+    -- -- 防止重复包装
+    -- if module._wrapped_initialized then
+    --     return module
+    -- end
+    -- module._wrapped_initialized = true
 
     local initialized = false
     local p_init = module.init

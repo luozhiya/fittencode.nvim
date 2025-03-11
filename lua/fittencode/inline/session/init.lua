@@ -1,7 +1,7 @@
 local Editor = require('fittencode.document.editor')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
-local State = require('fittencode.inline.state')
+local ViewState = require('fittencode.inline.view.state')
 local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.functional.fn')
 local Log = require('fittencode.log')
@@ -17,6 +17,13 @@ local AdvanceSegmentation = require('fittencode.inline.model.advance_segmentatio
 -- * 通过配置交互模式来实现延时补全 (delay_completion)
 local Session = {}
 
+local Phase = {
+    created = 'created',
+    model_ready = 'model_ready',
+    interactive = 'interactive',
+    terminated = 'terminated',
+}
+
 function Session.new(options)
     local self = setmetatable({}, Session)
     self:_initialize(options)
@@ -28,24 +35,27 @@ function Session:_initialize(options)
     self.position = options.position
     self.id = options.id
     self.timing = {}
-    self.request_handles = {}
+    self.requests = {}
     self.keymaps = {}
     self.prompt_generator = options.prompt_generator
     self.triggering_completion = options.triggering_completion
     self.update_inline_status = options.update_inline_status
     self.set_interactive_session_debounced = options.set_interactive_session_debounced
-    self.phase = 'created'
+    self.phase = Phase.created
     self.completion = Status.new({ gc = self:gc(), on_update = function() self.update_inline_status(self.id) end })
 end
 
 -- 设置 Model，计算补全数据
 function Session:set_model(parsed_response)
-    self.model = Model.new({
-        buf = self.buf,
-        position = self.position,
-        response = parsed_response,
-    })
-    self:advance_segmentation()
+    if self.phase == Phase.created then
+        self.phase = Phase.model_ready
+        self.model = Model.new({
+            buf = self.buf,
+            position = self.position,
+            response = parsed_response,
+        })
+        self:advance_segmentation()
+    end
 end
 
 function Session:advance_segmentation()
@@ -58,25 +68,21 @@ end
 
 -- 设置交互模式
 function Session:set_interactive()
-    if self.phase == 'created' then
+    if self.phase == Phase.model_ready then
         self.view = View:new({ buf = self.buf })
         self:set_keymaps()
         self:set_autocmds()
         self:update_view()
-        self.phase = 'interactive'
+        self.phase = Phase.interactive
     end
 end
 
 function Session:is_interactive()
-    return self.phase == 'interactive'
-end
-
-function Session:update_model(state)
-    self.model:update(state)
+    return self.phase == Phase.interactive
 end
 
 function Session:update_view()
-    self.view.update(State.get_state_from_model(self.model:snapshot()))
+    self.view.update(ViewState.get_state_from_model(self.model:snapshot()))
 end
 
 function Session:accept(direction, range)
@@ -156,10 +162,10 @@ function Session:is_cached(position)
 end
 
 function Session:abort_and_clear_requests()
-    for _, handle in ipairs(self.request_handles) do
+    for _, handle in ipairs(self.requests) do
         handle:abort()
     end
-    self.request_handles = {}
+    self.requests = {}
 end
 
 function Session:clear_mv()
@@ -173,15 +179,15 @@ end
 
 -- 终止不会清除 timing 等信息，方便后续做性能统计分析
 function Session:terminate()
-    if self.phase == 'terminated' then
+    if self.phase == Phase.terminated then
         return
-    elseif self.phase == 'interactive' then
+    elseif self.phase == Phase.interactive then
         self:abort_and_clear_requests()
         self:clear_mv()
         self:restore_keymaps()
         self:clear_autocmds()
     end
-    self.phase = 'terminated'
+    self.phase = Phase.terminated
     self.update_inline_status(self.id)
 end
 
@@ -207,7 +213,7 @@ end
 -- * 判断是否已经终止
 -- * 跳出 Promise
 function Session:is_terminated()
-    return self.phase == 'terminated'
+    return self.phase == Phase.terminated
 end
 
 function Session:get_status()
@@ -222,7 +228,7 @@ function Session:record_timing(event, timestamp)
 end
 
 function Session:request_handles_push(handle)
-    self.request_handles[#self.request_handles + 1] = handle
+    self.requests[#self.requests + 1] = handle
 end
 
 -- 生成 Prompt
@@ -272,15 +278,15 @@ end
 -- 获取补全版本号
 ---@return FittenCode.Concurrency.Promise
 function Session:get_completion_version()
-    local request_handle = Client.make_request(Protocol.Methods.get_completion_version)
-    if not request_handle then
+    local request = Client.make_request(Protocol.Methods.get_completion_version)
+    if not request then
         return Promise.reject()
     end
 
     self:record_timing('get_completion_version.request')
-    self:request_handles_push(request_handle)
+    self:request_handles_push(request)
 
-    return request_handle:async():forward(function(_)
+    return request:async():forward(function(_)
         self:record_timing('get_completion_version.response')
         ---@type FittenCode.Protocol.Methods.GetCompletionVersion.Response
         local response = _.json()

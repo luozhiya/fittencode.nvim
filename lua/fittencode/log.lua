@@ -101,8 +101,9 @@ end
 local function write_to_log(content)
     local ok, err = pcall(function()
         local file = io.open(LOG_FILE, 'a')
-        if not file then return end
-
+        if not file then
+            return
+        end
         file:write(content .. '\n')
         file:close()
     end)

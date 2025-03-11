@@ -49,44 +49,6 @@
 ---@field extmark_ids table
 ---@field buf number
 
----@class FittenCode.Inline.GenerateOneStageResponse
----@field request_id string
----@field completions FittenCode.Inline.GenerateOneStageResponse.Completion[]
----@field context string
-
----@class FittenCode.Inline.GenerateOneStageResponse.Completion
----@field generated_text string
----@field character_delta number UTF-16 code units
----@field line_delta number zero-based line number
-
----@class FittenCode.Inline.RawGenerateOneStageResponse
----@field server_request_id string
----@field generated_text string
----@field ex_msg string
----@field delta_char number
----@field delta_line number
-
----@class FittenCode.Inline.Tracker
----@field ft_token string
----@field has_lsp boolean
----@field enabled boolean
----@field chosen string
----@field use_project_completion boolean
----@field uri string
----@field accept_cnt number
----@field insert_without_paste_cnt number
----@field insert_cnt number
----@field delete_cnt number
----@field completion_times number
----@field completion_total_time number
----@field insert_with_completion_without_paste_cnt number
----@field insert_with_completion_cnt number
-
----@class FittenCode.Inline.Tracker.Options
----@field requestUrl string
----@field extra FittenCode.Inline.Tracker.Options.Extra
-
----@class FittenCode.Inline.Tracker.Options.Extra
----@field ft_token string
----@field tracker_type string
----@field tracker_event_type string
+---@class FittenCode.Inline.Controller.Observer
+---@field update function
+---@field id string

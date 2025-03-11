@@ -47,7 +47,7 @@ function Status:no_more_suggestions()
     return self:_transition(X.NO_MORE_SUGGESTIONS)
 end
 
-function Status:suggestions_ready() -- 修正拼写错误
+function Status:suggestions_ready()
     return self:_transition(X.SUGGESTIONS_READY)
 end
 

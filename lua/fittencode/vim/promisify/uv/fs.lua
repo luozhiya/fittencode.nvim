@@ -103,9 +103,9 @@ end
 ---@param path string 文件路径
 ---@param content string 文件内容
 ---@return FittenCode.Concurrency.Promise
-function M.write_content(path, content)
+function M.write_content(path, mode, content)
     local fd
-    return M.open(path, 'w', 438)
+    return M.open(path, mode or 'w', 438)
         :forward(function(result)
             fd = result[1]
             return M.write(fd, content, -1)
