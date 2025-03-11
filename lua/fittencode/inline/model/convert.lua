@@ -5,7 +5,7 @@ local M = {}
 -- 2. 内容验证（实际字符匹配）
 -- 3. 总量验证（总字符数一致）
 -- 返回与self.words结构相同的分词范围
-function M.convert_segments_to_words_by_model(model, segments)
+function M.segments_to_words(model, segments)
     local words = {}
     local ptr = 1 -- 字符指针（基于chars数组索引）
 

@@ -87,18 +87,50 @@ function M.parse_words(s, chars)
     return words
 end
 
+--[[
+
 function M.parse_lines(s)
     local lines = {}
     local line_start = 1
     while true do
-        local line_end = s:find('\n', line_start, true) or #s
-        if s:sub(line_end, line_end) == '\n' then
-            line_end = line_end - 1
+        local i = s:find('\n', line_start, true)
+        if not i then
+            break
         end
-        table.insert(lines, { start = line_start, end_ = line_end })
+        local line_end = i - 1
+        table.insert(lines, s:sub(line_start, line_end))
+        line_start = i + 1
+    end
+    -- 添加剩余部分作为最后一行
+    table.insert(lines, s:sub(line_start, #s))
+    return lines
+end
+
+示例：
+'aa\n\ncc' -> {'aa', '', 'cc'}
+'aa\n' -> {'aa', ''}
+'\n' -> {'', ''}
+'\n\n' -> {'', '', ''}
+
+]]
+---@param s string
+---@return table
+function M.parse_lines(s)
+    local lines = {}
+    local line_start = 1
+    while line_start <= #s do
+        local line_end = s:find('\n', line_start, true)
+        if not line_end then
+            -- 如果没有找到换行符，说明这是最后一行
+            table.insert(lines, s:sub(line_start))
+            break
+        end
+        local line_content = s:sub(line_start, line_end - 1)
+        table.insert(lines, { start = line_start, end_ = line_end - 1, content = line_content })
         line_start = line_end + 1
-        if line_start > #s then break end
-        if s:sub(line_start, line_start) == '\n' then
+        -- 处理连续的换行符
+        while s:sub(line_start, line_start) == '\n' do
+            table.insert(lines, { start = line_start, end_ = line_start, content = '' })
             line_start = line_start + 1
         end
     end

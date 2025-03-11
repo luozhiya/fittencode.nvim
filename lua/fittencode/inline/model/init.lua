@@ -150,9 +150,9 @@ function Model:update_segments(segments)
         return
     end
     for i, seg in ipairs(segments) do
-        local impl = self.completion_models[i]
-        local words = Convert.convert_segments_to_words_by_model(impl:snapshot(), seg)
-        impl:update_words(words)
+        local compl_model = self.completion_models[i]
+        local words = Convert.segments_to_words(compl_model:snapshot(), seg)
+        compl_model:update_words(words)
     end
 end
 

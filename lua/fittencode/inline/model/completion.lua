@@ -62,14 +62,6 @@ function CompletionModel.new(source, placeholder_ranges)
     self.words = Preprocessing.parse_words(source, self.chars)
     self.lines = Preprocessing.parse_lines(source)
 
-    -- 初始化移动列表（end positions）
-    self.char_list = {}
-    for _, c in ipairs(self.chars) do table.insert(self.char_list, c.end_) end
-    self.word_list = {}
-    for _, w in ipairs(self.words) do table.insert(self.word_list, w.end_) end
-    self.line_list = {}
-    for _, l in ipairs(self.lines) do table.insert(self.line_list, l.end_) end
-
     -- 初始化范围
     self.commit_ranges = {}
     self:update_stage_ranges()

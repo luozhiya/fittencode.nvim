@@ -50,7 +50,7 @@ function Session:set_model(parsed_response)
 end
 
 function Session:advance_segmentation()
-    AdvanceSegmentation.run(self.model:get_text()):forward(function(segments)
+    AdvanceSegmentation.send_segments(self.model:get_text()):forward(function(segments)
         self.model:update({
             segments = segments
         })
@@ -321,20 +321,20 @@ function Session:generate_one_stage_auth(completion_version, body)
         ['2'] = '2_2',
         ['3'] = '2_3',
     }
-    local request_handle = Client.make_request(Protocol.Methods.generate_one_stage_auth, {
+    local request = Client.make_request(Protocol.Methods.generate_one_stage_auth, {
         variables = {
             completion_version = vu[completion_version],
         },
         body = body,
     })
-    if not request_handle then
+    if not request then
         return Promise.reject()
     end
 
     self:record_timing('generate_one_stage_auth.request')
-    self:request_handles_push(request_handle)
+    self:request_handles_push(request)
 
-    return request_handle:async():forward(function(_)
+    return request:async():forward(function(_)
         self:record_timing('generate_one_stage_auth.response')
         local response = _.json()
         if not response then

@@ -11,21 +11,21 @@ local M = {}
 
 -- 高级分词
 ---@return FittenCode.Concurrency.Promise, FittenCode.HTTP.Response?
-function M.run(text)
+function M.send_segments(text)
     if Editor.onlyascii(text) then
-        Log.trace('Generated text is only ascii, skip word segmentation')
+        Log.debug('Generated text is only ascii, skip word segmentation')
         return Promise.resolve()
     end
 
-    local request_handle = Client.make_request(Protocol.Methods.chat_auth, {
+    local request = Client.make_request(Protocol.Methods.chat_auth, {
         body = assert(vim.fn.json_encode(Segmentation.generate(text))),
     })
-    if not request_handle then
+    if not request then
         Log.error('Failed to send request')
         return Promise.reject()
     end
 
-    return request_handle:async():forward(function(response)
+    return request:async():forward(function(response)
         local segments = response.json()
         if segments then
             return segments
@@ -33,7 +33,7 @@ function M.run(text)
             Log.error('Failed to parse: {}', response)
             return Promise.reject()
         end
-    end), request_handle
+    end), request
 end
 
 return M
