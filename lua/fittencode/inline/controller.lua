@@ -262,7 +262,7 @@ function Controller:set_onkey(enable)
                 return
             end
             if self:lazy_completion(key) then
-                -- 忽视输入，用户输入的字符由底层处理
+                -- >= 0.11.0 忽视输入，用户输入的字符由底层处理
                 return ''
             end
         end

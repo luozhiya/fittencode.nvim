@@ -6,7 +6,7 @@ local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.functional.fn')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
-local Status = require('fittencode.inline.session.status')
+local CompletionStatus = require('fittencode.inline.session.completion_status')
 local ResponseParser = require('fittencode.inline.fim_protocol.context.comprehensive.response').ResponseParser
 local Protocol = require('fittencode.client.protocol')
 local ZipFlow = require('fittencode.zipflow')
@@ -42,7 +42,7 @@ function Session:_initialize(options)
     self.update_inline_status = options.update_inline_status
     self.set_interactive_session_debounced = options.set_interactive_session_debounced
     self.phase = PHASE.CREATED
-    self.completion = Status.new({ gc = self:gc(), on_update = function() self.update_inline_status(self.id) end })
+    self.completion_status = CompletionStatus.new({ gc = self:gc(), on_update = function() self.update_inline_status(self.id) end })
 end
 
 -- 设置 Model，计算补全数据
@@ -59,7 +59,12 @@ function Session:set_model(parsed_response)
 end
 
 function Session:advance_segmentation()
-    AdvanceSegmentation.send_segments(self.model:get_text()):forward(function(segments)
+    local promise, request = AdvanceSegmentation.send_segments(self.model:get_text())
+    if not request then
+        return
+    end
+    self:add_request(request)
+    promise:forward(function(segments)
         self.model:update({
             segments = segments
         })
@@ -181,7 +186,8 @@ end
 function Session:terminate()
     if self.phase == PHASE.TERMINATED then
         return
-    elseif self.phase == PHASE.INTERACTIVE then
+    end
+    if self.phase == PHASE.INTERACTIVE then
         self:abort_and_clear_requests()
         self:clear_mv()
         self:restore_keymaps()
@@ -217,7 +223,7 @@ function Session:is_terminated()
 end
 
 function Session:get_status()
-    return self.completion:get()
+    return self.completion_status:get()
 end
 
 function Session:record_timing(event, timestamp)
@@ -227,14 +233,14 @@ function Session:record_timing(event, timestamp)
     self.timing[#self.timing + 1] = { event = event, timestamp = timestamp }
 end
 
-function Session:request_handles_push(handle)
+function Session:add_request(handle)
     self.requests[#self.requests + 1] = handle
 end
 
 -- 生成 Prompt
 ---@return FittenCode.Concurrency.Promise
 function Session:generate_prompt()
-    self.completion:generating_prompt()
+    self.completion_status:generating_prompt()
     self:record_timing('generate_prompt.request')
 
     return self.prompt_generator:generate2(self.buf, self.position, {
@@ -255,22 +261,22 @@ end
 ---@return FittenCode.Concurrency.Promise
 function Session:send_completions()
     return self:generate_prompt():forward(function(prompt)
-        self.completion:requesting_completions()
+        self.completion_status:requesting_completions()
         return self:request_completions(prompt)
     end):forward(function(completion)
         if self:is_terminated() then
             return Promise.reject()
         end
         if not completion then
-            self.completion:no_more_suggestions()
+            self.completion_status:no_more_suggestions()
             return Promise.reject()
         end
         self:set_model(completion)
-        self.completion:suggestions_ready()
+        self.completion_status:suggestions_ready()
         Fn.schedule_call(self.set_interactive_session_debounced, self)
         return Promise.resolve(completion)
     end):catch(function()
-        self.completion:error()
+        self.completion_status:error()
         return Promise.reject()
     end)
 end
@@ -284,7 +290,7 @@ function Session:get_completion_version()
     end
 
     self:record_timing('get_completion_version.request')
-    self:request_handles_push(request)
+    self:add_request(request)
 
     return request:async():forward(function(_)
         self:record_timing('get_completion_version.response')
@@ -334,7 +340,7 @@ function Session:generate_one_stage_auth(completion_version, body)
     end
 
     self:record_timing('generate_one_stage_auth.request')
-    self:request_handles_push(request)
+    self:add_request(request)
 
     return request:async():forward(function(_)
         self:record_timing('generate_one_stage_auth.response')

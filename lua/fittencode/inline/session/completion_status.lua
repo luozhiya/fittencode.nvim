@@ -1,7 +1,7 @@
 local Fn = require('fittencode.functional.fn')
 
-local Status = {}
-Status.__index = Status
+local CompletionStatus = {}
+CompletionStatus.__index = CompletionStatus
 
 local X = {
     CREATED = 'created',
@@ -12,16 +12,16 @@ local X = {
     ERROR = 'error',
 }
 
-function Status.new(options)
+function CompletionStatus.new(options)
     local self = setmetatable({
         gc = options.gc,
         on_update = options.on_update,
-    }, Status)
+    }, CompletionStatus)
     self:_transition(X.CREATED)
     return self
 end
 
-function Status:_transition(value)
+function CompletionStatus:_transition(value)
     if self._current == value then return self end
 
     self._current = value
@@ -35,33 +35,33 @@ function Status:_transition(value)
     return self
 end
 
-function Status:generating_prompt()
+function CompletionStatus:generating_prompt()
     return self:_transition(X.GENERATING_PROMPT)
 end
 
-function Status:requesting_completions()
+function CompletionStatus:requesting_completions()
     return self:_transition(X.REQUESTING_COMPLETIONS)
 end
 
-function Status:no_more_suggestions()
+function CompletionStatus:no_more_suggestions()
     return self:_transition(X.NO_MORE_SUGGESTIONS)
 end
 
-function Status:suggestions_ready()
+function CompletionStatus:suggestions_ready()
     return self:_transition(X.SUGGESTIONS_READY)
 end
 
-function Status:error()
+function CompletionStatus:error()
     return self:_transition(X.ERROR)
 end
 
 -- 基础查询方法
-function Status:get()
+function CompletionStatus:get()
     return self._current
 end
 
-function Status:is(state)
+function CompletionStatus:is(state)
     return self._current == state
 end
 
-return Status
+return CompletionStatus
