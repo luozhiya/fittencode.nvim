@@ -1,7 +1,19 @@
--- .busted
 return {
-    pattern = "_spec.lua$",
-    verbose = true,
-    output = 'spec',
-    shuffle = true,
+	_all = {
+		coverage = false,
+        lpath = "lua/?.lua;lua/?/init.lua",
+		lua = './tests/bin/nvim'
+	},
+	inline = {
+		ROOT = {'./tests/inline/'},
+		pattern = '',  -- No fancy name patterns for test files
+	},
+	chat = {
+		ROOT = {'./tests/chat/'},
+		pattern = '',  -- No fancy name patterns for test files
+	},
+	functional = {
+		ROOT = {'./tests/functional/'},
+		pattern = '',  -- No fancy name patterns for test files
+	}
 }

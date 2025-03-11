@@ -1,0 +1,20 @@
+# https://github.com/HiPhish/yo-dawg.nvim/blob/master/test/nvim-shim
+
+#!/bin/sh
+
+export XDG_CONFIG_HOME='tests/xdg/config/'
+export XDG_STATE_HOME='tests/xdg/local/state/'
+export XDG_DATA_HOME='tests/xdg/local/share/'
+
+# export LUA_PATH="$(luarocks path --lua-version 5.1 --lua-path);"
+# export LUA_CPATH="$(luarocks path --lua-version 5.1 --cpath);"
+# export PATH="$(luarocks path --lua-version 5.1 --bin):$PATH"
+
+# print where nvim is running from
+# echo ================================================================================
+# echo "Neovim located at: $(which nvim)"
+# echo "Neovim running from: $(pwd)"
+# nvim --version
+# echo ================================================================================
+
+nvim --cmd 'set loadplugins' -l $@

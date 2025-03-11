@@ -1,4 +1,5 @@
-local Promise = require('promise')
+local A = require('fittencode.concurrency.async_await')
+local Promise = require('fittencode.concurrency.promise')
 
 -- Promise.new(function(resolve, reject) reject('Error') end):forward(function(value) print(value) end, function(reason) print(111) end):catch(function(reason) print(222) end)
 
