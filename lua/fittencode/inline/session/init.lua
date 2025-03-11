@@ -17,11 +17,11 @@ local AdvanceSegmentation = require('fittencode.inline.model.advance_segmentatio
 -- * 通过配置交互模式来实现延时补全 (delay_completion)
 local Session = {}
 
-local Phase = {
-    created = 'created',
-    model_ready = 'model_ready',
-    interactive = 'interactive',
-    terminated = 'terminated',
+local PHASE = {
+    CREATED = 'created',
+    MODEL_READY = 'model_ready',
+    INTERACTIVE = 'interactive',
+    TERMINATED = 'terminated',
 }
 
 function Session.new(options)
@@ -41,14 +41,14 @@ function Session:_initialize(options)
     self.triggering_completion = options.triggering_completion
     self.update_inline_status = options.update_inline_status
     self.set_interactive_session_debounced = options.set_interactive_session_debounced
-    self.phase = Phase.created
+    self.phase = PHASE.CREATED
     self.completion = Status.new({ gc = self:gc(), on_update = function() self.update_inline_status(self.id) end })
 end
 
 -- 设置 Model，计算补全数据
 function Session:set_model(parsed_response)
-    if self.phase == Phase.created then
-        self.phase = Phase.model_ready
+    if self.phase == PHASE.CREATED then
+        self.phase = PHASE.MODEL_READY
         self.model = Model.new({
             buf = self.buf,
             position = self.position,
@@ -68,17 +68,17 @@ end
 
 -- 设置交互模式
 function Session:set_interactive()
-    if self.phase == Phase.model_ready then
+    if self.phase == PHASE.MODEL_READY then
         self.view = View:new({ buf = self.buf })
         self:set_keymaps()
         self:set_autocmds()
         self:update_view()
-        self.phase = Phase.interactive
+        self.phase = PHASE.INTERACTIVE
     end
 end
 
 function Session:is_interactive()
-    return self.phase == Phase.interactive
+    return self.phase == PHASE.INTERACTIVE
 end
 
 function Session:update_view()
@@ -179,15 +179,15 @@ end
 
 -- 终止不会清除 timing 等信息，方便后续做性能统计分析
 function Session:terminate()
-    if self.phase == Phase.terminated then
+    if self.phase == PHASE.TERMINATED then
         return
-    elseif self.phase == Phase.interactive then
+    elseif self.phase == PHASE.INTERACTIVE then
         self:abort_and_clear_requests()
         self:clear_mv()
         self:restore_keymaps()
         self:clear_autocmds()
     end
-    self.phase = Phase.terminated
+    self.phase = PHASE.TERMINATED
     self.update_inline_status(self.id)
 end
 
@@ -213,7 +213,7 @@ end
 -- * 判断是否已经终止
 -- * 跳出 Promise
 function Session:is_terminated()
-    return self.phase == Phase.terminated
+    return self.phase == PHASE.TERMINATED
 end
 
 function Session:get_status()
