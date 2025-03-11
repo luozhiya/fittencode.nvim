@@ -9,7 +9,7 @@ function M.parse_chars(s)
     while i <= #s do
         local b = s:byte(i)
         local len = UTF8.len_by_first_byte(b)
-        table.insert(chars, { start = i, end_ = i + len - 1 })
+        table.insert(chars, { start = i, end_ = i + len - 1, content = s:sub(i, i + len - 1) })
         i = i + len
     end
     return chars
@@ -51,14 +51,14 @@ function M.parse_words(s, chars)
                 table.insert(words, current_word)
                 current_word = nil
             end
-            table.insert(words, { start = char.start, end_ = char.end_ })
+            table.insert(words, { start = char.start, end_ = char.end_, type = char_type, content = u8char })
         elseif char_type == 'chinese' or char_type == 'other' then
             -- 中文和特殊字符单独成词
             if current_word then
                 table.insert(words, current_word)
                 current_word = nil
             end
-            table.insert(words, { start = char.start, end_ = char.end_ })
+            table.insert(words, { start = char.start, end_ = char.end_, type = char_type, content = u8char })
         else
             -- 处理可合并类型: 空白符和字母数字
             if current_word and current_word.type == char_type then
@@ -73,7 +73,8 @@ function M.parse_words(s, chars)
                 current_word = {
                     start = char.start,
                     end_ = char.end_,
-                    type = char_type -- 记录类型用于合并判断
+                    type = char_type,
+                    content = s:sub(char.start, char.end_)
                 }
             end
         end
@@ -89,28 +90,11 @@ end
 
 --[[
 
-function M.parse_lines(s)
-    local lines = {}
-    local line_start = 1
-    while true do
-        local i = s:find('\n', line_start, true)
-        if not i then
-            break
-        end
-        local line_end = i - 1
-        table.insert(lines, s:sub(line_start, line_end))
-        line_start = i + 1
-    end
-    -- 添加剩余部分作为最后一行
-    table.insert(lines, s:sub(line_start, #s))
-    return lines
-end
-
-示例：
-'aa\n\ncc' -> {'aa', '', 'cc'}
-'aa\n' -> {'aa', ''}
-'\n' -> {'', ''}
-'\n\n' -> {'', '', ''}
+'aa\n\ncc' -> {
+    { start = 1, end_ = 3, content = 'aa\n' },
+    { start = 4, end_ = 4, content = '\n' },
+    { start = 5, end_ = 6, content = 'cc' }
+}
 
 ]]
 ---@param s string
@@ -118,22 +102,28 @@ end
 function M.parse_lines(s)
     local lines = {}
     local line_start = 1
-    while line_start <= #s do
-        local line_end = s:find('\n', line_start, true)
-        if not line_end then
-            -- 如果没有找到换行符，说明这是最后一行
-            table.insert(lines, s:sub(line_start))
-            break
-        end
-        local line_content = s:sub(line_start, line_end - 1)
-        table.insert(lines, { start = line_start, end_ = line_end - 1, content = line_content })
-        line_start = line_end + 1
-        -- 处理连续的换行符
-        while s:sub(line_start, line_start) == '\n' do
-            table.insert(lines, { start = line_start, end_ = line_start, content = '' })
-            line_start = line_start + 1
-        end
+    while true do
+        local i = s:find('\n', line_start, true)
+        if not i then break end
+
+        -- 当前行包含换行符
+        local content = s:sub(line_start, i)
+        table.insert(lines, {
+            start = line_start,
+            end_ = i,
+            content = content
+        })
+        line_start = i + 1
     end
+
+    -- 处理最后一行（可能为空）
+    local final_content = s:sub(line_start, #s)
+    table.insert(lines, {
+        start = line_start,
+        end_ = #s,
+        content = final_content
+    })
+
     return lines
 end
 
