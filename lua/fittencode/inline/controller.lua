@@ -396,7 +396,7 @@ end
 -- 显示当前补全状态
 -- * `{ inline: 'idle', session: nil }`
 -- * `{ inline: 'disabled', session: nil }`
--- * `{ inline: 'running', session: 'new' }`
+-- * `{ inline: 'running', session: 'created' }`
 -- * `{ inline: 'running', session: 'generating_prompt' }`
 -- * `{ inline: 'running', session: 'requesting_completions }`
 -- * `{ inline: 'running', session: 'suggestions_ready' }`

@@ -38,6 +38,11 @@ function Model:_initialize(options)
     end
     self.computed_completions = computed
 
+    -- worksapce
+    -- 工作区域
+    -- - 单个point，则内容往后填充
+    -- - range， 则删除旧内容，插入新内容
+
     -- 2. 解析 placeholder 范围
     self.placeholder_ranges = self:generate_placeholder_ranges(self.buf, self.position, self.computed_completions)
 

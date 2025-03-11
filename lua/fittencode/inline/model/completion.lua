@@ -46,10 +46,13 @@ function CompletionModel.new(source, placeholder_ranges)
         if r.start < 1 or r.end_ > #source then
             error('Placeholder ranges out of bounds')
         end
-        -- 检查是否出现在两端
-        if r.start == 1 or r.end_ == #source then
-            error('Placeholder cannot be at text boundaries')
-        end
+        -- 检查是否出现在两端，如下例所示，还是允许的
+        -- 1*1+2
+        --   ^
+        -- 1*(1+2)
+        -- if r.start == 1 or r.end_ == #source then
+        --     error('Placeholder cannot be at text boundaries')
+        -- end
         -- 检查范围有效性
         if r.start > r.end_ then
             error('Invalid placeholder range: start > end')

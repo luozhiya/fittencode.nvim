@@ -6,7 +6,7 @@ local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.functional.fn')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
-local SessionStatus = require('fittencode.inline.session_status')
+local Status = require('fittencode.inline.session.status')
 local ResponseParser = require('fittencode.inline.fim_protocol.context.comprehensive.response').ResponseParser
 local Protocol = require('fittencode.client.protocol')
 local ZipFlow = require('fittencode.zipflow')
@@ -30,13 +30,12 @@ function Session:_initialize(options)
     self.timing = {}
     self.request_handles = {}
     self.keymaps = {}
-    self.terminated = false
-    self.interactive = false
     self.prompt_generator = options.prompt_generator
     self.triggering_completion = options.triggering_completion
     self.update_inline_status = options.update_inline_status
     self.set_interactive_session_debounced = options.set_interactive_session_debounced
-    self.status = SessionStatus:new({ gc = self:gc(), on_update = function() self.update_inline_status(self.id) end })
+    self.phase = 'created'
+    self.completion = Status.new({ gc = self:gc(), on_update = function() self.update_inline_status(self.id) end })
 end
 
 -- 设置 Model，计算补全数据
@@ -59,15 +58,17 @@ end
 
 -- 设置交互模式
 function Session:set_interactive()
-    self.view = View:new({ buf = self.buf })
-    self:set_keymaps()
-    self:set_autocmds()
-    self:update_view()
-    self.interactive = true
+    if self.phase == 'created' then
+        self.view = View:new({ buf = self.buf })
+        self:set_keymaps()
+        self:set_autocmds()
+        self:update_view()
+        self.phase = 'interactive'
+    end
 end
 
 function Session:is_interactive()
-    return self.interactive
+    return self.phase == 'interactive'
 end
 
 function Session:update_model(state)
@@ -172,16 +173,15 @@ end
 
 -- 终止不会清除 timing 等信息，方便后续做性能统计分析
 function Session:terminate()
-    if self.terminated then
+    if self.phase == 'terminated' then
         return
-    end
-    if not self.terminated then
+    elseif self.phase == 'interactive' then
         self:abort_and_clear_requests()
         self:clear_mv()
         self:restore_keymaps()
         self:clear_autocmds()
     end
-    self.terminated = true
+    self.phase = 'terminated'
     self.update_inline_status(self.id)
 end
 
@@ -207,15 +207,11 @@ end
 -- * 判断是否已经终止
 -- * 跳出 Promise
 function Session:is_terminated()
-    return self.terminated
+    return self.phase == 'terminated'
 end
 
 function Session:get_status()
-    return self.status:get()
-end
-
-function Session:update_status()
-    return self.status
+    return self.completion:get()
 end
 
 function Session:record_timing(event, timestamp)
@@ -232,7 +228,7 @@ end
 -- 生成 Prompt
 ---@return FittenCode.Concurrency.Promise
 function Session:generate_prompt()
-    self:update_status():generating_prompt()
+    self.completion:generating_prompt()
     self:record_timing('generate_prompt.request')
 
     return self.prompt_generator:generate2(self.buf, self.position, {
@@ -253,22 +249,22 @@ end
 ---@return FittenCode.Concurrency.Promise
 function Session:send_completions()
     return self:generate_prompt():forward(function(prompt)
-        self:update_status():requesting_completions()
+        self.completion:requesting_completions()
         return self:request_completions(prompt)
     end):forward(function(completion)
         if self:is_terminated() then
             return Promise.reject()
         end
         if not completion then
-            self:update_status():no_more_suggestions()
+            self.completion:no_more_suggestions()
             return Promise.reject()
         end
         self:set_model(completion)
-        self:update_status():suggestions_ready()
+        self.completion:suggestions_ready()
         Fn.schedule_call(self.set_interactive_session_debounced, self)
         return Promise.resolve(completion)
     end):catch(function()
-        self:update_status():error()
+        self.completion:error()
         return Promise.reject()
     end)
 end
