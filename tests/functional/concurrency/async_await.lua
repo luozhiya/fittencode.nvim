@@ -12,9 +12,11 @@ async(function()
     -- print(vim.inspect(p))
     print(await(Promise.resolve("Immediate Promise")))  -- 立即解决的 Promise
     local x = await(Promise.new(function(resolve)
-        print('zzz')
-        vim.defer_fn(function() resolve('Delayed') end, 10000)
+        print(1)
+        vim.defer_fn(function() print(2) resolve('Delayed') end, 1000)
     end)) -- 延迟 1 秒的 Promise
     print(x)
     print('')
 end)()
+
+vim.uv.sleep(2000)

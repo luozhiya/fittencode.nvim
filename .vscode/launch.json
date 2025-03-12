@@ -5,9 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Debugger: Testing",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/check.py",
+            "console": "integratedTerminal",
+            "args": "test"
+        },
+        {
+            "name": "Lua Debugger",
             "type": "lua",
             "request": "launch",
-            "name": "Debug",
             "program": "${workspaceFolder}/lua/fittencode/open_promot_language/opl.lua"
         }
     ]
