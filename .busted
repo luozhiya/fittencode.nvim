@@ -1,8 +1,10 @@
+local is_windows = package.config:sub(1,1) == '\\'
+
 return {
 	_all = {
 		coverage = false,
         lpath = "lua/?.lua;lua/?/init.lua",
-		lua = './tests/bin/nvim'
+		lua = is_windows and '.\\tests\\bin\\nvim.bat' or './tests/bin/nvim'
 	},
 	inline = {
 		ROOT = {'./tests/inline/'},

@@ -62,7 +62,7 @@ def run_busted(test_type):
         result = subprocess.run(
             f"{cmd} --run {test_type}",
             shell=True,
-            # check=True,
+            check=True,
             env=env,
             capture_output=True,  # 捕获输出
             text=True  # 确保输出是文本格式
