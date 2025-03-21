@@ -1,7 +1,1 @@
-runtime
-nightly
 doc/tags
-py/ft_token
-py/__pycache__
-generated.lua
-tests/xdg
