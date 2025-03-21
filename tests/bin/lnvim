@@ -1,6 +1,0 @@
-os.execute("@echo off")
-os.execute("set XDG_CONFIG_HOME=tests/xdg/config/")
-os.execute("set XDG_STATE_HOME=tests/xdg/local/state/")
-os.execute("set XDG_DATA_HOME=tests/xdg/local/share/")
-local args = table.concat(arg, " ")
-os.execute("nvim --cmd \"set loadplugins\" -l " .. args)

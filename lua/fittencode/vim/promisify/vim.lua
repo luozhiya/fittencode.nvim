@@ -1,5 +1,0 @@
-local Process = require('fittencode.vim.promisify.uv.spawn_new')
-
-local M = {}
-
-return M
