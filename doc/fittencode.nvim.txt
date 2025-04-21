@@ -1,4 +1,4 @@
-*fittencode.nvim.txt*     For Neovim >= 0.8.0    Last change: 2025 February 01
+*fittencode.nvim.txt*      For Neovim >= 0.8.0      Last change: 2025 April 21
 
 ==============================================================================
 Table of Contents                          *fittencode.nvim-table-of-contents*
@@ -336,13 +336,22 @@ format function.
 
 STATUS LINE ~
 
-using lualine
+using lualine.nvim
 
 >
     {
       function()
       local emoji = {"🚫", "⏸️ ", "⌛️", "⚠️ ", "0️⃣ ", "✅"}
       return "🅕" .. emoji[require("fittencode").get_current_status()] end,
+    },
+<
+
+using heirline.nvim
+
+>
+    {
+      provider = function() local emoji = { "🚫", "⏸️", "⌛️", "⚠️", "0️⃣ ", "✅" } return emoji[require("fittencode").get_current_status()] end,
+      condition = function() return package.loaded.fittencode end,
     },
 <
 
