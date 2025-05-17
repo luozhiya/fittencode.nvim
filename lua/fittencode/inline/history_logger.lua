@@ -1,0 +1,3 @@
+local HistoryLogger = {}
+
+return HistoryLogger

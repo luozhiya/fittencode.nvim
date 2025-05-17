@@ -1,0 +1,3 @@
+local HistoryLoggerManager = {}
+
+return HistoryLoggerManager
