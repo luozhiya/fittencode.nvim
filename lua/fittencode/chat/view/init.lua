@@ -15,7 +15,7 @@ local welcome_message = {
         '按下 Ctrl+➡️ 接受一个单词的补全建议。',
         '按下 Alt+X 在光标位置添加代码段。',
         '',
-        'Fitten Code 现支持本地私有化，代码不上云，网络无延迟，功能更丰富！',
+        'Fitten Code 现支持[本地私有化](https://code.fittentech.com/)，代码不上云，网络无延迟，功能更丰富！',
         ''
     },
     ['en'] = {
@@ -212,20 +212,20 @@ function View:set_mode(mode)
     self.mode = mode
 end
 
-function View:show()
-    if not self.state or not self.state.selected_conversation_id then
-        return
-    end
-    assert(self.state)
-    assert(self.state.selected_conversation_id)
-    assert(self.messages_exchange.buf)
-    assert(self.char_input.buf)
-    assert(self.reference.buf)
+local function _setup_autoclose(self, win_id)
+    vim.api.nvim_create_autocmd('WinClosed', {
+        pattern = tostring(win_id),
+        callback = function()
+            self:hide()
+        end,
+        once = true,
+    })
+end
 
-    local editor_width = vim.o.columns
-    local editor_height = vim.o.lines - vim.o.cmdheight
+local function _show_as_panel(self)
+        local editor_width = vim.o.columns
+        local editor_height = vim.o.lines - vim.o.cmdheight
 
-    if self.mode == 'panel' then
         self.messages_exchange.win = vim.api.nvim_open_win(self.messages_exchange.buf, true, {
             vertical = true,
             split = 'left',
@@ -249,6 +249,8 @@ function View:show()
             vim.api.nvim_set_option_value('list', false, { win = self.messages_exchange.win })
             vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.messages_exchange.win })
         end)
+        _setup_autoclose(self, self.messages_exchange.win)
+
         self.reference.win = vim.api.nvim_open_win(self.reference.buf, true, {
             vertical = true,
             split = 'below',
@@ -273,6 +275,8 @@ function View:show()
             vim.api.nvim_set_option_value('list', false, { win = self.reference.win })
             vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.reference.win })
         end)
+        _setup_autoclose(self, self.reference.win)
+
         self.char_input.win = vim.api.nvim_open_win(self.char_input.buf, true, {
             vertical = true,
             split = 'below',
@@ -297,23 +301,21 @@ function View:show()
             vim.api.nvim_set_option_value('list', false, { win = self.char_input.win })
             vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.char_input.win })
         end)
-    elseif self.mode == 'float' then
-        self.messages_exchange.win = vim.api.nvim_open_win(self.messages_exchange.buf, true, {
-            relative = 'editor',
-            width = 60,
-            height = 15,
-            row = 5,
-            col = 5,
-            border = 'single'
-        })
-        self.char_input.win = vim.api.nvim_open_win(self.char_input.buf, true, {
-            relative = 'editor',
-            width = 60,
-            height = 5,
-            row = 20,
-            col = 5,
-            border = 'single'
-        })
+        _setup_autoclose(self, self.char_input.win)
+end
+
+function View:show()
+    if not self.state or not self.state.selected_conversation_id then
+        return
+    end
+    assert(self.state)
+    assert(self.state.selected_conversation_id)
+    assert(self.messages_exchange.buf)
+    assert(self.char_input.buf)
+    assert(self.reference.buf)
+    
+    if self.mode == 'panel' then
+        _show_as_panel(self)
     end
 end
 
