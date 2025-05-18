@@ -18,10 +18,6 @@ local DEFAULTS = {
         server_url = '',
     },
     action = {
-        ask_file = {
-            -- Show "Fitten Code - Ask File" in the editor context menu, when you right-click on the code.
-            show_in_editor_context_menu = true,
-        },
         document_code = {
             -- Show "Fitten Code - Document Code" in the editor context menu, when you right-click on the code.
             show_in_editor_context_menu = true,
@@ -174,15 +170,25 @@ local DEFAULTS = {
     -- Default keymaps for Fitten Code.
     keymaps = {
         inline = {
-            ['<A-O>'] = 'edit_completion',
-            ['<Tab>'] = 'accept',
-            ['<Esc>'] = 'cancel',
-            ['<C-Down>'] = 'accept_line',
-            ['<C-Up>'] = 'revoke_line',
-            ['<C-Right>'] = 'accept_word',
-            ['<C-Left>'] = 'revoke_word',
-            ['<A-\\>'] = 'triggering_completion',
+            ['edit_completion'] = '<A-O>',
+            ['accept'] = '<Tab>',
+            ['cancel'] = '<Esc>',
+            ['accept_line'] = '<C-Down>',
+            ['revoke_line'] = '<C-Up>',
+            ['accept_word'] = '<C-Right>',
+            ['revoke_word'] = '<C-Left>',
+            ['triggering_completion'] = '<A-\\>',
         },
+        chat = {
+            ['add_to_chat'] = 'A-X',
+            ['document_code'] = '',
+            ['edit_code'] = '',
+            ['explain_code'] = '',
+            ['find_bugs'] = '',
+            ['generate_unit_test'] = '',
+            ['optimize_code'] = '',
+            ['start_chat'] = '',
+        }
     },
     log = {
         level = vim.log.levels.WARN,

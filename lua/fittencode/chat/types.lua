@@ -81,7 +81,7 @@
 ---@class FittenCode.Chat.Conversation
 ---@field abort_before_answer boolean
 ---@field is_favorited boolean
----@field mode "chat"
+---@field mode "chat" | "write" | "agent"
 ---@field id string
 ---@field messages FittenCode.Chat.Message[]
 ---@field init_variables table

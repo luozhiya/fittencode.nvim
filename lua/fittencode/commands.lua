@@ -81,6 +81,54 @@ local CHAT = {
             end
         end
     },
+    add_to_chat = {
+        execute = function()
+            local controller = require('fittencode.chat')
+            controller:trigger_action('add_to_chat')
+        end
+    },
+    document_code = {
+        execute = function()
+            local controller = require('fittencode.chat')
+            controller:trigger_action('document_code')
+        end
+    },
+    edit_code = {
+        execute = function()
+            local controller = require('fittencode.chat')
+            controller:trigger_action('edit_code')
+        end
+    },
+    explain_code = {
+        execute = function()
+            local controller = require('fittencode.chat')
+            controller:trigger_action('explain_code')
+        end
+    },
+    find_bugs = {
+        execute = function()
+            local controller = require('fittencode.chat')
+            controller:trigger_action('find_bugs')
+        end
+    },
+    generate_unit_test = {
+        execute = function()
+            local controller = require('fittencode.chat')
+            controller:trigger_action('generate_unit_test')
+        end
+    },
+    optimize_code = {
+        execute = function()
+            local controller = require('fittencode.chat')
+            controller:trigger_action('optimize_code')
+        end
+    },
+    start_chat = {
+        execute = function()
+            local controller = require('fittencode.chat')
+            controller:trigger_action('start_chat')
+        end
+    }
 }
 
 local commands = vim.tbl_deep_extend('error', {}, BASE, INLINE, CHAT)
@@ -124,6 +172,8 @@ vim.api.nvim_create_user_command('FittenCode', function(input)
     execute(input)
 end, {
     nargs = '*',
+    range = true,
+    bang = true,
     complete = function(...)
         return complete(...)
     end,

@@ -9,7 +9,7 @@ Location.__index = Location
 ---@param uri string
 ---@param range FittenCode.Range|FittenCode.Position
 ---@return FittenCode.Location
-function Location:new(uri, range)
+function Location.new(uri, range)
     vim.validate({
         uri = { uri, { 'string', 'table' } },
         range = { range, 'table' }
@@ -17,12 +17,12 @@ function Location:new(uri, range)
     if getmetatable(range) == Position then
         range = Range.from_position(range)
     end
-    local obj = {
+    local self = {
         uri = uri,
         range = range
     }
-    setmetatable(obj, self)
-    return obj
+    setmetatable(self, Location)
+    return self
 end
 
 return Location

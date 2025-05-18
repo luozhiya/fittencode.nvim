@@ -15,18 +15,18 @@ local Range = {}
 Range.__index = Range
 
 ---@return FittenCode.Range
-function Range:new(options)
+function Range.new(start, end_)
     ---@class FittenCode.Range
-    local obj = {
-        start = options.start,
-        end_ = options.end_,
+    local self = {
+        start = start,
+        end_ = end_,
     }
     -- If start is not before or equal to end, the values will be swapped.
-    if obj.start:is_after(obj.end_) then
-        obj.start, obj.end_ = obj.end_, obj.start
+    if self.start:is_after(self.end_) then
+        self.start, self.end_ = self.end_, self.start
     end
-    setmetatable(obj, self)
-    return obj
+    setmetatable(self, Range)
+    return self
 end
 
 function Range:sort()

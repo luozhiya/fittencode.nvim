@@ -314,4 +314,8 @@ function Conversation:update_partial_bot_message(msg)
     self.update_view()
 end
 
+-- Add reference to chat
+function Conversation:add_to_chat(buf, range)
+end
+
 return Conversation

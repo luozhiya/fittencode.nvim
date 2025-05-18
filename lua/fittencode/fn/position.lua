@@ -11,14 +11,13 @@ local Position = {}
 Position.__index = Position
 
 ---@return FittenCode.Position
-function Position:new(options)
-    options = options or { row = 0, col = 0 }
-    local obj = {
-        row = options.row,
-        col = options.col,
+function Position.new(row, col)
+    local self = {
+        row = row,
+        col = col,
     }
-    setmetatable(obj, Position)
-    return obj
+    setmetatable(self, Position)
+    return self
 end
 
 -- Check if this position is equal to `other`.

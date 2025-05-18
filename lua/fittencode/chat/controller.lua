@@ -2,6 +2,9 @@ local Log = require('fittencode.log')
 local State = require('fittencode.chat.state')
 local Fn = require('fittencode.fn')
 local Config = require('fittencode.config')
+local i18n = require('fittencode.i18n')
+local Position = require('fittencode.fn.position')
+local Range = require('fittencode.fn.range')
 
 ---@class FittenCode.Chat.Status
 ---@field selected_conversation_id? string
@@ -51,6 +54,16 @@ function Controller:_initialize(options)
     self:add_observer(function(ctrl, event_type, data)
         self.status_observer:update(ctrl, event_type, data)
     end)
+    self.essential_builtins = {
+        'chat',
+        'document-code',
+        'edit-code',
+        'explain-code',
+        'find-bugs',
+        'generate-unit-test',
+        'optimize-code'
+    }
+    self.context = {}
 end
 
 function Controller:add_observer(observer)
@@ -150,8 +163,11 @@ function Controller:create_conversation(template_id, show, mode)
     mode = mode or 'chat'
 
     ---@type FittenCode.Chat.ConversationType
-    local conversation_ty = self:get_conversation_type(template_id)
-    if not conversation_ty then Log.error('No conversation type found for {}', template_id) end
+    local conversation_ty = self:get_conversation_type(template_id .. '-' .. i18n.display_preference())
+    if not conversation_ty then
+        Log.error('No conversation type found for {}, fallback to en', template_id)
+        conversation_ty = self:get_conversation_type(template_id .. '-en')
+    end
 
     local variables = self:_resolve_variables(conversation_ty.template.variables, { time = 'conversation-start' })
     ---@type FittenCode.Chat.CreatedConversation
@@ -159,6 +175,7 @@ function Controller:create_conversation(template_id, show, mode)
         conversation_id = self:generate_conversation_id(),
         init_variables = variables,
         update_view = function() self:update_view() end,
+        update_status = function(data) self:notify_observers('conversation_updated', data) end,
     })
 
     if created_conversation.type == 'unavailable' then
@@ -204,23 +221,12 @@ function Controller:show_conversation(id)
     end
 end
 
+function Controller:selected_conversation()
+    return self.model:get_conversation_by_id(self.model.selected_conversation_id)
+end
+
 function Controller:get_status()
     return self.status_observer
-end
-
-local function _comment_snippet(self)
-    return Config.snippet.comment or ''
-end
-
-local function _unit_test_framework(self)
-    local tf = {}
-    tf['c'] = 'C/C++'
-    tf['cpp'] = tf['c']
-    tf['java'] = 'Java'
-    tf['python'] = 'Python'
-    tf['javascript'] = 'JavaScript/TypeScript'
-    tf['typescript'] = tf['javascript']
-    return Config.unit_test_framework[tf[Editor.language_id()]] or ''
 end
 
 function Controller:_resolve_variables_internal(variables, messages)
@@ -230,7 +236,7 @@ function Controller:_resolve_variables_internal(variables, messages)
     end
     local switch = {
         ['context'] = function()
-            return { name = Editor.filename(buf), language = Editor.language_id(buf), content = Editor.content(buf) }
+            return { name = Fn.filename(buf), language = Fn.language_id(buf), content = Fn.content(buf) }
         end,
         ['constant'] = function()
             return variables.value
@@ -251,10 +257,20 @@ function Controller:_resolve_variables_internal(variables, messages)
             return Editor.language_id(buf)
         end,
         ['comment-snippet'] = function()
-            return self:_comment_snippet()
+            return Config.snippet.comment or ''
         end,
         ['unit-test-framework'] = function()
-            local s = self:_unit_test_framework()
+            local function _unit_test_framework()
+                local tf = {}
+                tf['c'] = 'C/C++'
+                tf['cpp'] = tf['c']
+                tf['java'] = 'Java'
+                tf['python'] = 'Python'
+                tf['javascript'] = 'JavaScript/TypeScript'
+                tf['typescript'] = tf['javascript']
+                return Config.unit_test_framework[tf[Editor.language_id()]] or ''
+            end
+            local s = _unit_test_framework()
             return s == 'Not specified' and '' or s
         end,
         ['selected-text-with-diagnostics'] = function()
@@ -295,6 +311,101 @@ function Controller:_resolve_variables(variables, e)
         end
     end
     return n
+end
+
+--[[
+
+默认有 6 个
+Document Code (document-code)
+Edit Code (edit-code)
+Explain Code (explain-code)
+Find Bugs (find-bugs)
+Generate UnitTest (generate-unit-test)
+Optimize Code (optimize-code)
+
+]]
+local VCODES = { ['v'] = true, ['V'] = true, [vim.api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
+
+local function get_range_from_visual_selection()
+    if not VCODES[vim.api.nvim_get_mode().mode] then
+        return
+    end
+    -- [bufnum, lnum, col, off]
+    local _, pos = pcall(vim.fn.getregionpos, vim.fn.getpos('.'), vim.fn.getpos('v'))
+    if pos then
+        local start = { pos[1][1][2], pos[1][1][3] }
+        local end_ = { pos[#pos][2][2], pos[#pos][2][3] }
+        return Range.new(Position.new(start[1], start[2]), Position.new(end_[1], end_[2]))
+    end
+end
+
+function Controller:commands(type, mode)
+    mode = mode or 'chat'
+    if mode == 'chat' then
+        -- chat 和 edit-code 对选区没有严格要求
+        -- 如果没有选区，edit-code 则使用当前位置作为范围
+        --             chat 则保持
+        local buf = vim.api.nvim_get_current_buf()
+        local win = vim.api.nvim_get_current_win()
+        self.context.buf = buf
+        local selection = {}
+        selection.range = get_range_from_visual_selection()
+        local need_selected = { 'document-code', 'edit-code', 'explain-code', 'find-bugs', 'generate-unit-test', 'optimize-code' }
+        if need_selected[type] and not selection.range then
+            if type == 'edit-code' then
+                -- TODO: Tree-sitter supported
+                local curpos = Fn.position(win)
+                selection.range = Range.new(Position.new(curpos.row - 20, 0), Position.new(curpos.row + 20, -1))
+            else
+                Log.notify_error('Please select the code in the editor.')
+                return
+            end
+        end
+        self.context.selection = selection
+    elseif mode == 'write' then
+        -- TODO
+    elseif mode == 'agent' then
+        -- TODO
+    end
+
+    self:create_conversation(type, true, mode)
+end
+
+function Controller:add_to_chat()
+    local buf = vim.api.nvim_get_current_buf()
+    local range = get_range_from_visual_selection()
+    local conversation = self:selected_conversation()
+    if not conversation then
+        Log.error('No conversation selected')
+        return
+    end
+    if not range then
+        Log.error('No range selected')
+        return
+    end
+    conversation:add_to_chat(buf, range)
+end
+
+function Controller:trigger_action(action)
+    if action == 'add_to_chat' then
+        self:add_to_chat()
+        return
+    end
+    local mapping = {
+        ['document_code'] = 'document-code',
+        ['edit_code'] = 'edit-code',
+        ['explain_code'] = 'explain-code',
+        ['find_bugs'] = 'find-bugs',
+        ['generate_unit_test'] = 'generate-unit-test',
+        ['optimize_code'] = 'optimize-code',
+        ['start_chat'] ='chat',
+    }
+    local type = mapping[action]
+    if not type then
+        Log.error('Unsupported action: ' .. action)
+        return
+    end
+    self:commands(type)
 end
 
 return Controller
