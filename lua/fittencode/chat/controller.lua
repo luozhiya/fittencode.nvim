@@ -3,6 +3,32 @@ local State = require('fittencode.chat.state')
 local Fn = require('fittencode.fn')
 local Config = require('fittencode.config')
 
+---@class FittenCode.Chat.Status
+---@field selected_conversation_id? string
+---@field conversations table<string, table>
+local Status = {}
+Status.__index = Status
+
+function Status.new()
+    local self = setmetatable({}, Status)
+    self.selected_conversation_id = nil
+    self.conversations = {}
+    return self
+end
+
+---@param controller FittenCode.Chat.Controller
+function Status:update(controller, event_type, data)
+    self.selected_conversation_id = controller.model.selected_conversation_id
+    if event_type == 'conversation_updated' then
+        assert(data)
+        if not self.conversations[data.id] then
+            self.conversations[data.id] = {}
+        end
+        self.conversations[data.id].stream = data.stream
+        self.conversations[data.id].timestamp = data.timestamp
+    end
+end
+
 ---@class FittenCode.Chat.Controller
 local Controller = {}
 Controller.__index = Controller
@@ -21,6 +47,37 @@ function Controller:_initialize(options)
     self.basic_chat_template_id = options.basic_chat_template_id
     self.conversation_types_provider = options.conversation_types_provider
     self.observers = {}
+    self.status_observer = Status.new()
+    self:add_observer(function(ctrl, event_type, data)
+        self.status_observer:update(ctrl, event_type, data)
+    end)
+end
+
+function Controller:add_observer(observer)
+    table.insert(self.observers, observer)
+end
+
+function Controller:remove_observer(observer)
+    for i, obs in ipairs(self.observers) do
+        if obs == observer then
+            table.remove(self.observers, i)
+            break
+        end
+    end
+end
+
+local EventType = {
+    CONVERSATION_ADDED = 'conversation_added',
+    CONVERSATION_DELETED = 'conversation_deleted',
+    VIEW_SHOWN = 'view_shown',
+    VIEW_HIDDEN = 'view_hidden',
+}
+
+---@param data? table Additional event data
+function Controller:notify_observers(event_type, data)
+    for _, observer in ipairs(self.observers) do
+        observer(self, event_type, data)
+    end
 end
 
 ---@return string
@@ -37,10 +94,12 @@ end
 
 function Controller:show_view()
     self.view:show()
+    self:notify_observers(EventType.VIEW_SHOWN)
 end
 
 function Controller:hide_view()
     self.view:hide()
+    self:notify_observers(EventType.VIEW_HIDDEN)
 end
 
 function Controller:view_visible()
@@ -56,6 +115,10 @@ function Controller:add_and_show_conversation(conversation, show)
     if show then
         self:show_view()
     end
+    self:notify_observers(EventType.CONVERSATION_ADDED, {
+        conversation = conversation,
+        show = show
+    })
     return conversation
 end
 
@@ -120,6 +183,9 @@ end
 function Controller:delete_conversation(id)
     self.model:delete_conversation(id)
     self:update_view()
+    self:notify_observers(EventType.CONVERSATION_DELETED, {
+        conversation_id = id
+    })
 end
 
 ---@param template_id string
@@ -139,7 +205,7 @@ function Controller:show_conversation(id)
 end
 
 function Controller:get_status()
-    return self.status
+    return self.status_observer
 end
 
 local function _comment_snippet(self)
