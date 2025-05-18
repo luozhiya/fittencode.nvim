@@ -171,14 +171,16 @@ do
     }
     for k, v in pairs(actions) do
         local key = Config.keymaps.chat[k]
-        local modes
-        if type(v) ~= 'table' then
-            modes = { v }
-        else
-            modes = v
-        end
-        for _, mode in ipairs(modes) do
-            vim.keymap.set(mode, key, function() controller:trigger_action(k) end, { noremap = true, silent = true })
+        if key and key ~= '' then
+            local modes
+            if type(v) ~= 'table' then
+                modes = { v }
+            else
+                modes = v
+            end
+            for _, mode in ipairs(modes) do
+                vim.keymap.set(mode, key, function() controller:trigger_action(k) end, { noremap = true, silent = true })
+            end
         end
     end
 end

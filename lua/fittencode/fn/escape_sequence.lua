@@ -1,6 +1,5 @@
-local bit = require('bit')
-local Validate = require('fittencode.unicode.validate')
-local Codecvt = require('fittencode.unicode.codecvt')
+local Validate = require('fittencode.fn.validate')
+local Codecvt = require('fittencode.fn.codecvt')
 
 local M = {}
 

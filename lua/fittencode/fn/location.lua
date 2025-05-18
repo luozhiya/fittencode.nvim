@@ -1,5 +1,5 @@
-local Position = require('fittencode.document.position')
-local Range = require('fittencode.document.range')
+local Position = require('fittencode.fn.position')
+local Range = require('fittencode.fn.range')
 
 -- Represents a location inside a resource, such as a line inside a text file.
 ---@class FittenCode.Location

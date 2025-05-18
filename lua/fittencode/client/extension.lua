@@ -1,4 +1,4 @@
-local URLSearchParams = require('fittencode.url_search_params')
+local URLSearchParams = require('fittencode.fn.url_search_params')
 local Path = require('fittencode.path')
 
 local function extension_uri()

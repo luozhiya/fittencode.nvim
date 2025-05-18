@@ -1,4 +1,4 @@
-local Editor = require('fittencode.document.editor')
+local Editor = require('fittencode.fn.editor')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local ViewState = require('fittencode.inline.view.state')

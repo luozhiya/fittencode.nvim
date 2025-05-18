@@ -4,7 +4,7 @@ local Config = require('fittencode.config')
 local Perf = require('fittencode.functional.performance')
 local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
-local URLSearchParams = require('fittencode.net.url_search_params')
+local URLSearchParams = require('fittencode.net.fn.url_search_params')
 
 -- ms
 local SENDING_GAP = 1e3 * 60 * 10

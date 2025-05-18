@@ -1,6 +1,6 @@
 local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
-local URLSearchParams = require('fittencode.net.url_search_params')
+local URLSearchParams = require('fittencode.net.fn.url_search_params')
 local Config = require('fittencode.config')
 local GrayTestHelper = require('fittencode.inline.gray_test_helper')
 local EventLoop = require('fittencode.vim.promisify.uv.event_loop')

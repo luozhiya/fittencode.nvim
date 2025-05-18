@@ -1,5 +1,5 @@
-local UTF8 = require('fittencode.unicode.utf8')
-local LangUnicode = require('fittencode.unicode.lang')
+local UTF8 = require('fittencode.fn.utf8')
+local LangUnicode = require('fittencode.fn.lang')
 
 local M = {}
 

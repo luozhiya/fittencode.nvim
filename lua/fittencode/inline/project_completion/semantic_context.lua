@@ -1,5 +1,5 @@
 local Fn = require('fittencode.functional.fn')
-local Editor = require('fittencode.document.editor')
+local Editor = require('fittencode.fn.editor')
 local LspService = require('fittencode.functional.lsp_service')
 local Comment = require('fittencode.inline.project_completion.comment')
 local Spec = require('fittencode.inline.project_completion.spec')

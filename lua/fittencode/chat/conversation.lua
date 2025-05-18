@@ -2,10 +2,8 @@ local Log = require('fittencode.log')
 local Fn = require('fittencode.fn')
 local Config = require('fittencode.config')
 local Client = require('fittencode.client')
-local Runtime = require('fittencode.chat.runtime')
-local VM = require('fittencode.open_promot_language.vm')
+local OPL = require('fittencode.opl')
 local Protocal = require('fittencode.client.protocol')
-local Token = require('fittencode.client.token')
 
 ---@class FittenCode.Chat.Conversation
 local Conversation = {}
@@ -118,7 +116,7 @@ function Conversation:evaluate_template(template, variables)
     end
     local env = vim.tbl_deep_extend('force', {}, self.init_variables or {}, self.variables or {})
     env.messages = self.messages
-    return VM:new():run(env, template)
+    return OPL.run(env, template)
 end
 
 function Conversation:recovered_from_error(error)
@@ -140,7 +138,7 @@ end
 
 ---@param content? string
 function Conversation:answer(content)
-    content = Token.remove_special_token(content)
+    content = Client.remove_special_token(content)
     if not content or content == '' then
         return
     end

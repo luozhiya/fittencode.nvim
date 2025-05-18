@@ -93,7 +93,7 @@ local DEFAULTS = {
         -- * 'en'
         -- * 'zh-cn'
         -- * 'auto'
-        display_preference = 'auto',
+        display_preference = 'zh-cn',
     },
     -- Show menu as submenu in the editor context menu, when you right-click on the code.
     show_submenu = false,

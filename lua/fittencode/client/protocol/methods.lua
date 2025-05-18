@@ -354,13 +354,13 @@ local Methods = {
     },
     -- 对话接口 Chat (Fast/Search @FCPS)，以流的形式接受数据
     -- * `method = POST`
-    -- * `headers = { 'Content-Type' = 'application/json' }`
+    -- * `headers = { 'Content-Type' = 'application/json', 'Authorization' = 'Bearer {{access_token}}' }`
     -- * `body = @FittenCode.Protocol.Methods.ChatAuth.Body`
     -- * `query = ?ft_token={}&{platform_info}`
     -- * `response = @FittenCode.Protocol.Methods.ChatAuth.Response`
     chat_auth = {
         method = 'POST',
-        headers = { ['Content-Type'] = 'application/json' },
+        headers = { ['Content-Type'] = 'application/json', ['Authorization'] = 'Bearer {{access_token}}' },
         url = '/codeapi/chat_auth',
         query = {
             ref = { '{{platform_info}}' },

@@ -1,6 +1,6 @@
-local Editor = require('fittencode.document.editor')
-local Range = require('fittencode.document.range')
-local Position = require('fittencode.document.position')
+local Editor = require('fittencode.fn.editor')
+local Range = require('fittencode.fn.range')
+local Position = require('fittencode.fn.position')
 local Fn = require('fittencode.functional.fn')
 
 -- 协议常量 (不可修改)

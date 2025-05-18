@@ -231,7 +231,7 @@ function Controller:get_status()
 end
 
 function Controller:_resolve_variables_internal(context, variables, messages)
-    local buf = context.buf
+    local buf = context and context.buf or nil
     if not buf then
         return
     end

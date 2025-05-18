@@ -252,10 +252,14 @@ end
 ---@return FittenCode.HTTP.Response
 function M.fetch(url, options)
     options = options or {}
+
+    -- Log.debug('fetching url: {}', url)
+    -- Log.debug('fetch options: {}', options)
+
     local stream = create_stream()
     local handle = { aborted = false }
 
-    local curl_command = Config.http.curl.command or 'curl'
+    local curl_command = 'curl'
 
     -- 构建 curl 参数
     local args = {
@@ -304,6 +308,7 @@ function M.fetch(url, options)
 
     -- 标准输出处理
     process:on('stdout', function(chunk)
+        -- Log.debug('curl stdout: {}', chunk)
         if handle.aborted then return end
 
         if not headers_processed then
@@ -345,6 +350,7 @@ function M.fetch(url, options)
 
     -- 标准错误处理
     process:on('stderr', function(chunk)
+        -- Log.debug('curl stderr: {}', chunk)
         if handle.aborted then
             return
         end
@@ -353,6 +359,7 @@ function M.fetch(url, options)
 
     -- 退出处理
     process:on('exit', function(code, signal)
+        -- Log.debug('curl exit: {} {}', code, signal)
         if handle.aborted then
             return
         end
@@ -388,6 +395,7 @@ function M.fetch(url, options)
 
     -- 错误处理
     process:on('error', function(err)
+        -- Log.error('curl error: {}', err)
         stream:_emit('error', {
             type = 'PROCESS_ERROR',
             message = err
@@ -396,6 +404,7 @@ function M.fetch(url, options)
 
     -- 中止处理
     process:on('abort', function()
+        -- Log.debug('curl aborted')
         stream:_emit('abort', {
             type = 'USER_ABORT'
         })

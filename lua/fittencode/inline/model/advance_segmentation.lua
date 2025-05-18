@@ -1,4 +1,4 @@
-local Editor = require('fittencode.document.editor')
+local Editor = require('fittencode.fn.editor')
 local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.functional.fn')
 local Log = require('fittencode.log')

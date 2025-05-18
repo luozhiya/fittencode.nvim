@@ -1,6 +1,6 @@
-local Position = require('fittencode.document.position')
-local Range = require('fittencode.document.range')
-local TextLine = require('fittencode.document.text_line')
+local Position = require('fittencode.fn.position')
+local Range = require('fittencode.fn.range')
+local TextLine = require('fittencode.fn.text_line')
 
 -- 按字符位置偏移量
 ---@alias FittenCode.CharactersOffset number
@@ -98,7 +98,7 @@ function M.line_at(buf, row)
     vim.api.nvim_buf_call(buf, function()
         text = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
     end)
-    return TextLine:new({
+    return TextLine.new({
         text = text,
         line_number = row,
         range = Range.from_line(row, text),

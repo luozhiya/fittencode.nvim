@@ -1,5 +1,16 @@
 local M = {}
 
-vim.tbl_deep_extend('force', M, require('fittencode.fn.core'))
+local core = require('fittencode.fn.core')
+local vscode = require('fittencode.fn.vscode')
+
+setmetatable(M, {
+    __index = function(t, k)
+        if core[k] then
+            return core[k]
+        elseif vscode[k] then
+            return vscode[k]
+        end
+    end
+})
 
 return M

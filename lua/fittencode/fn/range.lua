@@ -1,4 +1,4 @@
-local Position = require('fittencode.document.position')
+local Position = require('fittencode.fn.position')
 
 -- A range represents an ordered pair of two positions. It is guaranteed that `start:is_before_or_equal(end)`
 -- Why `end_` instead of `end`?

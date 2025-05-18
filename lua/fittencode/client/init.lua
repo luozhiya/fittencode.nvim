@@ -6,7 +6,7 @@ local Path = require('fittencode.path')
 local Log = require('fittencode.log')
 local OPL = require('fittencode.opl')
 local i18n = require('fittencode.i18n')
-local URLSearchParams = require('fittencode.url_search_params')
+local URLSearchParams = require('fittencode.fn.url_search_params')
 local Config = require('fittencode.config')
 
 ---@class FittenCode.Client

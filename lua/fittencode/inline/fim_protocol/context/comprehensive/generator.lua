@@ -1,9 +1,9 @@
 local AsyncHash = require('fittencode.async_hash')
 local Promise = require('fittencode.concurrency.promise')
 local Fn = require('fittencode.functional.fn')
-local Editor = require('fittencode.document.editor')
-local Position = require('fittencode.document.position')
-local Range = require('fittencode.document.range')
+local Editor = require('fittencode.fn.editor')
+local Position = require('fittencode.fn.position')
+local Range = require('fittencode.fn.range')
 local Config = require('fittencode.config')
 local LspService = require('fittencode.functional.lsp_service')
 

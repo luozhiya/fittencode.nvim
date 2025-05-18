@@ -20,6 +20,7 @@ function APIKeyManager.new(options)
     if key then
         local _, keyring = pcall(vim.fn.json_decode, key)
         if _ then
+            -- Log.debug('keyring: {}', keyring)
             self.keyring = keyring
         else
             self.storage:delete(self.key)
@@ -58,6 +59,14 @@ function APIKeyManager:get_fitten_user_id()
     local _, user_id = pcall(function() return self.keyring.user_info.user_id end)
     if _ then
         return user_id
+    end
+end
+
+---@return string?
+function APIKeyManager:get_fitten_user_token()
+    local _, token = pcall(function() return self.keyring.user_info.token end)
+    if _ then
+        return token
     end
 end
 
