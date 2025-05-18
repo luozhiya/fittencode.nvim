@@ -120,8 +120,8 @@ res:async().promise()
 ---| '"PARSE_ERROR"'   # 数据解析错误
 ---| '"NETWORK_ERROR"' # 网络连接错误
 
-local Promise = require('fittencode.promise')
-local Process = require('fittencode.process')
+local Promise = require('fittencode.fn.promise')
+local Process = require('fittencode.fn.process')
 local Log = require('fittencode.log')
 local Config = require('fittencode.config')
 

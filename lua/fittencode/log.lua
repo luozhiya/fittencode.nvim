@@ -1,6 +1,6 @@
 local Config = require('fittencode.config')
-local Format = require('fittencode.format')
-local Path = require('fittencode.path')
+local Format = require('fittencode.fn.format')
+local Path = require('fittencode.fn.path')
 
 ---@class FittenCode.Log
 ---@field error function

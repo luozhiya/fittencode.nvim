@@ -1,9 +1,9 @@
 local TemplateResolver = require('fittencode.chat.template_resolver')
 local ConversationType = require('fittencode.chat.conversation_type')
-local Promise = require('fittencode.promise')
+local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
-local Path = require('fittencode.path')
+local Path = require('fittencode.fn.path')
 local Perf = require('fittencode.fn.perf')
 
 ---@class FittenCode.Chat.ConversationTypeProvider
