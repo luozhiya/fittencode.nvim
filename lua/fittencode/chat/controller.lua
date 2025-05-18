@@ -63,7 +63,6 @@ function Controller:_initialize(options)
         'generate-unit-test',
         'optimize-code'
     }
-    self.context = {}
 end
 
 function Controller:add_observer(observer)
@@ -158,7 +157,7 @@ end
 ---@param template_id string
 ---@param show boolean
 ---@param mode string
-function Controller:create_conversation(template_id, show, mode)
+function Controller:create_conversation(template_id, show, mode, context)
     show = show or true
     mode = mode or 'chat'
 
@@ -174,6 +173,7 @@ function Controller:create_conversation(template_id, show, mode)
     local created_conversation = conversation_ty:create_conversation({
         conversation_id = self:generate_conversation_id(),
         init_variables = variables,
+        context = context,
         update_view = function() self:update_view() end,
         update_status = function(data) self:notify_observers('conversation_updated', data) end,
     })
@@ -341,13 +341,14 @@ end
 
 function Controller:commands(type, mode)
     mode = mode or 'chat'
+    local context= {}
     if mode == 'chat' then
         -- chat 和 edit-code 对选区没有严格要求
         -- 如果没有选区，edit-code 则使用当前位置作为范围
         --             chat 则保持
         local buf = vim.api.nvim_get_current_buf()
         local win = vim.api.nvim_get_current_win()
-        self.context.buf = buf
+        context.buf = buf
         local selection = {}
         selection.range = get_range_from_visual_selection()
         local need_selected = { 'document-code', 'edit-code', 'explain-code', 'find-bugs', 'generate-unit-test', 'optimize-code' }
@@ -361,14 +362,14 @@ function Controller:commands(type, mode)
                 return
             end
         end
-        self.context.selection = selection
+        context.selection = selection
     elseif mode == 'write' then
         -- TODO
     elseif mode == 'agent' then
         -- TODO
     end
 
-    self:create_conversation(type, true, mode)
+    self:create_conversation(type, true, mode, context)
 end
 
 function Controller:add_to_chat()

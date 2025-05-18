@@ -28,6 +28,7 @@ function ConversationType:create_conversation(opts)
             id = opts.conversation_id,
             template = self.template,
             init_variables = opts.init_variables,
+            context = opts.context,
             update_view = opts.update_view,
             update_status = opts.update_status,
         }),
