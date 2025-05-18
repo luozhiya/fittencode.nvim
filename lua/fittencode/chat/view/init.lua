@@ -223,85 +223,85 @@ local function _setup_autoclose(self, win_id)
 end
 
 local function _show_as_panel(self)
-        local editor_width = vim.o.columns
-        local editor_height = vim.o.lines - vim.o.cmdheight
+    local editor_width = vim.o.columns
+    local editor_height = vim.o.lines - vim.o.cmdheight
 
-        self.messages_exchange.win = vim.api.nvim_open_win(self.messages_exchange.buf, true, {
-            vertical = true,
-            split = 'left',
-            width = 40,
-            height = editor_height,
-        })
-        vim.api.nvim_win_call(self.messages_exchange.win, function()
-            vim.api.nvim_set_option_value('wrap', true, { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('linebreak', true, { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('cursorline', true, { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('spell', false, { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('number', false, { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('relativenumber', false, { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('conceallevel', 2, { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('concealcursor', 'niv', { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('foldenable', true, { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('colorcolumn', '', { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('foldcolumn', '0', { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('winfixwidth', true, { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('winfixbuf', true, { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('list', false, { win = self.messages_exchange.win })
-            vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.messages_exchange.win })
-        end)
-        _setup_autoclose(self, self.messages_exchange.win)
+    self.messages_exchange.win = vim.api.nvim_open_win(self.messages_exchange.buf, true, {
+        vertical = true,
+        split = 'left',
+        width = 40,
+        height = editor_height,
+    })
+    vim.api.nvim_win_call(self.messages_exchange.win, function()
+        vim.api.nvim_set_option_value('wrap', true, { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('linebreak', true, { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('cursorline', true, { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('spell', false, { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('number', false, { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('relativenumber', false, { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('conceallevel', 2, { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('concealcursor', 'niv', { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('foldenable', true, { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('colorcolumn', '', { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('foldcolumn', '0', { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('winfixwidth', true, { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('winfixbuf', true, { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('list', false, { win = self.messages_exchange.win })
+        vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.messages_exchange.win })
+    end)
+    _setup_autoclose(self, self.messages_exchange.win)
 
-        self.reference.win = vim.api.nvim_open_win(self.reference.buf, true, {
-            vertical = true,
-            split = 'below',
-            width = 40,
-            height = 7,
-        })
-        vim.api.nvim_win_call(self.reference.win, function()
-            vim.api.nvim_set_option_value('wrap', true, { win = self.reference.win })
-            vim.api.nvim_set_option_value('linebreak', true, { win = self.reference.win })
-            vim.api.nvim_set_option_value('cursorline', true, { win = self.reference.win })
-            vim.api.nvim_set_option_value('spell', false, { win = self.reference.win })
-            vim.api.nvim_set_option_value('number', false, { win = self.reference.win })
-            vim.api.nvim_set_option_value('relativenumber', false, { win = self.reference.win })
-            vim.api.nvim_set_option_value('conceallevel', 2, { win = self.reference.win })
-            vim.api.nvim_set_option_value('concealcursor', 'niv', { win = self.reference.win })
-            vim.api.nvim_set_option_value('foldenable', true, { win = self.reference.win })
-            vim.api.nvim_set_option_value('colorcolumn', '', { win = self.reference.win })
-            vim.api.nvim_set_option_value('foldcolumn', '0', { win = self.reference.win })
-            vim.api.nvim_set_option_value('winfixwidth', true, { win = self.reference.win })
-            vim.api.nvim_set_option_value('winfixheight', true, { win = self.reference.win })
-            vim.api.nvim_set_option_value('winfixbuf', true, { win = self.reference.win })
-            vim.api.nvim_set_option_value('list', false, { win = self.reference.win })
-            vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.reference.win })
-        end)
-        _setup_autoclose(self, self.reference.win)
+    self.reference.win = vim.api.nvim_open_win(self.reference.buf, true, {
+        vertical = true,
+        split = 'below',
+        width = 40,
+        height = 7,
+    })
+    vim.api.nvim_win_call(self.reference.win, function()
+        vim.api.nvim_set_option_value('wrap', true, { win = self.reference.win })
+        vim.api.nvim_set_option_value('linebreak', true, { win = self.reference.win })
+        vim.api.nvim_set_option_value('cursorline', true, { win = self.reference.win })
+        vim.api.nvim_set_option_value('spell', false, { win = self.reference.win })
+        vim.api.nvim_set_option_value('number', false, { win = self.reference.win })
+        vim.api.nvim_set_option_value('relativenumber', false, { win = self.reference.win })
+        vim.api.nvim_set_option_value('conceallevel', 2, { win = self.reference.win })
+        vim.api.nvim_set_option_value('concealcursor', 'niv', { win = self.reference.win })
+        vim.api.nvim_set_option_value('foldenable', true, { win = self.reference.win })
+        vim.api.nvim_set_option_value('colorcolumn', '', { win = self.reference.win })
+        vim.api.nvim_set_option_value('foldcolumn', '0', { win = self.reference.win })
+        vim.api.nvim_set_option_value('winfixwidth', true, { win = self.reference.win })
+        vim.api.nvim_set_option_value('winfixheight', true, { win = self.reference.win })
+        vim.api.nvim_set_option_value('winfixbuf', true, { win = self.reference.win })
+        vim.api.nvim_set_option_value('list', false, { win = self.reference.win })
+        vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.reference.win })
+    end)
+    _setup_autoclose(self, self.reference.win)
 
-        self.char_input.win = vim.api.nvim_open_win(self.char_input.buf, true, {
-            vertical = true,
-            split = 'below',
-            width = 40,
-            height = 3,
-        })
-        vim.api.nvim_win_call(self.char_input.win, function()
-            vim.api.nvim_set_option_value('wrap', true, { win = self.char_input.win })
-            vim.api.nvim_set_option_value('linebreak', true, { win = self.char_input.win })
-            vim.api.nvim_set_option_value('cursorline', true, { win = self.char_input.win })
-            vim.api.nvim_set_option_value('spell', false, { win = self.char_input.win })
-            vim.api.nvim_set_option_value('number', false, { win = self.char_input.win })
-            vim.api.nvim_set_option_value('relativenumber', false, { win = self.char_input.win })
-            vim.api.nvim_set_option_value('conceallevel', 2, { win = self.char_input.win })
-            vim.api.nvim_set_option_value('concealcursor', 'niv', { win = self.char_input.win })
-            vim.api.nvim_set_option_value('foldenable', false, { win = self.char_input.win })
-            vim.api.nvim_set_option_value('colorcolumn', '', { win = self.char_input.win })
-            vim.api.nvim_set_option_value('foldcolumn', '0', { win = self.char_input.win })
-            vim.api.nvim_set_option_value('winfixwidth', true, { win = self.char_input.win })
-            vim.api.nvim_set_option_value('winfixheight', true, { win = self.char_input.win })
-            vim.api.nvim_set_option_value('winfixbuf', true, { win = self.char_input.win })
-            vim.api.nvim_set_option_value('list', false, { win = self.char_input.win })
-            vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.char_input.win })
-        end)
-        _setup_autoclose(self, self.char_input.win)
+    self.char_input.win = vim.api.nvim_open_win(self.char_input.buf, true, {
+        vertical = true,
+        split = 'below',
+        width = 40,
+        height = 3,
+    })
+    vim.api.nvim_win_call(self.char_input.win, function()
+        vim.api.nvim_set_option_value('wrap', true, { win = self.char_input.win })
+        vim.api.nvim_set_option_value('linebreak', true, { win = self.char_input.win })
+        vim.api.nvim_set_option_value('cursorline', true, { win = self.char_input.win })
+        vim.api.nvim_set_option_value('spell', false, { win = self.char_input.win })
+        vim.api.nvim_set_option_value('number', false, { win = self.char_input.win })
+        vim.api.nvim_set_option_value('relativenumber', false, { win = self.char_input.win })
+        vim.api.nvim_set_option_value('conceallevel', 2, { win = self.char_input.win })
+        vim.api.nvim_set_option_value('concealcursor', 'niv', { win = self.char_input.win })
+        vim.api.nvim_set_option_value('foldenable', false, { win = self.char_input.win })
+        vim.api.nvim_set_option_value('colorcolumn', '', { win = self.char_input.win })
+        vim.api.nvim_set_option_value('foldcolumn', '0', { win = self.char_input.win })
+        vim.api.nvim_set_option_value('winfixwidth', true, { win = self.char_input.win })
+        vim.api.nvim_set_option_value('winfixheight', true, { win = self.char_input.win })
+        vim.api.nvim_set_option_value('winfixbuf', true, { win = self.char_input.win })
+        vim.api.nvim_set_option_value('list', false, { win = self.char_input.win })
+        vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.char_input.win })
+    end)
+    _setup_autoclose(self, self.char_input.win)
 end
 
 function View:show()
@@ -313,7 +313,7 @@ function View:show()
     assert(self.messages_exchange.buf)
     assert(self.char_input.buf)
     assert(self.reference.buf)
-    
+
     if self.mode == 'panel' then
         _show_as_panel(self)
     end
