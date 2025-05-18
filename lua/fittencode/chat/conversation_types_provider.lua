@@ -1,11 +1,10 @@
 local TemplateResolver = require('fittencode.chat.template_resolver')
 local ConversationType = require('fittencode.chat.conversation_type')
-local Editor = require('fittencode.document.editor')
 local Promise = require('fittencode.promise')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Path = require('fittencode.path')
-local Performance = require('fittencode.functional.performance')
+local Perf = require('fittencode.fn.perf')
 
 ---@class FittenCode.Chat.ConversationTypeProvider
 local ConversationTypesProvider = {}
@@ -56,7 +55,7 @@ function ConversationTypesProvider:async_load_conversation_types()
     Log.trace('ConversationTypesProvider will load conversation types in background')
     return Promise.new(function(resolve)
         vim.defer_fn(function()
-            local perf = Performance.smart_timer_format()
+            local perf = Perf.smart_timer_format()
             self:load_conversation_types()
             resolve(perf)
         end, 10)
@@ -108,11 +107,11 @@ function ConversationTypesProvider:load_workspace_templates()
     --  └── task
     --      ├── diagnose-errors-en.rdt.md
     --      ├── diagnose-errors-zh-cn.rdt.md
-    local ws = Editor.workspace()
-    if not ws then
+    local workspace = Fn.workspace()
+    if not workspace then
         return
     end
-    local resource = Path.join(ws, '.fittencode', 'template')
+    local resource = Path.join(workspace, '.fittencode', 'template')
     Log.info('Loading workspace templates from: {}', resource)
     local e = TemplateResolver.load_from_directory(resource)
     for _, r in ipairs(e) do

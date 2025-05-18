@@ -1,8 +1,7 @@
-local Fn = require('fittencode.functional.fn')
+local Fn = require('fittencode.fn')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
-local EditorStateMonitor = require('fittencode.chat.editor_state_monitor')
-local Language = require('fittencode.language.preference')
+local i18n = require('fittencode.i18n')
 
 local welcome_message = {
     ['zh-cn'] = {
@@ -14,6 +13,7 @@ local welcome_message = {
         '按下 TAB 接受所有补全建议。',
         '按下 Ctrl+⬇️ 接受一行补全建议。',
         '按下 Ctrl+➡️ 接受一个单词的补全建议。',
+        '按下 Alt+X 在光标位置添加代码段。',
         '',
         'Fitten Code 现支持本地私有化，代码不上云，网络无延迟，功能更丰富！',
         ''
@@ -27,8 +27,9 @@ local welcome_message = {
         'Press TAB to accept all completion suggestions.',
         'Press Ctrl+⬇️ to accept one line of completion suggestion.',
         'Press Ctrl+➡️ to accept one word of completion suggestion.',
+        'Press Alt+X to insert code snippet at cursor position.',
         '',
-        'Experience the high-efficiency code auto-completion now!',
+        'Fitten Code now supports [local privatization](https://code.fittentech.com/), with no network latency, safer code, and richer features!',
         ''
     }
 }
@@ -89,15 +90,9 @@ function View:_initialize(options)
         vim.api.nvim_set_option_value('swapfile', false, { buf = self.char_input.buf })
         vim.api.nvim_set_option_value('modifiable', false, { buf = self.char_input.buf })
     end)
-    EditorStateMonitor.register_filter_buf(self.messages_exchange.buf)
-    EditorStateMonitor.register_filter_buf(self.reference.buf)
-    EditorStateMonitor.register_filter_buf(self.char_input.buf)
 end
 
 function View:destroy()
-    EditorStateMonitor.unregister_filter_buf(self.messages_exchange.buf)
-    EditorStateMonitor.unregister_filter_buf(self.reference.buf)
-    EditorStateMonitor.unregister_filter_buf(self.char_input.buf)
     self:_destroy_win()
 end
 
@@ -198,7 +193,7 @@ function View:render_conversation(conversation)
     end
 
     if #lines == 0 then
-        lines = welcome_message[Language.display_preference()]
+        lines = welcome_message[i18n.display_preference()]
     end
 
     vim.api.nvim_buf_call(self.messages_exchange.buf, function()

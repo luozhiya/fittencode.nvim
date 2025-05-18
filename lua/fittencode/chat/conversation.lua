@@ -26,7 +26,9 @@ function Conversation:_initialize(options)
     self.messages = {}
     self.update_view = Fn.schedule_call_wrap_fn(options.update_view)
     self.update_status = Fn.schedule_call_wrap_fn(options.update_status)
+    self.resolve_variables = Fn.schedule_call_wrap_fn(options.resolve_variables)
     self.variables = options.variables or {}
+    self.context = options.context or {}
     self.temporary_editor_content = nil
     self.is_favorited = false
     self.state = {
@@ -98,7 +100,7 @@ end
 
 ---@return table
 function Conversation:resolve_variables_at_message_time()
-    return Runtime.resolve_variables(self.template.variables, {
+    return self.resolve_variables(self.context, self.template.variables, {
         time = 'message',
         messages = self.messages,
     })

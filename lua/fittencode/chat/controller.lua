@@ -168,7 +168,7 @@ function Controller:create_conversation(template_id, show, mode, context)
         conversation_ty = self:get_conversation_type(template_id .. '-en')
     end
 
-    local variables = self:_resolve_variables(conversation_ty.template.variables, { time = 'conversation-start' })
+    local variables = self:_resolve_variables(context, conversation_ty.template.variables, { time = 'conversation-start' })
     ---@type FittenCode.Chat.CreatedConversation
     local created_conversation = conversation_ty:create_conversation({
         conversation_id = self:generate_conversation_id(),
@@ -176,6 +176,7 @@ function Controller:create_conversation(template_id, show, mode, context)
         context = context,
         update_view = function() self:update_view() end,
         update_status = function(data) self:notify_observers('conversation_updated', data) end,
+        resolve_variables = function(...) self:_resolve_variables(...) end,
     })
 
     if created_conversation.type == 'unavailable' then
@@ -229,8 +230,8 @@ function Controller:get_status()
     return self.status_observer
 end
 
-function Controller:_resolve_variables_internal(variables, messages)
-    local buf = EditorStateMonitor.active_text_editor()
+function Controller:_resolve_variables_internal(context, variables, messages)
+    local buf = context.buf
     if not buf then
         return
     end
@@ -245,16 +246,17 @@ function Controller:_resolve_variables_internal(variables, messages)
             return messages and messages[variables.index] and messages[variables.index][variables.property]
         end,
         ['selected-text'] = function()
-            return EditorStateMonitor.selected_text()
+            return Fn.get_text(buf, context.selection.range)
         end,
         ['selected-location-text'] = function()
-            return EditorStateMonitor.selected_location_text()
+            -- TODO
+            Log.error('Not implemented for selected-location-text')
         end,
         ['filename'] = function()
-            return Editor.filename(buf)
+            return Fn.filename(buf)
         end,
         ['language'] = function()
-            return Editor.language_id(buf)
+            return Fn.language_id(buf)
         end,
         ['comment-snippet'] = function()
             return Config.snippet.comment or ''
@@ -268,39 +270,42 @@ function Controller:_resolve_variables_internal(variables, messages)
                 tf['python'] = 'Python'
                 tf['javascript'] = 'JavaScript/TypeScript'
                 tf['typescript'] = tf['javascript']
-                return Config.unit_test_framework[tf[Editor.language_id()]] or ''
+                return Config.unit_test_framework[tf[Fn.language_id()]] or ''
             end
             local s = _unit_test_framework()
             return s == 'Not specified' and '' or s
         end,
         ['selected-text-with-diagnostics'] = function()
-            return EditorStateMonitor.selected_text_with_diagnostics({ diagnostic_severities = variables.severities })
+            -- TODO
+            Log.error('Not implemented for selected-text-with-diagnostics')
         end,
         ['errorMessage'] = function()
-            return EditorStateMonitor.diagnose_info()
+            -- TODO
+            Log.error('Not implemented for errorMessage')
         end,
         ['errorLocation'] = function()
-            return EditorStateMonitor.error_location()
+            -- TODO
+            Log.error('Not implemented for errorLocation')
         end,
         ['title-selected-text'] = function()
-            return EditorStateMonitor.title_selected_text()
+            -- TODO
+            Log.error('Not implemented for title-selected-text')
         end,
         ['terminal-text'] = function()
             Log.error('Not implemented for terminal-text')
-            return ''
         end
     }
     return switch[variables.type]()
 end
 
-function Controller:_resolve_variables(variables, e)
+function Controller:_resolve_variables(context, variables, e)
     local n = {
         messages = e.messages,
     }
     for _, v in ipairs(variables) do
         if v.time == e.time then
             if n[v.name] == nil then
-                local s = self:_resolve_variables_internal(v, { messages = e.messages })
+                local s = self:_resolve_variables_internal(context, v, { messages = e.messages })
                 if not s then
                     Log.warn('Failed to resolve variable {}', v.name)
                 end
@@ -313,17 +318,6 @@ function Controller:_resolve_variables(variables, e)
     return n
 end
 
---[[
-
-默认有 6 个
-Document Code (document-code)
-Edit Code (edit-code)
-Explain Code (explain-code)
-Find Bugs (find-bugs)
-Generate UnitTest (generate-unit-test)
-Optimize Code (optimize-code)
-
-]]
 local VCODES = { ['v'] = true, ['V'] = true, [vim.api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
 
 local function get_range_from_visual_selection()
@@ -341,7 +335,7 @@ end
 
 function Controller:commands(type, mode)
     mode = mode or 'chat'
-    local context= {}
+    local context = {}
     if mode == 'chat' then
         -- chat 和 edit-code 对选区没有严格要求
         -- 如果没有选区，edit-code 则使用当前位置作为范围
@@ -399,7 +393,7 @@ function Controller:trigger_action(action)
         ['find_bugs'] = 'find-bugs',
         ['generate_unit_test'] = 'generate-unit-test',
         ['optimize_code'] = 'optimize-code',
-        ['start_chat'] ='chat',
+        ['start_chat'] = 'chat',
     }
     local type = mapping[action]
     if not type then

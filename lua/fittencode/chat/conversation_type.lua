@@ -31,6 +31,7 @@ function ConversationType:create_conversation(opts)
             context = opts.context,
             update_view = opts.update_view,
             update_status = opts.update_status,
+            resolve_variables = opts.resolve_variables,
         }),
         should_immediately_answer = self.template.initialMessage ~= nil
     }
