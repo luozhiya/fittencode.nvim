@@ -1,11 +1,9 @@
-local Editor = require('fittencode.document.editor')
 local Log = require('fittencode.log')
-local Fn = require('fittencode.functional.fn')
+local Fn = require('fittencode.fn')
 local Config = require('fittencode.config')
 local Client = require('fittencode.client')
 local Runtime = require('fittencode.chat.runtime')
 local VM = require('fittencode.open_promot_language.vm')
-local Promise = require('fittencode.concurrency.promise')
 local Protocal = require('fittencode.client.protocol')
 local Token = require('fittencode.client.token')
 
@@ -240,7 +238,6 @@ function Conversation:execute_chat(options)
             end
         end)
 
-        -- 通过 Promise 统一处理请求结果与错误，简洁明了
         res:async():forward(function()
             self:handle_completion(completion)
         end, function(err)

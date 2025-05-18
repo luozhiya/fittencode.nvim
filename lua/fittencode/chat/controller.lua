@@ -1,7 +1,7 @@
 local Log = require('fittencode.log')
-local Runtime = require('fittencode.chat.runtime')
 local State = require('fittencode.chat.state')
 local Fn = require('fittencode.fn')
+local Config = require('fittencode.config')
 
 ---@class FittenCode.Chat.Controller
 local Controller = {}
@@ -21,7 +21,6 @@ function Controller:_initialize(options)
     self.basic_chat_template_id = options.basic_chat_template_id
     self.conversation_types_provider = options.conversation_types_provider
     self.observers = {}
-    self.augroup_name = 'Fittencode.Chat.Controller'
 end
 
 ---@return string
@@ -91,7 +90,7 @@ function Controller:create_conversation(template_id, show, mode)
     local conversation_ty = self:get_conversation_type(template_id)
     if not conversation_ty then Log.error('No conversation type found for {}', template_id) end
 
-    local variables = Runtime.resolve_variables(conversation_ty.template.variables, { time = 'conversation-start' })
+    local variables = self:_resolve_variables(conversation_ty.template.variables, { time = 'conversation-start' })
     ---@type FittenCode.Chat.CreatedConversation
     local created_conversation = conversation_ty:create_conversation({
         conversation_id = self:generate_conversation_id(),
@@ -141,6 +140,95 @@ end
 
 function Controller:get_status()
     return self.status
+end
+
+local function _comment_snippet(self)
+    return Config.snippet.comment or ''
+end
+
+local function _unit_test_framework(self)
+    local tf = {}
+    tf['c'] = 'C/C++'
+    tf['cpp'] = tf['c']
+    tf['java'] = 'Java'
+    tf['python'] = 'Python'
+    tf['javascript'] = 'JavaScript/TypeScript'
+    tf['typescript'] = tf['javascript']
+    return Config.unit_test_framework[tf[Editor.language_id()]] or ''
+end
+
+function Controller:_resolve_variables_internal(variables, messages)
+    local buf = EditorStateMonitor.active_text_editor()
+    if not buf then
+        return
+    end
+    local switch = {
+        ['context'] = function()
+            return { name = Editor.filename(buf), language = Editor.language_id(buf), content = Editor.content(buf) }
+        end,
+        ['constant'] = function()
+            return variables.value
+        end,
+        ['message'] = function()
+            return messages and messages[variables.index] and messages[variables.index][variables.property]
+        end,
+        ['selected-text'] = function()
+            return EditorStateMonitor.selected_text()
+        end,
+        ['selected-location-text'] = function()
+            return EditorStateMonitor.selected_location_text()
+        end,
+        ['filename'] = function()
+            return Editor.filename(buf)
+        end,
+        ['language'] = function()
+            return Editor.language_id(buf)
+        end,
+        ['comment-snippet'] = function()
+            return self:_comment_snippet()
+        end,
+        ['unit-test-framework'] = function()
+            local s = self:_unit_test_framework()
+            return s == 'Not specified' and '' or s
+        end,
+        ['selected-text-with-diagnostics'] = function()
+            return EditorStateMonitor.selected_text_with_diagnostics({ diagnostic_severities = variables.severities })
+        end,
+        ['errorMessage'] = function()
+            return EditorStateMonitor.diagnose_info()
+        end,
+        ['errorLocation'] = function()
+            return EditorStateMonitor.error_location()
+        end,
+        ['title-selected-text'] = function()
+            return EditorStateMonitor.title_selected_text()
+        end,
+        ['terminal-text'] = function()
+            Log.error('Not implemented for terminal-text')
+            return ''
+        end
+    }
+    return switch[variables.type]()
+end
+
+function Controller:_resolve_variables(variables, e)
+    local n = {
+        messages = e.messages,
+    }
+    for _, v in ipairs(variables) do
+        if v.time == e.time then
+            if n[v.name] == nil then
+                local s = self:_resolve_variables_internal(v, { messages = e.messages })
+                if not s then
+                    Log.warn('Failed to resolve variable {}', v.name)
+                end
+                n[v.name] = s
+            else
+                Log.warn('Variable {} is already defined', v.name)
+            end
+        end
+    end
+    return n
 end
 
 return Controller
