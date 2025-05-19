@@ -82,8 +82,11 @@ function State.get_state_from_model(model, selected_state)
         if selected_state then
             if conv.id == model.selected_conversation_id then
                 sc.reference = {
-                    -- select_text = model.document.selected_text(),
-                    -- select_range = model.document.selected_range()
+                    select_text = Fn.get_text(conv.context.buf, conv.context.selection.range),
+                    select_range = {
+                        name = Fn.filename(conv.context.buf),
+                        range = conv.context.selection.range
+                    }
                 }
             else
                 if sc.content.type == 'messageExchange' then

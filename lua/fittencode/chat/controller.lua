@@ -161,6 +161,8 @@ function Controller:create_conversation(template_id, show, mode, context)
     show = show or true
     mode = mode or 'chat'
 
+    Log.debug('Creating conversation with template_id = {}, show = {}, mode = {}, context = {}', template_id, show, mode, context)
+
     ---@type FittenCode.Chat.ConversationType
     local conversation_ty = self:get_conversation_type(template_id .. '-' .. i18n.display_preference())
     if not conversation_ty then
@@ -332,11 +334,11 @@ local function get_range_from_visual_selection(buf)
     else
         local start = vim.api.nvim_buf_get_mark(buf, '<')
         local end_ = vim.api.nvim_buf_get_mark(buf, '>')
-        return Range.of(Position.of(start[1], start[2]), Position.of(end_[1], end_[2]))
+        return Range.of(Position.of(start[1] - 1, start[2]), Position.of(end_[1] - 1, end_[2]))
     end
 end
 
-function Controller:commands(type, mode)
+function Controller:builtin_template_action(type, mode)
     mode = mode or 'chat'
     local context = {}
     if mode == 'chat' then
@@ -347,7 +349,8 @@ function Controller:commands(type, mode)
         local win = vim.api.nvim_get_current_win()
         context.buf = buf
         local selection = {}
-        selection.range = get_range_from_visual_selection(buf)
+        local range = get_range_from_visual_selection(buf)
+        selection.range = Fn.normalize_range(buf, range)
         local need_selected = { 'document-code', 'edit-code', 'explain-code', 'find-bugs', 'generate-unit-test', 'optimize-code' }
         if need_selected[type] and not selection.range then
             if type == 'edit-code' then
@@ -360,10 +363,6 @@ function Controller:commands(type, mode)
             end
         end
         context.selection = selection
-    elseif mode == 'write' then
-        -- TODO
-    elseif mode == 'agent' then
-        -- TODO
     end
 
     self:create_conversation(type, true, mode, context)
@@ -384,7 +383,7 @@ function Controller:add_to_chat()
     conversation:add_to_chat(buf, range)
 end
 
-function Controller:trigger_action(action)
+function Controller:handle_action(action)
     if action == 'add_to_chat' then
         self:add_to_chat()
         return
@@ -403,7 +402,7 @@ function Controller:trigger_action(action)
         Log.error('Unsupported action: ' .. action)
         return
     end
-    self:commands(type)
+    self:builtin_template_action(type)
 end
 
 return Controller

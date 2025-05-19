@@ -1,6 +1,7 @@
 local Fn = require('fittencode.fn')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
+local Format = require('fittencode.fn.format')
 local i18n = require('fittencode.i18n')
 
 local welcome_message = {
@@ -132,10 +133,10 @@ end
 
 function View:render_reference(conversation)
     assert(self.reference.buf)
-    local range = conversation.reference.select_range
+    local select_range = conversation.reference.select_range
     local title = ''
-    if range then
-        title = string.format('%s %d:%d', range.name, range.start_row, range.end_row)
+    if select_range then
+        title = Format.nothrow_format('{} {}', select_range.name, tostring(select_range.range))
     end
     local lines = {}
     lines[1] = title

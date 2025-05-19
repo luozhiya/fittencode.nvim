@@ -174,6 +174,7 @@ end
 ---@param content string
 ---@param bot_action string?
 function Conversation:add_user_message(content, bot_action)
+    Log.debug('Add user message: {}', content)
     self.messages[#self.messages + 1] = {
         author = 'user',
         content = content,
@@ -183,6 +184,21 @@ function Conversation:add_user_message(content, bot_action)
         bot_action = bot_action,
     }
     self.update_view()
+end
+
+local function validate_chunk(chunk)
+    local delta = chunk and chunk.delta
+    if not delta then
+        return false
+    end
+    -- "\0\0\0\0\0\0\0\0\n\n"
+    -- "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\n\n"
+    for i = 1, #delta do
+        if string.byte(delta, i) == 0 then
+            return false
+        end
+    end
+    return true
 end
 
 ---@param options table
@@ -208,6 +224,7 @@ function Conversation:execute_chat(options)
         assert(ir)
 
         local variables = self:resolve_variables_at_message_time()
+        Log.debug('Variables: {}', variables)
         local retrieval_augmentation = ir.retrievalAugmentation
         local evaluated = self:evaluate_template(ir.template, variables)
         local api_key_manager = Client.get_api_key_manager()
@@ -221,6 +238,7 @@ function Conversation:execute_chat(options)
                 project_id = '',
             }
         }
+        Log.debug('Evaluated body: {}', body)
 
         local res = Client.make_request(protocol, {
             body = assert(vim.fn.json_encode(body)),
@@ -238,13 +256,13 @@ function Conversation:execute_chat(options)
             for _, line in ipairs(v) do
                 ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
                 local _, chunk = pcall(vim.fn.json_decode, line)
-                if _ then
+                if _ and validate_chunk(chunk) then
                     completion[#completion + 1] = chunk.delta
                     self:handle_partial_completion(completion)
                 else
                     -- 忽略非法的 chunk
                     err_chunks[#err_chunks + 1] = line
-                    Log.error('Error while decoding chunk: {}', line)
+                    Log.debug('Invalid chunk: {} >> {}', line, chunk)
                 end
             end
         end)

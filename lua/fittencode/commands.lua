@@ -84,49 +84,49 @@ local CHAT = {
     add_to_chat = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:trigger_action('add_to_chat')
+            controller:handle_action('add_to_chat')
         end
     },
     document_code = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:trigger_action('document_code')
+            controller:handle_action('document_code')
         end
     },
     edit_code = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:trigger_action('edit_code')
+            controller:handle_action('edit_code')
         end
     },
     explain_code = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:trigger_action('explain_code')
+            controller:handle_action('explain_code')
         end
     },
     find_bugs = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:trigger_action('find_bugs')
+            controller:handle_action('find_bugs')
         end
     },
     generate_unit_test = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:trigger_action('generate_unit_test')
+            controller:handle_action('generate_unit_test')
         end
     },
     optimize_code = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:trigger_action('optimize_code')
+            controller:handle_action('optimize_code')
         end
     },
     start_chat = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:trigger_action('start_chat')
+            controller:handle_action('start_chat')
         end
     }
 }

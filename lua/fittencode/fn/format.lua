@@ -243,6 +243,13 @@ local function format_arg(arg, spec_str)
         return number_str
     end
 
+    -- Using __tostring metamethod ?
+    -- if arg_type == 'table' then
+    --     if arg.__tostring then
+    --         return tostring(arg)
+    --     end
+    -- end
+
     local by_inspect = {
         'nil',
         'table',

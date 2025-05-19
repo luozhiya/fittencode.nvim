@@ -4,6 +4,8 @@
 --   * `vim.api.str_byteindex` 返回的 `col` 指向末尾字节
 -- * -1 是 row 和 col 的特殊值代表最后一行
 
+local Format = require('fittencode.fn.format')
+
 ---@class FittenCode.Position
 ---@field row number A zero-based row value.
 ---@field col number A zero-based column value.
@@ -18,6 +20,10 @@ function Position.new(options)
     }
     setmetatable(self, Position)
     return self
+end
+
+function Position:__tostring()
+    return Format.nothrow_format('Position<{}:{}>', self.row, self.col)
 end
 
 -- Check if this position is equal to `other`.
@@ -59,18 +65,18 @@ end
 ---@param other FittenCode.Position
 ---@return number -1 if this is before `other`, 1 if this is after `other`, 0 if they are equal.
 function Position:compare_to(other)
-    if self:eof() and other:eof() then
+    if self:rel_eof() and other:rel_eof() then
         return 0
-    elseif self:eof() then
+    elseif self:rel_eof() then
         return 1
-    elseif other:eof() then
+    elseif other:rel_eof() then
         return -1
     elseif self.row == other.row then
-        if self:eol() and self:eol() then
+        if self:rel_eol() and self:rel_eol() then
             return 0
-        elseif self:eol() then
+        elseif self:rel_eol() then
             return 1
-        elseif other:eol() then
+        elseif other:rel_eol() then
             return -1
         else
             return self.col - other.col
@@ -113,15 +119,15 @@ end
 
 -- Check if this position is at the end of file.
 ---@return boolean
-function Position:eof()
+function Position:rel_eof()
     return self.row == -1 and self.col == -1
 end
 
-function Position:eol()
+function Position:rel_eol()
     return self.col == -1
 end
 
-function Position:islastline()
+function Position:rel_lastline()
     return self.row == -1
 end
 

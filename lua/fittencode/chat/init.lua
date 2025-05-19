@@ -179,7 +179,7 @@ do
                 modes = v
             end
             for _, mode in ipairs(modes) do
-                vim.keymap.set(mode, key, function() controller:trigger_action(k) end, { noremap = true, silent = true })
+                vim.keymap.set(mode, key, function() controller:handle_action(k) end, { noremap = true, silent = true })
             end
         end
     end

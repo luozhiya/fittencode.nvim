@@ -305,7 +305,7 @@ function M.round_start(buf, position)
     local roundpos = position:clone()
     vim.api.nvim_buf_call(buf, function()
         local row = roundpos.row
-        if position:islastline() then
+        if position:rel_lastline() then
             row = assert(M.line_count(buf)) - 1
         end
         local line = vim.fn.getline(row + 1)
@@ -322,7 +322,7 @@ function M.round_end(buf, position)
     local roundpos = position:clone()
     vim.api.nvim_buf_call(buf, function()
         local row = roundpos.row
-        if position:islastline() then
+        if position:rel_lastline() then
             row = assert(M.line_count(buf)) - 1
         end
         local line = vim.fn.getline(row + 1)
@@ -360,9 +360,10 @@ function M.get_lines(buf, range)
         -- end_row   inclusive
         -- end_col   exclusive
         local end_col = roundrange.end_.col
-        if roundrange.end_:eol() then
+        if not roundrange.end_:rel_eol() then
             end_col = end_col + 1
         end
+        -- Log.debug('get_lines, range = {}, roundrange = {}, end_col = {}', range, roundrange, end_col)
         lines = vim.api.nvim_buf_get_text(buf, roundrange.start.row, roundrange.start.col, roundrange.end_.row, end_col, {})
     end)
     return lines
@@ -436,6 +437,19 @@ function M.compare_bytes_order(prev, curr)
     local rv = #curr - req
     rv = M.round_col_end(curr, rv)
     return leq, #curr - rv
+end
+
+function M.normalize_range(buf, range)
+    if range.start.col == 2147483647 then
+        range.start.col = -1
+    end
+    if range.end_.col == 2147483647 then
+        range.end_.col = -1
+    end
+    range.start = M.round_start(buf, range.start)
+    range.end_ = M.round_end(buf, range.end_)
+    range:sort()
+    return range
 end
 
 return M

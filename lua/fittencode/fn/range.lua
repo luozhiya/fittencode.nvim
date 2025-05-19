@@ -1,5 +1,6 @@
 local Position = require('fittencode.fn.position')
 local Log = require('fittencode.log')
+local Format = require('fittencode.fn.format')
 
 -- A range represents an ordered pair of two positions. It is guaranteed that `start:is_before_or_equal(end)`
 -- Why `end_` instead of `end`?
@@ -28,6 +29,10 @@ function Range.new(options)
     end
     setmetatable(self, Range)
     return self
+end
+
+function Range:__tostring()
+    return Format.nothrow_format('Range<{}, {}>', tostring(self.start), tostring(self.end_))
 end
 
 function Range:sort()
