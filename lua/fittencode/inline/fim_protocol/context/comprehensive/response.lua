@@ -37,8 +37,8 @@ function ContextBuilder:_retrieve_context_fragments(buf, start_pos, end_pos)
     local suffix_range = self:_create_peek_range(buf, end_offset, 1)
 
     return {
-        prefix = Editor.get_text(buf, Range:new(prefix_range)),
-        suffix = Editor.get_text(buf, Range:new(suffix_range))
+        prefix = Editor.get_text(buf, Range.new(prefix_range)),
+        suffix = Editor.get_text(buf, Range.new(suffix_range))
     }
 end
 
@@ -51,10 +51,10 @@ function ContextBuilder:_create_peek_range(buf, base_offset, direction)
         total_chars
     )
 
-    local peek_pos = Editor.position_at(buf, peek_offset) or Position:new()
+    local peek_pos = Editor.position_at(buf, peek_offset) or Position.new()
     return {
-        start = (direction == -1) and peek_pos or Position:new(base_offset),
-        end_ = (direction == -1) and Position:new(base_offset) or peek_pos
+        start = (direction == -1) and peek_pos or Position.new(base_offset),
+        end_ = (direction == -1) and Position.new(base_offset) or peek_pos
     }
 end
 

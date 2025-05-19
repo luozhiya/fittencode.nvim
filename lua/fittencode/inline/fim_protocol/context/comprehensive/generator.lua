@@ -32,15 +32,15 @@ local function _clean_fim_pattern(text)
 end
 
 local function _get_full_text(buf)
-    local full_range = Range:new({
-        start = Position:new({ row = 0, col = 0 }),
-        end_ = Position:new({ row = -1, col = -1 })
+    local full_range = Range.new({
+        start = Position.new({ row = 0, col = 0 }),
+        end_ = Position.new({ row = -1, col = -1 })
     })
     return _clean_fim_pattern(Editor.get_text(buf, full_range))
 end
 
 local function _get_text_segment(buf, start_pos, end_pos)
-    return _clean_fim_pattern(Editor.get_text(buf, Range:new({
+    return _clean_fim_pattern(Editor.get_text(buf, Range.new({
         start = start_pos,
         end_ = end_pos
     })))
@@ -53,9 +53,9 @@ local function _calculate_large_file_positions(buf, curoffset, charscount)
     local prefixoffset = math.max(0, math.min(curround - HALF_MAX, charscount - HALF_MAX * 2))
 
     return {
-        prefix_pos = Editor.position_at(buf, prefixoffset) or Position:new(),
-        cur_pos = Editor.position_at(buf, curoffset) or Position:new(),
-        suffix_pos = Editor.position_at(buf, suffixoffset) or Position:new(),
+        prefix_pos = Editor.position_at(buf, prefixoffset) or Position.new(),
+        cur_pos = Editor.position_at(buf, curoffset) or Position.new(),
+        suffix_pos = Editor.position_at(buf, suffixoffset) or Position.new(),
         prefixoffset = prefixoffset,
         suffixoffset = suffixoffset
     }

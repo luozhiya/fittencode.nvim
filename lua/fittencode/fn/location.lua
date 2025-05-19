@@ -15,7 +15,7 @@ function Location.new(uri, range)
         range = { range, 'table' }
     })
     if getmetatable(range) == Position then
-        range = Range.from_position(range)
+        range = Range.of(range)
     end
     local self = {
         uri = uri,

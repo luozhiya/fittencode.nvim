@@ -70,7 +70,6 @@ local function preset_variables()
     return variables
 end
 
--- 辅助函数：验证URL格式
 local function is_valid_url(url)
     if type(url) ~= 'string' then return false end
 
@@ -109,7 +108,7 @@ function M.get_server_url()
 
     -- 仅在企业版/标准版时尝试自定义URL
     if (is_enterprise or is_standard) and raw_url and #raw_url > 0 then
-        local cleaned = raw_url:gsub('%s+', ''):gsub('/+', '/')
+        local cleaned = vim.trim(raw_url)
         if is_valid_url(cleaned) then
             final_url = cleaned
         end
@@ -118,7 +117,6 @@ function M.get_server_url()
     return final_url
 end
 
--- 根据时区信息，提供对应的本地化接口
 ---@param method FittenCode.Protocol.Element.URL
 local function localize_method_url(method)
     if type(method) ~= 'table' then

@@ -320,16 +320,19 @@ end
 
 local VCODES = { ['v'] = true, ['V'] = true, [vim.api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
 
-local function get_range_from_visual_selection()
-    if not VCODES[vim.api.nvim_get_mode().mode] then
-        return
-    end
-    -- [bufnum, lnum, col, off]
-    local _, pos = pcall(vim.fn.getregionpos, vim.fn.getpos('.'), vim.fn.getpos('v'))
-    if pos then
-        local start = { pos[1][1][2], pos[1][1][3] }
-        local end_ = { pos[#pos][2][2], pos[#pos][2][3] }
-        return Range.new(Position.new(start[1], start[2]), Position.new(end_[1], end_[2]))
+local function get_range_from_visual_selection(buf)
+    if VCODES[vim.api.nvim_get_mode().mode] then
+        -- [bufnum, lnum, col, off]
+        local _, pos = pcall(vim.fn.getregionpos, vim.fn.getpos('.'), vim.fn.getpos('v'))
+        if pos then
+            local start = { pos[1][1][2], pos[1][1][3] }
+            local end_ = { pos[#pos][2][2], pos[#pos][2][3] }
+            return Range.of(Position.of(start[1], start[2]), Position.of(end_[1], end_[2]))
+        end
+    else
+        local start = vim.api.nvim_buf_get_mark(buf, '<')
+        local end_ = vim.api.nvim_buf_get_mark(buf, '>')
+        return Range.of(Position.of(start[1], start[2]), Position.of(end_[1], end_[2]))
     end
 end
 
@@ -344,13 +347,13 @@ function Controller:commands(type, mode)
         local win = vim.api.nvim_get_current_win()
         context.buf = buf
         local selection = {}
-        selection.range = get_range_from_visual_selection()
+        selection.range = get_range_from_visual_selection(buf)
         local need_selected = { 'document-code', 'edit-code', 'explain-code', 'find-bugs', 'generate-unit-test', 'optimize-code' }
         if need_selected[type] and not selection.range then
             if type == 'edit-code' then
                 -- TODO: Tree-sitter supported
                 local curpos = Fn.position(win)
-                selection.range = Range.new(Position.new(curpos.row - 20, 0), Position.new(curpos.row + 20, -1))
+                selection.range = Range.of(Position.of(curpos.row - 20, 0), Position.of(curpos.row + 20, -1))
             else
                 Log.notify_error('Please select the code in the editor.')
                 return

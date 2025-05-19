@@ -4,6 +4,7 @@ local Config = require('fittencode.config')
 local Client = require('fittencode.client')
 local OPL = require('fittencode.opl')
 local Protocal = require('fittencode.client.protocol')
+local i18n = require('fittencode.i18n')
 
 ---@class FittenCode.Chat.Conversation
 local Conversation = {}
@@ -120,8 +121,15 @@ function Conversation:evaluate_template(template, variables)
 end
 
 function Conversation:recovered_from_error(error)
+    -- [GitHub](https://github.com/luozhiya/fittencode.nvim/issues)
+    local content = {
+        i18n.tr('Error encountered. Refer to error message for troubleshooting or file an issue on {}.', 'GitHub'),
+        '```json',
+        vim.inspect(error),
+        '```',
+    }
     self:add_bot_message({
-        content = error and vim.inspect(error) or 'Error occurred, please try again later.'
+        content = table.concat(content, '\n')
     })
 end
 
@@ -221,6 +229,8 @@ function Conversation:execute_chat(options)
             return nil, 'Failed to create request chat'
         end
 
+        local err_chunks = {}
+
         -- Start streaming
         res.stream:on('data', function(stdout)
             self.update_status({ id = self.id, stream = true })
@@ -233,14 +243,18 @@ function Conversation:execute_chat(options)
                     self:handle_partial_completion(completion)
                 else
                     -- 忽略非法的 chunk
+                    err_chunks[#err_chunks + 1] = line
                     Log.error('Error while decoding chunk: {}', line)
                 end
             end
         end)
 
         res:async():forward(function()
+            Log.debug('Request chat completed, completions: {}', completion)
             self:handle_completion(completion)
         end, function(err)
+            err.err_chunks = err_chunks
+            Log.debug('Recovered from error: {}', err)
             self:recovered_from_error(err)
         end):finally(function()
             self.update_status({ id = self.id, stream = false })

@@ -1,6 +1,7 @@
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local TextLine = require('fittencode.fn.text_line')
+local Log = require('fittencode.log')
 
 -- 按字符位置偏移量
 ---@alias FittenCode.CharactersOffset number
@@ -206,7 +207,7 @@ function M.offset_at(buf, position)
     end
     local offset
     vim.api.nvim_buf_call(buf, function()
-        local lines = assert(M.get_lines(buf, Range:new({ start = Position:new({ row = 0, col = 0 }), end_ = position })))
+        local lines = assert(M.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = position })))
         vim.tbl_map(function(line)
             local utf = vim.str_utf_pos(line)
             if not offset then
@@ -239,7 +240,7 @@ function M.position_at(buf, offset)
             else
                 local col = vim.str_byteindex(line, 'utf-32', offset)
                 col = M.round_col_end(line, col)
-                pos = Position:new({
+                pos = Position.new({
                     row = index,
                     col = col,
                 })
@@ -258,7 +259,7 @@ function M.position(win)
         return
     end
     local row, col = unpack(vim.api.nvim_win_get_cursor(win))
-    return Position:new({
+    return Position.new({
         row = row - 1,
         col = col,
     })

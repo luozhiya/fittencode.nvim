@@ -94,9 +94,9 @@ function Model:generate_placeholder_ranges(buf, position, computed_completions)
             goto continue
         end
         -- 1. 获取 postion 往后 col_delta 个字符 T0
-        local replace_text = Editor.get_text(buf, Range:new({
+        local replace_text = Editor.get_text(buf, Range.new({
             start = position,
-            end_ = Position:new({
+            end_ = Position.new({
                 row = position.row,
                 col = position.col + col_delta,
             }),

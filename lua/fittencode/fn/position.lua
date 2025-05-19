@@ -11,10 +11,10 @@ local Position = {}
 Position.__index = Position
 
 ---@return FittenCode.Position
-function Position.new(row, col)
+function Position.new(options)
     local self = {
-        row = row,
-        col = col,
+        row = options.row,
+        col = options.col,
     }
     setmetatable(self, Position)
     return self
@@ -85,7 +85,7 @@ end
 ---@param col_delta? number The number of columns to move.
 ---@return FittenCode.Position The new position.
 function Position:translate(row_delta, col_delta)
-    return Position:new({
+    return Position.new({
         row = self.row + (row_delta or 0),
         col = self.col + (col_delta or 0),
     })
@@ -96,7 +96,7 @@ end
 ---@param col? number The new column value.
 ---@return FittenCode.Position The new position.
 function Position:with(row, col)
-    return Position:new({
+    return Position.new({
         row = row or self.row,
         col = col or self.col,
     })
@@ -105,7 +105,7 @@ end
 -- Create a copy of this position.
 ---@return FittenCode.Position The new position.
 function Position:clone()
-    return Position:new({
+    return Position.new({
         row = self.row,
         col = self.col,
     })
@@ -123,6 +123,13 @@ end
 
 function Position:islastline()
     return self.row == -1
+end
+
+function Position.of(row, col)
+    return Position.new({
+        row = row,
+        col = col,
+    })
 end
 
 return Position
