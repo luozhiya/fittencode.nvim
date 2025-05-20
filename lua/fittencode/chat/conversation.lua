@@ -34,6 +34,7 @@ function Conversation:_initialize(options)
         type = 'user_can_reply',
     }
     self.request_handle = nil
+    self.partial_answer_index = 1
 end
 
 function Conversation:get_select_text()
@@ -253,7 +254,7 @@ local function start_normal_chat(self)
             project_id = '',
         }
     }
-    Log.debug('Evaluated HTTP body: {}', body)
+    Log.debug('Evaluated HTTP BODY: {}', body)
 
     local res = Client.make_request(protocol, {
         body = assert(vim.fn.json_encode(body)),
@@ -273,7 +274,7 @@ local function start_normal_chat(self)
             local _, chunk = pcall(vim.fn.json_decode, line)
             if _ and validate_chunk(chunk) then
                 completion[#completion + 1] = chunk.delta
-                self:handle_partial_completion(completion)
+                self:handle_partial_completion(chunk.delta)
             else
                 -- 忽略非法的 chunk
                 err_chunks[#err_chunks + 1] = line
@@ -281,6 +282,9 @@ local function start_normal_chat(self)
             end
         end
     end)
+
+    -- recount
+    self.partial_answer_index = 1
 
     res:async():forward(function(response)
         Log.debug('Request chat completed, completions: {}', completion)
@@ -313,10 +317,6 @@ function Conversation:handle_completion(completion, response, env)
     local type = handler.type
     local content = table.concat(completion, '')
 
-    -- Additional timing information
-    local timing = response.timing()
-    content = content .. '\n\n' .. i18n.tr('> Timing: {} ms', timing.total)
-
     if type == 'update-temporary-editor' then
         Log.error('Not implemented for update-temporary-editor')
     elseif type == 'active-editor-diff' then
@@ -348,28 +348,35 @@ function Conversation:add_bot_message(msg)
     self.update_view()
 end
 
----@param completion table<string>
-function Conversation:handle_partial_completion(completion)
+---@param delta string
+function Conversation:handle_partial_completion(delta)
     local handler = { type = 'message' }
     local type = handler.type
-    local content = table.concat(completion, '')
 
     if type == 'update-temporary-editor' then
         Log.error('Not implemented for update-temporary-editor')
     elseif type == 'active-editor-diff' then
         Log.error('Not implemented for active-editor-diff')
     elseif type == 'message' then
-        self:update_partial_bot_message({ content = content })
+        self:update_partial_bot_message({ content = delta })
     else
         Log.error('Unsupported property: ' .. type)
     end
 end
 
+local function get_partial_answer_index(self)
+    local index = self.partial_answer_index
+    self.partial_answer_index = index + 1
+    return index
+end
+
 ---@param msg table
 function Conversation:update_partial_bot_message(msg)
+    Log.debug('Update partial bot message: {}', msg.content)
     self.state = {
         type = 'bot_answer_streaming',
-        partial_answer = msg.content
+        partial_answer = msg.content,
+        __uuid = get_partial_answer_index(self)
     }
     self.update_view()
 end

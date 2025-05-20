@@ -67,7 +67,8 @@ local function to_state(conversation)
         cs.content.state = conversation.state
         cs.content.reference = conversation.reference
         cs.content.error = conversation.error
-        cs.content.messages = conversation:is_title_message() and Fn.slice(conversation.messages, 2) or conversation.messages
+        -- cs.content.messages = conversation:is_title_message() and Fn.slice(conversation.messages, 2) or conversation.messages
+        cs.content.messages = conversation.messages
     end
     return cs
 end

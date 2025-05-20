@@ -1,148 +1,518 @@
-================================================================================
-Verbose logging started: 2025-05-19 23:09:32
-Log level: DEBUG
-Calling process: /home/qx/calculus/fx/nvim/nvim/bin/nvim
-Neovim version: 0.12.0
-Process ID: 7240
-Parent process ID: 7239
-OS name: {
-  machine = "x86_64",
-  release = "6.14.6-arch1-1",
-  sysname = "Linux",
-  version = "#1 SMP PREEMPT_DYNAMIC Fri, 09 May 2025 17:36:18 +0000"
-}
-GUI running: 0
-WSL running: 0
-================================================================================
-[2025-05-19T23:09:32.007189000+08:00 client/init.lua:26 INFO] Load API key from storage successfully
-[2025-05-19T23:09:32.047176000+08:00 chat/conversation_types_provider.lua:69 DEBUG] ConversationTypesProvider will load built-in templates based on extension URI: /home/qx/calculus/fx/fittencode.nvim
-[2025-05-19T23:09:32.047221000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/chat/chat-en.rdt.md
-[2025-05-19T23:09:32.047244000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/chat/chat-zh-cn.rdt.md
-[2025-05-19T23:09:32.047251000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/diagnose-errors-en.rdt.md
-[2025-05-19T23:09:32.047257000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/diagnose-errors-zh-cn.rdt.md
-[2025-05-19T23:09:32.047265000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/diagnose-errors.rdt.md
-[2025-05-19T23:09:32.047271000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/document-code-en.rdt.md
-[2025-05-19T23:09:32.047277000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/document-code-zh-cn.rdt.md
-[2025-05-19T23:09:32.047283000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/edit-code-en.rdt.md
-[2025-05-19T23:09:32.047289000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/edit-code-zh-cn.rdt.md
-[2025-05-19T23:09:32.047297000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/explain-code-en.rdt.md
-[2025-05-19T23:09:32.047303000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/explain-code-w-context.rdt.md
-[2025-05-19T23:09:32.047309000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/explain-code-zh-cn.rdt.md
-[2025-05-19T23:09:32.047316000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/find-bugs-en.rdt.md
-[2025-05-19T23:09:32.047322000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/find-bugs-zh-cn.rdt.md
-[2025-05-19T23:09:32.047334000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/generate-code-en.rdt.md
-[2025-05-19T23:09:32.047340000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/generate-code-zh-cn.rdt.md
-[2025-05-19T23:09:32.047346000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/generate-unit-test-en.rdt.md
-[2025-05-19T23:09:32.047352000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/generate-unit-test-zh-cn.rdt.md
-[2025-05-19T23:09:32.047367000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/improve-readability.rdt.md
-[2025-05-19T23:09:32.047373000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/optimize-code-en.rdt.md
-[2025-05-19T23:09:32.047381000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/optimize-code-zh-cn.rdt.md
-[2025-05-19T23:09:32.047387000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/terminal-fix-en.rdt.md
-[2025-05-19T23:09:32.047393000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/terminal-fix-zh-cn.rdt.md
-[2025-05-19T23:09:32.047399000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/title-chat-en.rdt.md
-[2025-05-19T23:09:32.047405000+08:00 chat/conversation_types_provider.lua:86 INFO] Loading built-in template from: /home/qx/calculus/fx/fittencode.nvim/template/task/title-chat-zh-cn.rdt.md
-[2025-05-19T23:09:35.346983000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable filename
-[2025-05-19T23:09:35.347020000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable language
-[2025-05-19T23:09:35.347029000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable selectedText
-[2025-05-19T23:09:35.347231000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:09:36.641040000+08:00 chat/conversation.lua:177 DEBUG] Add user message: 1
-[2025-05-19T23:09:36.641530000+08:00 chat/conversation.lua:225 DEBUG] Evaluated body: {
-  ft_token = "659dec9189d3ad42d84f9619",
-  inputs = "<|system|>\n请完全使用中文回答。\n<|end|>\n<|user|>\n1<|end|>\n<|assistant|>",
-  meta_datas = {
-    project_id = ""
-  }
-}
-[2025-05-19T23:09:36.659504000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:09:36.659532000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:09:37.374161000+08:00 chat/conversation.lua:255 DEBUG] Request chat completed, completions: { "看起来", "你的", "消息", "不", "完整", "，", "能否", "提供更多", "详细", "信息", "，", "这样", "我可以", "更好地", "帮助", "你", "？", "" }
-[2025-05-19T23:09:52.024754000+08:00 chat/conversation.lua:177 DEBUG] Add user message: 你的数据日期是多少
-[2025-05-19T23:09:52.025727000+08:00 chat/conversation.lua:225 DEBUG] Evaluated body: {
-  ft_token = "659dec9189d3ad42d84f9619",
-  inputs = "<|system|>\n请完全使用中文回答。\n<|end|>\n<|user|>\n1<|end|>\n<|assistant|>\n看起来你的消息不完整，能否提供更多详细信息，这样我可以更好地帮助你？<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>",
-  meta_datas = {
-    project_id = ""
-  }
-}
-[2025-05-19T23:09:52.032980000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:09:52.033006000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:09:52.974045000+08:00 chat/conversation.lua:255 DEBUG] Request chat completed, completions: { "抱歉", "，", "我", "无法", "提供", "具体的", "训练", "数据", "日期", "信息", "。", "我的", "知识", "是", "基于", "最新的", "训练", "数据", "，", "旨在", "提供", "准确", "和", "有用", "的信息", "。", "如果你", "有任何", "问题", "或", "需要", "帮助", "，请", "告诉我", "！", "" }
-[2025-05-19T23:10:06.745116000+08:00 chat/conversation.lua:177 DEBUG] Add user message: 你的数据日期是多少
-[2025-05-19T23:10:06.746067000+08:00 chat/conversation.lua:225 DEBUG] Evaluated body: {
-  ft_token = "659dec9189d3ad42d84f9619",
-  inputs = "<|system|>\n请完全使用中文回答。\n<|end|>\n<|user|>\n1<|end|>\n<|assistant|>\n看起来你的消息不完整，能否提供更多详细信息，这样我可以更好地帮助你？<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>\n抱歉，我无法提供具体的训练数据日期信息。我的知识是基于最新的训练数据，旨在提供准确和有用的信息。如果你有任何问题或需要帮助，请告诉我！<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>",
-  meta_datas = {
-    project_id = ""
-  }
-}
-[2025-05-19T23:10:06.758700000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:10:06.758732000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:10:07.949902000+08:00 chat/conversation.lua:255 DEBUG] Request chat completed, completions: { "我无法", "提供", "具体的", "训练", "数据", "日期", "信息", "。", "我的", "知识", "库", "是", "定期", "更新", "的", "，", "包含", "最新的", "信息", "和", "数据", "。", "如果你", "有任何", "问题", "或", "需要", "帮助", "，请", "告诉我", "！", "" }
-[2025-05-19T23:10:16.396823000+08:00 chat/conversation.lua:177 DEBUG] Add user message: 你的数据日期是多少
-[2025-05-19T23:10:16.397418000+08:00 chat/conversation.lua:225 DEBUG] Evaluated body: {
-  ft_token = "659dec9189d3ad42d84f9619",
-  inputs = "<|system|>\n请完全使用中文回答。\n<|end|>\n<|user|>\n1<|end|>\n<|assistant|>\n看起来你的消息不完整，能否提供更多详细信息，这样我可以更好地帮助你？<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>\n抱歉，我无法提供具体的训练数据日期信息。我的知识是基于最新的训练数据，旨在提供准确和有用的信息。如果你有任何问题或需要帮助，请告诉我！<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>\n我无法提供具体的训练数据日期信息。我的知识库是定期更新的，包含最新的信息和数据。如果你有任何问题或需要帮助，请告诉我！<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>",
-  meta_datas = {
-    project_id = ""
-  }
-}
-[2025-05-19T23:10:16.413914000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:10:16.413975000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:10:17.379457000+08:00 chat/conversation.lua:255 DEBUG] Request chat completed, completions: { "我", "无法", "提供", "具体的", "训练", "数据", "日期", "信息", "。", "我的", "知识", "是", "基于", "最新的", "训练", "数据", "，", "旨在", "提供", "准确", "和", "有用", "的信息", "。", "如果你", "有", "其他", "问题", "或", "需要", "帮助", "的地方", "，请", "告诉我", "！", "" }
-[2025-05-19T23:12:44.540158000+08:00 chat/conversation.lua:177 DEBUG] Add user message: jsdlkfjdks
-[2025-05-19T23:12:44.541033000+08:00 chat/conversation.lua:225 DEBUG] Evaluated body: {
-  ft_token = "659dec9189d3ad42d84f9619",
-  inputs = "<|system|>\n请完全使用中文回答。\n<|end|>\n<|user|>\n1<|end|>\n<|assistant|>\n看起来你的消息不完整，能否提供更多详细信息，这样我可以更好地帮助你？<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>\n抱歉，我无法提供具体的训练数据日期信息。我的知识是基于最新的训练数据，旨在提供准确和有用的信息。如果你有任何问题或需要帮助，请告诉我！<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>\n我无法提供具体的训练数据日期信息。我的知识库是定期更新的，包含最新的信息和数据。如果你有任何问题或需要帮助，请告诉我！<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>\n我无法提供具体的训练数据日期信息。我的知识是基于最新的训练数据，旨在提供准确和有用的信息。如果你有其他问题或需要帮助的地方，请告诉我！<|end|>\n<|user|>\njsdlkfjdks<|end|>\n<|assistant|>",
-  meta_datas = {
-    project_id = ""
-  }
-}
-[2025-05-19T23:12:44.552111000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:12:44.552148000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:12:45.379315000+08:00 chat/conversation.lua:255 DEBUG] Request chat completed, completions: { "看起来", "你", "输入", "的内容", "是一", "串", "随机", "字符", "，", "如果你", "有任何", "问题", "或者", "需要", "帮助", "的地方", "，请", "提供", "详细", "信息", "，", "我会", "尽力", "帮助", "你", "。", "" }
-[2025-05-19T23:12:52.124754000+08:00 chat/conversation.lua:177 DEBUG] Add user message: 真得吗
-[2025-05-19T23:12:52.125346000+08:00 chat/conversation.lua:225 DEBUG] Evaluated body: {
-  ft_token = "659dec9189d3ad42d84f9619",
-  inputs = "<|system|>\n请完全使用中文回答。\n<|end|>\n<|user|>\n1<|end|>\n<|assistant|>\n看起来你的消息不完整，能否提供更多详细信息，这样我可以更好地帮助你？<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>\n抱歉，我无法提供具体的训练数据日期信息。我的知识是基于最新的训练数据，旨在提供准确和有用的信息。如果你有任何问题或需要帮助，请告诉我！<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>\n我无法提供具体的训练数据日期信息。我的知识库是定期更新的，包含最新的信息和数据。如果你有任何问题或需要帮助，请告诉我！<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>\n我无法提供具体的训练数据日期信息。我的知识是基于最新的训练数据，旨在提供准确和有用的信息。如果你有其他问题或需要帮助的地方，请告诉我！<|end|>\n<|user|>\njsdlkfjdks<|end|>\n<|assistant|>\n看起来你输入的内容是一串随机字符，如果你有任何问题或者需要帮助的地方，请提供详细信息，我会尽力帮助你。<|end|>\n<|user|>\n真得吗<|end|>\n<|assistant|>",
-  meta_datas = {
-    project_id = ""
-  }
-}
-[2025-05-19T23:12:52.138431000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:12:52.138457000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:13:22.938195000+08:00 chat/conversation.lua:255 DEBUG] Request chat completed, completions: { "\0\0\0\0\0\0\0\0\n\n", "", "是", "的", "，", "真的", "可以", "。", "请", "告诉我", "你需要", "什么样的", "帮助", "或", "有什么", "问题", "，", "我会", "尽力", "为你", "解答", "。", "" }
-[2025-05-19T23:14:37.220419000+08:00 chat/conversation.lua:177 DEBUG] Add user message: 会出错吗
-[2025-05-19T23:14:37.221086000+08:00 chat/conversation.lua:225 DEBUG] Evaluated body: {
-  ft_token = "659dec9189d3ad42d84f9619",
-  inputs = "<|system|>\n请完全使用中文回答。\n<|end|>\n<|user|>\n1<|end|>\n<|assistant|>\n看起来你的消息不完整，能否提供更多详细信息，这样我可以更好地帮助你？<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>\n抱歉，我无法提供具体的训练数据日期信息。我的知识是基于最新的训练数据，旨在提供准确和有用的信息。如果你有任何问题或需要帮助，请告诉我！<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>\n我无法提供具体的训练数据日期信息。我的知识库是定期更新的，包含最新的信息和数据。如果你有任何问题或需要帮助，请告诉我！<|end|>\n<|user|>\n你的数据日期是多少<|end|>\n<|assistant|>\n我无法提供具体的训练数据日期信息。我的知识是基于最新的训练数据，旨在提供准确和有用的信息。如果你有其他问题或需要帮助的地方，请告诉我！<|end|>\n<|user|>\njsdlkfjdks<|end|>\n<|assistant|>\n看起来你输入的内容是一串随机字符，如果你有任何问题或者需要帮助的地方，请提供详细信息，我会尽力帮助你。<|end|>\n<|user|>\n真得吗<|end|>\n<|assistant|>\n\0\0\0\0\0\0\0\0\n\n是的，真的可以。请告诉我你需要什么样的帮助或有什么问题，我会尽力为你解答。<|end|>\n<|user|>\n会出错吗<|end|>\n<|assistant|>",
-  meta_datas = {
-    project_id = ""
-  }
-}
-[2025-05-19T23:14:37.233974000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:14:37.234000000+08:00 chat/controller.lua:310 WARN] Failed to resolve variable lastMessage
-[2025-05-19T23:14:37.578860000+08:00 chat/conversation.lua:249 ERROR] Error while decoding chunk: {"detail":[{"type":"string_type","loc":["body","inputs"],"msg":"Input should be a valid string","input":[60,124,115,121,115,116,101,109,124,62,10,232,175,183,229,174,140,229,133,168,228,189,191,231,148,168,228,184,173,230,150,135,229,155,158,231,173,148,227,128,130,10,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,49,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62,10,231,156,139,232,181,183,230,157,165,228,189,160,231,154,132,230,182,136,230,129,175,228,184,141,229,174,140,230,149,180,239,188,140,232,131,189,229,144,166,230,143,144,228,190,155,230,155,180,229,164,154,232,175,166,231,187,134,228,191,161,230,129,175,239,188,140,232,191,153,230,160,183,230,136,145,229,143,175,228,187,165,230,155,180,229,165,189,229,156,176,229,184,174,229,138,169,228,189,160,239,188,159,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,228,189,160,231,154,132,230,149,176,230,141,174,230,151,165,230,156,159,230,152,175,229,164,154,229,176,145,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62,10,230,138,177,230,173,137,239,188,140,230,136,145,230,151,160,230,179,149,230,143,144,228,190,155,229,133,183,228,189,147,231,154,132,232,174,173,231,187,131,230,149,176,230,141,174,230,151,165,230,156,159,228,191,161,230,129,175,227,128,130,230,136,145,231,154,132,231,159,165,232,175,134,230,152,175,229,159,186,228,186,142,230,156,128,230,150,176,231,154,132,232,174,173,231,187,131,230,149,176,230,141,174,239,188,140,230,151,168,229,156,168,230,143,144,228,190,155,229,135,134,231,161,174,229,146,140,230,156,137,231,148,168,231,154,132,228,191,161,230,129,175,227,128,130,229,166,130,230,158,156,228,189,160,230,156,137,228,187,187,228,189,149,233,151,174,233,162,152,230,136,150,233,156,128,232,166,129,229,184,174,229,138,169,239,188,140,232,175,183,229,145,138,232,175,137,230,136,145,239,188,129,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,228,189,160,231,154,132,230,149,176,230,141,174,230,151,165,230,156,159,230,152,175,229,164,154,229,176,145,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62,10,230,136,145,230,151,160,230,179,149,230,143,144,228,190,155,229,133,183,228,189,147,231,154,132,232,174,173,231,187,131,230,149,176,230,141,174,230,151,165,230,156,159,228,191,161,230,129,175,227,128,130,230,136,145,231,154,132,231,159,165,232,175,134,229,186,147,230,152,175,229,174,154,230,156,159,230,155,180,230,150,176,231,154,132,239,188,140,229,140,133,229,144,171,230,156,128,230,150,176,231,154,132,228,191,161,230,129,175,229,146,140,230,149,176,230,141,174,227,128,130,229,166,130,230,158,156,228,189,160,230,156,137,228,187,187,228,189,149,233,151,174,233,162,152,230,136,150,233,156,128,232,166,129,229,184,174,229,138,169,239,188,140,232,175,183,229,145,138,232,175,137,230,136,145,239,188,129,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,228,189,160,231,154,132,230,149,176,230,141,174,230,151,165,230,156,159,230,152,175,229,164,154,229,176,145,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62,10,230,136,145,230,151,160,230,179,149,230,143,144,228,190,155,229,133,183,228,189,147,231,154,132,232,174,173,231,187,131,230,149,176,230,141,174,230,151,165,230,156,159,228,191,161,230,129,175,227,128,130,230,136,145,231,154,132,231,159,165,232,175,134,230,152,175,229,159,186,228,186,142,230,156,128,230,150,176,231,154,132,232,174,173,231,187,131,230,149,176,230,141,174,239,188,140,230,151,168,229,156,168,230,143,144,228,190,155,229,135,134,231,161,174,229,146,140,230,156,137,231,148,168,231,154,132,228,191,161,230,129,175,227,128,130,229,166,130,230,158,156,228,189,160,230,156,137,229,133,182,228,187,150,233,151,174,233,162,152,230,136,150,233,156,128,232,166,129,229,184,174,229,138,169,231,154,132,229,156,176,230,150,
-[2025-05-19T23:14:37.579318000+08:00 chat/conversation.lua:249 ERROR] Error while decoding chunk: 185,239,188,140,232,175,183,229,145,138,232,175,137,230,136,145,239,188,129,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,106,115,100,108,107,102,106,100,107,115,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62,10,231,156,139,232,181,183,230,157,165,228,189,160,232,190,147,229,133,165,231,154,132,229,134,133,229,174,185,230,152,175,228,184,128,228,184,178,233,154,143,230,156,186,229,173,151,231,172,166,239,188,140,229,166,130,230,158,156,228,189,160,230,156,137,228,187,187,228,189,149,233,151,174,233,162,152,230,136,150,232,128,133,233,156,128,232,166,129,229,184,174,229,138,169,231,154,132,229,156,176,230,150,185,239,188,140,232,175,183,230,143,144,228,190,155,232,175,166,231,187,134,228,191,161,230,129,175,239,188,140,230,136,145,228,188,154,229,176,189,229,138,155,229,184,174,229,138,169,228,189,160,227,128,130,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,231,156,159,229,190,151,229,144,151,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62,10,0,0,0,0,0,0,0,0,10,10,230,152,175,231,154,132,239,188,140,231,156,159,231,154,132,229,143,175,228,187,165,227,128,130,232,175,183,229,145,138,232,175,137,230,136,145,228,189,160,233,156,128,232,166,129,228,187,128,228,185,136,230,160,183,231,154,132,229,184,174,229,138,169,230,136,150,230,156,137,228,187,128,228,185,136,233,151,174,233,162,152,239,188,140,230,136,145,228,188,154,229,176,189,229,138,155,228,184,186,228,189,160,232,167,163,231,173,148,227,128,130,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,228,188,154,229,135,186,233,148,153,229,144,151,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62]}]}
-[2025-05-19T23:14:37.582048000+08:00 chat/conversation.lua:259 DEBUG] Recovered from error: {
-  err_chunks = { '{"detail":[{"type":"string_type","loc":["body","inputs"],"msg":"Input should be a valid string","input":[60,124,115,121,115,116,101,109,124,62,10,232,175,183,229,174,140,229,133,168,228,189,191,231,148,168,228,184,173,230,150,135,229,155,158,231,173,148,227,128,130,10,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,49,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62,10,231,156,139,232,181,183,230,157,165,228,189,160,231,154,132,230,182,136,230,129,175,228,184,141,229,174,140,230,149,180,239,188,140,232,131,189,229,144,166,230,143,144,228,190,155,230,155,180,229,164,154,232,175,166,231,187,134,228,191,161,230,129,175,239,188,140,232,191,153,230,160,183,230,136,145,229,143,175,228,187,165,230,155,180,229,165,189,229,156,176,229,184,174,229,138,169,228,189,160,239,188,159,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,228,189,160,231,154,132,230,149,176,230,141,174,230,151,165,230,156,159,230,152,175,229,164,154,229,176,145,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62,10,230,138,177,230,173,137,239,188,140,230,136,145,230,151,160,230,179,149,230,143,144,228,190,155,229,133,183,228,189,147,231,154,132,232,174,173,231,187,131,230,149,176,230,141,174,230,151,165,230,156,159,228,191,161,230,129,175,227,128,130,230,136,145,231,154,132,231,159,165,232,175,134,230,152,175,229,159,186,228,186,142,230,156,128,230,150,176,231,154,132,232,174,173,231,187,131,230,149,176,230,141,174,239,188,140,230,151,168,229,156,168,230,143,144,228,190,155,229,135,134,231,161,174,229,146,140,230,156,137,231,148,168,231,154,132,228,191,161,230,129,175,227,128,130,229,166,130,230,158,156,228,189,160,230,156,137,228,187,187,228,189,149,233,151,174,233,162,152,230,136,150,233,156,128,232,166,129,229,184,174,229,138,169,239,188,140,232,175,183,229,145,138,232,175,137,230,136,145,239,188,129,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,228,189,160,231,154,132,230,149,176,230,141,174,230,151,165,230,156,159,230,152,175,229,164,154,229,176,145,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62,10,230,136,145,230,151,160,230,179,149,230,143,144,228,190,155,229,133,183,228,189,147,231,154,132,232,174,173,231,187,131,230,149,176,230,141,174,230,151,165,230,156,159,228,191,161,230,129,175,227,128,130,230,136,145,231,154,132,231,159,165,232,175,134,229,186,147,230,152,175,229,174,154,230,156,159,230,155,180,230,150,176,231,154,132,239,188,140,229,140,133,229,144,171,230,156,128,230,150,176,231,154,132,228,191,161,230,129,175,229,146,140,230,149,176,230,141,174,227,128,130,229,166,130,230,158,156,228,189,160,230,156,137,228,187,187,228,189,149,233,151,174,233,162,152,230,136,150,233,156,128,232,166,129,229,184,174,229,138,169,239,188,140,232,175,183,229,145,138,232,175,137,230,136,145,239,188,129,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,228,189,160,231,154,132,230,149,176,230,141,174,230,151,165,230,156,159,230,152,175,229,164,154,229,176,145,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62,10,230,136,145,230,151,160,230,179,149,230,143,144,228,190,155,229,133,183,228,189,147,231,154,132,232,174,173,231,187,131,230,149,176,230,141,174,230,151,165,230,156,159,228,191,161,230,129,175,227,128,130,230,136,145,231,154,132,231,159,165,232,175,134,230,152,175,229,159,186,228,186,142,230,156,128,230,150,176,231,154,132,232,174,173,231,187,131,230,149,176,230,141,174,239,188,140,230,151,168,229,156,168,230,143,144,228,190,155,229,135,134,231,161,174,229,146,140,230,156,137,231,148,168,231,154,132,228,191,161,230,129,175,227,128,130,229,166,130,230,158,156,228,189,160,230,156,137,229,133,182,228,187,150,233,151,174,233,162,152,230,136,150,233,156,128,232,166,129,229,184,174,229,138,169,231,154,132,229,156,176,230,150,', "185,239,188,140,232,175,183,229,145,138,232,175,137,230,136,145,239,188,129,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,106,115,100,108,107,102,106,100,107,115,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62,10,231,156,139,232,181,183,230,157,165,228,189,160,232,190,147,229,133,165,231,154,132,229,134,133,229,174,185,230,152,175,228,184,128,228,184,178,233,154,143,230,156,186,229,173,151,231,172,166,239,188,140,229,166,130,230,158,156,228,189,160,230,156,137,228,187,187,228,189,149,233,151,174,233,162,152,230,136,150,232,128,133,233,156,128,232,166,129,229,184,174,229,138,169,231,154,132,229,156,176,230,150,185,239,188,140,232,175,183,230,143,144,228,190,155,232,175,166,231,187,134,228,191,161,230,129,175,239,188,140,230,136,145,228,188,154,229,176,189,229,138,155,229,184,174,229,138,169,228,189,160,227,128,130,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,231,156,159,229,190,151,229,144,151,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62,10,0,0,0,0,0,0,0,0,10,10,230,152,175,231,154,132,239,188,140,231,156,159,231,154,132,229,143,175,228,187,165,227,128,130,232,175,183,229,145,138,232,175,137,230,136,145,228,189,160,233,156,128,232,166,129,228,187,128,228,185,136,230,160,183,231,154,132,229,184,174,229,138,169,230,136,150,230,156,137,228,187,128,228,185,136,233,151,174,233,162,152,239,188,140,230,136,145,228,188,154,229,176,189,229,138,155,228,184,186,228,189,160,232,167,163,231,173,148,227,128,130,60,124,101,110,100,124,62,10,60,124,117,115,101,114,124,62,10,228,188,154,229,135,186,233,148,153,229,144,151,60,124,101,110,100,124,62,10,60,124,97,115,115,105,115,116,97,110,116,124,62]}]}" },
-  response = {
-    headers = {
-      connection = "keep-alive",
-      ["content-length"] = "5516",
-      ["content-type"] = "application/json",
-      date = "Mon, 19 May 2025 15:12:55 GMT",
-      ["req-arrive-time"] = "1747667575869",
-      ["req-cost-time"] = "5",
-      ["resp-start-time"] = "1747667575875",
-      server = "nginx/1.24.0",
-      ["x-envoy-upstream-service-time"] = "4"
-    },
-    json = <function 1>,
-    ok = false,
-    status = 422,
-    text = <function 2>,
-    timing = <function 3>
-  },
-  status = 422,
-  type = "HTTP_ERROR"
-}
+[2025-05-20T19:06:11.822947000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 您
+[2025-05-20T19:06:11.824858000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 提供的
+[2025-05-20T19:06:11.824858000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 代码
+[2025-05-20T19:06:11.825858000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 片段
+[2025-05-20T19:06:11.825858000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 非常
+[2025-05-20T19:06:11.826925000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 简
+[2025-05-20T19:06:11.829436000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 简
+[2025-05-20T19:06:11.837625000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 短
+[2025-05-20T19:06:11.837625000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 短
+[2025-05-20T19:06:11.850812000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:11.851812000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ，
+[2025-05-20T19:06:11.864811000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 仅
+[2025-05-20T19:06:11.865812000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 仅
+[2025-05-20T19:06:11.873957000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 包含
+[2025-05-20T19:06:11.874868000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 包含
+[2025-05-20T19:06:11.883874000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 了一个
+[2025-05-20T19:06:11.884867000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 了一个
+[2025-05-20T19:06:11.898504000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  `
+[2025-05-20T19:06:11.899506000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  `
+[2025-05-20T19:06:11.913644000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: main
+[2025-05-20T19:06:11.914650000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = main
+[2025-05-20T19:06:11.927767000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: `
+[2025-05-20T19:06:11.928707000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = `
+[2025-05-20T19:06:11.941565000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  
+[2025-05-20T19:06:11.942604000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  
+[2025-05-20T19:06:12.032987000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 函数
+[2025-05-20T19:06:12.033966000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 的
+[2025-05-20T19:06:12.034966000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 声明
+[2025-05-20T19:06:12.034966000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:12.035966000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 而
+[2025-05-20T19:06:12.035966000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 没有
+[2025-05-20T19:06:12.036966000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 没有
+[2025-05-20T19:06:12.045490000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 实现
+[2025-05-20T19:06:12.046488000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 实现
+[2025-05-20T19:06:12.059687000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 内容
+[2025-05-20T19:06:12.060687000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 内容
+[2025-05-20T19:06:12.073719000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 。
+[2025-05-20T19:06:12.074661000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 。
+[2025-05-20T19:06:12.083793000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 下面
+[2025-05-20T19:06:12.083793000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 下面
+[2025-05-20T19:06:12.112430000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 是对
+[2025-05-20T19:06:12.114040000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 这个
+[2025-05-20T19:06:12.114558000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 这个
+[2025-05-20T19:06:12.121905000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 代码
+[2025-05-20T19:06:12.122905000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 代码
+[2025-05-20T19:06:12.136018000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 的
+[2025-05-20T19:06:12.137017000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 的
+[2025-05-20T19:06:12.150275000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 逐步
+[2025-05-20T19:06:12.151274000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 逐步
+[2025-05-20T19:06:12.164496000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 分解
+[2025-05-20T19:06:12.164496000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 分解
+[2025-05-20T19:06:12.176576000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 和
+[2025-05-20T19:06:12.177583000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 和
+[2025-05-20T19:06:12.189673000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 详细
+[2025-05-20T19:06:12.190616000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 详细
+[2025-05-20T19:06:12.202909000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 解释
+[2025-05-20T19:06:12.203915000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 解释
+[2025-05-20T19:06:12.217043000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ：
+
+
+[2025-05-20T19:06:12.218042000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ：
+
+
+[2025-05-20T19:06:12.230722000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 1
+[2025-05-20T19:06:12.231715000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 1
+[2025-05-20T19:06:12.246402000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: .
+[2025-05-20T19:06:12.247401000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = .
+[2025-05-20T19:06:12.260620000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  **
+[2025-05-20T19:06:12.260620000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  **
+[2025-05-20T19:06:12.274759000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: `
+[2025-05-20T19:06:12.275758000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = `
+[2025-05-20T19:06:12.369542000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: int
+[2025-05-20T19:06:12.370542000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  main
+[2025-05-20T19:06:12.371057000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ()`
+[2025-05-20T19:06:12.371057000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: **:
+[2025-05-20T19:06:12.371057000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  
+[2025-05-20T19:06:12.372055000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 这
+[2025-05-20T19:06:12.372055000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 这
+[2025-05-20T19:06:12.386567000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 行
+[2025-05-20T19:06:12.387567000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 代码
+[2025-05-20T19:06:12.387567000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 代码
+[2025-05-20T19:06:12.408239000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 声明
+[2025-05-20T19:06:12.408239000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 声明
+[2025-05-20T19:06:12.410204000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 了一个
+[2025-05-20T19:06:12.411235000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 了一个
+[2025-05-20T19:06:12.425829000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 名为
+[2025-05-20T19:06:12.425829000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 名为
+[2025-05-20T19:06:12.466238000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  `
+[2025-05-20T19:06:12.466779000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: main
+[2025-05-20T19:06:12.466779000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = main
+[2025-05-20T19:06:12.469806000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: `
+[2025-05-20T19:06:12.469806000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = `
+[2025-05-20T19:06:12.483805000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  的
+[2025-05-20T19:06:12.483805000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  的
+[2025-05-20T19:06:12.498399000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 函数
+[2025-05-20T19:06:12.499418000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 函数
+[2025-05-20T19:06:12.511958000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:12.511958000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ，
+[2025-05-20T19:06:12.524468000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 它是
+[2025-05-20T19:06:12.525469000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 它是
+[2025-05-20T19:06:12.538469000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: C
+[2025-05-20T19:06:12.538469000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = C
+[2025-05-20T19:06:12.550981000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: /C
+[2025-05-20T19:06:12.551981000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = /C
+[2025-05-20T19:06:12.564413000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ++
+[2025-05-20T19:06:12.565389000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ++
+[2025-05-20T19:06:12.577987000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 程序
+[2025-05-20T19:06:12.578937000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 程序
+[2025-05-20T19:06:12.591550000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 的
+[2025-05-20T19:06:12.591550000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 的
+[2025-05-20T19:06:12.604930000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 入口
+[2025-05-20T19:06:12.605923000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 入口
+[2025-05-20T19:06:12.625923000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 点
+[2025-05-20T19:06:12.626443000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 点
+[2025-05-20T19:06:12.635097000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 。
+[2025-05-20T19:06:12.636099000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 。
+[2025-05-20T19:06:12.653215000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 程序
+[2025-05-20T19:06:12.654214000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 程序
+[2025-05-20T19:06:12.668291000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 从
+[2025-05-20T19:06:12.668812000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 从
+[2025-05-20T19:06:12.677803000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 这里
+[2025-05-20T19:06:12.678802000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 这里
+[2025-05-20T19:06:12.691959000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 开始
+[2025-05-20T19:06:12.692908000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 开始
+[2025-05-20T19:06:12.705989000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 执行
+[2025-05-20T19:06:12.706931000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 执行
+[2025-05-20T19:06:12.718997000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 。
+[2025-05-20T19:06:12.719938000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 。
+[2025-05-20T19:06:12.732909000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: `
+[2025-05-20T19:06:12.732909000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = `
+[2025-05-20T19:06:12.746590000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: int
+[2025-05-20T19:06:12.747637000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = int
+[2025-05-20T19:06:12.759122000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: `
+[2025-05-20T19:06:12.760106000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = `
+[2025-05-20T19:06:12.773106000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  
+[2025-05-20T19:06:12.773106000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  
+[2025-05-20T19:06:12.787231000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 表
+[2025-05-20T19:06:12.788167000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 表
+[2025-05-20T19:06:12.801349000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 示
+[2025-05-20T19:06:12.802313000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 示
+[2025-05-20T19:06:12.816313000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 这个
+[2025-05-20T19:06:12.817313000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 这个
+[2025-05-20T19:06:12.830826000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 函数
+[2025-05-20T19:06:12.832422000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 函数
+[2025-05-20T19:06:12.844899000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 返回
+[2025-05-20T19:06:12.845839000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 返回
+[2025-05-20T19:06:12.858925000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 一个
+[2025-05-20T19:06:12.858925000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 一个
+[2025-05-20T19:06:12.872015000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 整
+[2025-05-20T19:06:12.872926000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 整
+[2025-05-20T19:06:12.886040000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 数值
+[2025-05-20T19:06:12.887048000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 数值
+[2025-05-20T19:06:12.900299000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 。
+[2025-05-20T19:06:12.900842000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 。
+[2025-05-20T19:06:12.913381000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 通常
+[2025-05-20T19:06:12.913902000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 通常
+[2025-05-20T19:06:12.925894000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:12.926925000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ，
+[2025-05-20T19:06:12.939756000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 返回
+[2025-05-20T19:06:12.940698000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 返回
+[2025-05-20T19:06:12.953145000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 0
+[2025-05-20T19:06:12.954085000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 0
+[2025-05-20T19:06:12.967617000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 表示
+[2025-05-20T19:06:12.968610000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 表示
+[2025-05-20T19:06:12.982619000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 程序
+[2025-05-20T19:06:12.983610000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 程序
+[2025-05-20T19:06:12.997146000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 成功
+[2025-05-20T19:06:12.998082000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 成功
+[2025-05-20T19:06:13.011291000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 执行
+[2025-05-20T19:06:13.012201000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 执行
+[2025-05-20T19:06:13.025470000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 完毕
+[2025-05-20T19:06:13.026483000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 完毕
+[2025-05-20T19:06:13.038749000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:13.039730000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ，
+[2025-05-20T19:06:13.052943000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 非
+[2025-05-20T19:06:13.053854000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 非
+[2025-05-20T19:06:13.065885000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 零
+[2025-05-20T19:06:13.066854000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 零
+[2025-05-20T19:06:13.079909000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 值
+[2025-05-20T19:06:13.080910000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 值
+[2025-05-20T19:06:13.092203000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 表示
+[2025-05-20T19:06:13.093208000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 表示
+[2025-05-20T19:06:13.104865000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 某种
+[2025-05-20T19:06:13.105859000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 某种
+[2025-05-20T19:06:13.118533000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 类型的
+[2025-05-20T19:06:13.119526000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 类型的
+[2025-05-20T19:06:13.132770000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 错误
+[2025-05-20T19:06:13.132770000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 错误
+[2025-05-20T19:06:13.146906000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 。
+
+
+[2025-05-20T19:06:13.147898000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 。
+
+
+[2025-05-20T19:06:13.162684000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 2
+[2025-05-20T19:06:13.163683000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 2
+[2025-05-20T19:06:13.176991000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: .
+[2025-05-20T19:06:13.177927000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = .
+[2025-05-20T19:06:13.191934000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  **
+[2025-05-20T19:06:13.192928000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  **
+[2025-05-20T19:06:13.206066000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 函数
+[2025-05-20T19:06:13.206066000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 函数
+[2025-05-20T19:06:13.220243000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 体
+[2025-05-20T19:06:13.220872000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 体
+[2025-05-20T19:06:13.233904000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: **:
+[2025-05-20T19:06:13.233904000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = **:
+[2025-05-20T19:06:13.247786000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  在
+[2025-05-20T19:06:13.247786000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  在
+[2025-05-20T19:06:13.261502000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 这个
+[2025-05-20T19:06:13.262503000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 这个
+[2025-05-20T19:06:13.274558000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 代码
+[2025-05-20T19:06:13.275552000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 代码
+[2025-05-20T19:06:13.289282000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 片段
+[2025-05-20T19:06:13.289282000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 片段
+[2025-05-20T19:06:13.302406000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 中
+[2025-05-20T19:06:13.302406000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 中
+[2025-05-20T19:06:13.315601000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:13.316600000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ，
+[2025-05-20T19:06:13.329723000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: `
+[2025-05-20T19:06:13.330707000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = `
+[2025-05-20T19:06:13.344091000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: main
+[2025-05-20T19:06:13.345032000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = main
+[2025-05-20T19:06:13.359071000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: `
+[2025-05-20T19:06:13.360072000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = `
+[2025-05-20T19:06:13.373080000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  
+[2025-05-20T19:06:13.373080000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  
+[2025-05-20T19:06:13.386180000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 函数
+[2025-05-20T19:06:13.387091000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 函数
+[2025-05-20T19:06:13.400973000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 的
+[2025-05-20T19:06:13.401605000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 的
+[2025-05-20T19:06:13.414165000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 函数
+[2025-05-20T19:06:13.414165000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 函数
+[2025-05-20T19:06:13.426809000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 体
+[2025-05-20T19:06:13.427809000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 体
+[2025-05-20T19:06:13.439808000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 是
+[2025-05-20T19:06:13.440807000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 是
+[2025-05-20T19:06:13.453160000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 空
+[2025-05-20T19:06:13.454101000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 空
+[2025-05-20T19:06:13.467282000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 的
+[2025-05-20T19:06:13.467282000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 的
+[2025-05-20T19:06:13.481393000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: （
+[2025-05-20T19:06:13.482346000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = （
+[2025-05-20T19:06:13.495485000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 即
+[2025-05-20T19:06:13.496520000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 即
+[2025-05-20T19:06:13.509492000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  `{
+[2025-05-20T19:06:13.510482000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  `{
+[2025-05-20T19:06:13.524638000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: }`
+[2025-05-20T19:06:13.524638000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = }`
+[2025-05-20T19:06:13.538785000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  
+[2025-05-20T19:06:13.539783000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  
+[2025-05-20T19:06:13.552970000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 之间
+[2025-05-20T19:06:13.553911000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 之间
+[2025-05-20T19:06:13.567108000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 没有任何
+[2025-05-20T19:06:13.568045000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 没有任何
+[2025-05-20T19:06:13.581012000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 代码
+[2025-05-20T19:06:13.582042000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 代码
+[2025-05-20T19:06:13.595056000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ）。
+[2025-05-20T19:06:13.595056000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ）。
+[2025-05-20T19:06:13.609352000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 这意味着
+[2025-05-20T19:06:13.610325000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 这意味着
+[2025-05-20T19:06:13.622617000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 如果
+[2025-05-20T19:06:13.623565000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 如果
+[2025-05-20T19:06:13.636138000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 这个
+[2025-05-20T19:06:13.637131000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 这个
+[2025-05-20T19:06:13.648238000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 程序
+[2025-05-20T19:06:13.649271000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 程序
+[2025-05-20T19:06:13.661036000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 被
+[2025-05-20T19:06:13.662030000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 被
+[2025-05-20T19:06:13.675358000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 编
+[2025-05-20T19:06:13.676298000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 编
+[2025-05-20T19:06:13.689268000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 译
+[2025-05-20T19:06:13.690268000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 译
+[2025-05-20T19:06:13.704278000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 并
+[2025-05-20T19:06:13.705269000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 并
+[2025-05-20T19:06:13.719327000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 运行
+[2025-05-20T19:06:13.720321000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 运行
+[2025-05-20T19:06:13.733366000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:13.734366000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ，
+[2025-05-20T19:06:13.747365000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 它
+[2025-05-20T19:06:13.748366000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 它
+[2025-05-20T19:06:13.762367000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 实际上
+[2025-05-20T19:06:13.763367000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 实际上
+[2025-05-20T19:06:13.776372000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 不会
+[2025-05-20T19:06:13.777367000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 不会
+[2025-05-20T19:06:13.789366000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 执行
+[2025-05-20T19:06:13.790367000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 执行
+[2025-05-20T19:06:13.803366000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 任何
+[2025-05-20T19:06:13.803366000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 任何
+[2025-05-20T19:06:13.815506000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 操作
+[2025-05-20T19:06:13.816498000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 操作
+[2025-05-20T19:06:13.829387000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:13.829387000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ，
+[2025-05-20T19:06:13.842379000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 只是
+[2025-05-20T19:06:13.842379000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 只是
+[2025-05-20T19:06:13.856379000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 立即
+[2025-05-20T19:06:13.856379000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 立即
+[2025-05-20T19:06:13.870394000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 结束
+[2025-05-20T19:06:13.871380000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 结束
+[2025-05-20T19:06:13.885899000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 并
+[2025-05-20T19:06:13.886891000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 并
+[2025-05-20T19:06:13.901007000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 返回
+[2025-05-20T19:06:13.902031000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 返回
+[2025-05-20T19:06:13.914589000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 一个
+[2025-05-20T19:06:13.915583000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 一个
+[2025-05-20T19:06:13.928585000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 整
+[2025-05-20T19:06:13.929584000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 整
+[2025-05-20T19:06:13.942655000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 数值
+[2025-05-20T19:06:13.943686000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 数值
+[2025-05-20T19:06:13.955663000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: （
+[2025-05-20T19:06:13.956656000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = （
+[2025-05-20T19:06:13.969687000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 在
+[2025-05-20T19:06:13.970693000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 在
+[2025-05-20T19:06:13.982702000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: C
+[2025-05-20T19:06:13.983694000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = C
+[2025-05-20T19:06:13.996204000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ++
+[2025-05-20T19:06:13.997205000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ++
+[2025-05-20T19:06:14.009306000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 中
+[2025-05-20T19:06:14.010247000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 中
+[2025-05-20T19:06:14.022258000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:14.023251000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ，
+[2025-05-20T19:06:14.036423000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 如果
+[2025-05-20T19:06:14.037416000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 如果
+[2025-05-20T19:06:14.051415000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 未
+[2025-05-20T19:06:14.052415000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 未
+[2025-05-20T19:06:14.066425000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 明确
+[2025-05-20T19:06:14.067415000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 明确
+[2025-05-20T19:06:14.081415000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 指定
+[2025-05-20T19:06:14.082422000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 指定
+[2025-05-20T19:06:14.095092000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 返回
+[2025-05-20T19:06:14.096073000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 返回
+[2025-05-20T19:06:14.109119000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 值
+[2025-05-20T19:06:14.110118000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 值
+[2025-05-20T19:06:14.123168000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:14.124118000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ，
+[2025-05-20T19:06:14.137118000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 编
+[2025-05-20T19:06:14.138121000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 编
+[2025-05-20T19:06:14.150118000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 译
+[2025-05-20T19:06:14.151118000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 译
+[2025-05-20T19:06:14.163477000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 器
+[2025-05-20T19:06:14.164477000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 器
+[2025-05-20T19:06:14.176477000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 通常
+[2025-05-20T19:06:14.176477000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 通常
+[2025-05-20T19:06:14.189477000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 会
+[2025-05-20T19:06:14.189477000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 会
+[2025-05-20T19:06:14.202485000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 默认
+[2025-05-20T19:06:14.203476000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 默认
+[2025-05-20T19:06:14.217476000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 返回
+[2025-05-20T19:06:14.218477000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 返回
+[2025-05-20T19:06:14.232752000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 0
+[2025-05-20T19:06:14.232752000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 0
+[2025-05-20T19:06:14.247667000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ）
+[2025-05-20T19:06:14.247667000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ）
+[2025-05-20T19:06:14.261666000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 。
+
+
+[2025-05-20T19:06:14.262666000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 。
+
+
+[2025-05-20T19:06:14.275707000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ###
+[2025-05-20T19:06:14.276701000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ###
+[2025-05-20T19:06:14.289739000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  
+[2025-05-20T19:06:14.290740000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  
+[2025-05-20T19:06:14.348742000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 总
+[2025-05-20T19:06:14.349742000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 总
+[2025-05-20T19:06:14.351740000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 结
+[2025-05-20T19:06:14.352741000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 
+
+[2025-05-20T19:06:14.352741000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 
+
+[2025-05-20T19:06:14.354739000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 这段
+[2025-05-20T19:06:14.354739000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 这段
+[2025-05-20T19:06:14.397741000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 代码
+[2025-05-20T19:06:14.397741000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 代码
+[2025-05-20T19:06:14.399743000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 的主要
+[2025-05-20T19:06:14.399743000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 的主要
+[2025-05-20T19:06:14.401742000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 功能
+[2025-05-20T19:06:14.401742000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 功能
+[2025-05-20T19:06:14.402741000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 是
+[2025-05-20T19:06:14.402741000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 是
+[2025-05-20T19:06:14.412847000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 定义
+[2025-05-20T19:06:14.413847000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 定义
+[2025-05-20T19:06:14.427705000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 了一个
+[2025-05-20T19:06:14.428232000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 了一个
+[2025-05-20T19:06:14.442056000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: C
+[2025-05-20T19:06:14.443047000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = C
+[2025-05-20T19:06:14.457046000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: /C
+[2025-05-20T19:06:14.458047000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = /C
+[2025-05-20T19:06:14.470046000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ++
+[2025-05-20T19:06:14.471047000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ++
+[2025-05-20T19:06:14.485047000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 程序
+[2025-05-20T19:06:14.486047000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 程序
+[2025-05-20T19:06:14.497827000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 的
+[2025-05-20T19:06:14.499828000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 的
+[2025-05-20T19:06:14.511827000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 入口
+[2025-05-20T19:06:14.512827000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 入口
+[2025-05-20T19:06:14.525859000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 点
+[2025-05-20T19:06:14.526858000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 点
+[2025-05-20T19:06:14.538828000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:14.539828000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ，
+[2025-05-20T19:06:14.551854000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 但
+[2025-05-20T19:06:14.552857000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 但
+[2025-05-20T19:06:14.565826000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 没有
+[2025-05-20T19:06:14.566826000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 没有
+[2025-05-20T19:06:14.579827000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 执行
+[2025-05-20T19:06:14.580827000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 执行
+[2025-05-20T19:06:14.593841000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 任何
+[2025-05-20T19:06:14.594842000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 任何
+[2025-05-20T19:06:14.608842000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 实际
+[2025-05-20T19:06:14.609841000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 实际
+[2025-05-20T19:06:14.623841000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 的操作
+[2025-05-20T19:06:14.623841000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 的操作
+[2025-05-20T19:06:14.637412000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 。
+[2025-05-20T19:06:14.638413000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 。
+[2025-05-20T19:06:14.651425000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 要
+[2025-05-20T19:06:14.652389000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 要
+[2025-05-20T19:06:14.664974000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 使
+[2025-05-20T19:06:14.667975000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 使
+[2025-05-20T19:06:14.678974000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 这个
+[2025-05-20T19:06:14.680976000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 这个
+[2025-05-20T19:06:14.692002000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 程序
+[2025-05-20T19:06:14.693001000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 程序
+[2025-05-20T19:06:14.705573000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 具有
+[2025-05-20T19:06:14.706568000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 具有
+[2025-05-20T19:06:14.719543000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 实际
+[2025-05-20T19:06:14.720543000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 实际
+[2025-05-20T19:06:14.733565000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 的功能
+[2025-05-20T19:06:14.735547000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 的功能
+[2025-05-20T19:06:14.760543000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:14.761546000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ，
+[2025-05-20T19:06:14.775569000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 您
+[2025-05-20T19:06:14.775569000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 需要
+[2025-05-20T19:06:14.776568000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 需要
+[2025-05-20T19:06:14.789544000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 在
+[2025-05-20T19:06:14.790543000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 在
+[2025-05-20T19:06:14.804577000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  `
+[2025-05-20T19:06:14.807554000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  `
+[2025-05-20T19:06:14.817549000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: main
+[2025-05-20T19:06:14.818552000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = main
+[2025-05-20T19:06:14.834559000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: `
+[2025-05-20T19:06:14.841560000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = `
+[2025-05-20T19:06:14.846563000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  
+[2025-05-20T19:06:14.848557000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  
+[2025-05-20T19:06:14.859569000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 函数
+[2025-05-20T19:06:14.861557000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 函数
+[2025-05-20T19:06:14.872567000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 的
+[2025-05-20T19:06:14.873556000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 的
+[2025-05-20T19:06:14.886556000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 花
+[2025-05-20T19:06:14.887556000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 花
+[2025-05-20T19:06:14.899567000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 括
+[2025-05-20T19:06:14.900557000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 括
+[2025-05-20T19:06:14.913246000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 号
+[2025-05-20T19:06:14.914237000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 号
+[2025-05-20T19:06:14.927246000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 内
+[2025-05-20T19:06:14.928237000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 内
+[2025-05-20T19:06:14.942237000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 添加
+[2025-05-20T19:06:14.943237000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 添加
+[2025-05-20T19:06:14.957237000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 代码
+[2025-05-20T19:06:14.958238000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 代码
+[2025-05-20T19:06:14.971238000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 来
+[2025-05-20T19:06:14.971238000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 来
+[2025-05-20T19:06:14.984238000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 实现
+[2025-05-20T19:06:14.985238000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 实现
+[2025-05-20T19:06:15.001238000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 您的
+[2025-05-20T19:06:15.002239000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 您的
+[2025-05-20T19:06:15.013269000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 目标
+[2025-05-20T19:06:15.014270000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 目标
+[2025-05-20T19:06:15.025852000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 。
+[2025-05-20T19:06:15.026849000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 。
+[2025-05-20T19:06:15.039849000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 例如
+[2025-05-20T19:06:15.039849000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 例如
+[2025-05-20T19:06:15.052858000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: ，
+[2025-05-20T19:06:15.053849000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = ，
+[2025-05-20T19:06:15.065875000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 您
+[2025-05-20T19:06:15.066875000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 您
+[2025-05-20T19:06:15.080849000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 可能
+[2025-05-20T19:06:15.080849000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 可能
+[2025-05-20T19:06:15.094148000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 希望
+[2025-05-20T19:06:15.094148000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 希望
+[2025-05-20T19:06:15.108316000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 在
+[2025-05-20T19:06:15.109316000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 在
+[2025-05-20T19:06:15.123294000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  `
+[2025-05-20T19:06:15.124286000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  `
+[2025-05-20T19:06:15.137408000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: main
+[2025-05-20T19:06:15.138400000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = main
+[2025-05-20T19:06:15.151529000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: `
+[2025-05-20T19:06:15.152520000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = `
+[2025-05-20T19:06:15.165048000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message:  
+[2025-05-20T19:06:15.166041000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content =  
+[2025-05-20T19:06:15.180157000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 函数
+[2025-05-20T19:06:15.181156000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 函数
+[2025-05-20T19:06:15.193244000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 中
+[2025-05-20T19:06:15.194185000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 中
+[2025-05-20T19:06:15.206871000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 打印
+[2025-05-20T19:06:15.206871000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 打印
+[2025-05-20T19:06:15.218881000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 一些
+[2025-05-20T19:06:15.219898000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 一些
+[2025-05-20T19:06:15.231633000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 信息
+[2025-05-20T19:06:15.232616000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 信息
+[2025-05-20T19:06:15.244255000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 、
+[2025-05-20T19:06:15.245248000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 、
+[2025-05-20T19:06:15.258391000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 进行
+[2025-05-20T19:06:15.259342000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 进行
+[2025-05-20T19:06:15.273341000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 计算
+[2025-05-20T19:06:15.273341000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 计算
+[2025-05-20T19:06:15.288341000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 或者
+[2025-05-20T19:06:15.289342000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 或者
+[2025-05-20T19:06:15.309341000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 执行
+[2025-05-20T19:06:15.310342000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 执行
+[2025-05-20T19:06:15.317341000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 其他
+[2025-05-20T19:06:15.318341000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 其他
+[2025-05-20T19:06:15.332349000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 任务
+[2025-05-20T19:06:15.333342000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 任务
+[2025-05-20T19:06:15.346366000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 。
+[2025-05-20T19:06:15.347341000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 。
+[2025-05-20T19:06:15.378426000+08:00 chat/conversation.lua:365 DEBUG] Update partial bot message: 
+[2025-05-20T19:06:15.379411000+08:00 chat/view/init.lua:261 DEBUG] render_conversation streaming content = 
+[2025-05-20T19:06:15.383414000+08:00 chat/conversation.lua:286 DEBUG] Request chat completed, completions: { "您", "提供的", "代码", "片段", "非常", "简", "短", "，", "仅", "包含", "了一个", " `", "main", "`", " ", "函数", "的", "声明", "，", "而", "没有", "实现", "内容", "。", "下面", "是对", "这个", "代码", "的", "逐步", "分解", "和", "详细", "解释", "：\n\n", "1", ".", " **", "`", "int", " main", "()`", "**:", " ", "这", "行", "代码", "声明", "了一个", "名为", " `", "main", "`", " 的", "函数", "，", "它是", "C", "/C", "++", "程序", "的", "入口", "点", "。", "程序", "从", "这里", "开始", "执行", "。", "`", "int", "`", " ", "表", "示", "这个", "函数", "返回", "一个", "整", "数值", "。", "通常", "，", "返回", "0", "表示", "程序", "成功", "执行", "完毕", "，", "非", "零", "值", "表示", "某种", "类型的", "错误", "。\n\n", "2", ".", " **", "函数", "体", "**:", " 在", "这个", "代码", "片段", "中", "，", "`", "main", "`", " ", "函数", "的", "函数", "体", "是", "空", "的", "（", "即", " `{", "}`", " ", "之间", "没有任何", "代码", "）。", "这意味着", "如果", "这个", "程序", "被", "编", "译", "并", "运行", "，", "它", "实际上", "不会", "执行", "任何", "操作", "，", "只是", "立即", "结束", "并", "返回", "一个", "整", "数值", "（", "在", "C", "++", "中", "，", "如果", "未", "明确", "指定", "返回", "值", "，", "编", "译", "器", "通常", "会", "默认", "返回", "0", "）", "。\n\n", "###", " ", "总", "结", "\n", "这段", "代码", "的主要", "功能", "是", "定义", "了一个", "C", "/C", "++", "程序", "的", "入口", "点", "，", "但", "没有", "执行", "任何", "实际", "的操作", "。", "要", "使", "这个", "程序", "具有", "实际", "的功能", "，", "您", "需要", "在", " `", "main", "`", " ", "函数", "的", "花", "括", "号", "内", "添加", "代码", "来", "实现", "您的", "目标", "。", "例如", "，", "您", "可能", "希望", "在", " `", "main", "`", " ", "函数", "中", "打印", "一些", "信息", "、", "进行", "计算", "或者", "执行", "其他", "任务", "。", "" }
+[2025-05-20T19:06:15.384412000+08:00 chat/view/init.lua:240 DEBUG] render_conversation i = 1

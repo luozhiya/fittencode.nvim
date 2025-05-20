@@ -55,6 +55,7 @@ local View = {
     },
     mode = nil,
     state = nil,
+    rendering = {},
 }
 View.__index = View
 
@@ -155,13 +156,11 @@ function View:render_conversation(conversation)
     local api_key_manager = Client.get_api_key_manager()
     local username = api_key_manager:get_username()
     local bot_id = 'Fitten Code'
-    local lines = {}
 
-    -- local index = 1
-    local function feed(author, msg)
-        lines[#lines + 1] = string.format('# %s', author)
-        -- lines[#lines + 1] = string.format('# %s `[%d]`', author, index)
-        -- index = index + 1
+    self.rendering[conversation.id] = self.rendering[conversation.id] or {}
+
+    local function __split(msg)
+        local lines = {}
         local v = vim.split(msg, '\n', { trimempty = false })
         for i, line in ipairs(v) do
             if line == '\n' then
@@ -170,44 +169,118 @@ function View:render_conversation(conversation)
                 lines[#lines + 1] = line
             end
         end
+        return lines
+    end
+
+    local function __section(author, msg)
+        local lines = {}
+        lines[#lines + 1] = string.format('# %s', author)
+        if msg then
+            vim.list_extend(lines, __split(msg))
+        end
         lines[#lines + 1] = ''
+        return lines
     end
 
-    if conversation.header.is_title_message then
-        feed(username, conversation.header.title)
+    local function __append_text(content)
+        vim.api.nvim_buf_call(self.messages_exchange.buf, function()
+            local view = vim.fn.winsaveview()
+            vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
+            if type(content) == 'string' then
+                content = __split(content)
+            end
+            vim.api.nvim_buf_set_text(self.messages_exchange.buf, -1, -1, -1, -1, content)
+            vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
+            vim.fn.winrestview(view)
+        end)
     end
 
-    local messages = conversation.content.messages
-    assert(messages)
-    -- Log.debug('render_conversation messages = {}', messages)
-    for i, message in ipairs(messages) do
-        local content = message.content
-        local author = message.author
-
-        if author == 'user' then
-            feed(username, content)
-        elseif author == 'bot' then
-            feed(bot_id, content)
+    local scroll_bottom = false
+    if self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win) then
+        local cursor = vim.api.nvim_win_get_cursor(self.messages_exchange.win)
+        if cursor[1] == vim.api.nvim_buf_line_count(self.messages_exchange.buf) then
+            scroll_bottom = true
         end
     end
 
+    -- modify buffer
+
+    local streaming = false
     if conversation.content.state ~= nil and conversation.content.state.type == 'bot_answer_streaming' then
-        feed(bot_id, conversation.content.state.partial_answer)
+        streaming = true
     end
 
-    if #lines == 0 then
-        lines = welcome_message[i18n.display_preference()]
+    local has_msg = false
+    local messages = conversation.content.messages
+    assert(messages)
+    if #messages > 0 then
+        has_msg = true
     end
 
-    vim.api.nvim_buf_call(self.messages_exchange.buf, function()
-        local view = vim.fn.winsaveview()
-        vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
-        vim.api.nvim_buf_set_lines(self.messages_exchange.buf, 0, -1, false, lines)
-        vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
-        vim.fn.winrestview(view)
-        -- scroll to bottom
-        vim.api.nvim_command('normal! G')
-    end)
+    if not has_msg and not streaming and not self.rendering[conversation.id].show_welcome_msg then
+        self.rendering[conversation.id].show_welcome_msg = true
+        __append_text(welcome_message[i18n.display_preference()])
+    elseif self.rendering[conversation.id].show_welcome_msg then
+        vim.api.nvim_buf_call(self.messages_exchange.buf, function()
+            local view = vim.fn.winsaveview()
+            vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
+            vim.api.nvim_buf_set_lines(self.messages_exchange.buf, 0, -1, false, {})
+            vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
+            vim.fn.winrestview(view)
+        end)
+        self.rendering[conversation.id].show_welcome_msg = false
+    end
+
+    -- Log.debug('render_conversation has_msg = {}', has_msg)
+    -- Log.debug('render_conversation streaming = {}', streaming)
+    Log.debug('render_conversation streaming content = {}', conversation.content.state.partial_answer)
+
+    if has_msg then
+        local last_msg = self.rendering[conversation.id].last_msg or 0
+        for i = last_msg + 1, #messages do
+            Log.debug('render_conversation i = {}', i)
+            local msg = messages[i]
+            if msg.author == 'user' then
+                if last_msg ~= 0 then
+                    __append_text('\n\n')
+                end
+                __append_text(__section(username, msg.content))
+                __append_text('\n')
+                self.rendering[conversation.id].last_msg = i
+                break
+            end
+        end
+    end
+
+    if streaming then
+        if not self.rendering[conversation.id].streaming then
+            __append_text(__section(bot_id))
+        end
+        self.rendering[conversation.id].streaming = true
+        self.rendering[conversation.id].cache_partial_answer = self.rendering[conversation.id].cache_partial_answer or {}
+        local cur = self.rendering[conversation.id].cache_partial_answer_cur or 1
+        -- 简单的 UUID 不能保证正确
+        -- 因为从 M 到 V 是异步的
+        self.rendering[conversation.id].cache_partial_answer[conversation.content.state.__uuid] = conversation.content.state.partial_answer
+        if not self.rendering[conversation.id].cache_partial_answer[cur] then
+            -- schedule next view
+        else
+            __append_text(self.rendering[conversation.id].cache_partial_answer[cur])
+            self.rendering[conversation.id].cache_partial_answer_cur = cur + 1
+        end
+    else
+        self.rendering[conversation.id].streaming = false
+        self.rendering[conversation.id].cache_partial_answer = {}
+        self.rendering[conversation.id].cache_partial_answer_cur = 1
+    end
+
+    -- modify buffer
+
+    if scroll_bottom then
+        vim.api.nvim_win_call(self.messages_exchange.win, function()
+            vim.api.nvim_win_set_cursor(self.messages_exchange.win, { vim.api.nvim_buf_line_count(self.messages_exchange.buf), 0 })
+        end)
+    end
 end
 
 function View:set_mode(mode)

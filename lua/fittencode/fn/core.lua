@@ -1,4 +1,4 @@
-local BIT = require('bit')
+local bit = require('bit')
 
 local function schedule_call(fx, ...)
     if fx then
@@ -134,9 +134,18 @@ end
 
 local function uuid_v4()
     local rnds = rng(16)
-    rnds[6] = BIT.bor(BIT.band(rnds[6], 15), 64)
-    rnds[8] = BIT.bor(BIT.band(rnds[8], 63), 128)
+    rnds[6] = bit.bor(bit.band(rnds[6], 15), 64)
+    rnds[8] = bit.bor(bit.band(rnds[8], 63), 128)
     return stringify(rnds)
+end
+
+local function uuid_v1()
+    local random = math.random
+    local template = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
+    return string.gsub(template, '[xy]', function(c)
+        local v = (c == 'x') and random(0, 0xf) or random(8, 0xb)
+        return string.format('%x', v)
+    end)
 end
 
 local function clamp(value, min, max)
@@ -223,6 +232,7 @@ return {
     fs_all_entries = fs_all_entries,
     slice = slice,
     uuid_v4 = uuid_v4,
+    uuid_v1 = uuid_v1,
     get_unique_identifier = get_unique_identifier,
     reverse = reverse,
     random = random,

@@ -322,7 +322,7 @@ function Controller:_resolve_variables(context, variables, event)
             if resolved_vars[v.name] == nil then
                 local s = self:_resolve_variables_internal(context, v, { messages = event.messages })
                 if not s then
-                    Log.warn('Failed to resolve variable {}', v.name)
+                    -- Log.warn('Failed to resolve variable {}', v.name)
                 end
                 resolved_vars[v.name] = s
             else
