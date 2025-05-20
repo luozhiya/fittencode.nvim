@@ -454,9 +454,9 @@ function M.normalize_range(buf, range)
     if range.end_.col == 2147483647 then
         range.end_.col = -1
     end
+    range:sort()
     range.start = M.round_start(buf, range.start)
     range.end_ = M.round_end(buf, range.end_)
-    range:sort()
     return range
 end
 
