@@ -155,7 +155,7 @@ function View:render_reference(conversation)
 end
 
 ---@param conversation FittenCode.Chat.ConversationState
-function View:render_conversation(conversation, clean_canvas)
+function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     assert(self.messages_exchange.buf)
     local api_key_manager = Client.get_api_key_manager()
     local username = api_key_manager:get_username()
@@ -211,7 +211,7 @@ function View:render_conversation(conversation, clean_canvas)
     if self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win) then
         local cursor = vim.api.nvim_win_get_cursor(self.messages_exchange.win)
         local height = vim.api.nvim_win_get_height(self.messages_exchange.win)
-        if cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) - height/3 then
+        if cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) - height / 3 then
             scroll_bottom = true
         end
     end
@@ -230,18 +230,20 @@ function View:render_conversation(conversation, clean_canvas)
         has_msg = true
     end
 
-    if not has_msg and not streaming and not self.rendering[conversation.id].show_welcome_msg then
-        self.rendering[conversation.id].show_welcome_msg = true
-        __set_text(welcome_message[i18n.display_preference()])
-    elseif self.rendering[conversation.id].show_welcome_msg then
-        vim.api.nvim_buf_call(self.messages_exchange.buf, function()
-            local view = vim.fn.winsaveview()
-            vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
-            vim.api.nvim_buf_set_lines(self.messages_exchange.buf, 0, -1, false, {})
-            vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
-            vim.fn.winrestview(view)
-        end)
-        self.rendering[conversation.id].show_welcome_msg = false
+    if not skip_welcome_msg then
+        if not has_msg and not streaming and not self.rendering[conversation.id].show_welcome_msg then
+            self.rendering[conversation.id].show_welcome_msg = true
+            __set_text(welcome_message[i18n.display_preference()])
+        elseif self.rendering[conversation.id].show_welcome_msg then
+            vim.api.nvim_buf_call(self.messages_exchange.buf, function()
+                local view = vim.fn.winsaveview()
+                vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
+                vim.api.nvim_buf_set_lines(self.messages_exchange.buf, 0, -1, false, {})
+                vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
+                vim.fn.winrestview(view)
+            end)
+            self.rendering[conversation.id].show_welcome_msg = false
+        end
     end
 
     -- Log.debug('render_conversation has_msg = {}', has_msg)
