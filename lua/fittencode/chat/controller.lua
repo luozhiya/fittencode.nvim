@@ -22,7 +22,7 @@ end
 
 ---@param controller FittenCode.Chat.Controller
 function Status:update(controller, event_type, data)
-    self.selected_conversation_id = controller.model.selected_conversation_id
+    self.selected_conversation_id = controller.model:get_selected_conversation_id()
     if event_type == 'conversation_updated' then
         assert(data)
         if not self.conversations[data.id] then
@@ -137,8 +137,8 @@ function Controller:receive_view_message(msg)
         self:update_view()
     elseif ty == 'send_message' then
         Log.debug('Received message id = {}', msg.data.id)
-        Log.debug('Selected conversation id = {}', self.model.selected_conversation_id)
-        assert(msg.data.id == self.model.selected_conversation_id)
+        Log.debug('Selected conversation id = {}', self.model:get_selected_conversation_id())
+        assert(msg.data.id == self.model:get_selected_conversation_id())
         ---@type FittenCode.Chat.Conversation
         local conversation = self.model:get_conversation_by_id(msg.data.id)
         if conversation then
@@ -213,18 +213,24 @@ function Controller:get_conversation_type(template_id)
     return self.conversation_types_provider:get_conversation_type(template_id)
 end
 
----@param id string
-function Controller:show_conversation(id)
-    ---@type FittenCode.Chat.Conversation
-    local conversation = self.model:get_conversation_by_id(id)
-    if conversation then
-        self.model.selected_conversation_id = id
-        self:show_view()
-    end
+function Controller:selected_conversation()
+    return self.model:get_conversation_by_id(self.model:get_selected_conversation_id())
 end
 
-function Controller:selected_conversation()
-    return self.model:get_conversation_by_id(self.model.selected_conversation_id)
+function Controller:list_conversations()
+    local list = self.model:list_conversations()
+    for _, conv in ipairs(list.conversations) do
+        conv.streaming = self.status_observer.conversations[conv.id] and self.status_observer.conversations[conv.id].stream or false
+    end
+    return list
+end
+
+function Controller:select_conversation(id)
+    local conversation = self.model:get_conversation_by_id(id)
+    if conversation then
+        self.model.select_conversation(id)
+        self:update_view(true)
+    end
 end
 
 function Controller:get_status()

@@ -39,6 +39,14 @@ function Model:add_and_select_conversation(e)
     self.selected_conversation_id = e.id
 end
 
+function Model:get_selected_conversation_id()
+    return self.selected_conversation_id
+end
+
+function Model:select_conversation(id)
+    self.selected_conversation_id = id
+end
+
 ---@param id string
 ---@return FittenCode.Chat.Conversation?
 function Model:get_conversation_by_id(id)
@@ -92,6 +100,26 @@ function Model:user_can_reply(id)
     local conversation = self:get_conversation_by_id(id)
     if not conversation then return false end
     return conversation:user_can_reply()
+end
+
+-- 获取 Conversation 列表
+function Model:list_conversations()
+    local result = {
+        selected_conversation_id = self.selected_conversation_id,
+    }
+    local conversations = {}
+    for _, conv in ipairs(self.conversations) do
+        local id = conv.id
+        local title = conv.title
+        local is_favorited = conv.is_favorited
+        conversations[#conversations + 1] = {
+            id = id,
+            title = title,
+            is_favorited = is_favorited,
+        }
+    end
+    result.conversations = conversations
+    return result
 end
 
 return Model

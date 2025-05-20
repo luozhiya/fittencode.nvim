@@ -412,6 +412,9 @@ function View:show()
 end
 
 function View:hide()
+    if not self:is_visible() then
+        return
+    end
     self:update_char_input(false)
     self:_destroy_win()
 end
