@@ -81,13 +81,15 @@ function State.get_state_from_model(model, selected_state)
         local sc = to_state(conv)
         if selected_state then
             if conv.id == model.selected_conversation_id then
-                sc.reference = {
-                    select_text = Fn.get_text(conv.context.buf, conv.context.selection.range),
-                    select_range = {
-                        name = Fn.filename(conv.context.buf),
-                        range = conv.context.selection.range
+                if conv.context.selection then
+                    sc.reference = {
+                        select_text = Fn.get_text(conv.context.buf, conv.context.selection.range),
+                        select_range = {
+                            name = Fn.filename(conv.context.buf),
+                            range = conv.context.selection.range
+                        }
                     }
-                }
+                end
             else
                 if sc.content.type == 'messageExchange' then
                     sc.content.messages = {}

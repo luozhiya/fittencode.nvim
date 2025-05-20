@@ -762,7 +762,8 @@ function p.statement(state)
                 stm = Ast:new(AstType.STM_SCHEME, state.lookahead.loc.start_row, a)
                 p.expect(state, 'TOKEN_IDENTIFIER') -- 读取识别符
                 p.expect(state, 'TOKEN_CLOSE')      -- 读取 }}
-                p.ignore_single_newline(state)
+                -- 如果 SCheme 后是换行符，则需要保留?
+                -- p.ignore_single_newline(state)
             end
         end
     elseif state.lookahead.type == 'TOKEN_IDENTIFIER' then
@@ -1072,7 +1073,11 @@ function c.compile_node(lastenv, node)
         return ''
     end
     if node.type == AstType.STM_TEXT then
-        return '___emit([[' .. node.value .. ']])\n'
+        if node.value == '\n' then
+            return '___emit("\\n")\n'
+        else
+            return '___emit([[' .. node.value .. ']])\n'
+        end
     elseif node.type == AstType.STM_EACH then
         local env = '___env_' .. random_name()
         local list_name = '___list_' .. random_name()
@@ -1108,6 +1113,9 @@ function c.compile_node(lastenv, node)
         code[#code + 1] = 'end\n'
         return table.concat(code)
     elseif node.type == AstType.STM_SCHEME then
+        --         return '___emit(' .. c.compile_node(lastenv, node.a) .. ')\n' .. '___emit([[\
+        -- \
+        -- ]])\n'
         return '___emit(' .. c.compile_node(lastenv, node.a) .. ')\n'
     elseif node.type == AstType.EXP_IDENTIFIER then
         return '___resolve_var(' .. lastenv .. ', \"' .. node.value .. '\") '
@@ -1219,10 +1227,10 @@ local fn = {
 ---@return string, string
 local function CompilerRunner(env, source)
     local env_name = '___env_' .. random_name()
-    Log.debug('opl env_name {}', env_name)
-    Log.debug('opl source {}', source)
+    -- Log.debug('opl env_name {}', env_name)
+    -- Log.debug('opl source {}', source)
     local ast = Parser:new(source):parse()
-    Log.debug('opl ast {}', ast)
+    -- Log.debug('opl ast {}', ast)
     local code = Compiler:new(env_name, ast):compile();
     Log.debug('opl code {}', code)
     return env_name, code
@@ -1283,6 +1291,52 @@ end
 
 -- sample()
 
+local function sample2()
+    local env = {
+        openFiles = {
+            { name = 'file1.txt', language = 'lua',    content = 'print("hello")' },
+            { name = 'file2.txt', language = 'python', content = 'print("hi")' },
+        },
+        selectedText = 'print("hello")',
+    }
+    local env_name, code = CompilerRunner(env, [[<|system|>
+Summarize the code at a high level (including goal and purpose) with an emphasis on its key functionality.
+<|end|>
+<|user|>
+Below is the user's code context, which may be needed for subsequent inquiries.
+## Code Summary
+## Open Files
+{{#each openFiles}}
+### File: {{name}}
+\`\`\`{{language}}
+{{content}}
+\`\`\`
+{{/each}}
+<|end|>
+<|assistant|>
+Understood, you can continue to enter your question.
+<|end|>
+<|user|>
+Break down and explain the following code in detail step by step, then summarize the code (emphasize its main function).
+
+## Selected Code
+\`\`\`
+{{selectedText}}
+\`\`\`
+<|end|>
+<|assistant|>]])
+    -- local env_name, code = CompilerRunner(env, read_file('source.txt'))
+    local stdout, stderr = CodeRunner(env_name, env, nil, code)
+    if stderr then
+        print(stderr)
+    else
+        print(stdout)
+    end
+    write_file('generated.lua', code)
+end
+
+-- sample2()
+
 local _internals = {
     Lexer = Lexer,
     LexerRunner = LexerRunner,
@@ -1306,6 +1360,7 @@ function M.run(env, template)
     if stderr then
         Log.error('Error evaluating template: {}', stderr)
     else
+        Log.debug('Template evaluation result: {}', stdout)
         return stdout
     end
 end

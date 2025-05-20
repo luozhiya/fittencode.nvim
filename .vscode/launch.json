@@ -16,7 +16,7 @@
             "name": "Lua Debugger",
             "type": "lua",
             "request": "launch",
-            "program": "${workspaceFolder}/lua/fittencode/open_promot_language/opl.lua"
+            "program": "${workspaceFolder}/lua/fittencode/opl.lua"
         }
     ]
 }

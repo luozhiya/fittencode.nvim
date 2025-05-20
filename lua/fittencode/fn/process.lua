@@ -72,6 +72,8 @@ local function run(process)
         kill(signal or 'sigterm')
     end
 
+    Log.debug('Starting process, command = {}, args = {}, options = {}', command, args, options)
+
     state.uv_process, state.pid = vim.uv.spawn(command, {
         args = args,
         stdio = { stdin, stdout, stderr },

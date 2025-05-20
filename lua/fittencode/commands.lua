@@ -84,49 +84,56 @@ local CHAT = {
     add_to_chat = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:handle_action('add_to_chat')
+            controller:add_to_chat()
         end
     },
     document_code = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:handle_action('document_code')
+            local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
+            controller:from_builtin_template_with_selection(TEMPLATE_CATEGORIES.DOCUMENT_CODE)
         end
     },
     edit_code = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:handle_action('edit_code')
+            local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
+            controller:from_builtin_template_with_selection(TEMPLATE_CATEGORIES.EDIT_CODE)
         end
     },
     explain_code = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:handle_action('explain_code')
+            local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
+            controller:from_builtin_template_with_selection(TEMPLATE_CATEGORIES.EXPLAIN_CODE)
         end
     },
     find_bugs = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:handle_action('find_bugs')
+            local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
+            controller:from_builtin_template_with_selection(TEMPLATE_CATEGORIES.FIND_BUGS)
         end
     },
     generate_unit_test = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:handle_action('generate_unit_test')
+            local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
+            controller:from_builtin_template_with_selection(TEMPLATE_CATEGORIES.GENERATE_UNIT_TEST)
         end
     },
     optimize_code = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:handle_action('optimize_code')
+            local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
+            controller:from_builtin_template_with_selection(TEMPLATE_CATEGORIES.OPTIMIZE_CODE)
         end
     },
     start_chat = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:handle_action('start_chat')
+            local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
+            controller:from_builtin_template_with_selection(TEMPLATE_CATEGORIES.CHAT)
         end
     }
 }

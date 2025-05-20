@@ -5,6 +5,7 @@ local Config = require('fittencode.config')
 local i18n = require('fittencode.i18n')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
+local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
 
 ---@class FittenCode.Chat.Status
 ---@field selected_conversation_id? string
@@ -54,15 +55,6 @@ function Controller:_initialize(options)
     self:add_observer(function(ctrl, event_type, data)
         self.status_observer:update(ctrl, event_type, data)
     end)
-    self.essential_builtins = {
-        'chat',
-        'document-code',
-        'edit-code',
-        'explain-code',
-        'find-bugs',
-        'generate-unit-test',
-        'optimize-code'
-    }
 end
 
 function Controller:add_observer(observer)
@@ -161,7 +153,7 @@ function Controller:create_conversation(template_id, show, mode, context)
     show = show or true
     mode = mode or 'chat'
 
-    Log.debug('Creating conversation with template_id = {}, show = {}, mode = {}, context = {}', template_id, show, mode, context)
+    -- Log.debug('Creating conversation with template_id = {}, show = {}, mode = {}, context = {}', template_id, show, mode, context)
 
     ---@type FittenCode.Chat.ConversationType
     local conversation_ty = self:get_conversation_type(template_id .. '-' .. i18n.display_preference())
@@ -239,7 +231,7 @@ function Controller:_resolve_variables_internal(context, variables, messages)
     end
     local switch = {
         ['context'] = function()
-            return { name = Fn.filename(buf), language = Fn.language_id(buf), content = Fn.content(buf) }
+            return { { name = Fn.filename(buf), language = Fn.language_id(buf), content = Fn.content(buf) } }
         end,
         ['constant'] = function()
             return variables.value
@@ -295,7 +287,7 @@ function Controller:_resolve_variables_internal(context, variables, messages)
         end,
         ['terminal-text'] = function()
             Log.error('Not implemented for terminal-text')
-        end
+        end,
     }
     return switch[variables.type]()
 end
@@ -338,7 +330,7 @@ local function get_range_from_visual_selection(buf)
     end
 end
 
-function Controller:builtin_template_action(type, mode)
+function Controller:from_builtin_template_with_selection(type, mode)
     mode = mode or 'chat'
     local context = {}
     if mode == 'chat' then
@@ -351,12 +343,20 @@ function Controller:builtin_template_action(type, mode)
         local selection = {}
         local range = get_range_from_visual_selection(buf)
         selection.range = Fn.normalize_range(buf, range)
-        local need_selected = { 'document-code', 'edit-code', 'explain-code', 'find-bugs', 'generate-unit-test', 'optimize-code' }
-        if need_selected[type] and not selection.range then
-            if type == 'edit-code' then
+        local REQUIRES_SELECTION = {
+            TEMPLATE_CATEGORIES.DOCUMENT_CODE,
+            TEMPLATE_CATEGORIES.EDIT_CODE,
+            TEMPLATE_CATEGORIES.EXPLAIN_CODE,
+            TEMPLATE_CATEGORIES.FIND_BUGS,
+            TEMPLATE_CATEGORIES.GENERATE_UNIT_TEST,
+            TEMPLATE_CATEGORIES.OPTIMIZE_CODE
+        }
+        if REQUIRES_SELECTION[type] and not selection.range then
+            if type == TEMPLATE_CATEGORIES.EDIT_CODE then
                 -- TODO: Tree-sitter supported
+                -- Fn.expand_range_ts(buf, curpos, 'function') -- 'class'
                 local curpos = Fn.position(win)
-                selection.range = Range.of(Position.of(curpos.row - 20, 0), Position.of(curpos.row + 20, -1))
+                selection.range = Fn.expand_range(buf, curpos, 20)
             else
                 Log.notify_error('Please select the code in the editor.')
                 return
@@ -381,28 +381,6 @@ function Controller:add_to_chat()
         return
     end
     conversation:add_to_chat(buf, range)
-end
-
-function Controller:handle_action(action)
-    if action == 'add_to_chat' then
-        self:add_to_chat()
-        return
-    end
-    local mapping = {
-        ['document_code'] = 'document-code',
-        ['edit_code'] = 'edit-code',
-        ['explain_code'] = 'explain-code',
-        ['find_bugs'] = 'find-bugs',
-        ['generate_unit_test'] = 'generate-unit-test',
-        ['optimize_code'] = 'optimize-code',
-        ['start_chat'] = 'chat',
-    }
-    local type = mapping[action]
-    if not type then
-        Log.error('Unsupported action: ' .. action)
-        return
-    end
-    self:builtin_template_action(type)
 end
 
 return Controller

@@ -1,4 +1,4 @@
-local LIST = {
+local builtin_templates = {
     chat = {
         'chat-en.rdt.md',
         'chat-zh-cn.rdt.md'
@@ -30,4 +30,17 @@ local LIST = {
     }
 }
 
-return LIST
+local TEMPLATE_CATEGORIES = {
+    CHAT = 'chat',
+    DOCUMENT_CODE = 'document-code',
+    EDIT_CODE = 'edit-code',
+    EXPLAIN_CODE = 'explain-code',
+    FIND_BUGS = 'find-bugs',
+    GENERATE_UNIT_TEST = 'generate-unit-test',
+    OPTIMIZE_CODE = 'optimize-code'
+}
+
+return {
+    builtin_templates = builtin_templates,
+    TEMPLATE_CATEGORIES = TEMPLATE_CATEGORIES
+}

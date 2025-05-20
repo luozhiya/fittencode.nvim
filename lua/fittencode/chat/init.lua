@@ -16,6 +16,7 @@ local ConversationTypesProvider = require('fittencode.chat.conversation_types_pr
 local View = require('fittencode.chat.view')
 local Extension = require('fittencode.client.extension')
 local Config = require('fittencode.config')
+local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
 
 ---@type FittenCode.Chat.Controller
 local controller
@@ -35,7 +36,7 @@ do
         controller:receive_view_message(message)
     end)
     conversation_types_provider:async_load_conversation_types():forward(function()
-        for _, id in ipairs(controller.essential_builtins) do
+        for _, id in ipairs(TEMPLATE_CATEGORIES) do
             assert(conversation_types_provider:get_conversation_type(id .. '-en'), 'Missing builtin conversation type: ' .. id .. '-en' .. '. Extension may not be installed correctly.')
         end
     end)
@@ -161,25 +162,24 @@ end
 -- Keymaps
 do
     local actions = {
-        document_code = 'x',
-        edit_code = { 'x', 'n' },
-        explain_code = 'x',
-        find_bugs = 'x',
-        generate_unit_test = 'x',
-        optimize_code = 'x',
-        start_chat = { 'x', 'n' },
+        add_to_chat = { mode = { 'x' } },
+        document_code = { mode = { 'x' }, template = TEMPLATE_CATEGORIES.DOCUMENT_CODE },
+        edit_code = { mode = { 'x', 'n' }, template = TEMPLATE_CATEGORIES.EDIT_CODE },
+        explain_code = { mode = { 'x' }, template = TEMPLATE_CATEGORIES.EXPLAIN_CODE },
+        find_bugs = { mode = { 'x' }, template = TEMPLATE_CATEGORIES.FIND_BUGS },
+        generate_unit_test = { mode = { 'x' }, template = TEMPLATE_CATEGORIES.GENERATE_UNIT_TEST },
+        optimize_code = { mode = { 'x' }, template = TEMPLATE_CATEGORIES.OPTIMIZE_CODE },
+        start_chat = { mode = { 'x', 'n' }, template = TEMPLATE_CATEGORIES.CHAT },
     }
     for k, v in pairs(actions) do
         local key = Config.keymaps.chat[k]
         if key and key ~= '' then
-            local modes
-            if type(v) ~= 'table' then
-                modes = { v }
-            else
-                modes = v
-            end
-            for _, mode in ipairs(modes) do
-                vim.keymap.set(mode, key, function() controller:handle_action(k) end, { noremap = true, silent = true })
+            for _, mode in ipairs(v.mode) do
+                if k == 'add_to_chat' then
+                    vim.keymap.set(mode, key, function() controller:add_to_chat() end, { noremap = true, silent = true })
+                else
+                    vim.keymap.set(mode, key, function() controller:from_builtin_template_with_selection(v.template) end, { noremap = true, silent = true })
+                end
             end
         end
     end

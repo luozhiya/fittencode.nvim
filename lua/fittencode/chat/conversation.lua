@@ -146,22 +146,19 @@ end
 
 ---@param content? string
 function Conversation:answer(content)
-    content = Client.remove_special_token(content)
-    if not content or content == '' then
-        return
-    end
     -- 中断之前的请求
     self:abort()
 
-    self:add_user_message(content)
+    if content then
+        content = Client.remove_special_token(content)
+        if not content or content == '' then
+            return
+        end
+        self:add_user_message(content)
+    end
 
     -- 发送请求
-    local request_handle, err = self:execute_chat({
-        workspace = Fn.startswith(content, '@workspace'),
-        _workspace = Fn.startswith(content, '@_workspace'),
-        enterprise_workspace = (Fn.startswith(content, '@_workspace(') or Fn.startswith(content, '@workspace(')) and Config.fitten.version == 'enterprise',
-        content = content,
-    })
+    local request_handle, err = self:execute_chat()
     if not request_handle then
         -- 因为某些原因，请求失败，需要恢复状态
         self:recovered_from_error(err)
@@ -201,84 +198,109 @@ local function validate_chunk(chunk)
     return true
 end
 
----@param options table
-function Conversation:execute_chat(options)
+local function is_rag_chat(self)
+    if #self.messages == 0 then
+        return false
+    end
+    local last_message = self.messages[#self.messages]
+    if not last_message.content then
+        return false
+    end
+    local content = last_message.content
+    local workspace = Fn.startswith(content, '@workspace')
+    local _workspace = Fn.startswith(content, '@_workspace')
+    local enterprise_workspace = (Fn.startswith(content, '@_workspace(') or Fn.startswith(content, '@workspace(')) and Config.server.fitten_version == 'enterprise'
+
     if Config.server.fitten_version == 'default' then
-        options.workspace = false
+        workspace = false
     end
-    if options._workspace then
-        options.workspace = true
+    if _workspace then
+        workspace = true
     end
-    local protocol = Protocal.Methods.chat_auth
-    if options.workspace then
-        if not options.enterprise_workspace then
+    if workspace then
+        if not enterprise_workspace then
             -- protocol = Protocal.Methods.rag_chat
-            return nil, 'RAG chat is not implemented yet'
+            -- return nil, 'RAG chat is not implemented yet'
+            return true
         end
-    else
-        ---@type FittenCode.Chat.Template.InitialMessage | FittenCode.Chat.Template.Response | nil
-        local ir = self.template.response
-        if self.messages[1] == nil then
-            ir = self.template.initialMessage
-        end
-        assert(ir)
+    end
 
-        local variables = self:resolve_variables_at_message_time()
-        Log.debug('Variables: {}', variables)
-        local retrieval_augmentation = ir.retrievalAugmentation
-        local evaluated = self:evaluate_template(ir.template, variables)
-        local api_key_manager = Client.get_api_key_manager()
+    return false
+end
 
-        local completion = {}
-        ---@type FittenCode.Protocol.Methods.ChatAuth.Body
-        local body = {
-            inputs = evaluated,
-            ft_token = api_key_manager:get_fitten_user_id() or '',
-            meta_datas = {
-                project_id = '',
-            }
+local function start_normal_chat(self)
+    local protocol = Protocal.Methods.chat_auth
+    ---@type FittenCode.Chat.Template.InitialMessage | FittenCode.Chat.Template.Response | nil
+    local ir = self.template.response
+    if self.messages[1] == nil then
+        ir = self.template.initialMessage
+    end
+    assert(ir)
+
+    local variables = self:resolve_variables_at_message_time()
+    Log.debug('Variables: {}', variables)
+    local retrieval_augmentation = ir.retrievalAugmentation
+    local evaluated = self:evaluate_template(ir.template, variables)
+    local api_key_manager = Client.get_api_key_manager()
+
+    local completion = {}
+    ---@type FittenCode.Protocol.Methods.ChatAuth.Body
+    local body = {
+        inputs = evaluated,
+        ft_token = api_key_manager:get_fitten_user_id() or '',
+        meta_datas = {
+            project_id = '',
         }
-        Log.debug('Evaluated body: {}', body)
+    }
+    Log.debug('Evaluated body: {}', body)
 
-        local res = Client.make_request(protocol, {
-            body = assert(vim.fn.json_encode(body)),
-        })
-        if not res then
-            return nil, 'Failed to create request chat'
-        end
+    local res = Client.make_request(protocol, {
+        body = assert(vim.fn.json_encode(body)),
+    })
+    if not res then
+        return nil, 'Failed to create request chat'
+    end
 
-        local err_chunks = {}
+    local err_chunks = {}
 
-        -- Start streaming
-        res.stream:on('data', function(stdout)
-            self.update_status({ id = self.id, stream = true })
-            local v = vim.split(stdout, '\n', { trimempty = true })
-            for _, line in ipairs(v) do
-                ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
-                local _, chunk = pcall(vim.fn.json_decode, line)
-                if _ and validate_chunk(chunk) then
-                    completion[#completion + 1] = chunk.delta
-                    self:handle_partial_completion(completion)
-                else
-                    -- 忽略非法的 chunk
-                    err_chunks[#err_chunks + 1] = line
-                    Log.debug('Invalid chunk: {} >> {}', line, chunk)
-                end
+    -- Start streaming
+    res.stream:on('data', function(stdout)
+        self.update_status({ id = self.id, stream = true })
+        local v = vim.split(stdout, '\n', { trimempty = true })
+        for _, line in ipairs(v) do
+            ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
+            local _, chunk = pcall(vim.fn.json_decode, line)
+            if _ and validate_chunk(chunk) then
+                completion[#completion + 1] = chunk.delta
+                self:handle_partial_completion(completion)
+            else
+                -- 忽略非法的 chunk
+                err_chunks[#err_chunks + 1] = line
+                Log.debug('Invalid chunk: {} >> {}', line, chunk)
             end
-        end)
+        end
+    end)
 
-        res:async():forward(function()
-            Log.debug('Request chat completed, completions: {}', completion)
-            self:handle_completion(completion)
-        end, function(err)
-            err.err_chunks = err_chunks
-            Log.debug('Recovered from error: {}', err)
-            self:recovered_from_error(err)
-        end):finally(function()
-            self.update_status({ id = self.id, stream = false })
-        end)
+    res:async():forward(function()
+        Log.debug('Request chat completed, completions: {}', completion)
+        self:handle_completion(completion)
+    end, function(err)
+        err.err_chunks = err_chunks
+        Log.debug('Recovered from error: {}', err)
+        self:recovered_from_error(err)
+    end):finally(function()
+        self.update_status({ id = self.id, stream = false })
+    end)
 
-        return res
+    return res
+end
+
+function Conversation:execute_chat()
+    local rag = is_rag_chat(self)
+    if rag then
+        -- start_rag_chat()
+    else
+        return start_normal_chat(self)
     end
 end
 

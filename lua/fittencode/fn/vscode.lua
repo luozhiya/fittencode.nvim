@@ -106,8 +106,8 @@ function M.line_at(buf, row)
     })
 end
 
----@return string?
-function M.content(buf)
+---@return string[]?
+function M.content_lines(buf)
     if not buf then
         return
     end
@@ -116,6 +116,14 @@ function M.content(buf)
         content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
     end)
     return content
+end
+
+function M.content(buf)
+    local lines = M.content_lines(buf)
+    if not lines then
+        return
+    end
+    return table.concat(lines, '\n')
 end
 
 function M.workspace(buf)

@@ -67,7 +67,7 @@ end
 
 function ConversationTypesProvider:load_builtin_templates()
     Log.debug('ConversationTypesProvider will load built-in templates based on extension URI: {}', self.extension_uri)
-    local list = require('fittencode.chat.builtin_templates')
+    local list = require('fittencode.chat.builtin_templates').builtin_templates
     for k, v in pairs(list) do
         for _, file in ipairs(v) do
             local ct = self:load_builtin_template(k, file)
