@@ -250,8 +250,8 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     -- Log.debug('render_conversation has_msg = {}', has_msg)
     -- Log.debug('render_conversation streaming = {}', streaming)
 
-    local last_msg = self.rendering[conversation.id].last_msg or 1
-    for i = last_msg, #messages do
+    local last_msg = self.rendering[conversation.id].last_msg or 0
+    for i = last_msg + 1, #messages do
         local msg = messages[i]
         if msg.author == 'user' then
             __set_text(__section(username, msg.content))
