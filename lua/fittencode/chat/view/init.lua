@@ -256,19 +256,23 @@ function View:render_conversation(conversation)
         if not self.rendering[conversation.id].streaming then
             local lines = vim.api.nvim_buf_get_lines(self.messages_exchange.buf, -1, -1, false)
             self.rendering[conversation.id].last_buffer_ending = {
-                row = vim.api.nvim_buf_line_count(self.messages_exchange.buf),
+                row = vim.api.nvim_buf_line_count(self.messages_exchange.buf) - 1,
                 col = #lines > 0 and lines[1]:len() or 0
             }
             __set_text(__section(bot_id))
+            self.rendering[conversation.id].start_streaming_pos = {
+                row = vim.api.nvim_buf_line_count(self.messages_exchange.buf) - 1,
+                col = #lines > 0 and lines[1]:len() or 0
+            }
             self.rendering[conversation.id].streaming = true
         end
-        __set_text(conversation.content.state.partial_answer, self.rendering[conversation.id].last_buffer_ending.row, self.rendering[conversation.id].last_buffer_ending.col, -1, -1)
+        __set_text(conversation.content.state.partial_answer, self.rendering[conversation.id].start_streaming_pos.row, self.rendering[conversation.id].start_streaming_pos.col, -1, -1)
     else
         if self.rendering[conversation.id].streaming then
             for i = #messages, 1, -1 do
                 local msg = messages[i]
                 if msg.author == 'bot' then
-                    __set_text(__section(bot_id, msg.content))
+                    __set_text(__section(bot_id, msg.content), self.rendering[conversation.id].last_buffer_ending.row, self.rendering[conversation.id].last_buffer_ending.col, -1, -1)
                     __set_text('\n')
                     break
                 end
