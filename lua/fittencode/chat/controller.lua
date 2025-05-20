@@ -116,6 +116,7 @@ end
 ---@param show boolean
 ---@return FittenCode.Chat.Conversation
 function Controller:add_and_show_conversation(conversation, show)
+    Log.debug('add_and_show_conversation conversation = {}, show = {}', conversation, show)
     self.model:add_and_select_conversation(conversation)
     self:update_view(show)
     if show then
@@ -135,6 +136,8 @@ function Controller:receive_view_message(msg)
     if ty == 'ping' then
         self:update_view()
     elseif ty == 'send_message' then
+        Log.debug('Received message id = {}', msg.data.id)
+        Log.debug('Selected conversation id = {}', self.model.selected_conversation_id)
         assert(msg.data.id == self.model.selected_conversation_id)
         ---@type FittenCode.Chat.Conversation
         local conversation = self.model:get_conversation_by_id(msg.data.id)

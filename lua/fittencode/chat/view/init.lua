@@ -123,19 +123,18 @@ function View:update(state)
         skip_welcome_msg = true
     end
     self.state = state
-    local id = state.selected_conversation_id
-    if not id then
+    if not self.state.selected_conversation_id then
         self:send_message({
             type = 'start_chat'
         })
         return
     end
     assert(self.messages_exchange.buf)
-    local conversation = state.conversations[id]
+    local conversation = state.conversations[self.state.selected_conversation_id]
     assert(conversation)
     self:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     self:render_reference(conversation)
-    self:update_char_input(conversation:user_can_reply(), id)
+    self:update_char_input(conversation:user_can_reply())
 end
 
 function View:render_reference(conversation)
@@ -251,18 +250,22 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     -- Log.debug('render_conversation has_msg = {}', has_msg)
     -- Log.debug('render_conversation streaming = {}', streaming)
 
-    if has_msg then
-        local last_msg = self.rendering[conversation.id].last_msg or 0
-        for i = last_msg + 1, #messages do
-            Log.debug('render_conversation i = {}', i)
-            local msg = messages[i]
-            if msg.author == 'user' then
-                __set_text(__section(username, msg.content))
+    local last_msg = self.rendering[conversation.id].last_msg or 1
+    for i = last_msg, #messages do
+        local msg = messages[i]
+        if msg.author == 'user' then
+            __set_text(__section(username, msg.content))
+            __set_text('\n')
+        elseif msg.author == 'bot' then
+            if i == #messages and not streaming and self.rendering[conversation.id].streaming then
+                __set_text(__section(bot_id, msg.content), self.rendering[conversation.id].last_buffer_ending.row, self.rendering[conversation.id].last_buffer_ending.col, -1, -1)
                 __set_text('\n')
-                self.rendering[conversation.id].last_msg = i
-                break
+            else
+                __set_text(__section(bot_id, msg.content))
+                __set_text('\n')
             end
         end
+        self.rendering[conversation.id].last_msg = i
     end
 
     if streaming then
@@ -281,17 +284,7 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
         end
         __set_text(conversation.content.state.partial_answer, self.rendering[conversation.id].start_streaming_pos.row, self.rendering[conversation.id].start_streaming_pos.col, -1, -1)
     else
-        if self.rendering[conversation.id].streaming then
-            for i = #messages, 1, -1 do
-                local msg = messages[i]
-                if msg.author == 'bot' then
-                    __set_text(__section(bot_id, msg.content), self.rendering[conversation.id].last_buffer_ending.row, self.rendering[conversation.id].last_buffer_ending.col, -1, -1)
-                    __set_text('\n')
-                    break
-                end
-            end
-            self.rendering[conversation.id].streaming = false
-        end
+        self.rendering[conversation.id].streaming = false
     end
 
     -- modify buffer
@@ -435,7 +428,7 @@ function View:register_message_receiver(receive_view_message)
     self.receive_view_message = receive_view_message
 end
 
-function View:update_char_input(enable, id)
+function View:update_char_input(enable)
     local is_enabled = false
     vim.api.nvim_buf_call(self.char_input.buf, function()
         is_enabled = vim.api.nvim_get_option_value('modifiable', { buf = self.char_input.buf })
@@ -443,8 +436,6 @@ function View:update_char_input(enable, id)
     if is_enabled == enable then
         return
     end
-
-    -- Log.debug('update_char_input enable = {}, id = {}', enable, id)
 
     if self.char_input.on_key_ns then
         vim.on_key(nil, self.char_input.on_key_ns)
@@ -486,7 +477,7 @@ function View:update_char_input(enable, id)
                     self:send_message({
                         type = 'send_message',
                         data = {
-                            id = id,
+                            id = self.state.selected_conversation_id,
                             message = message
                         }
                     })
