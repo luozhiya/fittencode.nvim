@@ -182,20 +182,11 @@ function View:render_conversation(conversation)
         return lines
     end
 
-    local function __append_text(content)
-        vim.api.nvim_buf_call(self.messages_exchange.buf, function()
-            local view = vim.fn.winsaveview()
-            vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
-            if type(content) == 'string' then
-                content = __split(content)
-            end
-            vim.api.nvim_buf_set_text(self.messages_exchange.buf, -1, -1, -1, -1, content)
-            vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
-            vim.fn.winrestview(view)
-        end)
-    end
-
     local function __replace_text(content, start_row, start_col, end_row, end_col)
+        start_row = start_row or -1
+        start_col = start_col or -1
+        end_row = end_row or -1
+        end_col = end_col or -1
         vim.api.nvim_buf_call(self.messages_exchange.buf, function()
             local view = vim.fn.winsaveview()
             vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
@@ -232,7 +223,7 @@ function View:render_conversation(conversation)
 
     if not has_msg and not streaming and not self.rendering[conversation.id].show_welcome_msg then
         self.rendering[conversation.id].show_welcome_msg = true
-        __append_text(welcome_message[i18n.display_preference()])
+        __replace_text(welcome_message[i18n.display_preference()])
     elseif self.rendering[conversation.id].show_welcome_msg then
         vim.api.nvim_buf_call(self.messages_exchange.buf, function()
             local view = vim.fn.winsaveview()
@@ -253,8 +244,8 @@ function View:render_conversation(conversation)
             Log.debug('render_conversation i = {}', i)
             local msg = messages[i]
             if msg.author == 'user' then
-                __append_text(__section(username, msg.content))
-                __append_text('\n')
+                __replace_text(__section(username, msg.content))
+                __replace_text('\n')
                 self.rendering[conversation.id].last_msg = i
                 break
             end
@@ -268,7 +259,7 @@ function View:render_conversation(conversation)
                 row = vim.api.nvim_buf_line_count(self.messages_exchange.buf),
                 col = #lines > 0 and lines[1]:len() or 0
             }
-            __append_text(__section(bot_id))
+            __replace_text(__section(bot_id))
             self.rendering[conversation.id].streaming = true
         end
         __replace_text(conversation.content.state.partial_answer, self.rendering[conversation.id].last_buffer_ending.row, self.rendering[conversation.id].last_buffer_ending.col, -1, -1)
@@ -277,8 +268,8 @@ function View:render_conversation(conversation)
             for i = #messages, 1, -1 do
                 local msg = messages[i]
                 if msg.author == 'bot' then
-                    __append_text(__section(bot_id, msg.content))
-                    __append_text('\n')
+                    __replace_text(__section(bot_id, msg.content))
+                    __replace_text('\n')
                     break
                 end
             end
