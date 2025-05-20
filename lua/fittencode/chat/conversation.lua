@@ -134,7 +134,7 @@ function Conversation:recovered_from_error(error)
 end
 
 function Conversation:abort()
-    Log.debug('Abort request chat = {}', self.request_handle)
+    -- Log.debug('Abort request chat = {}', self.request_handle)
     if self.request_handle then
         self.request_handle:abort()
         self.request_handle = nil
@@ -253,7 +253,7 @@ local function start_normal_chat(self)
             project_id = '',
         }
     }
-    Log.debug('Evaluated body: {}', body)
+    Log.debug('Evaluated HTTP body: {}', body)
 
     local res = Client.make_request(protocol, {
         body = assert(vim.fn.json_encode(body)),

@@ -58,14 +58,16 @@ end
 ---@param conversation FittenCode.Chat.Conversation
 ---@return FittenCode.Chat.ConversationState
 local function to_state(conversation)
-    local chat_interface = conversation.template.chatInterface or 'message-exchange'
+    -- local chat_interface = conversation.template.chatInterface or 'message-exchange'
+    -- Force to use message-exchange interface for now
+    local chat_interface = 'message-exchange'
     local cs = ConversationState.new(conversation)
     if chat_interface == 'message-exchange' then
         cs.content.type = 'messageExchange'
-        cs.content.messages = conversation:is_title_message() and Fn.slice(conversation.messages, 2) or conversation.messages
         cs.content.state = conversation.state
         cs.content.reference = conversation.reference
         cs.content.error = conversation.error
+        cs.content.messages = conversation:is_title_message() and Fn.slice(conversation.messages, 2) or conversation.messages
     end
     return cs
 end

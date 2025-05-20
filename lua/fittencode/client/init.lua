@@ -184,8 +184,8 @@ function M.make_request(protocol, options)
     -- 协议 Method 需要补齐服务器地址前缀
     if protocol.type == 'method' then
         local server = M.get_server_url()
-        Log.debug('Server URL: {}', server)
-        Log.debug('Evaluated URL: {}', evaluated.url)
+        -- Log.debug('Server URL: {}', server)
+        -- Log.debug('Evaluated URL: {}', evaluated.url)
         if evaluated.url:sub(1, 1) ~= '/' and server:sub(-1) ~= '/' then
             evaluated.url = '/' .. evaluated.url
         end

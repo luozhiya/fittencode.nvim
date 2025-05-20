@@ -178,6 +178,8 @@ function View:render_conversation(conversation)
     end
 
     local messages = conversation.content.messages
+    assert(messages)
+    -- Log.debug('render_conversation messages = {}', messages)
     for i, message in ipairs(messages) do
         local content = message.content
         local author = message.author
@@ -346,7 +348,7 @@ function View:update_char_input(enable, id)
         return
     end
 
-    Log.debug('update_char_input enable = {}, id = {}', enable, id)
+    -- Log.debug('update_char_input enable = {}, id = {}', enable, id)
 
     if self.char_input.on_key_ns then
         vim.on_key(nil, self.char_input.on_key_ns)
@@ -367,7 +369,7 @@ function View:update_char_input(enable, id)
             vim.schedule(function()
                 if vim.api.nvim_get_mode().mode == 'i' and vim.api.nvim_get_current_buf() == self.char_input.buf and key == enter_key then
                     vim.api.nvim_buf_call(self.char_input.buf, function()
-                        Log.debug('ChatInputReady')
+                        -- Log.debug('ChatInputReady')
                         vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.ChatInputReady' })
                     end)
                 end
@@ -377,10 +379,10 @@ function View:update_char_input(enable, id)
             pattern = 'FittenCode.ChatInputReady',
             once = true,
             callback = function()
-                Log.debug('Hit ChatInputReady')
+                -- Log.debug('Hit ChatInputReady')
                 vim.api.nvim_buf_call(self.char_input.buf, function()
                     local message = vim.api.nvim_buf_get_lines(self.char_input.buf, 0, -1, false)[1]
-                    Log.debug('send message: <{}>', message)
+                    -- Log.debug('send message: <{}>', message)
                     if message == '' then
                         return
                     end
