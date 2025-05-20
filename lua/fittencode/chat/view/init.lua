@@ -288,9 +288,11 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     -- modify buffer
 
     if scroll_bottom then
-        vim.api.nvim_win_call(self.messages_exchange.win, function()
-            vim.api.nvim_win_set_cursor(self.messages_exchange.win, { vim.api.nvim_buf_line_count(self.messages_exchange.buf), 0 })
-        end)
+        if self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win) then
+            vim.api.nvim_win_call(self.messages_exchange.win, function()
+                vim.api.nvim_win_set_cursor(self.messages_exchange.win, { vim.api.nvim_buf_line_count(self.messages_exchange.buf), 0 })
+            end)
+        end
     end
 end
 
