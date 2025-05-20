@@ -117,8 +117,10 @@ end
 function View:update(state)
     -- Log.debug('view update state = {}', state)
     local clean_canvas = false
+    local skip_welcome_msg = false
     if self.state and self.state.selected_conversation_id ~= state.selected_conversation_id then
         clean_canvas = true
+        skip_welcome_msg = true
     end
     self.state = state
     local id = state.selected_conversation_id
@@ -131,7 +133,7 @@ function View:update(state)
     assert(self.messages_exchange.buf)
     local conversation = state.conversations[id]
     assert(conversation)
-    self:render_conversation(conversation, clean_canvas)
+    self:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     self:render_reference(conversation)
     self:update_char_input(conversation:user_can_reply(), id)
 end
