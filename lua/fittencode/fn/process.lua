@@ -63,7 +63,7 @@ local function run(process)
         end
     end
 
-    function process.abort(signal)
+    function process.abort(self, signal)
         if process.aborted or not vim.uv.is_active(state.uv_process) then
             return
         end

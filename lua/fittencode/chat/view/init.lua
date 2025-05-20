@@ -203,6 +203,8 @@ function View:render_conversation(conversation)
         vim.api.nvim_buf_set_lines(self.messages_exchange.buf, 0, -1, false, lines)
         vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
         vim.fn.winrestview(view)
+        -- scroll to bottom
+        vim.api.nvim_command('normal! G')
     end)
 end
 
@@ -344,6 +346,8 @@ function View:update_char_input(enable, id)
         return
     end
 
+    Log.debug('update_char_input enable = {}, id = {}', enable, id)
+
     if self.char_input.on_key_ns then
         vim.on_key(nil, self.char_input.on_key_ns)
         self.char_input.on_key_ns = nil
@@ -363,17 +367,23 @@ function View:update_char_input(enable, id)
             vim.schedule(function()
                 if vim.api.nvim_get_mode().mode == 'i' and vim.api.nvim_get_current_buf() == self.char_input.buf and key == enter_key then
                     vim.api.nvim_buf_call(self.char_input.buf, function()
-                        vim.api.nvim_exec_autocmds('User', { pattern = 'fittencode.ChatInputReady', modeline = false })
+                        Log.debug('ChatInputReady')
+                        vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.ChatInputReady' })
                     end)
                 end
             end)
         end)
         self.char_input_autocmd = vim.api.nvim_create_autocmd('User', {
-            pattern = 'fittencode.ChatInputReady',
+            pattern = 'FittenCode.ChatInputReady',
             once = true,
             callback = function()
+                Log.debug('Hit ChatInputReady')
                 vim.api.nvim_buf_call(self.char_input.buf, function()
                     local message = vim.api.nvim_buf_get_lines(self.char_input.buf, 0, -1, false)[1]
+                    Log.debug('send message: <{}>', message)
+                    if message == '' then
+                        return
+                    end
                     message = self:with_fcps(message)
                     self:send_message({
                         type = 'send_message',

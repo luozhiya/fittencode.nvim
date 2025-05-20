@@ -137,6 +137,7 @@ function Controller:receive_view_message(msg)
         ---@type FittenCode.Chat.Conversation
         local conversation = self.model:get_conversation_by_id(msg.data.id)
         if conversation then
+            Log.debug('Answer the conversation with message = {}', msg.data.message)
             conversation:answer(msg.data.message)
         end
     elseif ty == 'start_chat' then
@@ -188,6 +189,7 @@ function Controller:create_conversation(template_id, show, mode, context)
     self:add_and_show_conversation(created_conversation.conversation, show)
 
     if created_conversation.should_immediately_answer then
+        Log.debug('Answer the conversation immediately')
         created_conversation.conversation:answer()
     end
 end
@@ -224,7 +226,7 @@ function Controller:get_status()
     return self.status_observer
 end
 
-function Controller:_resolve_variables_internal(context, variables, messages)
+function Controller:_resolve_variables_internal(context, variables, msgpack)
     local buf = context and context.buf or nil
     if not buf then
         return
@@ -237,7 +239,24 @@ function Controller:_resolve_variables_internal(context, variables, messages)
             return variables.value
         end,
         ['message'] = function()
-            return messages and messages[variables.index] and messages[variables.index][variables.property]
+            -- Log.debug('resolve_variables message, context = {}, variables = {}, msgpack = {}', context, variables, msgpack)
+            -- 0 > 1
+            -- -1 > #message
+            local messages = msgpack.messages
+            if not messages then
+                return
+            end
+            local index
+            if variables.index == 0 then
+                index = 1
+            elseif variables.index == -1 then
+                index = #messages
+            else
+                index = variables.index + 1
+            end
+            if index and messages and messages[index] then
+                return messages[index][variables.property]
+            end
         end,
         ['selected-text'] = function()
             return Fn.get_text(buf, context.selection.range)
@@ -292,24 +311,24 @@ function Controller:_resolve_variables_internal(context, variables, messages)
     return switch[variables.type]()
 end
 
-function Controller:_resolve_variables(context, variables, e)
-    local n = {
-        messages = e.messages,
+function Controller:_resolve_variables(context, variables, event)
+    local resolved_vars = {
+        messages = event.messages,
     }
     for _, v in ipairs(variables) do
-        if v.time == e.time then
-            if n[v.name] == nil then
-                local s = self:_resolve_variables_internal(context, v, { messages = e.messages })
+        if v.time == event.time then
+            if resolved_vars[v.name] == nil then
+                local s = self:_resolve_variables_internal(context, v, { messages = event.messages })
                 if not s then
                     Log.warn('Failed to resolve variable {}', v.name)
                 end
-                n[v.name] = s
+                resolved_vars[v.name] = s
             else
                 Log.warn('Variable {} is already defined', v.name)
             end
         end
     end
-    return n
+    return resolved_vars
 end
 
 local VCODES = { ['v'] = true, ['V'] = true, [vim.api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }

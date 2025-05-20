@@ -134,6 +134,7 @@ function Conversation:recovered_from_error(error)
 end
 
 function Conversation:abort()
+    Log.debug('Abort request chat = {}', self.request_handle)
     if self.request_handle then
         self.request_handle:abort()
         self.request_handle = nil

@@ -195,7 +195,6 @@ function M.fetch(url, options)
 
     local curl_command = 'curl'
 
-    -- 构建 curl 参数
     local args = {
         '-s', '-L', '--compressed',
         '-i',
@@ -212,7 +211,6 @@ function M.fetch(url, options)
         table.insert(args, tostring(options.timeout / 1000))
     end
 
-    -- 请求头处理
     if options.headers then
         for k, v in pairs(options.headers) do
             table.insert(args, '-H')
@@ -220,7 +218,6 @@ function M.fetch(url, options)
         end
     end
 
-    -- 请求体处理
     if options.body_file then
         table.insert(args, '--data-binary')
         table.insert(args, '@' .. options.body_file)
@@ -231,16 +228,13 @@ function M.fetch(url, options)
 
     table.insert(args, url)
 
-    -- 初始化收集器
     local stderr_buffer = {}
     local headers_processed = false
 
-    -- 使用新进程模块
     local process = Process.new(curl_command, args, {
         stdin = options.body
     })
 
-    -- 标准输出处理
     process:on('stdout', function(chunk)
         -- Log.debug('curl stdout: {}', chunk)
         if handle.aborted then return end
@@ -282,7 +276,6 @@ function M.fetch(url, options)
         end
     end)
 
-    -- 标准错误处理
     process:on('stderr', function(chunk)
         -- Log.debug('curl stderr: {}', chunk)
         if handle.aborted then
@@ -291,7 +284,6 @@ function M.fetch(url, options)
         table.insert(stderr_buffer, chunk)
     end)
 
-    -- 退出处理
     process:on('exit', function(code, signal)
         -- Log.debug('curl exit: {} {}', code, signal)
         if handle.aborted then
@@ -327,7 +319,6 @@ function M.fetch(url, options)
         end
     end)
 
-    -- 错误处理
     process:on('error', function(err)
         -- Log.error('curl error: {}', err)
         stream:_emit('error', {
@@ -336,7 +327,6 @@ function M.fetch(url, options)
         })
     end)
 
-    -- 中止处理
     process:on('abort', function()
         -- Log.debug('curl aborted')
         stream:_emit('abort', {
@@ -344,11 +334,11 @@ function M.fetch(url, options)
         })
     end)
 
-    -- 请求控制方法
-    handle.abort = function()
+    handle.abort = function(self)
         if not handle.aborted then
             handle.aborted = true
-            process.abort()
+            Log.debug('aborting curl process = {}', process)
+            pcall(function() process:abort() end)
         end
     end
 
@@ -380,7 +370,7 @@ function M.fetch(url, options)
 
     return {
         stream = stream,
-        abort = function(self) handle.abort() end,
+        abort = function(self) handle:abort() end,
         async = function(self) return async() end,
     }
 end
