@@ -116,6 +116,10 @@ end
 ---@param state FittenCode.Chat.State
 function View:update(state)
     -- Log.debug('view update state = {}', state)
+    local clean_canvas = false
+    if self.state and self.state.selected_conversation_id ~= state.selected_conversation_id then
+        clean_canvas = true
+    end
     self.state = state
     local id = state.selected_conversation_id
     if not id then
@@ -127,7 +131,7 @@ function View:update(state)
     assert(self.messages_exchange.buf)
     local conversation = state.conversations[id]
     assert(conversation)
-    self:render_conversation(conversation)
+    self:render_conversation(conversation, clean_canvas)
     self:render_reference(conversation)
     self:update_char_input(conversation:user_can_reply(), id)
 end
@@ -151,13 +155,11 @@ function View:render_reference(conversation)
 end
 
 ---@param conversation FittenCode.Chat.ConversationState
-function View:render_conversation(conversation)
+function View:render_conversation(conversation, clean_canvas)
     assert(self.messages_exchange.buf)
     local api_key_manager = Client.get_api_key_manager()
     local username = api_key_manager:get_username()
     local bot_id = 'Fitten Code'
-
-    self.rendering[conversation.id] = self.rendering[conversation.id] or {}
 
     local function __split(msg)
         local lines = {}
@@ -198,6 +200,12 @@ function View:render_conversation(conversation)
             vim.fn.winrestview(view)
         end)
     end
+
+    if clean_canvas then
+        __set_text({}, 0, 0, -1, -1)
+    end
+
+    self.rendering[conversation.id] = self.rendering[conversation.id] or {}
 
     local scroll_bottom = false
     if self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win) then
@@ -392,6 +400,9 @@ end
 
 function View:show()
     if not self.state or not self.state.selected_conversation_id then
+        return
+    end
+    if self:is_visible() then
         return
     end
     assert(self.state)

@@ -363,7 +363,7 @@ end
 
 ---@param msg table
 function Conversation:update_partial_bot_message(msg)
-    Log.debug('Update partial bot message: {}', msg.content)
+    -- Log.debug('Update partial bot message: {}', msg.content)
     self.state = {
         type = 'bot_answer_streaming',
         partial_answer = msg.content,
