@@ -367,7 +367,6 @@ function Conversation:update_partial_bot_message(msg)
     self.state = {
         type = 'bot_answer_streaming',
         partial_answer = msg.content,
-        __uuid = Fn.uuid_v1()
     }
     self.update_view()
 end
