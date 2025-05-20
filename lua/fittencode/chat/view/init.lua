@@ -255,16 +255,14 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
         local msg = messages[i]
         if msg.author == 'user' then
             __set_text(__section(username, msg.content))
-            __set_text('\n')
         elseif msg.author == 'bot' then
             if i == #messages and not streaming and self.rendering[conversation.id].streaming then
                 __set_text(__section(bot_id, msg.content), self.rendering[conversation.id].last_buffer_ending.row, self.rendering[conversation.id].last_buffer_ending.col, -1, -1)
-                __set_text('\n')
             else
                 __set_text(__section(bot_id, msg.content))
-                __set_text('\n')
             end
         end
+        __set_text('\n')
         self.rendering[conversation.id].last_msg = i
     end
 
