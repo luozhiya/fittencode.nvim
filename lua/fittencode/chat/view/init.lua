@@ -185,20 +185,31 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
         return lines
     end
 
+    local function __view_wrap(fn)
+        local view
+        if self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win) then
+            view = vim.fn.winsaveview()
+        end
+        fn()
+        if view then
+            vim.fn.winrestview(view)
+        end
+    end
+
     local function __set_text(content, start_row, start_col, end_row, end_col)
         start_row = start_row or -1
         start_col = start_col or -1
         end_row = end_row or -1
         end_col = end_col or -1
         vim.api.nvim_buf_call(self.messages_exchange.buf, function()
-            local view = vim.fn.winsaveview()
-            vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
-            if type(content) == 'string' then
-                content = __split(content)
-            end
-            vim.api.nvim_buf_set_text(self.messages_exchange.buf, start_row, start_col, end_row, end_col, content)
-            vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
-            vim.fn.winrestview(view)
+            __view_wrap(function()
+                vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
+                if type(content) == 'string' then
+                    content = __split(content)
+                end
+                vim.api.nvim_buf_set_text(self.messages_exchange.buf, start_row, start_col, end_row, end_col, content)
+                vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
+            end)
         end)
     end
 
@@ -237,11 +248,11 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
             __set_text(welcome_message[i18n.display_preference()])
         elseif self.rendering[conversation.id].show_welcome_msg then
             vim.api.nvim_buf_call(self.messages_exchange.buf, function()
-                local view = vim.fn.winsaveview()
-                vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
-                vim.api.nvim_buf_set_lines(self.messages_exchange.buf, 0, -1, false, {})
-                vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
-                vim.fn.winrestview(view)
+                __view_wrap(function()
+                    vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
+                    vim.api.nvim_buf_set_lines(self.messages_exchange.buf, 0, -1, false, {})
+                    vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
+                end)
             end)
             self.rendering[conversation.id].show_welcome_msg = false
         end
