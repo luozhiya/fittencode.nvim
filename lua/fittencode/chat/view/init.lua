@@ -233,7 +233,6 @@ function View:render_conversation(conversation)
 
     -- Log.debug('render_conversation has_msg = {}', has_msg)
     -- Log.debug('render_conversation streaming = {}', streaming)
-    Log.debug('render_conversation streaming content = {}', conversation.content.state.partial_answer)
 
     if has_msg then
         local last_msg = self.rendering[conversation.id].last_msg or 0
@@ -257,21 +256,13 @@ function View:render_conversation(conversation)
             __append_text(__section(bot_id))
         end
         self.rendering[conversation.id].streaming = true
-        self.rendering[conversation.id].cache_partial_answer = self.rendering[conversation.id].cache_partial_answer or {}
-        local cur = self.rendering[conversation.id].cache_partial_answer_cur or 1
-        -- 简单的 UUID 不能保证正确
-        -- 因为从 M 到 V 是异步的
-        self.rendering[conversation.id].cache_partial_answer[conversation.content.state.__uuid] = conversation.content.state.partial_answer
-        if not self.rendering[conversation.id].cache_partial_answer[cur] then
-            -- schedule next view
-        else
-            __append_text(self.rendering[conversation.id].cache_partial_answer[cur])
-            self.rendering[conversation.id].cache_partial_answer_cur = cur + 1
+        if conversation.content.state.__uuid ~= self.rendering[conversation.id].last_state_uuid then
+            self.rendering[conversation.id].last_state_uuid = conversation.content.state.__uuid
+            Log.debug('render_conversation streaming content = {}', conversation.content.state.partial_answer)
+            __append_text(conversation.content.state.partial_answer)
         end
     else
         self.rendering[conversation.id].streaming = false
-        self.rendering[conversation.id].cache_partial_answer = {}
-        self.rendering[conversation.id].cache_partial_answer_cur = 1
     end
 
     -- modify buffer

@@ -34,7 +34,6 @@ function Conversation:_initialize(options)
         type = 'user_can_reply',
     }
     self.request_handle = nil
-    self.partial_answer_index = 1
 end
 
 function Conversation:get_select_text()
@@ -283,9 +282,6 @@ local function start_normal_chat(self)
         end
     end)
 
-    -- recount
-    self.partial_answer_index = 1
-
     res:async():forward(function(response)
         Log.debug('Request chat completed, completions: {}', completion)
         self:handle_completion(completion, response)
@@ -364,19 +360,13 @@ function Conversation:handle_partial_completion(delta)
     end
 end
 
-local function get_partial_answer_index(self)
-    local index = self.partial_answer_index
-    self.partial_answer_index = index + 1
-    return index
-end
-
 ---@param msg table
 function Conversation:update_partial_bot_message(msg)
     Log.debug('Update partial bot message: {}', msg.content)
     self.state = {
         type = 'bot_answer_streaming',
         partial_answer = msg.content,
-        __uuid = get_partial_answer_index(self)
+        __uuid = Fn.uuid_v1()
     }
     self.update_view()
 end
