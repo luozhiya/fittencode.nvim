@@ -125,6 +125,7 @@ local function parse_timing(chunk)
         end
 
         -- 检查所有必需的计时字段是否存在且为数值类型
+        -- seconds
         local required_fields = {
             'namelookup', 'connect', 'appconnect',
             'pretransfer', 'starttransfer', 'total', 'size_download'
@@ -337,7 +338,7 @@ function M.fetch(url, options)
     handle.abort = function(self)
         if not handle.aborted then
             handle.aborted = true
-            Log.debug('aborting curl process = {}', process)
+            -- Log.debug('aborting curl process = {}', process)
             pcall(function() process:abort() end)
         end
     end

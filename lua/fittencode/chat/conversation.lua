@@ -282,9 +282,9 @@ local function start_normal_chat(self)
         end
     end)
 
-    res:async():forward(function()
+    res:async():forward(function(response)
         Log.debug('Request chat completed, completions: {}', completion)
-        self:handle_completion(completion)
+        self:handle_completion(completion, response)
     end, function(err)
         err.err_chunks = err_chunks
         Log.debug('Recovered from error: {}', err)
@@ -307,11 +307,16 @@ end
 
 ---@param completion table
 ---@param env table?
-function Conversation:handle_completion(completion, env)
+function Conversation:handle_completion(completion, response, env)
     completion = completion or {}
     local handler = (env and env.completion_handler) or { type = 'message' }
     local type = handler.type
     local content = table.concat(completion, '')
+
+    -- Additional timing information
+    local timing = response.timing()
+    content = content .. '\n\n' .. i18n.tr('> Timing: {} ms', timing.total)
+
     if type == 'update-temporary-editor' then
         Log.error('Not implemented for update-temporary-editor')
     elseif type == 'active-editor-diff' then
