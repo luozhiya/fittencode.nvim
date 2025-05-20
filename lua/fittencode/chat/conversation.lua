@@ -273,7 +273,7 @@ local function start_normal_chat(self)
             local _, chunk = pcall(vim.fn.json_decode, line)
             if _ and validate_chunk(chunk) then
                 completion[#completion + 1] = chunk.delta
-                self:handle_partial_completion(chunk.delta)
+                self:handle_partial_completion(completion)
             else
                 -- 忽略非法的 chunk
                 err_chunks[#err_chunks + 1] = line
@@ -344,17 +344,18 @@ function Conversation:add_bot_message(msg)
     self.update_view()
 end
 
----@param delta string
-function Conversation:handle_partial_completion(delta)
+---@param completion table<string>
+function Conversation:handle_partial_completion(completion)
     local handler = { type = 'message' }
     local type = handler.type
+    local content = table.concat(completion, '')
 
     if type == 'update-temporary-editor' then
         Log.error('Not implemented for update-temporary-editor')
     elseif type == 'active-editor-diff' then
         Log.error('Not implemented for active-editor-diff')
     elseif type == 'message' then
-        self:update_partial_bot_message({ content = delta })
+        self:update_partial_bot_message({ content = content })
     else
         Log.error('Unsupported property: ' .. type)
     end

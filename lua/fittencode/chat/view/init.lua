@@ -195,6 +195,19 @@ function View:render_conversation(conversation)
         end)
     end
 
+    local function __replace_text(content, start_row, start_col, end_row, end_col)
+        vim.api.nvim_buf_call(self.messages_exchange.buf, function()
+            local view = vim.fn.winsaveview()
+            vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
+            if type(content) == 'string' then
+                content = __split(content)
+            end
+            vim.api.nvim_buf_set_text(self.messages_exchange.buf, start_row, start_col, end_row, end_col, content)
+            vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
+            vim.fn.winrestview(view)
+        end)
+    end
+
     local scroll_bottom = false
     if self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win) then
         local cursor = vim.api.nvim_win_get_cursor(self.messages_exchange.win)
@@ -240,9 +253,6 @@ function View:render_conversation(conversation)
             Log.debug('render_conversation i = {}', i)
             local msg = messages[i]
             if msg.author == 'user' then
-                if last_msg ~= 0 then
-                    __append_text('\n\n')
-                end
                 __append_text(__section(username, msg.content))
                 __append_text('\n')
                 self.rendering[conversation.id].last_msg = i
@@ -253,16 +263,27 @@ function View:render_conversation(conversation)
 
     if streaming then
         if not self.rendering[conversation.id].streaming then
+            local lines = vim.api.nvim_buf_get_lines(self.messages_exchange.buf, -1, -1, false)
+            self.rendering[conversation.id].last_buffer_ending = {
+                row = vim.api.nvim_buf_line_count(self.messages_exchange.buf),
+                col = #lines > 0 and lines[1]:len() or 0
+            }
             __append_text(__section(bot_id))
+            self.rendering[conversation.id].streaming = true
         end
-        self.rendering[conversation.id].streaming = true
-        if conversation.content.state.__uuid ~= self.rendering[conversation.id].last_state_uuid then
-            self.rendering[conversation.id].last_state_uuid = conversation.content.state.__uuid
-            Log.debug('render_conversation streaming content = {}', conversation.content.state.partial_answer)
-            __append_text(conversation.content.state.partial_answer)
-        end
+        __replace_text(conversation.content.state.partial_answer, self.rendering[conversation.id].last_buffer_ending.row, self.rendering[conversation.id].last_buffer_ending.col, -1, -1)
     else
-        self.rendering[conversation.id].streaming = false
+        if self.rendering[conversation.id].streaming then
+            for i = #messages, 1, -1 do
+                local msg = messages[i]
+                if msg.author == 'bot' then
+                    __append_text(__section(bot_id, msg.content))
+                    __append_text('\n')
+                    break
+                end
+            end
+            self.rendering[conversation.id].streaming = false
+        end
     end
 
     -- modify buffer
