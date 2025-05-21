@@ -9,7 +9,7 @@ local M = {
     _context_threshold = DEFAULT_CONTEXT_THRESHOLD
 }
 
-local function _create_peek_range(buf, base_offset, direction)
+local function create_peek_range(buf, base_offset, direction)
     local total_chars = Fn.wordcount(buf).chars
     local peek_offset = Fn.clamp(
         base_offset + (direction * M._context_threshold),
@@ -24,12 +24,12 @@ local function _create_peek_range(buf, base_offset, direction)
     }
 end
 
-local function _retrieve_context_fragments(buf, start_pos, end_pos)
+local function retrieve_context_fragments(buf, start_pos, end_pos)
     local start_offset = assert(Fn.offset_at(buf, start_pos), 'Invalid start position')
     local end_offset = assert(Fn.offset_at(buf, end_pos), 'Invalid end position')
 
-    local prefix_range = _create_peek_range(buf, start_offset, -1)
-    local suffix_range = _create_peek_range(buf, end_offset, 1)
+    local prefix_range = create_peek_range(buf, start_offset, -1)
+    local suffix_range = create_peek_range(buf, end_offset, 1)
 
     return {
         prefix = Fn.get_text(buf, Range.new(prefix_range)),
@@ -44,7 +44,7 @@ function M.build_fim_context(buf, range_start, range_end, threshold)
     if threshold then
         M._context_threshold = threshold
     end
-    local prefix, suffix = _retrieve_context_fragments(buf, range_start, range_end)
+    local prefix, suffix = retrieve_context_fragments(buf, range_start, range_end)
     return table.concat({ prefix, FIM_MIDDLE_TOKEN, suffix })
 end
 

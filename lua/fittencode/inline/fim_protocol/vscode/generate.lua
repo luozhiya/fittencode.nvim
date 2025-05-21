@@ -18,26 +18,26 @@ local last = {
 
 local M = {}
 
-local function _clean_fim_pattern(text)
+local function clean_fim_pattern(text)
     return text and vim.fn.substitute(text, FIM_PATTERN, '', 'g') or ''
 end
 
-local function _get_full_text(buf)
+local function get_full_text(buf)
     local full_range = Range.new({
         start = Position.new({ row = 0, col = 0 }),
         end_ = Position.new({ row = -1, col = -1 })
     })
-    return _clean_fim_pattern(Fn.get_text(buf, full_range))
+    return clean_fim_pattern(Fn.get_text(buf, full_range))
 end
 
-local function _get_text_segment(buf, start_pos, end_pos)
-    return _clean_fim_pattern(Fn.get_text(buf, Range.new({
+local function get_text_segment(buf, start_pos, end_pos)
+    return clean_fim_pattern(Fn.get_text(buf, Range.new({
         start = start_pos,
         end_ = end_pos
     })))
 end
 
-local function _calculate_large_file_positions(buf, curoffset, charscount)
+local function calculate_large_file_positions(buf, curoffset, charscount)
     local curround = math.floor(curoffset / SAMPLE_SIZE) * SAMPLE_SIZE
     local curmax = charscount - math.floor((charscount - curoffset) / SAMPLE_SIZE) * SAMPLE_SIZE
     local suffixoffset = math.min(charscount, math.max(curmax + HALF_MAX, HALF_MAX * 2))
@@ -52,8 +52,8 @@ local function _calculate_large_file_positions(buf, curoffset, charscount)
     }
 end
 
-local function _small_file_context(buf, position)
-    local full_text = _get_full_text(buf)
+local function small_file_context(buf, position)
+    local full_text = get_full_text(buf)
     local prefix_end = Fn.offset_at(buf, position) or #full_text
     return {
         prefix = full_text:sub(1, prefix_end),
@@ -63,27 +63,27 @@ local function _small_file_context(buf, position)
     }
 end
 
-local function _large_file_context(buf, position, charscount)
+local function large_file_context(buf, position, charscount)
     local curoffset = Fn.offset_at(buf, position) or 0
-    local positions = _calculate_large_file_positions(buf, curoffset, charscount)
+    local positions = calculate_large_file_positions(buf, curoffset, charscount)
 
     return {
-        prefix = _get_text_segment(buf, positions.prefix_pos, positions.cur_pos),
-        suffix = _get_text_segment(buf, positions.cur_pos, positions.suffix_pos),
+        prefix = get_text_segment(buf, positions.prefix_pos, positions.cur_pos),
+        suffix = get_text_segment(buf, positions.cur_pos, positions.suffix_pos),
         prefixoffset = positions.prefixoffset,
         norangecount = charscount - (Fn.offset_at(buf, positions.suffix_pos) or 0)
     }
 end
 
-local function _compute_editor_context(buf, position)
+local function compute_editor_context(buf, position)
     local wordcount = Fn.wordcount(buf)
     assert(wordcount, 'Failed to get buffer word count')
 
     local ctx
     if wordcount.chars <= MAX_CHARS then
-        ctx = _small_file_context(buf, position)
+        ctx = small_file_context(buf, position)
     else
-        ctx = _large_file_context(buf, position, wordcount.chars)
+        ctx = large_file_context(buf, position, wordcount.chars)
     end
 
     ctx.prefix = ctx.prefix or ''
@@ -91,7 +91,7 @@ local function _compute_editor_context(buf, position)
     return ctx
 end
 
-local function _calculate_diff_meta(current_text, current_cipher, filename)
+local function calculate_diff_meta(current_text, current_cipher, filename)
     if filename ~= last.filename then
         last = {
             filename = filename,
@@ -120,7 +120,7 @@ local function _calculate_diff_meta(current_text, current_cipher, filename)
     return diff_meta
 end
 
-local function _recalculate_meta_datas(options)
+local function recalculate_meta_datas(options)
     local base_meta = {
         cpos = vim.str_utfindex(options.prefix, 'utf-16'),
         bcpos = #options.prefix,
@@ -138,15 +138,15 @@ local function _recalculate_meta_datas(options)
     }
     return vim.tbl_deep_extend('force',
         base_meta,
-        _calculate_diff_meta(options.text, options.ciphertext, options.filename)
+        calculate_diff_meta(options.text, options.ciphertext, options.filename)
     )
 end
 
-local function _generate_base_prompt(buf, position, options)
-    local ctx = _compute_editor_context(buf, position)
+local function generate_base_prompt(buf, position, options)
+    local ctx = compute_editor_context(buf, position)
     local text = ctx.prefix .. ctx.suffix
     local ciphertext = Hash.md5(text)
-    local meta_datas = _recalculate_meta_datas({
+    local meta_datas = recalculate_meta_datas({
         text = text,
         ciphertext = ciphertext,
         prefix = ctx.prefix,
@@ -164,7 +164,7 @@ end
 ---@param buf number
 ---@param position FittenCode.Position
 function M.generate(buf, position, options)
-    return _generate_base_prompt(buf, position, {
+    return generate_base_prompt(buf, position, {
         filename = options.filename
     })
 end

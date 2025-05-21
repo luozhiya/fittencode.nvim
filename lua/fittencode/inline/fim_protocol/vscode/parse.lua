@@ -3,7 +3,7 @@ local Context = require('fittencode.inline.fim_protocol.vscode.context')
 local END_OF_TEXT_TOKEN = '<|endoftext|>' -- 文本结束标记
 
 ---@private
-local function _build_completion_item(raw_response)
+local function build_completion_item(raw_response)
     local clean_text = vim.fn.substitute(
         raw_response.generated_text or '',
         END_OF_TEXT_TOKEN,
@@ -24,7 +24,7 @@ end
 local function parse(raw_response, options)
     if not raw_response then return end
 
-    local completions = _build_completion_item(raw_response)
+    local completions = build_completion_item(raw_response)
     if not completions then
         return
     end
