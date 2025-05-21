@@ -5,6 +5,9 @@ local Promise = require('fittencode.fn.promise')
 local Session = require('fittencode.inline.session')
 local i18n = require('fittencode.i18n')
 local Log = require('fittencode.log')
+local Definitions = require('fittencode.inline.definitions')
+
+local EVENT = Definitions.CONTROLLER_EVENT
 
 ---@class FittenCode.Inline.Status
 local Status = {}
@@ -117,9 +120,9 @@ function Controller.remove_observer(observer)
 end
 
 ---@param data? table Additional event data
-function Controller.notify_observers(event_type, data)
+function Controller.notify_observers(event, data)
     for _, observer in ipairs(self.observers) do
-        Fn.schedule_call(observer, self, event_type, data)
+        Fn.schedule_call(observer, self, event, data)
     end
 end
 
@@ -200,7 +203,7 @@ function Controller.triggering_completion(options)
         position = position,
         id = assert(Fn.uuid_v4()),
         triggering_completion = function(...) self.triggering_completion_auto(...) end,
-        update_inline_status = function(id) self.update_status(id) end,
+        update_status = function(data) self.notify_observers(EVENT.SESSION_UPDATED, data) end,
         set_interactive_session_debounced = self.set_interactive_session_debounced
     })
     self.sessions[session.id] = session
@@ -337,17 +340,6 @@ function Controller.get_status()
         return Status.new({ inline = 'idle', session = nil })
     else
         return Status.new({ inline = 'disabled', session = nil })
-    end
-end
-
-function Controller.update_status(id)
-    if id == self.selected_session_id then
-        self.notify_observers({
-            event = 'Inline.StatusUpdated',
-            data = {
-                status = self.get_status()
-            }
-        })
     end
 end
 

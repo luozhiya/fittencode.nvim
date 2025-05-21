@@ -55,11 +55,11 @@ function Controller:_initialize(options)
     self.conversation_types_provider = options.conversation_types_provider
     self.observers = {}
     self.status_observer = Status.new()
-    self:add_observer(function(ctrl, event_type, data)
-        self.status_observer:update(ctrl, event_type, data)
+    self:add_observer(function(ctrl, event, data)
+        self.status_observer:update(ctrl, event, data)
     end)
-    self:add_observer(function(ctrl, event_type, data)
-        if event_type ~= EVENT.CONVERSATION_UPDATED then return end
+    self:add_observer(function(ctrl, event, data)
+        if event ~= EVENT.CONVERSATION_UPDATED then return end
         local BUSY = {
             PHASE.EVALUATE_TEMPLATE,
             PHASE.MAKE_REQUEST,
