@@ -24,6 +24,43 @@ do
     self.no_more_suggestion = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
 end
 
+do
+    local function set_keymaps()
+        local maps = {
+            { 'Alt-\\', function() self.triggering_completion_by_shortcut() end },
+        }
+        for _, v in ipairs(maps) do
+            self.keymaps[#self.keymaps + 1] = vim.fn.maparg(v[1], 'i', false, true)
+            vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
+        end
+    end
+    set_keymaps()
+end
+
+do
+    -- 输入事件顺序
+    -- * vim.on_key
+    -- * CursorMovedI
+    -- * TextChangedI
+    -- 只在 'TextChangedI', 'CompleteChanged' 触发自动补全，和 VSCode 一致
+    -- 后续做撤销的话，还需注意撤销产生的事件，并进行过滤
+    local function set_autocmds()
+        local autocmds = {
+            { { 'TextChangedI', 'CompleteChanged' }, function(args) self.triggering_completion_auto({ event = args }) end },
+            { { 'CursorMovedI' },                    function(args) self.dismiss_suggestions({ event = args }) end },
+            { { 'InsertLeave' },                     function(args) self.dismiss_suggestions({ event = args }) end },
+            { { 'BufLeave' },                        function(args) self.dismiss_suggestions({ event = args }) end },
+        }
+        for _, autocmd in ipairs(autocmds) do
+            vim.api.nvim_create_autocmd(autocmd[1], {
+                group = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true }),
+                callback = autocmd[2],
+            })
+        end
+    end
+    set_autocmds()
+end
+
 function Controller.register_observer(observer)
     self.observers[observer.id] = observer
 end
@@ -116,19 +153,18 @@ function Controller.triggering_completion(options)
     end
 
     self.cleanup_sessions()
-    local session, completions = self.send_completions(buf, position, options.edit_mode)
+    local session, completions = self.send_completions(buf, position)
     self.sessions[session.id] = session
     self.selected_session_id = session.id
 
     return completions
 end
 
-function Controller.send_completions(buf, position, edit_mode)
+function Controller.send_completions(buf, position)
     local session = Session.new({
         buf = buf,
         position = position,
         id = assert(Fn.uuid_v4()),
-        edit_mode = edit_mode,
         triggering_completion = function(...) self.triggering_completion_auto(...) end,
         update_inline_status = function(id) self.update_status(id) end,
         set_interactive_session_debounced = self.set_interactive_session_debounced
@@ -152,27 +188,6 @@ function Controller.lazy_completion(key)
         return self.session():lazy_completion(key)
     end
     return false
-end
-
--- 输入事件顺序
--- * vim.on_key
--- * CursorMovedI
--- * TextChangedI
--- 只在 'TextChangedI', 'CompleteChanged' 触发自动补全，和 VSCode 一致
--- 后续做撤销的话，还需注意撤销产生的事件，并进行过滤
-function Controller.set_autocmds()
-    local autocmds = {
-        { { 'TextChangedI', 'CompleteChanged' }, function(args) self.triggering_completion_auto({ event = args }) end },
-        { { 'CursorMovedI' },                    function(args) self.dismiss_suggestions({ event = args }) end },
-        { { 'InsertLeave' },                     function(args) self.dismiss_suggestions({ event = args }) end },
-        { { 'BufLeave' },                        function(args) self.dismiss_suggestions({ event = args }) end },
-    }
-    for _, autocmd in ipairs(autocmds) do
-        vim.api.nvim_create_autocmd(autocmd[1], {
-            group = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true }),
-            callback = autocmd[2],
-        })
-    end
 end
 
 function Controller.is_enabled(buf)
@@ -246,16 +261,6 @@ function Controller.triggering_completion_auto(options)
         return
     end
     self.triggering_completion(options)
-end
-
-function Controller.set_keymaps()
-    local maps = {
-        { 'Alt-\\', function() self.triggering_completion_by_shortcut() end },
-    }
-    for _, v in ipairs(maps) do
-        self.keymaps[#self.keymaps + 1] = vim.fn.maparg(v[1], 'i', false, true)
-        vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
-    end
 end
 
 -- 这个比 VSCode 的情况更复杂，suffixes 支持多个（非当前 buf filetype 也可以）
