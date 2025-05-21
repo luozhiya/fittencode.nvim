@@ -6,6 +6,16 @@ local OPL = require('fittencode.opl')
 local Protocal = require('fittencode.client.protocol')
 local i18n = require('fittencode.i18n')
 
+local PHASE = {
+    INIT = 'init',
+    EVALUATE_TEMPLATE = 'evaluate_template',
+    MAKE_REQUEST = 'make_request',
+    STREAMING = 'streaming',
+    COMPLETED = 'completed',
+    ERROR = 'error',
+    IDLE = 'idle',
+}
+
 ---@class FittenCode.Chat.Conversation
 local Conversation = {}
 Conversation.__index = Conversation
@@ -35,6 +45,7 @@ function Conversation:_initialize(options)
         type = 'user_can_reply',
     }
     self.request_handle = nil
+    self.update_status({ id = self.id, phase = PHASE.INIT })
 end
 
 function Conversation:get_select_text()
@@ -239,11 +250,15 @@ local function start_normal_chat(self)
     end
     assert(ir)
 
+    self.update_status({ id = self.id, phase = PHASE.EVALUATE_TEMPLATE })
+
     local variables = self:resolve_variables_at_message_time()
     Log.debug('Variables: {}', variables)
     local retrieval_augmentation = ir.retrievalAugmentation
     local evaluated = self:evaluate_template(ir.template, variables)
     local api_key_manager = Client.get_api_key_manager()
+
+    self.update_status({ id = self.id, phase = PHASE.MAKE_REQUEST })
 
     local completion = {}
     ---@type FittenCode.Protocol.Methods.ChatAuth.Body
@@ -267,7 +282,7 @@ local function start_normal_chat(self)
 
     -- Start streaming
     res.stream:on('data', function(stdout)
-        self.update_status({ id = self.id, stream = true })
+        self.update_status({ id = self.id, phase = PHASE.STREAMING })
         local v = vim.split(stdout, '\n', { trimempty = true })
         for _, line in ipairs(v) do
             ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
@@ -286,12 +301,14 @@ local function start_normal_chat(self)
     res:async():forward(function(response)
         Log.debug('Request chat completed, completions: {}', completion)
         self:handle_completion(completion, response)
+        self.update_status({ id = self.id, phase = PHASE.COMPLETED })
     end, function(err)
         err.err_chunks = err_chunks
         Log.debug('Recovered from error: {}', err)
         self:recovered_from_error(err)
+        self.update_status({ id = self.id, phase = PHASE.ERROR })
     end):finally(function()
-        self.update_status({ id = self.id, stream = false })
+        -- TODO
     end)
 
     return res

@@ -6,6 +6,14 @@ local i18n = require('fittencode.i18n')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
+local PI = require('fittencode.chat.view.progress_indicator')
+
+local EventType = {
+    CONVERSATION_ADDED = 'conversation_added',
+    CONVERSATION_DELETED = 'conversation_deleted',
+    CONVERSATION_UPDATED = 'conversation_updated',
+    CONVERSATION_SELECTED = 'conversation_selected',
+}
 
 ---@class FittenCode.Chat.Status
 ---@field selected_conversation_id? string
@@ -23,13 +31,12 @@ end
 ---@param controller FittenCode.Chat.Controller
 function Status:update(controller, event_type, data)
     self.selected_conversation_id = controller.model:get_selected_conversation_id()
-    if event_type == 'conversation_updated' then
+    if event_type == EventType.CONVERSATION_UPDATED then
         assert(data)
         if not self.conversations[data.id] then
             self.conversations[data.id] = {}
         end
-        self.conversations[data.id].stream = data.stream
-        self.conversations[data.id].timestamp = data.timestamp
+        self.conversations[data.id] = data
     end
 end
 
@@ -55,6 +62,21 @@ function Controller:_initialize(options)
     self:add_observer(function(ctrl, event_type, data)
         self.status_observer:update(ctrl, event_type, data)
     end)
+    self:add_observer(function(ctrl, event_type, data)
+        if event_type ~= EventType.CONVERSATION_UPDATED then return end
+        local BUSY = {
+            'evaluate_template',
+            'make_request',
+            'streaming',
+        }
+        if self.view:is_visible() and data.id == self.model:get_selected_conversation_id() then
+            if vim.tbl_contains(BUSY, data.phase) then
+                PI.start()
+            else
+                PI.stop()
+            end
+        end
+    end)
 end
 
 function Controller:add_observer(observer)
@@ -69,13 +91,6 @@ function Controller:remove_observer(observer)
         end
     end
 end
-
-local EventType = {
-    CONVERSATION_ADDED = 'conversation_added',
-    CONVERSATION_DELETED = 'conversation_deleted',
-    VIEW_SHOWN = 'view_shown',
-    VIEW_HIDDEN = 'view_hidden',
-}
 
 ---@param data? table Additional event data
 function Controller:notify_observers(event_type, data)
@@ -107,12 +122,10 @@ end
 
 function Controller:show_view()
     self.view:show()
-    self:notify_observers(EventType.VIEW_SHOWN)
 end
 
 function Controller:hide_view()
     self.view:hide()
-    self:notify_observers(EventType.VIEW_HIDDEN)
 end
 
 function Controller:view_visible()
@@ -195,7 +208,7 @@ function Controller:create_conversation(template_id, show, mode, context)
         init_variables = variables,
         context = context,
         update_view = function(...) self:update_view(...) end,
-        update_status = function(data) self:notify_observers('conversation_updated', data) end,
+        update_status = function(data) self:notify_observers(EventType.CONVERSATION_UPDATED, data) end,
         resolve_variables = function(...) self:_resolve_variables(...) end,
     })
 
@@ -240,7 +253,7 @@ end
 function Controller:list_conversations()
     local list = self.model:list_conversations()
     for _, conv in ipairs(list.conversations) do
-        conv.streaming = self.status_observer.conversations[conv.id] and self.status_observer.conversations[conv.id].stream or false
+        conv.phase = self.status_observer.conversations[conv.id] and self.status_observer.conversations[conv.id].phase or 'unknown'
     end
     return list
 end
@@ -400,6 +413,8 @@ function Controller:from_builtin_template_with_selection(type, mode)
         local selection = {}
         local range = get_range_from_visual_selection(buf)
         selection.range = Fn.normalize_range(buf, range)
+        Log.debug('Get range from visual selection = {}', range)
+        Log.debug('Selected range = {}', selection.range)
         local REQUIRES_SELECTION = {
             TEMPLATE_CATEGORIES.DOCUMENT_CODE,
             TEMPLATE_CATEGORIES.EDIT_CODE,
@@ -408,7 +423,7 @@ function Controller:from_builtin_template_with_selection(type, mode)
             TEMPLATE_CATEGORIES.GENERATE_UNIT_TEST,
             TEMPLATE_CATEGORIES.OPTIMIZE_CODE
         }
-        if REQUIRES_SELECTION[type] and not selection.range then
+        if vim.tbl_contains(REQUIRES_SELECTION, type) and not selection.range then
             if type == TEMPLATE_CATEGORIES.EDIT_CODE then
                 -- TODO: Tree-sitter supported
                 -- Fn.expand_range_ts(buf, curpos, 'function') -- 'class'

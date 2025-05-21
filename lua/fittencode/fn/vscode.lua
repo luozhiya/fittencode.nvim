@@ -95,6 +95,10 @@ function M.line_at(buf, row)
     if not buf then
         return
     end
+    local line_count = M.line_count(buf)
+    if row < 0 or row >= line_count then
+        return
+    end
     local text
     vim.api.nvim_buf_call(buf, function()
         text = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
@@ -455,6 +459,19 @@ function M.normalize_range(buf, range)
         range.end_.col = -1
     end
     range:sort()
+
+    local start_line = M.line_at(buf, range.start.row)
+    if not start_line then
+        return
+    end
+    local end_line = M.line_at(buf, range.end_.row)
+    if not end_line then
+        return
+    end
+    if range.start.col > #start_line.text or range.end_.col > #end_line.text then
+        return
+    end
+
     range.start = M.round_start(buf, range.start)
     range.end_ = M.round_end(buf, range.end_)
     return range
