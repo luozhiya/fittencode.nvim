@@ -1,10 +1,8 @@
 local Hash = require('fittencode.fn.hash')
-local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local Config = require('fittencode.config')
-local LSP = require('fittencode.fn.lsp')
 
 -- 常量定义
 local MAX_CHARS = 220000 -- ~200KB
@@ -156,7 +154,6 @@ function M._generate_base_prompt(buf, position, options)
         prefix = ctx.prefix,
         suffix = ctx.suffix,
         filename = options.filename,
-        edit_mode = options.edit_mode,
         prefixoffset = ctx.prefixoffset,
         norangecount = ctx.norangecount
     })
@@ -168,10 +165,8 @@ end
 
 ---@param buf number
 ---@param position FittenCode.Position
----@return FittenCode.Concurrency.Promise
 function M.generate(buf, position, options)
     return self._generate_base_prompt(buf, position, {
-        edit_mode = options.edit_mode,
         filename = options.filename
     })
 end
