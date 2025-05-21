@@ -10,14 +10,13 @@ local HALF_MAX = MAX_CHARS / 2
 local SAMPLE_SIZE = 2000
 local FIM_PATTERN = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
-local M = {
-    last = {
-        filename = '',
-        text = '',
-        ciphertext = ''
-    },
+local last = {
+    filename = '',
+    text = '',
+    ciphertext = ''
 }
-local self = M
+
+local M = {}
 
 local function _clean_fim_pattern(text)
     return text and vim.fn.substitute(text, FIM_PATTERN, '', 'g') or ''
@@ -53,7 +52,7 @@ local function _calculate_large_file_positions(buf, curoffset, charscount)
     }
 end
 
-function M._small_file_context(buf, position)
+local function _small_file_context(buf, position)
     local full_text = _get_full_text(buf)
     local prefix_end = Fn.offset_at(buf, position) or #full_text
     return {
@@ -64,7 +63,7 @@ function M._small_file_context(buf, position)
     }
 end
 
-function M._large_file_context(buf, position, charscount)
+local function _large_file_context(buf, position, charscount)
     local curoffset = Fn.offset_at(buf, position) or 0
     local positions = _calculate_large_file_positions(buf, curoffset, charscount)
 
@@ -76,15 +75,15 @@ function M._large_file_context(buf, position, charscount)
     }
 end
 
-function M._compute_editor_context(buf, position)
+local function _compute_editor_context(buf, position)
     local wordcount = Fn.wordcount(buf)
     assert(wordcount, 'Failed to get buffer word count')
 
     local ctx
     if wordcount.chars <= MAX_CHARS then
-        ctx = self._small_file_context(buf, position)
+        ctx = _small_file_context(buf, position)
     else
-        ctx = self._large_file_context(buf, position, wordcount.chars)
+        ctx = _large_file_context(buf, position, wordcount.chars)
     end
 
     ctx.prefix = ctx.prefix or ''
@@ -92,9 +91,9 @@ function M._compute_editor_context(buf, position)
     return ctx
 end
 
-function M._calculate_diff_meta(current_text, current_cipher, filename)
-    if filename ~= self.last.filename then
-        self.last = {
+local function _calculate_diff_meta(current_text, current_cipher, filename)
+    if filename ~= last.filename then
+        last = {
             filename = filename,
             text = current_text,
             ciphertext = current_cipher
@@ -105,23 +104,23 @@ function M._calculate_diff_meta(current_text, current_cipher, filename)
         }
     end
 
-    local lbytes, rbytes = Fn.compare_bytes_order(self.last.text, current_text)
+    local lbytes, rbytes = Fn.compare_bytes_order(last.text, current_text)
     local diff_meta = {
         plen = vim.str_utfindex(current_text:sub(1, lbytes), 'utf-16'),
         slen = vim.str_utfindex(current_text:sub(-rbytes), 'utf-16'),
         bplen = lbytes,
         bslen = rbytes,
-        pmd5 = self.last.ciphertext,
+        pmd5 = last.ciphertext,
         diff = current_text:sub(lbytes + 1, #current_text - rbytes)
     }
 
-    self.last.text = current_text
-    self.last.ciphertext = current_cipher
+    last.text = current_text
+    last.ciphertext = current_cipher
 
     return diff_meta
 end
 
-function M._recalculate_meta_datas(options)
+local function _recalculate_meta_datas(options)
     local base_meta = {
         cpos = vim.str_utfindex(options.prefix, 'utf-16'),
         bcpos = #options.prefix,
@@ -139,16 +138,15 @@ function M._recalculate_meta_datas(options)
     }
     return vim.tbl_deep_extend('force',
         base_meta,
-        self._calculate_edit_meta(options),
-        self._calculate_diff_meta(options.text, options.ciphertext, options.filename)
+        _calculate_diff_meta(options.text, options.ciphertext, options.filename)
     )
 end
 
-function M._generate_base_prompt(buf, position, options)
-    local ctx = self._compute_editor_context(buf, position)
+local function _generate_base_prompt(buf, position, options)
+    local ctx = _compute_editor_context(buf, position)
     local text = ctx.prefix .. ctx.suffix
     local ciphertext = Hash.md5(text)
-    local meta_datas = self._recalculate_meta_datas({
+    local meta_datas = _recalculate_meta_datas({
         text = text,
         ciphertext = ciphertext,
         prefix = ctx.prefix,
@@ -166,7 +164,7 @@ end
 ---@param buf number
 ---@param position FittenCode.Position
 function M.generate(buf, position, options)
-    return self._generate_base_prompt(buf, position, {
+    return _generate_base_prompt(buf, position, {
         filename = options.filename
     })
 end
