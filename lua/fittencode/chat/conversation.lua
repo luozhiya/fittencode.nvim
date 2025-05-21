@@ -22,6 +22,7 @@ function Conversation:_initialize(options)
     self.id = options.id
     self.template = options.template
     self.init_variables = options.init_variables
+    self.template_id = options.template_id
     self.messages = {}
     self.update_view = Fn.schedule_call_wrap_fn(options.update_view)
     self.update_status = Fn.schedule_call_wrap_fn(options.update_status)

@@ -89,12 +89,19 @@ function Controller:generate_conversation_id()
     return Fn.random(36):sub(2, 10)
 end
 
-function Controller:update_view(force)
-    force = force or false
+function Controller:update_view(options)
+    options = options or {}
+    local force = options.force or false
+    local clean_canvas = options.clean_canvas or false
+    local skip_welcome_msg = options.skip_welcome_msg or false
     if self:view_visible() or force then
         local state = State.get_state_from_model(self.model)
         -- Log.debug('update_view state = {}', state)
-        self.view:update(state)
+        self.view:update({
+            state = state,
+            clean_canvas = clean_canvas,
+            skip_welcome_msg = skip_welcome_msg
+        })
     end
 end
 
@@ -118,7 +125,19 @@ end
 function Controller:add_and_show_conversation(conversation, show)
     Log.debug('add_and_show_conversation conversation = {}, show = {}', conversation, show)
     self.model:add_and_select_conversation(conversation)
-    self:update_view(show)
+    self.view:select_conversation(conversation.id)
+    local REQUIRES_SKIP_WELCOME = {
+        TEMPLATE_CATEGORIES.DOCUMENT_CODE,
+        TEMPLATE_CATEGORIES.EXPLAIN_CODE,
+        TEMPLATE_CATEGORIES.FIND_BUGS,
+        TEMPLATE_CATEGORIES.GENERATE_UNIT_TEST,
+        TEMPLATE_CATEGORIES.OPTIMIZE_CODE
+    }
+    local skip_welcome_msg = false
+    if vim.tbl_contains(REQUIRES_SKIP_WELCOME, conversation.template_id) then
+        skip_welcome_msg = true
+    end
+    self:update_view({ force = show, clean_canvas = true, skip_welcome_msg = skip_welcome_msg })
     if show then
         self:show_view()
     end
@@ -172,9 +191,10 @@ function Controller:create_conversation(template_id, show, mode, context)
     ---@type FittenCode.Chat.CreatedConversation
     local created_conversation = conversation_ty:create_conversation({
         conversation_id = self:generate_conversation_id(),
+        template_id = template_id,
         init_variables = variables,
         context = context,
-        update_view = function() self:update_view() end,
+        update_view = function(...) self:update_view(...) end,
         update_status = function(data) self:notify_observers('conversation_updated', data) end,
         resolve_variables = function(...) self:_resolve_variables(...) end,
     })
@@ -225,11 +245,18 @@ function Controller:list_conversations()
     return list
 end
 
-function Controller:select_conversation(id)
+function Controller:select_conversation(id, show)
+    if id == self.model:get_selected_conversation_id() then
+        return
+    end
     local conversation = self.model:get_conversation_by_id(id)
     if conversation then
-        self.model.select_conversation(id)
-        self:update_view(true)
+        self.model:select_conversation(id)
+        self.view:select_conversation(id)
+        self:update_view({ force = show, clean_canvas = true })
+        if show then
+            self:show_view()
+        end
     end
 end
 

@@ -21,17 +21,18 @@ function ConversationType:tags()
 end
 
 ---@return FittenCode.Chat.CreatedConversation
-function ConversationType:create_conversation(opts)
+function ConversationType:create_conversation(options)
     return {
         type = 'success',
         conversation = Conversation.new({
-            id = opts.conversation_id,
+            id = options.conversation_id,
+            template_id = options.template_id,
             template = self.template,
-            init_variables = opts.init_variables,
-            context = opts.context,
-            update_view = opts.update_view,
-            update_status = opts.update_status,
-            resolve_variables = opts.resolve_variables,
+            init_variables = options.init_variables,
+            context = options.context,
+            update_view = options.update_view,
+            update_status = options.update_status,
+            resolve_variables = options.resolve_variables,
         }),
         should_immediately_answer = self.template.initialMessage ~= nil
     }

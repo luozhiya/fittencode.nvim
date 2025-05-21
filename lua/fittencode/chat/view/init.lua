@@ -113,24 +113,28 @@ function View:_destroy_win()
     end
 end
 
----@param state FittenCode.Chat.State
-function View:update(state)
-    -- Log.debug('view update state = {}', state)
-    local clean_canvas = false
-    local skip_welcome_msg = false
-    if self.state and self.state.selected_conversation_id ~= state.selected_conversation_id then
-        clean_canvas = true
-        skip_welcome_msg = true
+function View:select_conversation(conversation_id)
+    if self.selected_conversation_id ~= conversation_id then
+        self.selected_conversation_id = conversation_id
     end
-    self.state = state
-    if not self.state.selected_conversation_id then
+end
+
+function View:update(options)
+    ---@type FittenCode.Chat.State
+    local state = options.state
+    local clean_canvas = options.clean_canvas or false
+    local skip_welcome_msg = options.skip_welcome_msg or false
+    if self.selected_conversation_id and self.selected_conversation_id ~= state.selected_conversation_id then
+        return
+    end
+    if not self.selected_conversation_id then
         self:send_message({
             type = 'start_chat'
         })
         return
     end
     assert(self.messages_exchange.buf)
-    local conversation = state.conversations[self.state.selected_conversation_id]
+    local conversation = state.conversations[self.selected_conversation_id]
     assert(conversation)
     self:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     self:render_reference(conversation)
@@ -407,14 +411,13 @@ local function _show_as_panel(self)
 end
 
 function View:show()
-    if not self.state or not self.state.selected_conversation_id then
+    if not self.selected_conversation_id then
         return
     end
     if self:is_visible() then
         return
     end
-    assert(self.state)
-    assert(self.state.selected_conversation_id)
+    assert(self.selected_conversation_id)
     assert(self.messages_exchange.buf)
     assert(self.char_input.buf)
     assert(self.reference.buf)
@@ -491,7 +494,7 @@ function View:update_char_input(enable)
                     self:send_message({
                         type = 'send_message',
                         data = {
-                            id = self.state.selected_conversation_id,
+                            id = self.selected_conversation_id,
                             message = message
                         }
                     })
