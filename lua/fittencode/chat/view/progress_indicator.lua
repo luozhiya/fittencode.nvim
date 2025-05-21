@@ -1,20 +1,29 @@
--- 进度指示器模块
 local M = {}
 
--- 配置选项
+local styles = {
+    spin = { '⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷' },
+    line = { '|', '/', '-', '\\' },
+    dots = { '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏' },
+    bars = { '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█', '▇', '▆', '▅', '▄', '▃', '▂', '▁' },
+    arrows = { '←', '↖', '↑', '↗', '→', '↘', '↓', '↙' },
+    pulse = { '█', '▓', '▒', '░', ' ', '░', '▒', '▓' },
+    bounce = { '●', '•', ' ', '•', '●' },
+    grow = { '.', '..', '...', '....', '.....', '......' },
+    blocks = { '□', '■' },
+    circle = { '○', '◔', '◑', '◕', '●' },
+}
+
 local config = {
-    frames = { '⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷' },
+    frames = styles.spin,
     update_interval = 150, -- 毫秒
     highlight_group = 'Comment',
 }
 
--- 状态变量
 local progress_timer = nil
 local current_frame = 1
 local progress_win = nil
 local progress_buf = nil
 
--- 更新进度指示器显示
 local function update_progress()
     if not progress_buf then
         return
@@ -24,37 +33,34 @@ local function update_progress()
     current_frame = (current_frame % #config.frames) + 1
 end
 
--- 显示进度指示器
 function M.start()
     if progress_timer then
         return
     end
 
-    -- 创建浮动窗口
     progress_buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_option(progress_buf, 'bufhidden', 'wipe')
+    vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = progress_buf })
 
-    local width = vim.api.nvim_get_option('columns')
-    local height = vim.api.nvim_get_option('lines')
+    local width = vim.api.nvim_get_option_value('columns', {})
+    local height = vim.api.nvim_get_option_value('lines', {})
 
     progress_win = vim.api.nvim_open_win(progress_buf, false, {
         relative = 'editor',
         width = 1,
         height = 1,
         row = height - 2,
-        col = width - 2,
+        col = 0,
         style = 'minimal',
         focusable = false,
     })
 
-    vim.api.nvim_win_set_option(progress_win, 'winblend', 0)
-    vim.api.nvim_win_set_option(progress_win, 'winhl', 'Normal:' .. config.highlight_group)
+    vim.api.nvim_set_option_value('winblend', 0, { win = progress_win })
+    vim.api.nvim_set_option_value('winhl', 'Normal:' .. config.highlight_group, { win = progress_win })
 
-    -- 启动计时器
     progress_timer = vim.loop.new_timer()
+    assert(progress_timer)
     progress_timer:start(0, config.update_interval, vim.schedule_wrap(update_progress))
 
-    -- 初始更新
     update_progress()
 end
 
@@ -85,8 +91,5 @@ function M.toggle()
         M.start()
     end
 end
-
--- function M.update(ctrl, event_type, data)
--- end
 
 return M

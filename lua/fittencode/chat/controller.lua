@@ -7,13 +7,8 @@ local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
 local PI = require('fittencode.chat.view.progress_indicator')
-
-local EventType = {
-    CONVERSATION_ADDED = 'conversation_added',
-    CONVERSATION_DELETED = 'conversation_deleted',
-    CONVERSATION_UPDATED = 'conversation_updated',
-    CONVERSATION_SELECTED = 'conversation_selected',
-}
+local PHASE = require('fittencode.chat.conversation_phase')
+local EVENT = require('fittencode.chat.controller_event')
 
 ---@class FittenCode.Chat.Status
 ---@field selected_conversation_id? string
@@ -31,7 +26,7 @@ end
 ---@param controller FittenCode.Chat.Controller
 function Status:update(controller, event_type, data)
     self.selected_conversation_id = controller.model:get_selected_conversation_id()
-    if event_type == EventType.CONVERSATION_UPDATED then
+    if event_type == EVENT.CONVERSATION_UPDATED then
         assert(data)
         if not self.conversations[data.id] then
             self.conversations[data.id] = {}
@@ -63,11 +58,11 @@ function Controller:_initialize(options)
         self.status_observer:update(ctrl, event_type, data)
     end)
     self:add_observer(function(ctrl, event_type, data)
-        if event_type ~= EventType.CONVERSATION_UPDATED then return end
+        if event_type ~= EVENT.CONVERSATION_UPDATED then return end
         local BUSY = {
-            'evaluate_template',
-            'make_request',
-            'streaming',
+            PHASE.EVALUATE_TEMPLATE,
+            PHASE.MAKE_REQUEST,
+            PHASE.STREAMING
         }
         if self.view:is_visible() and data.id == self.model:get_selected_conversation_id() then
             if vim.tbl_contains(BUSY, data.phase) then
@@ -154,7 +149,7 @@ function Controller:add_and_show_conversation(conversation, show)
     if show then
         self:show_view()
     end
-    self:notify_observers(EventType.CONVERSATION_ADDED, {
+    self:notify_observers(EVENT.CONVERSATION_ADDED, {
         conversation = conversation,
         show = show
     })
@@ -208,7 +203,7 @@ function Controller:create_conversation(template_id, show, mode, context)
         init_variables = variables,
         context = context,
         update_view = function(...) self:update_view(...) end,
-        update_status = function(data) self:notify_observers(EventType.CONVERSATION_UPDATED, data) end,
+        update_status = function(data) self:notify_observers(EVENT.CONVERSATION_UPDATED, data) end,
         resolve_variables = function(...) self:_resolve_variables(...) end,
     })
 
@@ -235,7 +230,7 @@ end
 function Controller:delete_conversation(id)
     self.model:delete_conversation(id)
     self:update_view()
-    self:notify_observers(EventType.CONVERSATION_DELETED, {
+    self:notify_observers(EVENT.CONVERSATION_DELETED, {
         conversation_id = id
     })
 end
