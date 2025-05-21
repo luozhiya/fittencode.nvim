@@ -3,13 +3,11 @@ local Context = require('fittencode.inline.fim_protocol.vscode.context')
 local END_OF_TEXT_TOKEN = '<|endoftext|>' -- 文本结束标记
 
 local M = {
-     _context_builder = Context.new()
+    _context_builder = Context.new()
 }
-local self = M
 
 ---@private
 local function _build_completion_item(raw_response)
-    -- 使用协议常量清理文本
     local clean_text = vim.fn.substitute(
         raw_response.generated_text or '',
         END_OF_TEXT_TOKEN,
@@ -18,7 +16,7 @@ local function _build_completion_item(raw_response)
     )
 
     if clean_text == '' and not raw_response.ex_msg then
-        return nil
+        return
     end
 
     local generated_text = clean_text .. (raw_response.ex_msg or '')
@@ -40,7 +38,7 @@ function M.parse(raw_response, options)
     return {
         request_id = raw_response.server_request_id or '',
         completions = completions,
-        context = self._context_builder:build_fim_context(
+        context = M._context_builder:build_fim_context(
             options.buf,
             options.ref_start:clone(),
             options.ref_end:clone()
