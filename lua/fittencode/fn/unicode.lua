@@ -721,20 +721,20 @@ function M.byte_to_utfindex(s, encoding, index)
                 if byte_index + 1 > #s then break end
                 seq_len = 2
                 local b2 = string.byte(s, byte_index + 1)
-                codepoint = (b1 & 0x1F) << 6 | (b2 & 0x3F)
+                codepoint = bit.bor(bit.lshift(bit.band(b1, 0x1F), 6), bit.band(b2, 0x3F))
             elseif b1 < 0xF0 then
                 if byte_index + 2 > #s then break end
                 seq_len = 3
                 local b2 = string.byte(s, byte_index + 1)
                 local b3 = string.byte(s, byte_index + 2)
-                codepoint = (b1 & 0x0F) << 12 | (b2 & 0x3F) << 6 | (b3 & 0x3F)
+                codepoint = bit.bor(bit.lshift(bit.band(b1, 0x0F), 12), bit.lshift(bit.band(b2, 0x3F), 6), bit.band(b3, 0x3F))
             else
                 if byte_index + 3 > #s then break end
                 seq_len = 4
                 local b2 = string.byte(s, byte_index + 1)
                 local b3 = string.byte(s, byte_index + 2)
                 local b4 = string.byte(s, byte_index + 3)
-                codepoint = (b1 & 0x07) << 18 | (b2 & 0x3F) << 12 | (b3 & 0x3F) << 6 | (b4 & 0x3F)
+                codepoint = bit.bor(bit.lshift(bit.band(b1, 0x07), 18), bit.lshift(bit.band(b2, 0x3F), 12), bit.lshift(bit.band(b3, 0x3F), 6), bit.band(b4, 0x3F))
             end
 
             -- Check if we're in the middle of this sequence
