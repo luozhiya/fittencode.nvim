@@ -489,3 +489,118 @@ function M.unicode_escape_sequence_to_utf8(str)
     end
     return M.surrogate_pairs_to_utf8(result)
 end
+
+function M.utf8_codepoint_at(s, pos)
+    if pos > #s then
+        return
+    end
+
+    local b1, b2, b3, b4 = s:byte(pos, pos + 3)
+    if not b1 then
+        return
+    end
+
+    local code = 0
+    if b1 <= 0x7F then
+        code = b1
+    elseif b1 <= 0xDF then
+        code = bit.bor(bit.lshift(b1, 6), b2)
+        pos = pos + 1
+    elseif b1 <= 0xEF then
+        code = bit.bor(bit.lshift(b1, 12), bit.lshift(b2, 6), b3)
+        pos = pos + 2
+    else
+        code = bit.bor(bit.lshift(b1, 18), bit.lshift(b2, 12), bit.lshift(b3, 6), b4)
+        pos = pos + 3
+    end
+
+    if code >= 0xD800 and code <= 0xDFFF then
+        return
+    end
+
+    return {
+        code = code,
+        next_pos = pos + 1
+    }
+end
+
+-- 将字节索引转换为 UTF-32 和 UTF-16 的索引
+-- @param s 输入的 UTF-8 字符串
+-- @param byte_idx 字节索引（0-based）
+-- @return utf32_index, utf16_index 或 nil
+function M.utf_index(s, byte_idx)
+    local utf32 = 0
+    local utf16 = 0
+    local pos = 1 -- Lua 字符串是 1-based
+
+    -- round byte_idx to byte beginning
+
+    while pos <= #s do
+        local current_byte = pos - 1 -- 转换为 0-based
+        if current_byte == byte_idx then
+            return {
+                utf32 = utf32,
+                utf16 = utf16
+            }
+        end
+
+        -- 获取当前字符的码点和下一个字符的位置
+        local info = M.utf8_codepoint_at(s, pos)
+        if not info then
+            return
+        end
+        local code = info.code
+        local next_pos = info.next_pos
+
+        -- 更新 UTF-16 索引
+        if code >= 0x10000 then
+            utf16 = utf16 + 2
+        else
+            utf16 = utf16 + 1
+        end
+
+        -- 更新 UTF-32 索引
+        utf32 = utf32 + 1
+        pos = next_pos
+    end
+end
+
+-- 将 UTF-32 或 UTF-16 索引转换为字节索引
+-- @param s 输入的 UTF-8 字符串
+-- @param index 目标索引（0-based）
+-- @param encoding 'utf32' 或 'utf16'
+-- @return 字节索引（0-based）或 nil
+function M.byteindex(s, index, encoding)
+    if encoding == 'utf32' then
+        -- 直接通过 UTF-8 库获取第 (index+1) 个字符的位置
+        local pos = utf8.offset(s, index + 1) -- utf8.offset 是 1-based
+        return pos and (pos - 1) or nil       -- 转换为 0-based
+    elseif encoding == 'utf16' then
+        local sum_units = 0
+        local pos = 1 -- Lua 字符串是 1-based
+
+        while pos <= #s do
+            local current_byte = pos - 1 -- 转换为 0-based
+            local info = M.utf8_codepoint_at(s, pos)
+            if not info then
+                return
+            end
+            local code = info.code
+            local next_pos = info.next_pos
+
+            -- 计算当前字符占用的 UTF-16 代码单元数
+            local units = (code >= 0x10000) and 2 or 1
+
+            -- 如果当前累计单元数超过目标索引，返回当前字符的起始字节位置
+            if sum_units + units > index then
+                return current_byte
+            end
+
+            sum_units = sum_units + units
+            pos = next_pos
+        end
+        return nil -- 索引超出范围
+    elseif encoding == 'utf8' then
+        return index
+    end
+end
