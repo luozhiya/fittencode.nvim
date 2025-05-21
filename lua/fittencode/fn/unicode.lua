@@ -52,7 +52,7 @@ function M.utf8_bytes(byte)
         return 4
     else
         -- return 1 -- 处理错误：当作单字节处理
-        error("Invalid UTF-8 byte sequence: invalid first byte")
+        error('Invalid UTF-8 byte sequence: invalid first byte')
     end
 end
 
@@ -61,7 +61,7 @@ end
 ---@return number
 function M.utf8_bytes_by_codepoint(codepoint)
     if codepoint < 0 then
-        error("Invalid Unicode codepoint: negative value")
+        error('Invalid Unicode codepoint: negative value')
     elseif codepoint <= 0x7F then
         return 1
     elseif codepoint <= 0x7FF then
@@ -71,20 +71,17 @@ function M.utf8_bytes_by_codepoint(codepoint)
     elseif codepoint <= 0x10FFFF then
         return 4
     else
-        error("Invalid Unicode codepoint: out of range")
+        error('Invalid Unicode codepoint: out of range')
     end
-end
-
----@param format string
-local function validate_format(format)
-    assert(format == FORMAT.BYTE or format == FORMAT.UNIT, 'Invalid format: '.. format)
 end
 
 ---@param codepoint number
-local function validate_codepoint(codepoint)
+---@return boolean
+function M.validate_codepoint(codepoint)
     if codepoint < 0 or codepoint > 0x10FFFF or (codepoint >= 0xD800 and codepoint <= 0xDFFF) then
-        error(string.format('Invalid Unicode codepoint: 0x%X', codepoint))
+        return false
     end
+    return true
 end
 
 -- 将 UTF-8 字节序列转换为 Unicode 码点序列
@@ -119,7 +116,6 @@ end
 function M.codepoints_to_utf8(codepoints)
     local bytes = {}
     for _, cp in ipairs(codepoints) do
-        validate_codepoint(cp)
         if cp < 0x80 then
             table.insert(bytes, string.char(cp))
         elseif cp < 0x800 then
@@ -179,8 +175,6 @@ function M.surrogate_pairs_to_utf8(surrogate_pairs)
     for _, pair in ipairs(surrogate_pairs) do
         if #pair == 2 then
             local high, low = table.unpack(pair)
-            validate_codepoint(high)
-            validate_codepoint(low)
             if high < 0xD800 or high > 0xDBFF or low < 0xDC00 or low > 0xDFFF then
                 error('Invalid surrogate pair')
             end
@@ -189,7 +183,6 @@ function M.surrogate_pairs_to_utf8(surrogate_pairs)
                 bit.band(low, 0x3FF)
         else
             local cp = pair[1]
-            validate_codepoint(cp)
             codepoints[#codepoints + 1] = cp
         end
     end
@@ -204,7 +197,6 @@ end
 function M.utf8_to_utf16(input, endian, format)
     endian = endian or ENDIAN.LE
     format = format or FORMAT.BYTE
-    validate_format(format)
 
     local units = {}
     for _, cp in ipairs(M.utf8_to_codepoints(input)) do
@@ -246,7 +238,6 @@ end
 function M.utf8_to_utf32(input, endian, format)
     endian = endian or ENDIAN.LE
     format = format or FORMAT.BYTE
-    validate_format(format)
 
     local codepoints = M.utf8_to_codepoints(input)
 
@@ -255,7 +246,6 @@ function M.utf8_to_utf32(input, endian, format)
     else
         local bytes = {}
         for _, cp in ipairs(codepoints) do
-            validate_codepoint(cp)
             if endian == ENDIAN.LE then
                 bytes[#bytes + 1] = string.char(
                     bit.band(bit.rshift(cp, 24), 0xFF),
@@ -282,7 +272,6 @@ end
 ---@param input_format string
 function M.utf16_to_utf8(input, endian, input_format)
     input_format = input_format or FORMAT.BYTE
-    validate_format(input_format)
 
     -- UTF-16 字节序列转换为代理对序列
     local units = {}
@@ -332,13 +321,12 @@ end
 ---@return string
 function M.utf32_to_utf8(input, endian, input_format)
     input_format = input_format or FORMAT.BYTE
-    validate_format(input_format)
 
     local codepoints = {}
     if input_format == FORMAT.BYTE then
         local i, len = 1, #input
         while i <= len do
-            assert(type(input) =='string')
+            assert(type(input) == 'string')
             local b1, b2, b3, b4 = input:byte(i, i + 3)
             local cp
             if endian == ENDIAN.LE then
@@ -356,14 +344,12 @@ function M.utf32_to_utf8(input, endian, input_format)
                     b1
                 )
             end
-            validate_codepoint(cp)
             codepoints[#codepoints + 1] = cp
             i = i + 4
         end
     else
         assert(type(input) == 'table')
         for _, cp in ipairs(input) do
-            validate_codepoint(cp)
             codepoints[#codepoints + 1] = cp
         end
     end
@@ -436,7 +422,6 @@ function M.utf32_bytes_to_units(bytes, endian)
                 b1
             )
         end
-        validate_codepoint(cp)
         table.insert(units, cp)
         i = i + 4
     end
@@ -465,9 +450,6 @@ function M.is_chinese(codepoint)
 end
 
 function M.utf8_to_unicode_escape_sequence(str)
-    if not M.validate_utf8(str) then
-        return
-    end
     local surrogate_pairs = M.utf8_to_surrogate_pairs(str)
     local result = {}
     for i, pair in ipairs(surrogate_pairs) do
@@ -505,9 +487,5 @@ function M.unicode_escape_sequence_to_utf8(str)
             end
         end
     end
-    local utf8_str = M.surrogate_pairs_to_utf8(result)
-    if not M.validate_utf8(utf8_str) then
-        return
-    end
-    return utf8_str
+    return M.surrogate_pairs_to_utf8(result)
 end
