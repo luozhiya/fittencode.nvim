@@ -1,3 +1,0 @@
-local HistoryLogger = {}
-
-return HistoryLogger
