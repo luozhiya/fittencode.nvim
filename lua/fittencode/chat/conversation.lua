@@ -186,7 +186,7 @@ function Conversation:add_user_message(content, bot_action)
         type = VIEW_STATES.WAITING_FOR_BOT_ANSWER,
         bot_action = bot_action,
     }
-    self.update_view({ skip_welcome_msg = true })
+    self.update_view()
 end
 
 local function validate_chunk(chunk)
@@ -352,7 +352,7 @@ function Conversation:add_bot_message(msg)
         type = VIEW_STATES.USER_CAN_REPLY,
         response_placeholder = msg.response_placeholder
     }
-    self.update_view({ skip_welcome_msg = true })
+    self.update_view()
 end
 
 ---@param completion table<string>
