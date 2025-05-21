@@ -1,42 +1,16 @@
 local Client = require('fittencode.client')
 local Config = require('fittencode.config')
-local Fn = require('fittencode.functional.fn')
-local Promise = require('fittencode.concurrency.promise')
+local Fn = require('fittencode.fn')
+local Promise = require('fittencode.fn.promise')
 local Session = require('fittencode.inline.session')
-local Editor = require('fittencode.fn.editor')
-local Translate = require('fittencode.translations')
+local i18n = require('fittencode.i18n')
 local Log = require('fittencode.log')
-local Model = require('fittencode.inline.model')
-local View = require('fittencode.inline.view')
-local Position = require('fittencode.fn.position')
-local ProjectCompletionService = require('fittencode.inline.project_completion.service')
 local Status = require('fittencode.inline.status')
-local NotifyLogin = require('fittencode.client.notify_login')
-local PromptGenerator = require('fittencode.inline.fim_protocol.context.comprehensive.generator')
-local CompletionStatistics = require('fittencode.inline.completion_statistics')
 
----@class FittenCode.Inline.Controller
 local Controller = {}
-Controller.__index = Controller
+local self = Controller
 
----@return FittenCode.Inline.Controller
-function Controller.new(options)
-    local self = setmetatable({}, Controller)
-    self:_initialize(options)
-    return self
-end
-
-function Controller:_initialize(options)
-    options = options or {}
-    self.project_completion_service = ProjectCompletionService.new()
-    self.prompt_generator = PromptGenerator.new({
-        project_completion_service = self.project_completion_service
-    })
-    -- self.completion_statistics = CompletionStatistics.new({
-    --     get_project_completion_chosen = function()
-    --         return self.project_completion_service:get_chosen()
-    --     end,
-    -- })
+do
     self.observers = {}
     self.sessions = {}
     self.filter_events = {}
@@ -46,71 +20,46 @@ function Controller:_initialize(options)
         end
     end, Config.delay_completion.delaytime)
     self.keymaps = {}
-    self.extmark_ids = {
-        no_more_suggestion = {}
-    }
-    self.augroups = {
-        completion = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true }),
-        no_more_suggestion = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true })
-    }
-    self.ns_ids = {
-        virt_text = vim.api.nvim_create_namespace('Fittencode.Inline.VirtText'),
-        on_key = vim.api.nvim_create_namespace('Fittencode.Inline.OnKey')
-    }
-    self:set_suffix_permissions(Config.inline_completion.enable)
+    self.set_suffix_permissions(Config.inline_completion.enable)
+    self.no_more_suggestion = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
 end
 
-function Controller:destroy()
-    self:set_suffix_permissions(false)
-    for _, id in pairs(self.augroups) do
-        vim.api.nvim_del_augroup(id)
-    end
-    self.augroups = {}
-    self:cleanup_sessions()
-end
-
--- 外界可以通过注册观察者来监听 InlineController 的事件
--- * `Inline.StatusUpdated`
----@param observer FittenCode.Inline.Controller.Observer
-function Controller:register_observer(observer)
+function Controller.register_observer(observer)
     self.observers[observer.id] = observer
 end
 
----@param observer FittenCode.Inline.Controller.Observer
-function Controller:unregister_observer(observer)
+function Controller.unregister_observer(observer)
     self.observers[observer.id] = nil
 end
 
 ---@param payload table
-function Controller:notify_observers(payload)
+function Controller.notify_observers(payload)
     for _, observer in pairs(self.observers) do
-        if observer.events == '*' or vim.tbl_contains(observer.events, payload.event) then
-            Fn.schedule_call(function() observer:callback(payload) end)
-        end
+        Fn.schedule_call(function() observer:update(payload) end)
     end
 end
 
-function Controller:has_suggestions()
+function Controller.has_suggestions()
     return self.session() ~= nil
 end
 
-function Controller:accept(direction, scope)
+function Controller.accept(direction, scope)
     if self.session() then
         self.session():accept(direction, scope)
     end
 end
 
-function Controller:dismiss_suggestions(options)
+function Controller.dismiss_suggestions(options)
     Log.debug('Dismissing suggestions')
     options = options or {}
     if not options.force and options.event and vim.tbl_contains(self.filter_events, options.event.event) then
         return
     end
-    self:cleanup_sessions()
+    self.cleanup_sessions()
 end
 
 ---@param buf number
-function Controller:is_filetype_excluded(buf)
+function Controller.is_filetype_excluded(buf)
     local ft
     vim.api.nvim_buf_call(buf, function()
         ft = vim.api.nvim_get_option_value('filetype', { buf = buf })
@@ -118,7 +67,7 @@ function Controller:is_filetype_excluded(buf)
     return vim.tbl_contains(Config.disable_specific_inline_completion.suffixes, ft)
 end
 
-function Controller:cleanup_sessions()
+function Controller.cleanup_sessions()
     for k, v in pairs(self.sessions) do
         v:terminate()
     end
@@ -129,31 +78,28 @@ end
 -- * resolve 成功时返回补全列表
 -- * reject 没有补全或者出错了
 ---@return FittenCode.Concurrency.Promise
-function Controller:triggering_completion(options)
+function Controller.triggering_completion(options)
     Log.debug('Triggering completion')
     options = options or {}
 
     local function _preflight_check()
         local buf = vim.api.nvim_get_current_buf()
-        if self:is_filetype_excluded(buf) or not Editor.is_filebuf(buf) then
+        if self.is_filetype_excluded(buf) or not Fn.is_filebuf(buf) then
             return
         end
 
         local api_key_manager = Client.get_api_key_manager()
         if not api_key_manager:has_fitten_access_token() then
-            if Config.server.toggle_login_message_on_keyboard_input then
-                NotifyLogin.notify_login()
-            end
             return
         end
 
         if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
             return
         end
-        local position = Editor.position(vim.api.nvim_get_current_win())
+        local position = Fn.position(vim.api.nvim_get_current_win())
         assert(position)
 
-        local within_the_line = Editor.within_the_line(buf, position)
+        local within_the_line = Fn.within_the_line(buf, position)
         if Config.inline_completion.disable_completion_within_the_line and within_the_line then
             return
         end
@@ -169,29 +115,28 @@ function Controller:triggering_completion(options)
         return Promise.reject()
     end
 
-    self:cleanup_sessions()
-    local session, completions = self:send_completions(buf, position, options.edit_mode)
+    self.cleanup_sessions()
+    local session, completions = self.send_completions(buf, position, options.edit_mode)
     self.sessions[session.id] = session
     self.selected_session_id = session.id
 
     return completions
 end
 
-function Controller:send_completions(buf, position, edit_mode)
+function Controller.send_completions(buf, position, edit_mode)
     local session = Session.new({
         buf = buf,
         position = position,
         id = assert(Fn.uuid_v4()),
         edit_mode = edit_mode,
-        prompt_generator = self.prompt_generator,
-        triggering_completion = function(...) self:triggering_completion_auto(...) end,
-        update_inline_status = function(id) self:update_status(id) end,
+        triggering_completion = function(...) self.triggering_completion_auto(...) end,
+        update_inline_status = function(id) self.update_status(id) end,
         set_interactive_session_debounced = self.set_interactive_session_debounced
     })
     return session, session:send_completions()
 end
 
-function Controller:session()
+function Controller.session()
     local session = self.sessions[self.selected_session_id]
     if session and not session:is_terminated() and session:is_interactive() then
         return session
@@ -202,7 +147,7 @@ end
 -- * 回车换行比较特殊，会触发 Neovim 的自动缩进，暂不支持
 ---@param key string
 ---@return boolean
-function Controller:lazy_completion(key)
+function Controller.lazy_completion(key)
     if self.session() then
         return self.session():lazy_completion(key)
     end
@@ -215,35 +160,26 @@ end
 -- * TextChangedI
 -- 只在 'TextChangedI', 'CompleteChanged' 触发自动补全，和 VSCode 一致
 -- 后续做撤销的话，还需注意撤销产生的事件，并进行过滤
-function Controller:set_autocmds(enable)
+function Controller.set_autocmds()
     local autocmds = {
-        { { 'TextChangedI', 'CompleteChanged' }, function(args) self:triggering_completion_auto({ event = args }) end },
-        { { 'CursorMovedI' },                    function(args) self:dismiss_suggestions({ event = args }) end },
-        { { 'InsertLeave' },                     function(args) self:dismiss_suggestions({ event = args }) end },
-        { { 'BufLeave' },                        function(args) self:dismiss_suggestions({ event = args }) end },
+        { { 'TextChangedI', 'CompleteChanged' }, function(args) self.triggering_completion_auto({ event = args }) end },
+        { { 'CursorMovedI' },                    function(args) self.dismiss_suggestions({ event = args }) end },
+        { { 'InsertLeave' },                     function(args) self.dismiss_suggestions({ event = args }) end },
+        { { 'BufLeave' },                        function(args) self.dismiss_suggestions({ event = args }) end },
     }
-    if enable then
-        self:set_autocmds(false)
-        for _, autocmd in ipairs(autocmds) do
-            vim.api.nvim_create_autocmd(autocmd[1], {
-                group = self.augroups.completion,
-                callback = autocmd[2],
-            })
-        end
-    else
-        vim.api.nvim_clear_autocmds({ group = self.augroups.completion })
+    for _, autocmd in ipairs(autocmds) do
+        vim.api.nvim_create_autocmd(autocmd[1], {
+            group = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true }),
+            callback = autocmd[2],
+        })
     end
 end
 
-function Controller:is_enabled(buf)
-    return Config.inline_completion.enable and Editor.is_filebuf(buf) == true and not self:is_filetype_excluded(buf)
+function Controller.is_enabled(buf)
+    return Config.inline_completion.enable and Fn.is_filebuf(buf) == true and not self.is_filetype_excluded(buf)
 end
 
-function Controller:set_onkey(enable)
-    if not enable then
-        vim.on_key(nil, self.ns_ids.on_key)
-        return
-    end
+function Controller.set_onkey()
     local filtered = {}
     vim.tbl_map(function(key)
         filtered[#filtered + 1] = vim.api.nvim_replace_termcodes(key, true, true, true)
@@ -255,29 +191,28 @@ function Controller:set_onkey(enable)
     vim.on_key(function(key)
         local buf = vim.api.nvim_get_current_buf()
         self.filter_events = {}
-        if vim.api.nvim_get_mode().mode == 'i' and self:is_enabled(buf) then
+        if vim.api.nvim_get_mode().mode == 'i' and self.is_enabled(buf) then
             Log.debug('on key = {}', key)
             if vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
                 self.filter_events = { 'CursorMovedI', 'TextChangedI', }
                 return
             end
-            if self:lazy_completion(key) then
+            if self.lazy_completion(key) then
                 -- >= 0.11.0 忽视输入，用户输入的字符由底层处理
                 return ''
             end
         end
-    end, self.ns_ids.on_key)
+    end)
 end
 
 ---@param msg string
 ---@param timeout number
-function Controller:_show_no_more_suggestion(msg, timeout)
-    Fn.check_call(self.extmark_ids.no_more_suggestion.del)
+function Controller._show_no_more_suggestion(msg, timeout)
     local buf = vim.api.nvim_get_current_buf()
     local row, col = unpack(vim.api.nvim_win_get_cursor(buf))
-    self.extmark_ids.no_more_suggestion.id = vim.api.nvim_buf_set_extmark(
+    vim.api.nvim_buf_set_extmark(
         buf,
-        self.ns_ids.virt_text,
+        self.no_more_suggestion,
         row - 1,
         col - 1,
         {
@@ -285,69 +220,45 @@ function Controller:_show_no_more_suggestion(msg, timeout)
             virt_text_pos = 'inline',
             hl_mode = 'replace',
         })
-    self.extmark_ids.no_more_suggestion.del = function()
-        vim.api.nvim_buf_del_extmark(buf, self.ns_ids.virt_text, self.extmark_ids.no_more_suggestion.id)
-        self.extmark_ids.no_more_suggestion = {}
-        vim.api.nvim_clear_autocmds({ group = self.augroups.no_more_suggestion })
-    end
     vim.defer_fn(function()
-        Fn.check_call(self.extmark_ids.no_more_suggestion.del)
+        vim.api.nvim_buf_clear_namespace(buf, self.no_more_suggestion, 0, -1)
     end, timeout)
     vim.api.nvim_create_autocmd({ 'InsertLeave', 'BufLeave', 'CursorMovedI' }, {
-        group = self.augroups.no_more_suggestion,
+        group = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true }),
         callback = function()
-            Fn.check_call(self.extmark_ids.no_more_suggestion.del)
+            vim.api.nvim_buf_clear_namespace(buf, self.no_more_suggestion, 0, -1)
         end,
+        once = true,
     })
 end
 
-function Controller:edit_completion()
-    self:triggering_completion({
+function Controller.triggering_completion_by_shortcut()
+    self.triggering_completion({
         force = true,
-        edit_mode = true,
     }):catch(function()
-        self:_show_no_more_suggestion(Translate.translate('  (Currently no completion options available)'), 2000)
+        self._show_no_more_suggestion(i18n.translate('  (Currently no completion options available)'), 2000)
     end)
 end
 
-function Controller:triggering_completion_by_shortcut()
-    self:triggering_completion({
-        force = true,
-    }):catch(function()
-        self:_show_no_more_suggestion(Translate.translate('  (Currently no completion options available)'), 2000)
-    end)
-end
-
-function Controller:triggering_completion_auto(options)
+function Controller.triggering_completion_auto(options)
     if not Config.inline_completion.auto_triggering_completion then
         return
     end
-    self:triggering_completion(options)
+    self.triggering_completion(options)
 end
 
-function Controller:set_keymaps(enable)
+function Controller.set_keymaps()
     local maps = {
-        { 'Alt-\\', function() self:triggering_completion_by_shortcut() end },
-        { 'Alt-O',  function() self:edit_completion() end }
+        { 'Alt-\\', function() self.triggering_completion_by_shortcut() end },
     }
-    if enable then
-        self:set_keymaps(false)
-        for _, v in ipairs(maps) do
-            self.keymaps[#self.keymaps + 1] = vim.fn.maparg(v[1], 'i', false, true)
-            vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
-        end
-    else
-        for _, v in pairs(self.keymaps) do
-            if v then
-                vim.fn.mapset(v)
-            end
-        end
-        self.keymaps = {}
+    for _, v in ipairs(maps) do
+        self.keymaps[#self.keymaps + 1] = vim.fn.maparg(v[1], 'i', false, true)
+        vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
     end
 end
 
 -- 这个比 VSCode 的情况更复杂，suffixes 支持多个（非当前 buf filetype 也可以）
-function Controller:set_suffix_permissions(enable, suffixes)
+function Controller.set_suffix_permissions(enable, suffixes)
     local suffix_map = {}
     for _, suffix in ipairs(Config.disable_specific_inline_completion.suffixes or {}) do
         suffix_map[suffix] = true
@@ -399,25 +310,25 @@ end
 -- * `{ inline: 'running', session: 'no_more_suggestion' }`
 -- * `{ inline: 'running', session: 'error' }`
 ---@return FittenCode.Inline.Status
-function Controller:get_status()
+function Controller.get_status()
     -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
     local selected_session = self.sessions[self.selected_session_id]
     if selected_session and not selected_session:is_terminated() then
         return Status.new({ inline = 'running', session = selected_session:get_status() })
     end
-    if self:is_enabled(vim.api.nvim_get_current_buf()) then
+    if self.is_enabled(vim.api.nvim_get_current_buf()) then
         return Status.new({ inline = 'idle', session = nil })
     else
         return Status.new({ inline = 'disabled', session = nil })
     end
 end
 
-function Controller:update_status(id)
+function Controller.update_status(id)
     if id == self.selected_session_id then
-        self:notify_observers({
+        self.notify_observers({
             event = 'Inline.StatusUpdated',
             data = {
-                status = self:get_status()
+                status = self.get_status()
             }
         })
     end

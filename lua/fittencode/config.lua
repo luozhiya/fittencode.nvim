@@ -170,14 +170,13 @@ local DEFAULTS = {
     -- Default keymaps for Fitten Code.
     keymaps = {
         inline = {
-            ['edit_completion'] = '<A-O>',
+            ['triggering_completion'] = '<A-\\>',
             ['accept'] = '<Tab>',
             ['cancel'] = '<Esc>',
             ['accept_line'] = '<C-Down>',
             ['revoke_line'] = '<C-Up>',
             ['accept_word'] = '<C-Right>',
             ['revoke_word'] = '<C-Left>',
-            ['triggering_completion'] = '<A-\\>',
         },
         chat = {
             ['add_to_chat'] = 'A-X',
