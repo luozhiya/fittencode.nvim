@@ -5,7 +5,8 @@ local Client = require('fittencode.client')
 local OPL = require('fittencode.opl')
 local Protocal = require('fittencode.client.protocol')
 local i18n = require('fittencode.i18n')
-local PHASE = require('fittencode.chat.conversation_phase')
+local Definitions = require('fittencode.chat.definitions')
+local PHASE = Definitions.CONVERSATION_PHASE
 
 ---@class FittenCode.Chat.Conversation
 local Conversation = {}

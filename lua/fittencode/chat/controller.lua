@@ -7,8 +7,9 @@ local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
 local PI = require('fittencode.chat.view.progress_indicator')
-local PHASE = require('fittencode.chat.conversation_phase')
-local EVENT = require('fittencode.chat.controller_event')
+local Definitions = require('fittencode.chat.definitions')
+local EVENT = Definitions.CONTROLLER_EVENT
+local PHASE = Definitions.CONVERSATION_PHASE
 
 ---@class FittenCode.Chat.Status
 ---@field selected_conversation_id? string
