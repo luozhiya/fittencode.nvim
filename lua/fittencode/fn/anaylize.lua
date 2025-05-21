@@ -1,5 +1,11 @@
 local M = {}
 
+-- str_utf_pos
+-- str_utf_start
+-- str_utf_end
+-- str_utfindex
+-- str_byteindex
+
 -- 将字节索引转换为 UTF-32 和 UTF-16 的索引
 -- @param s 输入的 UTF-8 字符串
 -- @param byte_idx 字节索引（0-based）
