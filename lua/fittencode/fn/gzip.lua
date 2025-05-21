@@ -3,11 +3,11 @@ local Process = require('fittencode.fn.process')
 
 local M = {}
 
-function M.compress(input, opts)
+function M.compress(input, option)
     return Promise.new(function(resolve, reject)
         local args = { '-c', '--no-name' }
-        if opts.level then
-            table.insert(args, '-' .. opts.level)
+        if option.level then
+            table.insert(args, '-' .. option.level)
         end
 
         local p = Process.new('gzip', args, {

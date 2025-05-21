@@ -7,7 +7,7 @@ local Log = require('fittencode.log')
 local Client = require('fittencode.client')
 local CompletionStatus = require('fittencode.inline.session.completion_status')
 local Protocol = require('fittencode.client.protocol')
-local Zip = require('fittencode.fn.zip')
+local Zip = require('fittencode.fn.gzip')
 local AdvanceSegmentation = require('fittencode.inline.model.advance_segmentation')
 local Fim = require('fittencode.inline.fim_protocol.vsc')
 
@@ -245,10 +245,7 @@ local function compress_prompt(prompt)
         return
     end
     assert(data)
-    return Zip.compress(data, {
-        format = 'gzip',
-        input_type = 'data'
-    })
+    return Zip.compress(data)
 end
 
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
