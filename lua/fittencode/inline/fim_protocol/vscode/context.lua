@@ -11,16 +11,6 @@ local M = {
 }
 local self = M
 
----@param buf number
----@param range_start FittenCode.Position
----@param range_end FittenCode.Position
----@return string 符合FIM协议的上下文
-function M.build_fim_context(buf, range_start, range_end)
-    local prefix, suffix = self._retrieve_context_fragments(buf, range_start, range_end)
-    return table.concat({ prefix, FIM_MIDDLE_TOKEN, suffix })
-end
-
----@private
 function M._retrieve_context_fragments(buf, start_pos, end_pos)
     local start_offset = assert(Fn.offset_at(buf, start_pos), 'Invalid start position')
     local end_offset = assert(Fn.offset_at(buf, end_pos), 'Invalid end position')
@@ -34,7 +24,6 @@ function M._retrieve_context_fragments(buf, start_pos, end_pos)
     }
 end
 
----@private
 function M._create_peek_range(buf, base_offset, direction)
     local total_chars = Fn.wordcount(buf).chars
     local peek_offset = Fn.clamp(
@@ -48,6 +37,15 @@ function M._create_peek_range(buf, base_offset, direction)
         start = (direction == -1) and peek_pos or Position.new(base_offset),
         end_ = (direction == -1) and Position.new(base_offset) or peek_pos
     }
+end
+
+---@param buf number
+---@param range_start FittenCode.Position
+---@param range_end FittenCode.Position
+---@return string 符合FIM协议的上下文
+function M.build_fim_context(buf, range_start, range_end)
+    local prefix, suffix = self._retrieve_context_fragments(buf, range_start, range_end)
+    return table.concat({ prefix, FIM_MIDDLE_TOKEN, suffix })
 end
 
 return M
