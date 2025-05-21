@@ -140,14 +140,6 @@ local DEFAULTS = {
         -- * 'unittest'
         ['Python'] = 'Not specified',
     },
-    -- Intelligent Triggered Edit Completion
-    use_auto_edit_completion = {
-        -- Avaiable options:
-        -- * 'auto'
-        -- * 'on'
-        -- * 'off'
-        open = 'auto',
-    },
     -- Automatic Project Index Creation
     use_auto_upload_project = {
         -- Avaiable options:
@@ -199,10 +191,6 @@ local DEFAULTS = {
         ['Suggestion'] = {},
         ['InfoNotify'] = {},
         ['Commit'] = {},
-    },
-    http = {
-        -- 0 (zero) which means request never times out during transfer
-        timeout = 600, -- seconds
     },
 }
 

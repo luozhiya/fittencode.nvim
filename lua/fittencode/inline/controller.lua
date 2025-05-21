@@ -5,7 +5,20 @@ local Promise = require('fittencode.fn.promise')
 local Session = require('fittencode.inline.session')
 local i18n = require('fittencode.i18n')
 local Log = require('fittencode.log')
-local Status = require('fittencode.inline.status')
+
+---@class FittenCode.Inline.Status
+local Status = {}
+Status.__index = Status
+
+---@return FittenCode.Inline.Status
+function Status.new(options)
+    options = options or {}
+    local self = setmetatable({
+        inline = options.inline,
+        session = options.session
+    }, Status)
+    return self
+end
 
 local Controller = {}
 local self = Controller

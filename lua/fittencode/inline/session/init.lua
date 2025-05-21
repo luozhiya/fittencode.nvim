@@ -1,15 +1,13 @@
-local Editor = require('fittencode.fn.editor')
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local ViewState = require('fittencode.inline.view.state')
-local Promise = require('fittencode.concurrency.promise')
-local Fn = require('fittencode.functional.fn')
+local Promise = require('fittencode.fn.promise')
+local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
 local CompletionStatus = require('fittencode.inline.session.completion_status')
-local ResponseParser = require('fittencode.inline.fim_protocol.context.comprehensive.response').ResponseParser
 local Protocol = require('fittencode.client.protocol')
-local ZipFlow = require('fittencode.zipflow')
+local Zip = require('fittencode.fn.zip')
 local AdvanceSegmentation = require('fittencode.inline.model.advance_segmentation')
 
 -- 一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
@@ -244,7 +242,7 @@ function Session:generate_prompt()
     self:record_timing('generate_prompt.request')
 
     return self.prompt_generator:generate2(self.buf, self.position, {
-        filename = assert(Editor.filename(self.buf)),
+        filename = assert(Fn.filename(self.buf)),
         edit_mode = self.edit_mode
     }):forward(function(_)
         self:record_timing('generate_prompt.response')
@@ -316,7 +314,7 @@ function Session:async_compress_prompt(prompt)
         return Promise.reject()
     end
     assert(data)
-    return ZipFlow.compress(data, {
+    return Zip.compress(data, {
         format = 'gzip',
         input_type = 'data'
     })

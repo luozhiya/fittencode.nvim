@@ -1,13 +1,14 @@
 --[[
 
 Model 的设计思路：
--
+- 一个 Session 对应一个 Model
+- Model 一次有很多个 CompletionModel 代表很多个补全选项，目前只支持一个
 
 ]]
 
-local CompletionModel = require('fittencode.inline.model.completion')
+local CompletionModel = require('fittencode.inline.model.completion_model')
 local Log = require('fittencode.log')
-local Editor = require('fittencode.fn.editor')
+local Fn = require('fittencode.fn')
 local Range = require('fittencode.fn.range')
 local Position = require('fittencode.fn.position')
 local Convert = require('fittencode.inline.model.convert')
@@ -94,7 +95,7 @@ function Model:generate_placeholder_ranges(buf, position, computed_completions)
             goto continue
         end
         -- 1. 获取 postion 往后 col_delta 个字符 T0
-        local replace_text = Editor.get_text(buf, Range.new({
+        local replace_text = Fn.get_text(buf, Range.new({
             start = position,
             end_ = Position.new({
                 row = position.row,
@@ -104,7 +105,7 @@ function Model:generate_placeholder_ranges(buf, position, computed_completions)
         -- 2. 对比 T0 与 completion.generated_text 的文本差异，获取 placeholder 范围
         -- 代表前面有 start 个字符相同
         -- 后面有 end_ 个字符相同
-        local start, end_ = Editor.compare_bytes_order(replace_text, completion.generated_text)
+        local start, end_ = Fn.compare_bytes_order(replace_text, completion.generated_text)
         -- 从 start 到 #generated_text - end_ 之间的字符都可以认为是 placeholder
         local placeholder_range = { start = start, end_ = #completion.generated_text - end_ }
         placeholder_ranges[#placeholder_ranges + 1] = placeholder_range
