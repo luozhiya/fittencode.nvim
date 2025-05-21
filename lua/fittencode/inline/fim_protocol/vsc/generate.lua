@@ -1,4 +1,4 @@
-local Hash = require('fittencode.fn.hash')
+local MD5 = require('fittencode.fn.md5')
 local Fn = require('fittencode.fn')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
@@ -144,7 +144,7 @@ end
 local function generate_base_prompt(buf, position, options)
     local ctx = compute_editor_context(buf, position)
     local text = ctx.prefix .. ctx.suffix
-    local ciphertext = Hash.md5(text)
+    local ciphertext = MD5.compute(text)
     local meta_datas = recalculate_meta_datas({
         text = text,
         ciphertext = ciphertext,
