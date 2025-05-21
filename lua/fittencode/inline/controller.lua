@@ -103,18 +103,23 @@ do
     set_onkey()
 end
 
-function Controller.register_observer(observer)
-    self.observers[observer.id] = observer
+function Controller.add_observer(observer)
+    table.insert(self.observers, observer)
 end
 
-function Controller.unregister_observer(observer)
-    self.observers[observer.id] = nil
+function Controller.remove_observer(observer)
+    for i, obs in ipairs(self.observers) do
+        if obs == observer then
+            table.remove(self.observers, i)
+            break
+        end
+    end
 end
 
----@param payload table
-function Controller.notify_observers(payload)
-    for _, observer in pairs(self.observers) do
-        Fn.schedule_call(function() observer:update(payload) end)
+---@param data? table Additional event data
+function Controller.notify_observers(event_type, data)
+    for _, observer in ipairs(self.observers) do
+        Fn.schedule_call(observer, self, event_type, data)
     end
 end
 
