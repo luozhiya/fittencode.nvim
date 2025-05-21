@@ -2,6 +2,7 @@ local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local TextLine = require('fittencode.fn.text_line')
 local Log = require('fittencode.log')
+local Unicode = require('fittencode.fn.unicode')
 
 -- 按字符位置偏移量
 ---@alias FittenCode.CharactersOffset number
@@ -9,9 +10,7 @@ local Log = require('fittencode.log')
 local M = {}
 
 function M.filetype(buf)
-    if not buf then
-        return
-    end
+    assert(buf)
     local ft
     vim.api.nvim_buf_call(buf, function()
         ft = vim.api.nvim_get_option_value('filetype', { buf = buf })
@@ -21,9 +20,7 @@ end
 
 ---@return string?
 function M.language_id(buf)
-    if not buf then
-        return
-    end
+    assert(buf)
     local ft
     vim.api.nvim_buf_call(buf, function()
         ft = vim.api.nvim_get_option_value('filetype', { buf = buf })
@@ -41,9 +38,7 @@ end
 
 ---@return string?
 function M.filename(buf)
-    if not buf then
-        return
-    end
+    assert(buf)
     local name
     vim.api.nvim_buf_call(buf, function()
         name = vim.api.nvim_buf_get_name(buf)
@@ -52,9 +47,7 @@ function M.filename(buf)
 end
 
 function M.is_dirty(buf)
-    if not buf then
-        return
-    end
+    assert(buf)
     local dirty
     vim.api.nvim_buf_call(buf, function()
         local info = vim.fn.getbufinfo(buf)
@@ -65,9 +58,7 @@ end
 
 -- The version number of this document (it will strictly increase after each change, including undo/redo).
 function M.version(buf)
-    if not buf then
-        return
-    end
+    assert(buf)
     local version
     vim.api.nvim_buf_call(buf, function()
         local info = vim.fn.getbufinfo(buf)
@@ -77,9 +68,7 @@ function M.version(buf)
 end
 
 function M.line_count(buf)
-    if not buf then
-        return
-    end
+    assert(buf)
     local count
     vim.api.nvim_buf_call(buf, function()
         count = vim.api.nvim_buf_line_count(buf)
@@ -92,9 +81,7 @@ end
 ---@param row number A zero-based row value.
 ---@return FittenCode.TextLine?
 function M.line_at(buf, row)
-    if not buf then
-        return
-    end
+    assert(buf)
     local line_count = M.line_count(buf)
     if row < 0 or row >= line_count then
         return
@@ -112,9 +99,7 @@ end
 
 ---@return string[]?
 function M.content_lines(buf)
-    if not buf then
-        return
-    end
+    assert(buf)
     local content
     vim.api.nvim_buf_call(buf, function()
         content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
@@ -131,9 +116,7 @@ function M.content(buf)
 end
 
 function M.workspace(buf)
-    if not buf then
-        return
-    end
+    assert(buf)
     local ws
     vim.api.nvim_buf_call(buf, function()
         ws = vim.fn.getcwd()
@@ -141,26 +124,21 @@ function M.workspace(buf)
     return ws
 end
 
-function M.is_valid(buf)
-    if not buf then
-        return false
-    end
+function M.is_valid_buf(buf)
+    assert(buf)
     local ok, r = pcall(vim.api.nvim_buf_is_valid, buf)
     if not ok or not r then
         return false
     end
-    return false
+    return true
 end
 
 -- 检测一个 buffer 是否是一个文件，并且可读
 -- 并在满足这个条件下返回该文件的路径 (路径是和平台相关的)
 ---@return boolean, string?
 function M.is_filebuf(buf)
-    if not buf then
-        return false
-    end
-    local ok, r = pcall(vim.api.nvim_buf_is_valid, buf)
-    if not ok or not r then
+    assert(buf)
+    if not M.is_valid_buf(buf) then
         return false
     end
     if vim.api.nvim_buf_is_loaded(buf) and vim.fn.buflisted(buf) == 1 then
@@ -199,9 +177,7 @@ end
 --     cursor_words = 1,
 -- }
 function M.wordcount(buf)
-    if not buf then
-        return
-    end
+    assert(buf)
     local wc
     vim.api.nvim_buf_call(buf, function()
         wc = vim.fn.wordcount()
@@ -214,18 +190,16 @@ end
 ---@param position FittenCode.Position
 ---@return FittenCode.CharactersOffset?
 function M.offset_at(buf, position)
-    if not buf then
-        return
-    end
+    assert(buf)
     local offset
     vim.api.nvim_buf_call(buf, function()
         local lines = assert(M.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = position })))
         vim.tbl_map(function(line)
-            local utf = vim.str_utf_pos(line)
+            local byte_counts = Unicode.utf8_position_index(line).byte_counts
             if not offset then
                 offset = 0
             end
-            offset = offset + #utf
+            offset = offset + #byte_counts
         end, lines)
     end)
     return offset
@@ -237,37 +211,45 @@ end
 ---@param offset number Character offset in the buffer.
 ---@return FittenCode.Position?
 function M.position_at(buf, offset)
-    if not buf then
-        return
-    end
+    assert(buf)
     local pos
     vim.api.nvim_buf_call(buf, function()
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
         local index = 0
         while offset > 0 do
             local line = lines[index + 1] .. '\n'
-            local utf = vim.str_utf_pos(line)
-            if offset > #utf then
+            local byte_counts = Unicode.utf8_position_index(line).byte_counts
+            if offset > #byte_counts then
                 index = index + 1
             else
-                local col = vim.str_byteindex(line, 'utf-32', offset)
+                local col = Unicode.utf_to_byteindex(line, 'utf-32', offset)
                 col = M.round_col_end(line, col)
                 pos = Position.new({
                     row = index,
                     col = col,
                 })
             end
-            offset = offset - #utf
+            offset = offset - #byte_counts
         end
     end)
     return pos
+end
+
+function M.is_valid_win(win)
+    assert(win)
+    local ok, r = pcall(vim.api.nvim_buf_is_valid, win)
+    if not ok or not r then
+        return false
+    end
+    return true
 end
 
 -- Return the zero-based current position of the cursor in the window
 ---@param win integer?
 ---@return FittenCode.Position?
 function M.position(win)
-    if not win or not vim.api.nvim_win_is_valid(win) then
+    assert(win)
+    if not M.is_valid_win(win) then
         return
     end
     local row, col = unpack(vim.api.nvim_win_get_cursor(win))
@@ -283,10 +265,10 @@ function M.round_col_start(line, col)
     if col == 0 then
         return col
     end
-    local utf = vim.str_utf_pos(line)
-    for i = 1, #utf - 1 do
-        if col > utf[i] and col < utf[i + 1] then
-            col = utf[i]
+    local byte_counts = Unicode.utf8_position_index(line).byte_counts
+    for i = 1, #byte_counts - 1 do
+        if col > byte_counts[i] and col < byte_counts[i + 1] then
+            col = byte_counts[i]
             break
         end
     end
@@ -299,7 +281,7 @@ function M.round_col_end(line, col)
     if col == -1 then
         return col
     end
-    local utf = vim.str_utf_pos(line)
+    local utf = Unicode.utf8_position_index(line).byte_counts
     for i = 1, #utf - 1 do
         if col > utf[i] and col < utf[i + 1] then
             col = utf[i + 1] - 1
@@ -360,9 +342,7 @@ end
 ---@param range FittenCode.Range
 ---@return string[]?
 function M.get_lines(buf, range)
-    if not buf then
-        return
-    end
+    assert(buf)
     local lines
     vim.api.nvim_buf_call(buf, function()
         local roundrange = M.round_region(buf, range)
@@ -385,18 +365,14 @@ end
 ---@param range FittenCode.Range
 ---@return string?
 function M.get_text(buf, range)
-    if not buf then
-        return
-    end
+    assert(buf)
     return table.concat(assert(M.get_lines(buf, range)), '\n')
 end
 
 -- Check if the given text contains only ASCII characters.
----@param text? string|string[]
+---@param text string|string[]
 function M.onlyascii(text)
-    if not text then
-        return false
-    end
+    assert(text)
     if type(text) == 'table' then
         for _, t in ipairs(text) do
             if not M.onlyascii(t) then
@@ -405,7 +381,7 @@ function M.onlyascii(text)
         end
         return true
     else
-        if #vim.str_utf_pos(text) == #text then
+        if #Unicode.utf8_position_index(text).byte_counts == #text then
             return true
         end
     end
@@ -417,9 +393,7 @@ end
 ---@param position FittenCode.Position
 ---@return boolean
 function M.within_the_line(buf, position)
-    if not buf then
-        return false
-    end
+    assert(buf)
     local line = M.line_at(buf, position.row)
     if not line then
         return false

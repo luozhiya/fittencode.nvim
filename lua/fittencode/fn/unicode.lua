@@ -788,3 +788,5 @@ function M.byte_to_utfindex(s, encoding, index)
         error('Unsupported encoding: ' .. encoding)
     end
 end
+
+return M
