@@ -1,4 +1,4 @@
-local Context = require('fittencode.inline.fim_protocol.vscode.context')
+local Context = require('fittencode.inline.fim_protocol.vsc.context')
 
 local END_OF_TEXT_TOKEN = '<|endoftext|>'
 

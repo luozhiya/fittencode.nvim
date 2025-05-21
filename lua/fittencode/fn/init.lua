@@ -12,14 +12,14 @@ Fn 模块用于提供一些常用函数和抽象概念
 local M = {}
 
 local core = require('fittencode.fn.core')
-local vscode = require('fittencode.fn.vscode')
+local vsc = require('fittencode.fn.vsc')
 
 setmetatable(M, {
     __index = function(t, k)
         if core[k] then
             return core[k]
-        elseif vscode[k] then
-            return vscode[k]
+        elseif vsc[k] then
+            return vsc[k]
         end
     end
 })

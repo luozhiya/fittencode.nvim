@@ -9,6 +9,8 @@ local CompletionStatus = require('fittencode.inline.session.completion_status')
 local Protocol = require('fittencode.client.protocol')
 local Zip = require('fittencode.fn.zip')
 local AdvanceSegmentation = require('fittencode.inline.model.advance_segmentation')
+local FIMVim = require('fittencode.inline.fim_protocol.vim')
+local FIMVSC = require('fittencode.inline.fim_protocol.vsc')
 
 -- 一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
 -- * 一个会话的生命周期为：创建 -> 开始（交互模式） -> 结束
@@ -35,7 +37,6 @@ function Session:_initialize(options)
     self.timing = {}
     self.requests = {}
     self.keymaps = {}
-    self.prompt_generator = options.prompt_generator
     self.triggering_completion = options.triggering_completion
     self.update_inline_status = options.update_inline_status
     self.set_interactive_session_debounced = options.set_interactive_session_debounced
@@ -236,11 +237,7 @@ function Session:add_request(handle)
 end
 
 -- 生成 Prompt
----@return FittenCode.Concurrency.Promise
 function Session:generate_prompt()
-    self.completion_status:generating_prompt()
-    self:record_timing('generate_prompt.request')
-
     return self.prompt_generator:generate2(self.buf, self.position, {
         filename = assert(Fn.filename(self.buf)),
         edit_mode = self.edit_mode
