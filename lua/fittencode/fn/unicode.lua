@@ -553,19 +553,19 @@ function M.utf8_position_index(s)
     }
 end
 
----@param s utf-8 byte string
+---@param s string utf-8 bytes
 ---@param encoding "utf-8"|"utf-16"|"utf-32"
 ---@param index integer
 ---@return integer
 function M.utf_to_byteindex(s, encoding, index)
     if index < 1 then
-        return 1  -- Lua strings are 1-based
+        return 1 -- Lua strings are 1-based
     end
-    
+
     local byte_index = 1
     local char_count = 0
-    
-    if encoding == "utf-32" then
+
+    if encoding == 'utf-32' then
         -- UTF-32 is straightforward - each index corresponds to one codepoint
         while byte_index <= #s and char_count < index do
             local b = string.byte(s, byte_index)
@@ -581,14 +581,13 @@ function M.utf_to_byteindex(s, encoding, index)
             char_count = char_count + 1
         end
         return math.min(byte_index, #s + 1)
-        
-    elseif encoding == "utf-16" then
+    elseif encoding == 'utf-16' then
         -- UTF-16 needs to handle surrogate pairs (2 code units per codepoint for > 0xFFFF)
         while byte_index <= #s and char_count < index do
             local b1 = string.byte(s, byte_index)
             local seq_len
             local codepoint
-            
+
             -- Determine sequence length and codepoint
             if b1 < 0x80 then
                 seq_len = 1
@@ -597,22 +596,22 @@ function M.utf_to_byteindex(s, encoding, index)
                 if byte_index + 1 > #s then break end
                 seq_len = 2
                 local b2 = string.byte(s, byte_index + 1)
-                codepoint = (b1 & 0x1F) << 6 | (b2 & 0x3F)
+                codepoint = bit.bor(bit.lshift(bit.band(b1, 0x1F), 6), bit.band(b2, 0x3F))
             elseif b1 < 0xF0 then
                 if byte_index + 2 > #s then break end
                 seq_len = 3
                 local b2 = string.byte(s, byte_index + 1)
                 local b3 = string.byte(s, byte_index + 2)
-                codepoint = (b1 & 0x0F) << 12 | (b2 & 0x3F) << 6 | (b3 & 0x3F)
+                codepoint = bit.bor(bit.lshift(bit.band(b1, 0x0F), 12), bit.lshift(bit.band(b2, 0x3F), 6), bit.band(b3, 0x3F))
             else
                 if byte_index + 3 > #s then break end
                 seq_len = 4
                 local b2 = string.byte(s, byte_index + 1)
                 local b3 = string.byte(s, byte_index + 2)
                 local b4 = string.byte(s, byte_index + 3)
-                codepoint = (b1 & 0x07) << 18 | (b2 & 0x3F) << 12 | (b3 & 0x3F) << 6 | (b4 & 0x3F)
+                codepoint = bit.bor(bit.lshift(bit.band(b1, 0x07), 18), bit.lshift(bit.band(b2, 0x3F), 12), bit.lshift(bit.band(b3, 0x3F), 6), bit.band(b4, 0x3F))
             end
-            
+
             -- Count UTF-16 code units (1 for BMP, 2 for supplementary)
             if codepoint < 0x10000 then
                 char_count = char_count + 1
@@ -629,17 +628,16 @@ function M.utf_to_byteindex(s, encoding, index)
                     return byte_index + seq_len - 1
                 end
             end
-            
+
             byte_index = byte_index + seq_len
         end
         return math.min(byte_index, #s + 1)
-        
-    elseif encoding == "utf-8" then
+    elseif encoding == 'utf-8' then
         -- For UTF-8, just round up to the end of the current sequence
         while byte_index <= #s do
             local b = string.byte(s, byte_index)
             local seq_len
-            
+
             if b < 0x80 then
                 seq_len = 1
             elseif b < 0xE0 then
@@ -649,16 +647,16 @@ function M.utf_to_byteindex(s, encoding, index)
             else
                 seq_len = 4
             end
-            
+
             if byte_index + seq_len - 1 >= index then
                 return math.min(byte_index + seq_len - 1, #s + 1)
             end
-            
+
             byte_index = byte_index + seq_len
         end
         return #s + 1
     else
-        error("Unsupported encoding: " .. encoding)
+        error('Unsupported encoding: ' .. encoding)
     end
 end
 
