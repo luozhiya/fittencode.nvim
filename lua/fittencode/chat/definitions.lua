@@ -17,7 +17,7 @@ local CONVERSATION_PHASE = {
 
 local CONVERSATION_VIEW_STATES = {
     USER_CAN_REPLY = 'user_can_reply',
-    WAITING_FOR_USER_ANSWER = 'waiting_for_user_answer',
+    WAITING_FOR_BOT_ANSWER = 'waiting_for_bot_answer',
     BOT_ANSWER_STREAMING = 'bot_answer_streaming',
 }
 

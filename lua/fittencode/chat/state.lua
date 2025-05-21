@@ -6,6 +6,8 @@
 ]]
 
 local Fn = require('fittencode.fn')
+local Definitions = require('fittencode.chat.definitions')
+local VIEW_STATES = Definitions.CONVERSATION_VIEW_STATES
 
 ---@class FittenCode.Chat.ConversationState
 local ConversationState = {}
@@ -38,7 +40,7 @@ function ConversationState:is_empty()
 end
 
 function ConversationState:user_can_reply()
-    return self.content.state == nil or (self.content.state ~= nil and self.content.state.type == 'user_can_reply')
+    return self.content.state == nil or (self.content.state ~= nil and self.content.state.type == VIEW_STATES.USER_CAN_REPLY)
 end
 
 ---@class FittenCode.Chat.State

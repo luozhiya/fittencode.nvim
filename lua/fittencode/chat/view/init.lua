@@ -3,6 +3,8 @@ local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local Format = require('fittencode.fn.format')
 local i18n = require('fittencode.i18n')
+local Definitions = require('fittencode.chat.definitions')
+local VIEW_STATES = Definitions.CONVERSATION_VIEW_STATES
 
 local welcome_message = {
     ['zh-cn'] = {
@@ -235,7 +237,7 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     -- modify buffer
 
     local streaming = false
-    if conversation.content.state ~= nil and conversation.content.state.type == 'bot_answer_streaming' then
+    if conversation.content.state ~= nil and conversation.content.state.type == VIEW_STATES.BOT_ANSWER_STREAMING then
         streaming = true
     end
 

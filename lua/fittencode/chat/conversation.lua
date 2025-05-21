@@ -5,7 +5,9 @@ local Client = require('fittencode.client')
 local OPL = require('fittencode.opl')
 local Protocal = require('fittencode.client.protocol')
 local i18n = require('fittencode.i18n')
-local PHASE = require('fittencode.chat.definitions').CONVERSATION_PHASE
+local Definitions = require('fittencode.chat.definitions')
+local PHASE = Definitions.CONVERSATION_PHASE
+local VIEW_STATES = Definitions.CONVERSATION_VIEW_STATES
 
 ---@class FittenCode.Chat.Conversation
 local Conversation = {}
@@ -33,7 +35,7 @@ function Conversation:_initialize(options)
     self.temporary_editor_content = nil
     self.is_favorited = false
     self.state = {
-        type = 'user_can_reply',
+        type = VIEW_STATES.USER_CAN_REPLY,
     }
     self.request_handle = nil
     self.update_status({ id = self.id, phase = PHASE.INIT })
@@ -181,7 +183,7 @@ function Conversation:add_user_message(content, bot_action)
         content = content,
     }
     self.state = {
-        type = 'waiting_for_bot_answer',
+        type = VIEW_STATES.WAITING_FOR_BOT_ANSWER,
         bot_action = bot_action,
     }
     self.update_view()
@@ -347,7 +349,7 @@ function Conversation:add_bot_message(msg)
         reference = self.reference,
     }
     self.state = {
-        type = 'user_can_reply',
+        type = VIEW_STATES.USER_CAN_REPLY,
         response_placeholder = msg.response_placeholder
     }
     self.update_view()
@@ -374,7 +376,7 @@ end
 function Conversation:update_partial_bot_message(msg)
     -- Log.debug('Update partial bot message: {}', msg.content)
     self.state = {
-        type = 'bot_answer_streaming',
+        type = VIEW_STATES.BOT_ANSWER_STREAMING,
         partial_answer = msg.content,
     }
     self.update_view()
