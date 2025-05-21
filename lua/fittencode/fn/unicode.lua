@@ -524,83 +524,143 @@ function M.utf8_codepoint_at(s, pos)
     }
 end
 
--- 将字节索引转换为 UTF-32 和 UTF-16 的索引
--- @param s 输入的 UTF-8 字符串
--- @param byte_idx 字节索引（0-based）
--- @return utf32_index, utf16_index 或 nil
-function M.utf_index(s, byte_idx)
-    local utf32 = 0
-    local utf16 = 0
-    local pos = 1 -- Lua 字符串是 1-based
+-- pos/start/end
+function M.utf8_position_index(s)
+    local byte_counts = {}
+    local start_indices = {}
+    local end_indices = {}
 
-    -- round byte_idx to byte beginning
+    local length = #s
+    local position = 1
 
-    while pos <= #s do
-        local current_byte = pos - 1 -- 转换为 0-based
-        if current_byte == byte_idx then
-            return {
-                utf32 = utf32,
-                utf16 = utf16
-            }
+    while position <= length do
+        local first_byte = string.byte(s, position)
+        local byte_count
+
+        byte_count = M.utf8_bytes(first_byte)
+
+        table.insert(byte_counts, byte_count)
+        table.insert(start_indices, position)
+        table.insert(end_indices, position + byte_count - 1)
+
+        position = position + byte_count
+    end
+
+    return {
+        byte_counts = byte_counts,
+        start_indices = start_indices,
+        end_indices = end_indices
+    }
+end
+
+---@param s utf-8 byte string
+---@param encoding "utf-8"|"utf-16"|"utf-32"
+---@param index integer
+---@return integer
+function M.utf_to_byteindex(s, encoding, index)
+    if index < 1 then
+        return 1  -- Lua strings are 1-based
+    end
+    
+    local byte_index = 1
+    local char_count = 0
+    
+    if encoding == "utf-32" then
+        -- UTF-32 is straightforward - each index corresponds to one codepoint
+        while byte_index <= #s and char_count < index do
+            local b = string.byte(s, byte_index)
+            if b < 0x80 then
+                byte_index = byte_index + 1
+            elseif b < 0xE0 then
+                byte_index = byte_index + 2
+            elseif b < 0xF0 then
+                byte_index = byte_index + 3
+            else
+                byte_index = byte_index + 4
+            end
+            char_count = char_count + 1
         end
-
-        -- 获取当前字符的码点和下一个字符的位置
-        local info = M.utf8_codepoint_at(s, pos)
-        if not info then
-            return
+        return math.min(byte_index, #s + 1)
+        
+    elseif encoding == "utf-16" then
+        -- UTF-16 needs to handle surrogate pairs (2 code units per codepoint for > 0xFFFF)
+        while byte_index <= #s and char_count < index do
+            local b1 = string.byte(s, byte_index)
+            local seq_len
+            local codepoint
+            
+            -- Determine sequence length and codepoint
+            if b1 < 0x80 then
+                seq_len = 1
+                codepoint = b1
+            elseif b1 < 0xE0 then
+                if byte_index + 1 > #s then break end
+                seq_len = 2
+                local b2 = string.byte(s, byte_index + 1)
+                codepoint = (b1 & 0x1F) << 6 | (b2 & 0x3F)
+            elseif b1 < 0xF0 then
+                if byte_index + 2 > #s then break end
+                seq_len = 3
+                local b2 = string.byte(s, byte_index + 1)
+                local b3 = string.byte(s, byte_index + 2)
+                codepoint = (b1 & 0x0F) << 12 | (b2 & 0x3F) << 6 | (b3 & 0x3F)
+            else
+                if byte_index + 3 > #s then break end
+                seq_len = 4
+                local b2 = string.byte(s, byte_index + 1)
+                local b3 = string.byte(s, byte_index + 2)
+                local b4 = string.byte(s, byte_index + 3)
+                codepoint = (b1 & 0x07) << 18 | (b2 & 0x3F) << 12 | (b3 & 0x3F) << 6 | (b4 & 0x3F)
+            end
+            
+            -- Count UTF-16 code units (1 for BMP, 2 for supplementary)
+            if codepoint < 0x10000 then
+                char_count = char_count + 1
+                if char_count >= index then
+                    return byte_index + seq_len - 1
+                end
+            else
+                if char_count + 1 >= index then
+                    -- We're in the middle of a surrogate pair
+                    return byte_index + seq_len - 1
+                end
+                char_count = char_count + 2
+                if char_count >= index then
+                    return byte_index + seq_len - 1
+                end
+            end
+            
+            byte_index = byte_index + seq_len
         end
-        local code = info.code
-        local next_pos = info.next_pos
-
-        -- 更新 UTF-16 索引
-        if code >= 0x10000 then
-            utf16 = utf16 + 2
-        else
-            utf16 = utf16 + 1
+        return math.min(byte_index, #s + 1)
+        
+    elseif encoding == "utf-8" then
+        -- For UTF-8, just round up to the end of the current sequence
+        while byte_index <= #s do
+            local b = string.byte(s, byte_index)
+            local seq_len
+            
+            if b < 0x80 then
+                seq_len = 1
+            elseif b < 0xE0 then
+                seq_len = 2
+            elseif b < 0xF0 then
+                seq_len = 3
+            else
+                seq_len = 4
+            end
+            
+            if byte_index + seq_len - 1 >= index then
+                return math.min(byte_index + seq_len - 1, #s + 1)
+            end
+            
+            byte_index = byte_index + seq_len
         end
-
-        -- 更新 UTF-32 索引
-        utf32 = utf32 + 1
-        pos = next_pos
+        return #s + 1
+    else
+        error("Unsupported encoding: " .. encoding)
     end
 end
 
--- 将 UTF-32 或 UTF-16 索引转换为字节索引
--- @param s 输入的 UTF-8 字符串
--- @param index 目标索引（0-based）
--- @param encoding 'utf32' 或 'utf16'
--- @return 字节索引（0-based）或 nil
-function M.byteindex(s, index, encoding)
-    if encoding == 'utf32' then
-        -- 直接通过 UTF-8 库获取第 (index+1) 个字符的位置
-        local pos = utf8.offset(s, index + 1) -- utf8.offset 是 1-based
-        return pos and (pos - 1) or nil       -- 转换为 0-based
-    elseif encoding == 'utf16' then
-        local sum_units = 0
-        local pos = 1 -- Lua 字符串是 1-based
-
-        while pos <= #s do
-            local current_byte = pos - 1 -- 转换为 0-based
-            local info = M.utf8_codepoint_at(s, pos)
-            if not info then
-                return
-            end
-            local code = info.code
-            local next_pos = info.next_pos
-
-            -- 计算当前字符占用的 UTF-16 代码单元数
-            local units = (code >= 0x10000) and 2 or 1
-
-            -- 如果当前累计单元数超过目标索引，返回当前字符的起始字节位置
-            if sum_units + units > index then
-                return current_byte
-            end
-
-            sum_units = sum_units + units
-            pos = next_pos
-        end
-        return nil -- 索引超出范围
-    elseif encoding == 'utf8' then
-        return index
-    end
+function M.byte_to_utfindex()
 end
