@@ -239,13 +239,28 @@ function Session:generate_prompt()
     return Fim.generate(self.buf, self.position)
 end
 
+local function compress_prompt(prompt)
+    local _, data = pcall(vim.fn.json_encode, prompt)
+    if not _ then
+        return
+    end
+    assert(data)
+    return Zip.compress(data, {
+        format = 'gzip',
+        input_type = 'data'
+    })
+end
+
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
 -- * resolve 包含 suggestions_ready
 -- * reject 包含 error / no_more_suggestions
 ---@return FittenCode.Concurrency.Promise
 function Session:send_completions()
     local prompt = self:generate_prompt()
-    return self:request_completions(prompt):forward(function(completion)
+    local compressed_prompt = compress_prompt(prompt)
+    return self:get_completion_version():forward(function(completion_version)
+        return self:generate_one_stage_auth(completion_version, compressed_prompt)
+    end):forward(function(completion)
         if self:is_terminated() then
             return Promise.reject()
         end
@@ -311,25 +326,6 @@ function Session:generate_one_stage_auth(completion_version, body)
             position = self.position,
         })
     end):catch(function()
-    end)
-end
-
-local function compress_prompt(prompt)
-    local _, data = pcall(vim.fn.json_encode, prompt)
-    if not _ then
-        return
-    end
-    assert(data)
-    return Zip.compress(data, {
-        format = 'gzip',
-        input_type = 'data'
-    })
-end
-
-function Session:request_completions(prompt)
-    local compressed_prompt = compress_prompt(prompt)
-    return self:get_completion_version():forward(function(completion_version)
-        return self:generate_one_stage_auth(completion_version, compressed_prompt)
     end)
 end
 
