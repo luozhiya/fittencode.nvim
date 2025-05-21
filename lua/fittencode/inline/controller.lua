@@ -61,6 +61,35 @@ do
     set_autocmds()
 end
 
+do
+    local function set_onkey()
+        local filtered = {}
+        vim.tbl_map(function(key)
+            filtered[#filtered + 1] = vim.api.nvim_replace_termcodes(key, true, true, true)
+        end, {
+            '<Backspace>',
+            '<Delete>',
+        })
+        -- If {fn} returns an empty string, {key} is discarded/ignored.
+        vim.on_key(function(key)
+            local buf = vim.api.nvim_get_current_buf()
+            self.filter_events = {}
+            if vim.api.nvim_get_mode().mode == 'i' and self.is_enabled(buf) then
+                Log.debug('on key = {}', key)
+                if vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
+                    self.filter_events = { 'CursorMovedI', 'TextChangedI', }
+                    return
+                end
+                if self.lazy_completion(key) then
+                    -- >= 0.11.0 忽视输入，用户输入的字符由底层处理
+                    return ''
+                end
+            end
+        end)
+    end
+    set_onkey()
+end
+
 function Controller.register_observer(observer)
     self.observers[observer.id] = observer
 end
@@ -192,32 +221,6 @@ end
 
 function Controller.is_enabled(buf)
     return Config.inline_completion.enable and Fn.is_filebuf(buf) == true and not self.is_filetype_excluded(buf)
-end
-
-function Controller.set_onkey()
-    local filtered = {}
-    vim.tbl_map(function(key)
-        filtered[#filtered + 1] = vim.api.nvim_replace_termcodes(key, true, true, true)
-    end, {
-        '<Backspace>',
-        '<Delete>',
-    })
-    -- If {fn} returns an empty string, {key} is discarded/ignored.
-    vim.on_key(function(key)
-        local buf = vim.api.nvim_get_current_buf()
-        self.filter_events = {}
-        if vim.api.nvim_get_mode().mode == 'i' and self.is_enabled(buf) then
-            Log.debug('on key = {}', key)
-            if vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
-                self.filter_events = { 'CursorMovedI', 'TextChangedI', }
-                return
-            end
-            if self.lazy_completion(key) then
-                -- >= 0.11.0 忽视输入，用户输入的字符由底层处理
-                return ''
-            end
-        end
-    end)
 end
 
 ---@param msg string
