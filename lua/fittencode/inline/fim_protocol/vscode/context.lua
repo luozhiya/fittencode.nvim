@@ -2,8 +2,8 @@ local Fn = require('fittencode.fn')
 local Range = require('fittencode.fn.range')
 local Position = require('fittencode.fn.position')
 
-local DEFAULT_CONTEXT_THRESHOLD = 100   -- 默认上下文阈值
-local FIM_MIDDLE_TOKEN = '<fim_middle>' -- FIM中间标记
+local DEFAULT_CONTEXT_THRESHOLD = 100
+local FIM_MIDDLE_TOKEN = '<fim_middle>'
 
 local M = {
     _context_threshold = DEFAULT_CONTEXT_THRESHOLD
@@ -25,8 +25,8 @@ local function create_peek_range(buf, base_offset, direction)
 end
 
 local function retrieve_context_fragments(buf, start_pos, end_pos)
-    local start_offset = assert(Fn.offset_at(buf, start_pos), 'Invalid start position')
-    local end_offset = assert(Fn.offset_at(buf, end_pos), 'Invalid end position')
+    local start_offset = assert(Fn.offset_at(buf, start_pos))
+    local end_offset = assert(Fn.offset_at(buf, end_pos))
 
     local prefix_range = create_peek_range(buf, start_offset, -1)
     local suffix_range = create_peek_range(buf, end_offset, 1)

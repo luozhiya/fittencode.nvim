@@ -76,7 +76,7 @@ end
 
 local function compute_editor_context(buf, position)
     local wordcount = Fn.wordcount(buf)
-    assert(wordcount, 'Failed to get buffer word count')
+    assert(wordcount)
 
     local ctx
     if wordcount.chars <= MAX_CHARS then

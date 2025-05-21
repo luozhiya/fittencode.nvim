@@ -1,8 +1,7 @@
 local Context = require('fittencode.inline.fim_protocol.vscode.context')
 
-local END_OF_TEXT_TOKEN = '<|endoftext|>' -- 文本结束标记
+local END_OF_TEXT_TOKEN = '<|endoftext|>'
 
----@private
 local function build_completion_item(raw_response)
     local clean_text = vim.fn.substitute(
         raw_response.generated_text or '',
