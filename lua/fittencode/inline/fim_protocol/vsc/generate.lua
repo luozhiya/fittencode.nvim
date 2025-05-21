@@ -164,7 +164,7 @@ end
 ---@param position FittenCode.Position
 function M.generate(buf, position, options)
     return generate_base_prompt(buf, position, {
-        filename = options.filename
+        filename = Fn.filename(buf)
     })
 end
 

@@ -9,8 +9,7 @@ local CompletionStatus = require('fittencode.inline.session.completion_status')
 local Protocol = require('fittencode.client.protocol')
 local Zip = require('fittencode.fn.zip')
 local AdvanceSegmentation = require('fittencode.inline.model.advance_segmentation')
-local FIMVim = require('fittencode.inline.fim_protocol.vim')
-local FIMVSC = require('fittencode.inline.fim_protocol.vsc')
+local Fim = require('fittencode.inline.fim_protocol.vsc')
 
 -- 一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
 -- * 一个会话的生命周期为：创建 -> 开始（交互模式） -> 结束
@@ -236,18 +235,8 @@ function Session:add_request(handle)
     self.requests[#self.requests + 1] = handle
 end
 
--- 生成 Prompt
 function Session:generate_prompt()
-    return self.prompt_generator:generate2(self.buf, self.position, {
-        filename = assert(Fn.filename(self.buf)),
-        edit_mode = self.edit_mode
-    }):forward(function(_)
-        self:record_timing('generate_prompt.response')
-        return _
-    end):catch(function()
-        self:record_timing('generate_prompt.error')
-        return Promise.reject()
-    end)
+    return Fim.generate(self.buf, self.position)
 end
 
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
@@ -255,23 +244,18 @@ end
 -- * reject 包含 error / no_more_suggestions
 ---@return FittenCode.Concurrency.Promise
 function Session:send_completions()
-    return self:generate_prompt():forward(function(prompt)
-        self.completion_status:requesting_completions()
-        return self:request_completions(prompt)
-    end):forward(function(completion)
+    local prompt = self:generate_prompt()
+    return self:request_completions(prompt):forward(function(completion)
         if self:is_terminated() then
             return Promise.reject()
         end
         if not completion then
-            self.completion_status:no_more_suggestions()
             return Promise.reject()
         end
         self:set_model(completion)
-        self.completion_status:suggestions_ready()
         Fn.schedule_call(self.set_interactive_session_debounced, self)
         return Promise.resolve(completion)
     end):catch(function()
-        self.completion_status:error()
         return Promise.reject()
     end)
 end
@@ -283,12 +267,9 @@ function Session:get_completion_version()
     if not request then
         return Promise.reject()
     end
-
-    self:record_timing('get_completion_version.request')
     self:add_request(request)
 
     return request:async():forward(function(_)
-        self:record_timing('get_completion_version.response')
         ---@type FittenCode.Protocol.Methods.GetCompletionVersion.Response
         local response = _.json()
         if not response then
@@ -298,23 +279,7 @@ function Session:get_completion_version()
             return response
         end
     end):catch(function()
-        self:record_timing('get_completion_version.error')
     end)
-end
-
--- 压缩 Prompt 成 gzip 格式
----@param prompt FittenCode.Inline.Prompt
----@return FittenCode.Concurrency.Promise
-function Session:async_compress_prompt(prompt)
-    local _, data = pcall(vim.fn.json_encode, prompt)
-    if not _ then
-        return Promise.reject()
-    end
-    assert(data)
-    return Zip.compress(data, {
-        format = 'gzip',
-        input_type = 'data'
-    })
 end
 
 function Session:generate_one_stage_auth(completion_version, body)
@@ -333,33 +298,37 @@ function Session:generate_one_stage_auth(completion_version, body)
     if not request then
         return Promise.reject()
     end
-
-    self:record_timing('generate_one_stage_auth.request')
     self:add_request(request)
 
     return request:async():forward(function(_)
-        self:record_timing('generate_one_stage_auth.response')
         local response = _.json()
         if not response then
             Log.error('Failed to decode completion raw response: {}', _)
             return Promise.reject()
         end
-        return ResponseParser.parse(response, {
+        return Fim.parse(response, {
             buf = self.buf,
             position = self.position,
         })
     end):catch(function()
-        self:record_timing('generate_one_stage_auth.error')
     end)
 end
 
+local function compress_prompt(prompt)
+    local _, data = pcall(vim.fn.json_encode, prompt)
+    if not _ then
+        return
+    end
+    assert(data)
+    return Zip.compress(data, {
+        format = 'gzip',
+        input_type = 'data'
+    })
+end
+
 function Session:request_completions(prompt)
-    return Promise.all({
-        self:get_completion_version(),
-        self:async_compress_prompt(prompt),
-    }):forward(function(_)
-        local completion_version = _[1]
-        local compressed_prompt = _[2]
+    local compressed_prompt = compress_prompt(prompt)
+    return self:get_completion_version():forward(function(completion_version)
         return self:generate_one_stage_auth(completion_version, compressed_prompt)
     end)
 end
