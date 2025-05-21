@@ -660,5 +660,131 @@ function M.utf_to_byteindex(s, encoding, index)
     end
 end
 
-function M.byte_to_utfindex()
+---@param s string
+---@param encoding "utf-8"|"utf-16"|"utf-32"
+---@param index? integer
+---@return integer
+function M.byte_to_utfindex(s, encoding, index)
+    -- Handle optional index parameter
+    index = index or #s
+    -- Convert to 1-based for Lua string operations
+    index = index + 1
+
+    -- Validate index range
+    if index < 1 then return 0 end
+    if index > #s + 1 then index = #s + 1 end
+
+    local byte_index = 1
+    local utf_index = 0
+
+    if encoding == 'utf-32' then
+        -- UTF-32 is straightforward - count each complete codepoint
+        while byte_index < index do
+            local b = string.byte(s, byte_index)
+            local seq_len
+
+            if b < 0x80 then
+                seq_len = 1
+            elseif b < 0xE0 then
+                seq_len = 2
+            elseif b < 0xF0 then
+                seq_len = 3
+            else
+                seq_len = 4
+            end
+
+            -- Round up to end of sequence if in the middle
+            if byte_index + seq_len - 1 >= index then
+                -- Check if we're in the middle of a sequence
+                if byte_index <= index then
+                    utf_index = utf_index + 1
+                end
+                break
+            end
+
+            utf_index = utf_index + 1
+            byte_index = byte_index + seq_len
+        end
+        return utf_index
+    elseif encoding == 'utf-16' then
+        -- UTF-16 needs to handle surrogate pairs (2 code units per codepoint for > 0xFFFF)
+        while byte_index < index do
+            local b1 = string.byte(s, byte_index)
+            local seq_len
+            local codepoint
+
+            -- Determine sequence length and codepoint
+            if b1 < 0x80 then
+                seq_len = 1
+                codepoint = b1
+            elseif b1 < 0xE0 then
+                if byte_index + 1 > #s then break end
+                seq_len = 2
+                local b2 = string.byte(s, byte_index + 1)
+                codepoint = (b1 & 0x1F) << 6 | (b2 & 0x3F)
+            elseif b1 < 0xF0 then
+                if byte_index + 2 > #s then break end
+                seq_len = 3
+                local b2 = string.byte(s, byte_index + 1)
+                local b3 = string.byte(s, byte_index + 2)
+                codepoint = (b1 & 0x0F) << 12 | (b2 & 0x3F) << 6 | (b3 & 0x3F)
+            else
+                if byte_index + 3 > #s then break end
+                seq_len = 4
+                local b2 = string.byte(s, byte_index + 1)
+                local b3 = string.byte(s, byte_index + 2)
+                local b4 = string.byte(s, byte_index + 3)
+                codepoint = (b1 & 0x07) << 18 | (b2 & 0x3F) << 12 | (b3 & 0x3F) << 6 | (b4 & 0x3F)
+            end
+
+            -- Check if we're in the middle of this sequence
+            if byte_index + seq_len - 1 >= index then
+                -- Count this codepoint (will be rounded up)
+                if codepoint < 0x10000 then
+                    utf_index = utf_index + 1
+                else
+                    utf_index = utf_index + 2
+                end
+                break
+            end
+
+            -- Count UTF-16 code units
+            if codepoint < 0x10000 then
+                utf_index = utf_index + 1
+            else
+                utf_index = utf_index + 2
+            end
+
+            byte_index = byte_index + seq_len
+        end
+        return utf_index
+    elseif encoding == 'utf-8' then
+        -- For UTF-8, count complete sequences
+        while byte_index < index do
+            local b = string.byte(s, byte_index)
+            local seq_len
+
+            if b < 0x80 then
+                seq_len = 1
+            elseif b < 0xE0 then
+                seq_len = 2
+            elseif b < 0xF0 then
+                seq_len = 3
+            else
+                seq_len = 4
+            end
+
+            -- Check if we're in the middle of this sequence
+            if byte_index + seq_len - 1 >= index then
+                utf_index = utf_index + 1
+                break
+            end
+
+            utf_index = utf_index + 1
+            byte_index = byte_index + seq_len
+        end
+        return utf_index
+    else
+        error('Unsupported encoding: ' .. encoding)
+    end
 end
