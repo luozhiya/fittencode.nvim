@@ -7,7 +7,7 @@ local Protocal = require('fittencode.client.protocol')
 local i18n = require('fittencode.i18n')
 local Definitions = require('fittencode.chat.definitions')
 local PHASE = Definitions.CONVERSATION_PHASE
-local VIEW_STATES = Definitions.CONVERSATION_VIEW_STATES
+local VIEW_TYPE = Definitions.CONVERSATION_VIEW_TYPE
 
 ---@class FittenCode.Chat.Conversation
 local Conversation = {}
@@ -35,7 +35,7 @@ function Conversation:_initialize(options)
     self.temporary_editor_content = nil
     self.is_favorited = false
     self.state = {
-        type = VIEW_STATES.USER_CAN_REPLY,
+        type = VIEW_TYPE.USER_CAN_REPLY,
     }
     self.request_handle = nil
     self.update_status({ id = self.id, phase = PHASE.INIT })
@@ -183,7 +183,7 @@ function Conversation:add_user_message(content, bot_action)
         content = content,
     }
     self.state = {
-        type = VIEW_STATES.WAITING_FOR_BOT_ANSWER,
+        type = VIEW_TYPE.WAITING_FOR_BOT_ANSWER,
         bot_action = bot_action,
     }
     self.update_view()
@@ -246,7 +246,7 @@ local function start_normal_chat(self)
     self.update_status({ id = self.id, phase = PHASE.EVALUATE_TEMPLATE })
 
     local variables = self:resolve_variables_at_message_time()
-    Log.debug('Variables: {}', variables)
+    -- Log.debug('Variables: {}', variables)
     local retrieval_augmentation = ir.retrievalAugmentation
     local evaluated = self:evaluate_template(ir.template, variables)
     local api_key_manager = Client.get_api_key_manager()
@@ -262,7 +262,7 @@ local function start_normal_chat(self)
             project_id = '',
         }
     }
-    Log.debug('Evaluated HTTP BODY: {}', body)
+    Log.debug('Evaluated HTTP body: {}', body)
 
     local res = Client.make_request(protocol, {
         body = assert(vim.fn.json_encode(body)),
@@ -349,7 +349,7 @@ function Conversation:add_bot_message(msg)
         reference = self.reference,
     }
     self.state = {
-        type = VIEW_STATES.USER_CAN_REPLY,
+        type = VIEW_TYPE.USER_CAN_REPLY,
         response_placeholder = msg.response_placeholder
     }
     self.update_view()
@@ -376,7 +376,7 @@ end
 function Conversation:update_partial_bot_message(msg)
     -- Log.debug('Update partial bot message: {}', msg.content)
     self.state = {
-        type = VIEW_STATES.BOT_ANSWER_STREAMING,
+        type = VIEW_TYPE.BOT_ANSWER_STREAMING,
         partial_answer = msg.content,
     }
     self.update_view({ skip_welcome_msg = true })

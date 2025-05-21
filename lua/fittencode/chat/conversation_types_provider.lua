@@ -52,7 +52,7 @@ end
 -- end)
 
 function ConversationTypesProvider:async_load_conversation_types()
-    Log.trace('ConversationTypesProvider will load conversation types in background')
+    -- Log.trace('ConversationTypesProvider will load conversation types in background')
     return Promise.new(function(resolve)
         vim.defer_fn(function()
             local perf = Perf.smart_timer_format()
@@ -66,7 +66,7 @@ function ConversationTypesProvider:async_load_conversation_types()
 end
 
 function ConversationTypesProvider:load_builtin_templates()
-    Log.debug('ConversationTypesProvider will load built-in templates based on extension URI: {}', self.extension_uri)
+    -- Log.debug('ConversationTypesProvider will load built-in templates based on extension URI: {}', self.extension_uri)
     local list = require('fittencode.chat.builtin_templates').builtin_templates
     for k, v in pairs(list) do
         for _, file in ipairs(v) do
@@ -83,7 +83,7 @@ end
 ---@return FittenCode.Chat.ConversationType?
 function ConversationTypesProvider:load_builtin_template(type, file)
     local resource = Path.join(self.extension_uri, 'template', type, file)
-    Log.info('Loading built-in template from: {}', resource)
+    -- Log.info('Loading built-in template from: {}', resource)
     local t = TemplateResolver.load_from_file(resource)
     if t then
         return ConversationType.new({ template = t, source = 'built-in' })

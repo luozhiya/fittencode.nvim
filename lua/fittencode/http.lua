@@ -188,8 +188,8 @@ end
 function M.fetch(url, options)
     options = options or {}
 
-    Log.debug('fetching url: {}', url)
-    Log.debug('fetch options: {}', options)
+    Log.debug('Fetching url: {}', url)
+    Log.debug('Fetch options: {}', options)
 
     local stream = create_stream()
     local handle = { aborted = false }

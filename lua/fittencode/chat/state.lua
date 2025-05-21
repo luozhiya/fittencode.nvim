@@ -7,14 +7,14 @@
 
 local Fn = require('fittencode.fn')
 local Definitions = require('fittencode.chat.definitions')
-local VIEW_STATES = Definitions.CONVERSATION_VIEW_STATES
+local VIEW_TYPE = Definitions.CONVERSATION_VIEW_TYPE
 
----@class FittenCode.Chat.ConversationState
+---@class FittenCode.Chat.State.ConversationState
 local ConversationState = {}
 ConversationState.__index = ConversationState
 
 ---@param conversation FittenCode.Chat.Conversation
----@return FittenCode.Chat.ConversationState
+---@return FittenCode.Chat.State.ConversationState
 function ConversationState.new(conversation)
     local self = setmetatable({}, ConversationState)
     self:_initialize(conversation)
@@ -40,7 +40,7 @@ function ConversationState:is_empty()
 end
 
 function ConversationState:user_can_reply()
-    return self.content.state == nil or (self.content.state ~= nil and self.content.state.type == VIEW_STATES.USER_CAN_REPLY)
+    return self.content.state == nil or (self.content.state ~= nil and self.content.state.type == VIEW_TYPE.USER_CAN_REPLY)
 end
 
 ---@class FittenCode.Chat.State
@@ -58,7 +58,7 @@ function State:_initialize(options)
 end
 
 ---@param conversation FittenCode.Chat.Conversation
----@return FittenCode.Chat.ConversationState
+---@return FittenCode.Chat.State.ConversationState
 local function to_state(conversation)
     -- local chat_interface = conversation.template.chatInterface or 'message-exchange'
     -- Force to use message-exchange interface for now

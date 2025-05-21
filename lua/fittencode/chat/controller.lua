@@ -132,7 +132,7 @@ end
 ---@param show boolean
 ---@return FittenCode.Chat.Conversation
 function Controller:add_and_show_conversation(conversation, show)
-    Log.debug('add_and_show_conversation conversation = {}, show = {}', conversation, show)
+    -- Log.debug('add_and_show_conversation conversation = {}, show = {}', conversation, show)
     self.model:add_and_select_conversation(conversation)
     self.view:select_conversation(conversation.id)
     local REQUIRES_SKIP_WELCOME = {
@@ -164,13 +164,13 @@ function Controller:receive_view_message(msg)
     if ty == 'ping' then
         self:update_view()
     elseif ty == 'send_message' then
-        Log.debug('Received message id = {}', msg.data.id)
-        Log.debug('Selected conversation id = {}', self.model:get_selected_conversation_id())
+        -- Log.debug('Received message id = {}', msg.data.id)
+        -- Log.debug('Selected conversation id = {}', self.model:get_selected_conversation_id())
         assert(msg.data.id == self.model:get_selected_conversation_id())
         ---@type FittenCode.Chat.Conversation
         local conversation = self.model:get_conversation_by_id(msg.data.id)
         if conversation then
-            Log.debug('Answer the conversation with message = {}', msg.data.message)
+            -- Log.debug('Answer the conversation with message = {}', msg.data.message)
             conversation:answer(msg.data.message)
         end
     elseif ty == 'start_chat' then
@@ -223,7 +223,7 @@ function Controller:create_conversation(template_id, show, mode, context)
     self:add_and_show_conversation(created_conversation.conversation, show)
 
     if created_conversation.should_immediately_answer then
-        Log.debug('Answer the conversation immediately')
+        -- Log.debug('Answer the conversation immediately')
         created_conversation.conversation:answer()
     end
 end
@@ -409,8 +409,8 @@ function Controller:from_builtin_template_with_selection(type, mode)
         local selection = {}
         local range = get_range_from_visual_selection(buf)
         selection.range = Fn.normalize_range(buf, range)
-        Log.debug('Get range from visual selection = {}', range)
-        Log.debug('Selected range = {}', selection.range)
+        -- Log.debug('Get range from visual selection = {}', range)
+        -- Log.debug('Selected range = {}', selection.range)
         local REQUIRES_SELECTION = {
             TEMPLATE_CATEGORIES.DOCUMENT_CODE,
             TEMPLATE_CATEGORIES.EDIT_CODE,

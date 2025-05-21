@@ -49,7 +49,7 @@
 ---@class FittenCode.Chat.View
 ---@field state? FittenCode.Chat.State
 
----@class FittenCode.Chat.ConversationState
+---@class FittenCode.Chat.State.ConversationState
 ---@field id string
 ---@field reference table
 ---@field header table<string, string>
@@ -61,7 +61,7 @@
 ---@class FittenCode.Chat.State
 ---@field type string
 ---@field selected_conversation_id string
----@field conversations table<string, FittenCode.Chat.ConversationState>
+---@field conversations table<string, FittenCode.Chat.State.ConversationState>
 ---@field get_state_from_model function
 
 ---@class FittenCode.Chat.CreatedConversation
@@ -103,20 +103,6 @@
 ---@field request_handle FittenCode.HTTP.Response?
 ---@field update_view function?
 ---@field update_status function?
-
----@class FittenCode.Chat.StateConversation.Header
----@field title string
----@field is_title_message boolean
----@field codicon string
-
----@class FittenCode.Chat.StateConversation
----@field id string
----@field reference table
----@field header FittenCode.Chat.StateConversation.Header
----@field content FittenCode.Chat.Conversation
----@field timestamp string
----@field is_favorited boolean
----@field mode string
 
 ---@class FittenCode.Chat.Conversation.State
 ---@field type 'user_can_reply' | 'waiting_for_bot_answer' | 'bot_answer_streaming'
