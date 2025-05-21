@@ -209,7 +209,8 @@ end
 ---@param timeout number
 function Controller._show_no_more_suggestion(msg, timeout)
     local buf = vim.api.nvim_get_current_buf()
-    local row, col = unpack(vim.api.nvim_win_get_cursor(buf))
+    local win = vim.api.nvim_get_current_win()
+    local row, col = unpack(vim.api.nvim_win_get_cursor(win))
     vim.api.nvim_buf_set_extmark(
         buf,
         self.no_more_suggestion,
