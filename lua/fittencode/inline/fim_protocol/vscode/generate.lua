@@ -4,19 +4,18 @@ local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local Config = require('fittencode.config')
 
--- 常量定义
 local MAX_CHARS = 220000 -- ~200KB
 local HALF_MAX = MAX_CHARS / 2
 local SAMPLE_SIZE = 2000
 local FIM_PATTERN = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
-local last = {
-    filename = '',
-    text = '',
-    ciphertext = ''
+local M = {
+    last = {
+        filename = '',
+        text = '',
+        ciphertext = ''
+    }
 }
-
-local M = {}
 
 local function clean_fim_pattern(text)
     return text and vim.fn.substitute(text, FIM_PATTERN, '', 'g') or ''
@@ -92,8 +91,8 @@ local function compute_editor_context(buf, position)
 end
 
 local function calculate_diff_meta(current_text, current_cipher, filename)
-    if filename ~= last.filename then
-        last = {
+    if filename ~= M.last.filename then
+        M.last = {
             filename = filename,
             text = current_text,
             ciphertext = current_cipher
@@ -104,18 +103,18 @@ local function calculate_diff_meta(current_text, current_cipher, filename)
         }
     end
 
-    local lbytes, rbytes = Fn.compare_bytes_order(last.text, current_text)
+    local lbytes, rbytes = Fn.compare_bytes_order(M.last.text, current_text)
     local diff_meta = {
         plen = vim.str_utfindex(current_text:sub(1, lbytes), 'utf-16'),
         slen = vim.str_utfindex(current_text:sub(-rbytes), 'utf-16'),
         bplen = lbytes,
         bslen = rbytes,
-        pmd5 = last.ciphertext,
+        pmd5 = M.last.ciphertext,
         diff = current_text:sub(lbytes + 1, #current_text - rbytes)
     }
 
-    last.text = current_text
-    last.ciphertext = current_cipher
+    M.last.text = current_text
+    M.last.ciphertext = current_cipher
 
     return diff_meta
 end
