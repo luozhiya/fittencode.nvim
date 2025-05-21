@@ -153,6 +153,31 @@ function Controller.cleanup_sessions()
     self.selected_session_id = nil
 end
 
+local function _preflight_check(options)
+    local buf = vim.api.nvim_get_current_buf()
+    if self.is_filetype_excluded(buf) or not Fn.is_filebuf(buf) then
+        return
+    end
+    local api_key_manager = Client.get_api_key_manager()
+    if not api_key_manager:has_fitten_access_token() then
+        return
+    end
+    if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
+        return
+    end
+    local position = Fn.position(vim.api.nvim_get_current_win())
+    assert(position)
+    local within_the_line = Fn.within_the_line(buf, position)
+    if Config.inline_completion.disable_completion_within_the_line and within_the_line then
+        return
+    end
+    options.force = (options.force == nil) and false or options.force
+    if not options.force and self.session() and self.session():is_cached(position) then
+        return
+    end
+    return buf, position
+end
+
 -- 触发补全
 -- * resolve 成功时返回补全列表
 -- * reject 没有补全或者出错了
@@ -160,49 +185,11 @@ end
 function Controller.triggering_completion(options)
     Log.debug('Triggering completion')
     options = options or {}
-
-    local function _preflight_check()
-        local buf = vim.api.nvim_get_current_buf()
-        if self.is_filetype_excluded(buf) or not Fn.is_filebuf(buf) then
-            return
-        end
-
-        local api_key_manager = Client.get_api_key_manager()
-        if not api_key_manager:has_fitten_access_token() then
-            return
-        end
-
-        if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
-            return
-        end
-        local position = Fn.position(vim.api.nvim_get_current_win())
-        assert(position)
-
-        local within_the_line = Fn.within_the_line(buf, position)
-        if Config.inline_completion.disable_completion_within_the_line and within_the_line then
-            return
-        end
-        options.force = (options.force == nil) and false or options.force
-        if not options.force and self.session() and self.session():is_cached(position) then
-            return
-        end
-        return buf, position
-    end
-
-    local buf, position = _preflight_check()
+    local buf, position = _preflight_check(options)
     if not buf or not position then
         return Promise.reject()
     end
-
     self.cleanup_sessions()
-    local session, completions = self.send_completions(buf, position)
-    self.sessions[session.id] = session
-    self.selected_session_id = session.id
-
-    return completions
-end
-
-function Controller.send_completions(buf, position)
     local session = Session.new({
         buf = buf,
         position = position,
@@ -211,7 +198,10 @@ function Controller.send_completions(buf, position)
         update_inline_status = function(id) self.update_status(id) end,
         set_interactive_session_debounced = self.set_interactive_session_debounced
     })
-    return session, session:send_completions()
+    self.sessions[session.id] = session
+    self.selected_session_id = session.id
+
+    return session:send_completions()
 end
 
 function Controller.session()
