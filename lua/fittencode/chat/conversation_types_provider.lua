@@ -107,7 +107,8 @@ function ConversationTypesProvider:load_workspace_templates()
     --  └── task
     --      ├── diagnose-errors-en.rdt.md
     --      ├── diagnose-errors-zh-cn.rdt.md
-    local workspace = Fn.workspace()
+    local buf = vim.api.nvim_get_current_buf()
+    local workspace = Fn.workspace(buf)
     if not workspace then
         return
     end
