@@ -14,7 +14,6 @@ function View.new(options)
 end
 
 function View:render_stage(lines)
-    if self.mode == 'lines' then
         local virt_lines = {}
         for _, line in ipairs(lines) do
             virt_lines[#virt_lines + 1] = { { line, 'FittenCodeSuggestion' } }
@@ -41,8 +40,6 @@ function View:render_stage(lines)
                     hl_mode = 'combine',
                 })
         end
-    elseif self.mode == 'multi_segments' then
-    end
 end
 
 function View:clear()
