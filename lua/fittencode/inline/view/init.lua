@@ -1,3 +1,5 @@
+local Fn = require('fittencode.fn')
+
 local View = {}
 View.__index = View
 
@@ -11,11 +13,11 @@ function View.new(options)
     return self
 end
 
-function View:render_hints(state)
+function View:render_stage(lines)
     if self.mode == 'lines' then
-        local virt_text = {}
-        for _, line in ipairs(self.generated_text) do
-            virt_text[#virt_text + 1] = { { line, 'FittenCodeSuggestion' } }
+        local virt_lines = {}
+        for _, line in ipairs(lines) do
+            virt_lines[#virt_lines + 1] = { { line, 'FittenCodeSuggestion' } }
         end
         vim.api.nvim_buf_set_extmark(
             self.buf,
@@ -23,23 +25,22 @@ function View:render_hints(state)
             self.commit_row - 1,
             self.commit_col,
             {
-                virt_text = virt_text[1],
+                virt_text = virt_lines[1],
                 virt_text_pos = 'inline',
                 hl_mode = 'combine',
             })
-        table.remove(virt_text, 1)
-        if vim.tbl_count(virt_text) > 0 then
+        table.remove(virt_lines, 1)
+        if vim.tbl_count(virt_lines) > 0 then
             vim.api.nvim_buf_set_extmark(
                 self.buf,
                 self.completion_ns,
                 self.commit_row - 1,
                 0,
                 {
-                    virt_lines = virt_text,
+                    virt_lines = virt_lines,
                     hl_mode = 'combine',
                 })
         end
-    elseif self.mode == 'edit_completion' then
     elseif self.mode == 'multi_segments' then
     end
 end
@@ -52,22 +53,42 @@ function View:delete_text(start_pos, end_pos)
     vim.api.nvim_buf_set_text(self.buf, start_pos[1] - 1, start_pos[2] - 1, end_pos[1] - 1, end_pos[2] - 1, {})
 end
 
-function View:insert_text(start_pos, text)
-    vim.api.nvim_buf_set_text(self.buf, start_pos[1] - 1, start_pos[2] - 1, start_pos[1] - 1, start_pos[2] - 1, { text })
+function View:insert_text(pos, lines)
+    vim.api.nvim_buf_set_text(self.buf, pos[1] - 1, pos[2] - 1, pos[1] - 1, pos[2] - 1, lines)
+end
+
+function View:__view_wrap(win, fn)
+    local view
+    if win and vim.api.nvim_win_is_valid(win) then
+        view = vim.fn.winsaveview()
+    end
+    fn()
+    if view then
+        vim.fn.winrestview(view)
+    end
 end
 
 function View:update(state)
-    -- self.state = state
-    -- -- 0. clear all previous hints
-    -- self:clear()
-    -- -- 1. remove all content from init_pos to current_pos
-    -- self:delete_text(state.init_pos, state.current_pos)
-    -- -- 2. insert committed text
-    -- self:insert_text(state.init_pos, state.commit_text)
-    -- -- 3. render committed text virtual text overlay
-    -- self:render_virt_committed_text(state.init_pos, state.commit_text)
-    -- -- 4. render uncommitted text virtual text inline after
-    -- self:render_virt_uncommitted_text(state.uncommit_text)
+    self.state = state
+    local lines = state.lines
+    local win = vim.api.nvim_get_current_win()
+
+    local function __update()
+        -- -- 0. clear all previous hints
+        self:clear()
+        -- -- 1. remove all content from init_pos to current_pos
+        local current_pos = Fn.position(win)
+        self:delete_text(self.position, current_pos)
+
+        -- -- 2. insert committed text
+        self:insert_text(self.position, state.commit_text)
+        -- -- 3. render committed text virtual text overlay ?
+        -- self:render_virt_committed_text(state.init_pos, state.commit_text)
+        -- -- 4. render uncommitted text virtual text inline after
+        self:render_stage(state.uncommit_text)
+    end
+
+    self:__view_wrap(win, __update)
 end
 
 return View
