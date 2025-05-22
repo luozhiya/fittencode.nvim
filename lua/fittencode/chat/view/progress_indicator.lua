@@ -75,13 +75,13 @@ function M.stop()
 
     if progress_win and vim.api.nvim_win_is_valid(progress_win) then
         vim.api.nvim_win_close(progress_win, true)
-        progress_win = nil
     end
+    progress_win = nil
 
     if progress_buf and vim.api.nvim_buf_is_valid(progress_buf) then
         vim.api.nvim_buf_delete(progress_buf, { force = true })
-        progress_buf = nil
     end
+    progress_buf = nil
 
     current_frame = 1
 end
