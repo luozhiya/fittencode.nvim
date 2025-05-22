@@ -14,32 +14,32 @@ function View.new(options)
 end
 
 function View:render_stage(lines)
-        local virt_lines = {}
-        for _, line in ipairs(lines) do
-            virt_lines[#virt_lines + 1] = { { line, 'FittenCodeSuggestion' } }
-        end
+    local virt_lines = {}
+    for _, line in ipairs(lines) do
+        virt_lines[#virt_lines + 1] = { { line, 'FittenCodeSuggestion' } }
+    end
+    vim.api.nvim_buf_set_extmark(
+        self.buf,
+        self.completion_ns,
+        self.commit_row - 1,
+        self.commit_col,
+        {
+            virt_text = virt_lines[1],
+            virt_text_pos = 'inline',
+            hl_mode = 'combine',
+        })
+    table.remove(virt_lines, 1)
+    if vim.tbl_count(virt_lines) > 0 then
         vim.api.nvim_buf_set_extmark(
             self.buf,
             self.completion_ns,
             self.commit_row - 1,
-            self.commit_col,
+            0,
             {
-                virt_text = virt_lines[1],
-                virt_text_pos = 'inline',
+                virt_lines = virt_lines,
                 hl_mode = 'combine',
             })
-        table.remove(virt_lines, 1)
-        if vim.tbl_count(virt_lines) > 0 then
-            vim.api.nvim_buf_set_extmark(
-                self.buf,
-                self.completion_ns,
-                self.commit_row - 1,
-                0,
-                {
-                    virt_lines = virt_lines,
-                    hl_mode = 'combine',
-                })
-        end
+    end
 end
 
 function View:clear()
@@ -148,6 +148,10 @@ function View:update(state)
         end
     end
 
+    -- TODO: 现在只支持单个连续区域，以后支持 placeholder 等复杂情况
+    -- 从左到右，先把commit和placeholder填充，然后再依次填充stage这样坐标就不会错乱
+    -- 把 update作为一个pipeline，对state中lines逐行处理
+    -- 经过测试，extmark 不会影响行列数的计算，只会影响渲染位置
     local function __update()
         -- -- 0. clear all previous hints
         self:clear()
