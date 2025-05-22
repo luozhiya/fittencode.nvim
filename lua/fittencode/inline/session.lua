@@ -43,7 +43,7 @@ function Session:_initialize(options)
         })
     end
     self:sync_lifecycle(LIFECYCLE.CREATED)
-    self:sync_completion(COMPLETION_STATUS.CREATED)
+    self:sync_completion(COMPLETION_STATUS.START)
 end
 
 -- 设置 Model，计算补全数据

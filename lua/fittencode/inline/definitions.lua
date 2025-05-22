@@ -15,7 +15,7 @@ local INLINE_STATUS = {
 
 -- COMPLETION_STATUS 仅描述补全流程的进度（如请求中、建议就绪），属于会话交互阶段的子逻辑。
 local COMPLETION_STATUS = {
-    CREATED                    = 'created',                    -- 创建了 Session，COMPLETION
+    START                      = 'start',                      -- 创建了 Session，COMPLETION
     GENERATING_PROMPT          = 'generating_prompt',          -- 正在构建补全请求的提示词（如代码片段、自然语言问题）。
     GETTING_COMPLETION_VERSION = 'getting_completion_version', -- 正在获取补全服务版本。
     GENERATE_ONE_STAGE         = 'generate_one_stage',         -- 向补全服务发送请求（如 HTTP 请求），等待响应。

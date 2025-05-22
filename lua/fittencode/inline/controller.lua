@@ -138,7 +138,7 @@ function Controller.remove_observer(observer)
 end
 
 ---@param data? table
-function Controller.notify_observers(event, data)
+function Controller.__emit(event, data)
     for _, observer in ipairs(self.observers) do
         Fn.schedule_call(observer, self, event, data)
     end
@@ -147,9 +147,9 @@ end
 function Controller.on_bufenter(event)
     local buf = event.buf
     if self.is_enabled(buf) then
-        self.notify_observers(EVENT.INLINE_IDLE, { id = buf })
+        self.__emit(EVENT.INLINE_IDLE)
     else
-        self.notify_observers(EVENT.INLINE_DISABLED, { id = buf })
+        self.__emit(EVENT.INLINE_DISABLED)
     end
 end
 
@@ -230,26 +230,25 @@ function Controller.triggering_completion(options)
         position = position,
         id = assert(Fn.uuid_v4()),
         triggering_completion = function(...) self.triggering_completion_auto(...) end,
-        update_status = function(data) self.notify_observers(EVENT.SESSION_UPDATED, data) end,
-        on_receive_session_message = function(data) self.on_receive_session_message(data) end,
+        on_completion_status = function(data) self.__emit(EVENT.SESSION_UPDATED, data) end,
+        on_session_status = function(data) self.on_session_status(data) end,
     })
     self.sessions[session.id] = session
     self.selected_session_id = session.id
-    self.notify_observers(EVENT.SESSION_ADDED, { id = session.id, status = session.status })
 
     return session:send_completions()
 end
 
-function Controller.on_receive_session_message(data)
+function Controller.on_session_status(data)
     if data.type == SESSION_LIFECYCLE.CREATED then
-        self.notify_observers(EVENT.SESSION_ADDED, { id = data.id, status = data.status })
-        self.notify_observers(EVENT.INLINE_RUNNING, { id = data.id })
+        self.__emit(EVENT.INLINE_RUNNING, { id = data.id })
+        self.__emit(EVENT.SESSION_ADDED, { id = data.id, status = data.status })
     elseif data.type == SESSION_LIFECYCLE.TERMINATED then
-        self.notify_observers(EVENT.SESSION_DELETED, { id = data.id })
+        self.__emit(EVENT.SESSION_DELETED, { id = data.id })
         self.sessions[data.id] = nil
         if self.selected_session_id == data.id then
             self.selected_session_id = nil
-            self.notify_observers(EVENT.INLINE_IDLE, { id = data.id })
+            self.__emit(EVENT.INLINE_IDLE, { id = data.id })
         end
     end
 end
