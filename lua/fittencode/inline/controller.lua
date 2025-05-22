@@ -10,6 +10,7 @@ local Definitions = require('fittencode.inline.definitions')
 local EVENT = Definitions.CONTROLLER_EVENT
 local INLINE = Definitions.INLINE_STATUS
 local COMPLETION = Definitions.COMPLETION_STATUS
+local SESSION_LIFECYCLE = Definitions.SESSION_LIFECYCLE
 
 ---@class FittenCode.Inline.Status
 ---@field inline string
@@ -230,12 +231,27 @@ function Controller.triggering_completion(options)
         id = assert(Fn.uuid_v4()),
         triggering_completion = function(...) self.triggering_completion_auto(...) end,
         update_status = function(data) self.notify_observers(EVENT.SESSION_UPDATED, data) end,
+        on_receive_session_message = function(data) self.on_receive_session_message(data) end,
     })
     self.sessions[session.id] = session
     self.selected_session_id = session.id
     self.notify_observers(EVENT.SESSION_ADDED, { id = session.id, status = session.status })
 
     return session:send_completions()
+end
+
+function Controller.on_receive_session_message(data)
+    if data.type == SESSION_LIFECYCLE.CREATED then
+        self.notify_observers(EVENT.SESSION_ADDED, { id = data.id, status = data.status })
+        self.notify_observers(EVENT.INLINE_RUNNING, { id = data.id })
+    elseif data.type == SESSION_LIFECYCLE.TERMINATED then
+        self.notify_observers(EVENT.SESSION_DELETED, { id = data.id })
+        self.sessions[data.id] = nil
+        if self.selected_session_id == data.id then
+            self.selected_session_id = nil
+            self.notify_observers(EVENT.INLINE_IDLE, { id = data.id })
+        end
+    end
 end
 
 function Controller.session()
