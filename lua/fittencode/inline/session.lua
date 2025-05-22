@@ -5,10 +5,8 @@ local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
-local CompletionStatus = require('fittencode.inline.session.completion_status')
 local Protocol = require('fittencode.client.protocol')
 local Zip = require('fittencode.fn.gzip')
-local AdvanceSegmentation = require('fittencode.inline.model.advance_segmentation')
 local Fim = require('fittencode.inline.fim_protocol.vsc')
 
 -- 一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
@@ -37,10 +35,8 @@ function Session:_initialize(options)
     self.requests = {}
     self.keymaps = {}
     self.triggering_completion = options.triggering_completion
-    self.update_inline_status = options.update_inline_status
-    self.set_interactive_session_debounced = options.set_interactive_session_debounced
+    self.update_status = options.update_status
     self.phase = PHASE.CREATED
-    self.completion_status = CompletionStatus.new({ gc = self:gc(), on_update = function() self.update_inline_status(self.id) end })
 end
 
 -- 设置 Model，计算补全数据
@@ -192,7 +188,7 @@ function Session:terminate()
         self:clear_autocmds()
     end
     self.phase = PHASE.TERMINATED
-    self.update_inline_status(self.id)
+    self.update_status(self.id)
 end
 
 function Session:gc(timeout)
@@ -265,7 +261,7 @@ function Session:send_completions()
             return Promise.reject()
         end
         self:set_model(completion)
-        Fn.schedule_call(self.set_interactive_session_debounced, self)
+        self:set_interactive()
         return Promise.resolve(completion)
     end):catch(function()
         return Promise.reject()

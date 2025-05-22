@@ -57,11 +57,6 @@ do
     self.sessions = {}
     self.filter_events = {}
     self.status_observer = Status.new()
-    self.set_interactive_session_debounced = Fn.debounce(function(session)
-        if session and self.selected_session_id == session.id and not session:is_terminated() then
-            session:set_interactive()
-        end
-    end, Config.delay_completion.delaytime)
     self.keymaps = {}
     self.set_suffix_permissions(Config.inline_completion.enable)
     self.no_more_suggestion = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
@@ -235,7 +230,6 @@ function Controller.triggering_completion(options)
         id = assert(Fn.uuid_v4()),
         triggering_completion = function(...) self.triggering_completion_auto(...) end,
         update_status = function(data) self.notify_observers(EVENT.SESSION_UPDATED, data) end,
-        set_interactive_session_debounced = self.set_interactive_session_debounced
     })
     self.sessions[session.id] = session
     self.selected_session_id = session.id
