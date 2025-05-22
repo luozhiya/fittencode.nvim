@@ -90,16 +90,6 @@ function Promise.new(executor)
     return self
 end
 
--- 创建一个异步 Promise
-function Promise.async(executor)
-    local fn = vim.schedule_wrap(function(...)
-        executor(...)
-    end)
-    return Promise.new(function(resolve, reject)
-        fn(resolve, reject)
-    end)
-end
-
 -- 创建一个延时 Promise
 ---@param time number
 ---@param value any
