@@ -53,6 +53,34 @@ function View:delete_text(start_pos, end_pos)
     vim.api.nvim_buf_set_text(self.buf, start_pos[1] - 1, start_pos[2] - 1, end_pos[1] - 1, end_pos[2] - 1, {})
 end
 
+---@param row integer
+---@param col integer
+---@param lines string[]
+function View:append_text_at_pos(buffer, row, col, lines)
+    local count = vim.tbl_count(lines)
+    for i = 1, count, 1 do
+        local line = lines[i]
+        local len = string.len(line)
+        if i == 1 then
+            if len ~= 0 then
+                vim.api.nvim_buf_set_text(buffer, row, col, row, col, { line })
+            end
+        else
+            local max = vim.api.nvim_buf_line_count(buffer)
+            local try_row = row + i - 1
+            if try_row >= max then
+                vim.api.nvim_buf_set_lines(buffer, max, max, false, { line })
+            else
+                if string.len(vim.api.nvim_buf_get_lines(buffer, try_row, try_row + 1, false)[1]) ~= 0 then
+                    vim.api.nvim_buf_set_lines(buffer, try_row, try_row, false, { line })
+                else
+                    vim.api.nvim_buf_set_text(buffer, try_row, 0, try_row, 0, { line })
+                end
+            end
+        end
+    end
+end
+
 function View:insert_text(pos, lines)
     vim.api.nvim_buf_set_text(self.buf, pos[1] - 1, pos[2] - 1, pos[1] - 1, pos[2] - 1, lines)
 end
@@ -66,6 +94,31 @@ function View:__view_wrap(win, fn)
     if view then
         vim.fn.winrestview(view)
     end
+end
+
+---@param row integer 0-based
+---@param col integer 0-based
+---@param lines string[]
+function View:move_cursor_to_text_end(window, row, col, lines)
+    local cursor = { row, col }
+    local count = vim.tbl_count(lines)
+    if count == 0 then
+        return { row, col }
+    end
+    if count == 1 then
+        local first_len = string.len(lines[1])
+        cursor = { row + 1, col + first_len }
+        if window and vim.api.nvim_win_is_valid(window) then
+            vim.api.nvim_win_set_cursor(window, cursor)
+        end
+    else
+        local last_len = string.len(lines[count])
+        cursor = { row + count, last_len }
+        if window and vim.api.nvim_win_is_valid(window) then
+            vim.api.nvim_win_set_cursor(window, { row + count, last_len })
+        end
+    end
+    return { cursor[1] - 1, cursor[2] }
 end
 
 function View:update(state)
@@ -99,6 +152,7 @@ function View:update(state)
         self:delete_text(self.position, current_pos)
         -- -- 2. insert committed text
         self:insert_text(self.position, commit_lines)
+        self:move_cursor_to_text_end(win, self.position[1], self.position[2], commit_lines)
         -- -- 3. render uncommitted text virtual text inline after
         self:render_stage(stage_lines)
     end
