@@ -35,11 +35,16 @@ function Session:_initialize(options)
     self.requests = {}
     self.keymaps = {}
     self.triggering_completion = options.triggering_completion
-    self.update_status = function()
-        Fn.schedule_call(options.update_status, {
+    self.on_completion_status = function()
+        Fn.schedule_call(options.on_completion_status, {
+            id = self.id,
+            completion_status = self.completion_status,
+        })
+    end
+    self.on_session_status = function()
+        Fn.schedule_call(options.on_session_status, {
             id = self.id,
             lifecycle = self.lifecycle,
-            completion_status = self.completion_status,
         })
     end
     self:sync_lifecycle(LIFECYCLE.CREATED)
@@ -207,13 +212,13 @@ end
 function Session:sync_lifecycle(event)
     self.lifecycle = event
     self.timing.lifecycle[#self.timing.lifecycle + 1] = { event = event, timestamp = vim.uv.hrtime() }
-    self.update_status()
+    self.on_completion_status()
 end
 
 function Session:sync_completion(event)
     self.completion_status = event
     self.timing.completion[#self.timing.completion + 1] = { event = event, timestamp = vim.uv.hrtime() }
-    self.update_status()
+    self.on_completion_status()
 end
 
 function Session:add_request(handle)

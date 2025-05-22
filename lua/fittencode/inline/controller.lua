@@ -240,10 +240,10 @@ function Controller.triggering_completion(options)
 end
 
 function Controller.on_session_status(data)
-    if data.type == SESSION_LIFECYCLE.CREATED then
+    if data.lifecycle == SESSION_LIFECYCLE.CREATED then
         self.__emit(EVENT.INLINE_RUNNING, { id = data.id })
-        self.__emit(EVENT.SESSION_ADDED, { id = data.id, status = data.status })
-    elseif data.type == SESSION_LIFECYCLE.TERMINATED then
+        self.__emit(EVENT.SESSION_ADDED, { id = data.id })
+    elseif data.lifecycle == SESSION_LIFECYCLE.TERMINATED then
         self.__emit(EVENT.SESSION_DELETED, { id = data.id })
         self.sessions[data.id] = nil
         if self.selected_session_id == data.id then
