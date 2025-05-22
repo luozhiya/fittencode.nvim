@@ -1,8 +1,8 @@
 local CONTROLLER_EVENT = {
-    CONVERSATION_ADDED = 'conversation_added',
-    CONVERSATION_DELETED = 'conversation_deleted',
-    CONVERSATION_UPDATED = 'conversation_updated',
-    CONVERSATION_SELECTED = 'conversation_selected',
+    CONVERSATION_ADDED = 'FittenCode.Chat.ConversationAdded',
+    CONVERSATION_DELETED = 'FittenCode.Chat.ConversationDeleted',
+    CONVERSATION_UPDATED = 'FittenCode.Chat.ConversationUpdated',
+    CONVERSATION_SELECTED = 'FittenCode.Chat.ConversationSelected',
 }
 
 local CONVERSATION_PHASE = {

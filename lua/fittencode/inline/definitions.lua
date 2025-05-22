@@ -2,9 +2,18 @@ local CONTROLLER_EVENT = {
     SESSION_ADDED = 'FittenCode.Inline.SessionAdded',
     SESSION_DELETED = 'FittenCode.Inline.SessionDeleted',
     SESSION_UPDATED = 'FittenCode.Inline.SessionUpdated',
+    INLINE_DISABLED = 'FittenCode.Inline.Disabled',
+    INLINE_RUNNING = 'FittenCode.Inline.Running',
+    INLINE_IDLE = 'FittenCode.Inline.Idle',
 }
 
-local CompletionStatus = {
+local INLINE_STATUS = {
+    IDLE = 'idle',
+    DISABLE = 'disable',
+    RUNNING = 'running',
+}
+
+local SESSION_STATUS = {
     CREATED = 'created',
     GENERATING_PROMPT = 'generating_prompt',
     REQUESTING_COMPLETIONS = 'requesting_completions',
@@ -15,4 +24,6 @@ local CompletionStatus = {
 
 return {
     CONTROLLER_EVENT = CONTROLLER_EVENT,
+    INLINE_STATUS = INLINE_STATUS,
+    SESSION_STATUS = SESSION_STATUS,
 }
