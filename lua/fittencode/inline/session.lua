@@ -55,7 +55,6 @@ function Session:set_model(parsed_response)
             response = parsed_response,
         })
         self:sync_lifecycle(LIFECYCLE.MODEL_READY)
-        self:update_status()
     end
 end
 
@@ -67,7 +66,6 @@ function Session:set_interactive()
         self:set_autocmds()
         self:update_view()
         self:sync_lifecycle(LIFECYCLE.INTERACTIVE)
-        self:update_status()
     end
 end
 
@@ -183,7 +181,6 @@ function Session:terminate()
         self:clear_autocmds()
     end
     self:sync_lifecycle(LIFECYCLE.TERMINATED)
-    self.update_status()
 end
 
 ---@param key string
@@ -210,11 +207,13 @@ end
 function Session:sync_lifecycle(event)
     self.lifecycle = event
     self.timing.lifecycle[#self.timing.lifecycle + 1] = { event = event, timestamp = vim.uv.hrtime() }
+    self.update_status()
 end
 
 function Session:sync_completion(event)
     self.completion_status = event
     self.timing.completion[#self.timing.completion + 1] = { event = event, timestamp = vim.uv.hrtime() }
+    self.update_status()
 end
 
 function Session:add_request(handle)
