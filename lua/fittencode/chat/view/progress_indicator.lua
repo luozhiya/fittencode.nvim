@@ -26,7 +26,8 @@ local progress_win = nil
 local progress_buf = nil
 
 local function update_progress()
-    if not progress_buf then
+    if not progress_buf or not vim.api.nvim_buf_is_valid(progress_buf) then
+        M.stop()
         return
     end
 

@@ -58,7 +58,7 @@ local CHAT = {
             if controller:view_visible() then
                 return
             end
-            controller:update_view(true)
+            controller:update_view({force = true})
             controller:show_view()
         end
     },

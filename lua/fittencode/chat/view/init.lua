@@ -92,7 +92,7 @@ function View:_initialize(options)
         vim.api.nvim_set_option_value('buftype', 'nofile', { buf = self.char_input.buf })
         vim.api.nvim_set_option_value('buflisted', false, { buf = self.char_input.buf })
         vim.api.nvim_set_option_value('swapfile', false, { buf = self.char_input.buf })
-        vim.api.nvim_set_option_value('modifiable', false, { buf = self.char_input.buf })
+        -- vim.api.nvim_set_option_value('modifiable', false, { buf = self.char_input.buf })
     end)
 end
 
@@ -320,7 +320,7 @@ function View:set_mode(mode)
     self.mode = mode
 end
 
-local function _setup_autoclose(self, win_id)
+function View:__setup_autoclose(self, win_id)
     vim.api.nvim_create_autocmd('WinClosed', {
         pattern = tostring(win_id),
         callback = function()
@@ -330,7 +330,7 @@ local function _setup_autoclose(self, win_id)
     })
 end
 
-local function _show_as_panel(self)
+function View:__show_as_panel()
     local editor_width = vim.o.columns
     local editor_height = vim.o.lines - vim.o.cmdheight
 
@@ -357,7 +357,7 @@ local function _show_as_panel(self)
         vim.api.nvim_set_option_value('list', false, { win = self.messages_exchange.win })
         vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.messages_exchange.win })
     end)
-    _setup_autoclose(self, self.messages_exchange.win)
+    self:__setup_autoclose(self, self.messages_exchange.win)
 
     self.reference.win = vim.api.nvim_open_win(self.reference.buf, true, {
         vertical = true,
@@ -383,7 +383,7 @@ local function _show_as_panel(self)
         vim.api.nvim_set_option_value('list', false, { win = self.reference.win })
         vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.reference.win })
     end)
-    _setup_autoclose(self, self.reference.win)
+    self:__setup_autoclose(self, self.reference.win)
 
     self.char_input.win = vim.api.nvim_open_win(self.char_input.buf, true, {
         vertical = true,
@@ -409,7 +409,9 @@ local function _show_as_panel(self)
         vim.api.nvim_set_option_value('list', false, { win = self.char_input.win })
         vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.char_input.win })
     end)
-    _setup_autoclose(self, self.char_input.win)
+    self:__setup_autoclose(self, self.char_input.win)
+
+    self:set_key_filter()
 end
 
 function View:show()
@@ -425,7 +427,7 @@ function View:show()
     assert(self.reference.buf)
 
     if self.mode == 'panel' then
-        _show_as_panel(self)
+        self:__show_as_panel()
     end
 end
 
@@ -447,64 +449,44 @@ function View:register_message_receiver(receive_view_message)
     self.receive_view_message = receive_view_message
 end
 
-function View:update_char_input(enable)
-    local is_enabled = false
-    vim.api.nvim_buf_call(self.char_input.buf, function()
-        is_enabled = vim.api.nvim_get_option_value('modifiable', { buf = self.char_input.buf })
-    end)
-    if is_enabled == enable then
-        return
-    end
-
-    if self.char_input.on_key_ns then
-        vim.on_key(nil, self.char_input.on_key_ns)
-        self.char_input.on_key_ns = nil
-    end
-    if self.char_input.autocmd_id then
-        vim.api.nvim_del_autocmd(self.char_input.autocmd_id)
-        self.char_input.autocmd_id = nil
-    end
-
-    vim.api.nvim_buf_call(self.char_input.buf, function()
-        vim.api.nvim_set_option_value('modifiable', enable, { buf = self.char_input.buf })
-    end)
-
-    if enable then
-        local enter_key = vim.api.nvim_replace_termcodes('<Enter>', true, true, true)
-        self.char_input.on_key_ns = vim.on_key(function(key)
-            vim.schedule(function()
-                if vim.api.nvim_get_mode().mode == 'i' and vim.api.nvim_get_current_buf() == self.char_input.buf and key == enter_key then
-                    vim.api.nvim_buf_call(self.char_input.buf, function()
-                        -- Log.debug('ChatInputReady')
-                        vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.ChatInputReady' })
-                    end)
-                end
-            end)
-        end)
-        self.char_input_autocmd = vim.api.nvim_create_autocmd('User', {
-            pattern = 'FittenCode.ChatInputReady',
-            once = true,
-            callback = function()
-                -- Log.debug('Hit ChatInputReady')
+function View:set_key_filter()
+    local ENTER_KEY = vim.api.nvim_replace_termcodes('<Enter>', true, true, true)
+    vim.on_key(function(key)
+        vim.schedule(function()
+            if vim.api.nvim_get_mode().mode == 'i' and vim.api.nvim_get_current_buf() == self.char_input.buf and key == ENTER_KEY and self.update_char_input_enabled then
                 vim.api.nvim_buf_call(self.char_input.buf, function()
-                    local message = vim.api.nvim_buf_get_lines(self.char_input.buf, 0, -1, false)[1]
-                    -- Log.debug('send message: <{}>', message)
-                    if message == '' then
-                        return
-                    end
-                    message = self:with_fcps(message)
-                    self:send_message({
-                        type = 'send_message',
-                        data = {
-                            id = self.selected_conversation_id,
-                            message = message
-                        }
-                    })
-                    vim.api.nvim_buf_set_lines(self.char_input.buf, 0, -1, false, {})
+                    -- Log.debug('ChatInputReady')
+                    vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.ChatInputReady' })
                 end)
             end
-        })
-    end
+        end)
+    end)
+    vim.api.nvim_create_autocmd('User', {
+        pattern = 'FittenCode.ChatInputReady',
+        callback = function()
+            -- Log.debug('Hit ChatInputReady')
+            vim.api.nvim_buf_call(self.char_input.buf, function()
+                local message = vim.api.nvim_buf_get_lines(self.char_input.buf, 0, -1, false)[1]
+                -- Log.debug('send message: <{}>', message)
+                if message == '' then
+                    return
+                end
+                message = self:with_fcps(message)
+                self:send_message({
+                    type = 'send_message',
+                    data = {
+                        id = self.selected_conversation_id,
+                        message = message
+                    }
+                })
+                vim.api.nvim_buf_set_lines(self.char_input.buf, 0, -1, false, {})
+            end)
+        end
+    })
+end
+
+function View:update_char_input(enable)
+    self.update_char_input_enabled = enable
 end
 
 function View:set_fcps(enable)
