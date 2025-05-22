@@ -2,6 +2,7 @@ local Fn = require('fittencode.functional.fn')
 local Log = require('fittencode.log')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
+local Promise = require('fittencode.fn.promise')
 
 local M = {}
 
@@ -18,7 +19,7 @@ function M.generate(buf, position, options)
             filename = options.filename,
         },
     }
-    return prompt
+    return Promise.resolve(prompt)
 end
 
 function M.parse(raw)

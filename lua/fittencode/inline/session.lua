@@ -42,20 +42,19 @@ function Session:_initialize(options)
             completion_status = self.completion_status,
         })
     end
-    self.lifecycle = LIFECYCLE.CREATED
-    self:record_timing_lifecycle(LIFECYCLE.CREATED)
+    self:sync_lifecycle(LIFECYCLE.CREATED)
+    self:sync_completion(COMPLETION_STATUS.CREATED)
 end
 
 -- 设置 Model，计算补全数据
 function Session:set_model(parsed_response)
     if self.lifecycle == LIFECYCLE.CREATED then
-        self.lifecycle = LIFECYCLE.MODEL_READY
         self.model = Model.new({
             buf = self.buf,
             position = self.position,
             response = parsed_response,
         })
-        self:record_timing_lifecycle(LIFECYCLE.MODEL_READY)
+        self:sync_lifecycle(LIFECYCLE.MODEL_READY)
         self:update_status()
     end
 end
@@ -67,8 +66,7 @@ function Session:set_interactive()
         self:set_keymaps()
         self:set_autocmds()
         self:update_view()
-        self.lifecycle = LIFECYCLE.INTERACTIVE
-        self:record_timing_lifecycle(LIFECYCLE.INTERACTIVE)
+        self:sync_lifecycle(LIFECYCLE.INTERACTIVE)
         self:update_status()
     end
 end
@@ -184,8 +182,7 @@ function Session:terminate()
         self:restore_keymaps()
         self:clear_autocmds()
     end
-    self.lifecycle = LIFECYCLE.TERMINATED
-    self:record_timing_lifecycle(LIFECYCLE.TERMINATED)
+    self:sync_lifecycle(LIFECYCLE.TERMINATED)
     self.update_status()
 end
 
@@ -210,11 +207,13 @@ function Session:is_terminated()
     return self.lifecycle == LIFECYCLE.TERMINATED
 end
 
-function Session:record_timing_lifecycle(event)
+function Session:sync_lifecycle(event)
+    self.lifecycle = event
     self.timing.lifecycle[#self.timing.lifecycle + 1] = { event = event, timestamp = vim.uv.hrtime() }
 end
 
-function Session:record_timing_completion(event)
+function Session:sync_completion(event)
+    self.completion_status = event
     self.timing.completion[#self.timing.completion + 1] = { event = event, timestamp = vim.uv.hrtime() }
 end
 
@@ -223,13 +222,14 @@ function Session:add_request(handle)
 end
 
 function Session:generate_prompt()
+    self:sync_completion(COMPLETION_STATUS.GENERATING_PROMPT)
     return Fim.generate(self.buf, self.position)
 end
 
 local function async_compress_prompt(prompt)
     local _, data = pcall(vim.fn.json_encode, prompt)
     if not _ then
-        return
+        return Promise.reject()
     end
     assert(data)
     return Zip.compress(data)
@@ -240,26 +240,36 @@ end
 -- * reject 包含 error / no_more_suggestions
 ---@return FittenCode.Concurrency.Promise
 function Session:send_completions()
-    return Promise.all({
-        self:generate_prompt():forward(function(prompt)
-            return async_compress_prompt(prompt)
-        end),
-        self:get_completion_version()
-    }):forward(function(_)
-        local compressed_prompt = _[1]
-        local completion_version = _[2]
-        if not compressed_prompt or not completion_version then
+    local function __send_completions()
+        return Promise.all({
+            self:generate_prompt():forward(function(prompt)
+                return async_compress_prompt(prompt)
+            end),
+            self:get_completion_version()
+        }):forward(function(_)
+            local compressed_prompt = _[1]
+            local completion_version = _[2]
+            if not compressed_prompt or not completion_version then
+                return Promise.reject()
+            end
+            return self:generate_one_stage_auth(completion_version, compressed_prompt)
+        end):forward(function(completion)
+            if self:is_terminated() then
+                return Promise.reject()
+            end
+            if not completion then
+                self:sync_completion(COMPLETION_STATUS.NO_MORE_SUGGESTIONS)
+                return Promise.reject()
+            end
+            self:set_model(completion)
+            self:set_interactive()
+            return Promise.resolve(completion)
+        end):catch(function()
             return Promise.reject()
-        end
-        return self:generate_one_stage_auth(completion_version, compressed_prompt)
-    end):forward(function(completion)
-        if self:is_terminated() or not completion then
-            return Promise.reject()
-        end
-        self:set_model(completion)
-        self:set_interactive()
-        return Promise.resolve(completion)
-    end):catch(function()
+        end)
+    end
+    return __send_completions():catch(function()
+        self:sync_completion(COMPLETION_STATUS.ERROR)
         return Promise.reject()
     end)
 end
@@ -267,6 +277,7 @@ end
 -- 获取补全版本号
 ---@return FittenCode.Concurrency.Promise
 function Session:get_completion_version()
+    self:sync_completion(COMPLETION_STATUS.GETTING_COMPLETION_VERSION)
     local request = Client.make_request(Protocol.Methods.get_completion_version)
     if not request then
         return Promise.reject()
@@ -283,10 +294,12 @@ function Session:get_completion_version()
             return response
         end
     end):catch(function()
+        return Promise.reject()
     end)
 end
 
 function Session:generate_one_stage_auth(completion_version, body)
+    self:sync_completion(COMPLETION_STATUS.GENERATE_ONE_STAGE)
     local vu = {
         ['0'] = '',
         ['1'] = '2_1',
@@ -315,6 +328,7 @@ function Session:generate_one_stage_auth(completion_version, body)
             position = self.position,
         })
     end):catch(function()
+        return Promise.reject()
     end)
 end
 
