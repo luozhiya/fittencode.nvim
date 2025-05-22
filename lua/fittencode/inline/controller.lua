@@ -17,14 +17,6 @@ local SESSION = Definitions.SESSION_STATUS
 local Status = {}
 Status.__index = Status
 
--- * `{ inline: 'idle', session: nil }`
--- * `{ inline: 'disabled', session: nil }`
--- * `{ inline: 'running', session: 'created' }`
--- * `{ inline: 'running', session: 'generating_prompt' }`
--- * `{ inline: 'running', session: 'requesting_completions }`
--- * `{ inline: 'running', session: 'suggestions_ready' }`
--- * `{ inline: 'running', session: 'no_more_suggestion' }`
--- * `{ inline: 'running', session: 'error' }`
 ---@return FittenCode.Inline.Status
 function Status.new()
     local self = setmetatable({}, Status)
@@ -34,15 +26,6 @@ function Status.new()
 end
 
 -- -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
--- local selected_session = self.sessions[self.selected_session_id]
--- if selected_session and not selected_session:is_terminated() then
---     return Status.new({ inline = 'running', session = selected_session:get_status() })
--- end
--- if self.is_enabled(vim.api.nvim_get_current_buf()) then
---     return Status.new({ inline = 'idle', session = nil })
--- else
---     return Status.new({ inline = 'disabled', session = nil })
--- end
 function Status:update(controller, event_type, data)
     if data.id == controller.selected_session_id then
         if event_type == EVENT.SESSION_ADDED then
@@ -50,6 +33,7 @@ function Status:update(controller, event_type, data)
         elseif event_type == EVENT.SESSION_DELETED then
             self.session = ''
         elseif event_type == EVENT.SESSION_UPDATED then
+            assert(self.inline == INLINE.RUNNING)
             self.session = data.status
         end
     end
@@ -108,11 +92,11 @@ do
         { { 'CursorMovedI' },                    function(args) self.dismiss_suggestions({ event = args }) end },
         { { 'InsertLeave' },                     function(args) self.dismiss_suggestions({ event = args }) end },
         { { 'BufLeave' },                        function(args) self.dismiss_suggestions({ event = args }) end },
-        { { 'BufReadPost' },                     function(args) self.check_enabled({ event = args }) end }
+        { { 'BufEnter' },                        function(args) self.on_bufenter({ event = args }) end }
     }
     for _, autocmd in ipairs(autocmds) do
         vim.api.nvim_create_autocmd(autocmd[1], {
-            group = vim.api.nvim_create_augroup('Fittencode.Inline.Completion', { clear = true }),
+            group = vim.api.nvim_create_augroup('Fittencode.Inline', { clear = true }),
             callback = autocmd[2],
         })
     end
@@ -157,16 +141,16 @@ function Controller.remove_observer(observer)
     end
 end
 
----@param data? table Additional event data
+---@param data? table
 function Controller.notify_observers(event, data)
     for _, observer in ipairs(self.observers) do
         Fn.schedule_call(observer, self, event, data)
     end
 end
 
-function Controller.check_enabled(event)
+function Controller.on_bufenter(event)
     local buf = event.buf
-    if self.is_enabled(buf) and not self.is_filetype_excluded(buf) then
+    if self.is_enabled(buf) then
         self.notify_observers(EVENT.INLINE_IDLE, { id = buf })
     else
         self.notify_observers(EVENT.INLINE_DISABLED, { id = buf })

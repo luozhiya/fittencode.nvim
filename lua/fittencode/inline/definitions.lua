@@ -9,7 +9,7 @@ local CONTROLLER_EVENT = {
 
 local INLINE_STATUS = {
     IDLE = 'idle',
-    DISABLE = 'disable',
+    DISABLED = 'disabled',
     RUNNING = 'running',
 }
 
