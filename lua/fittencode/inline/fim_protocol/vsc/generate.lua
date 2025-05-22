@@ -3,6 +3,8 @@ local Fn = require('fittencode.fn')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local Config = require('fittencode.config')
+local Promise = require('fittencode.fn.promise')
+local Unicode = require('fittencode.fn.unicode')
 
 local MAX_CHARS = 220000 -- ~200KB
 local HALF_MAX = MAX_CHARS / 2
@@ -105,8 +107,8 @@ local function calculate_diff_meta(current_text, current_cipher, filename)
 
     local lbytes, rbytes = Fn.compare_bytes_order(M.last.text, current_text)
     local diff_meta = {
-        plen = vim.str_utfindex(current_text:sub(1, lbytes), 'utf-16'),
-        slen = vim.str_utfindex(current_text:sub(-rbytes), 'utf-16'),
+        plen = Unicode.byte_to_utfindex(current_text:sub(1, lbytes), 'utf-16'),
+        slen = Unicode.byte_to_utfindex(current_text:sub(-rbytes), 'utf-16'),
         bplen = lbytes,
         bslen = rbytes,
         pmd5 = M.last.ciphertext,
@@ -121,7 +123,7 @@ end
 
 local function recalculate_meta_datas(options)
     local base_meta = {
-        cpos = vim.str_utfindex(options.prefix, 'utf-16'),
+        cpos = Unicode.byte_to_utfindex(options.prefix, 'utf-16'),
         bcpos = #options.prefix,
         plen = 0,
         slen = 0,
@@ -135,19 +137,20 @@ local function recalculate_meta_datas(options)
         pc_prompt = '',
         pc_prompt_type = '0'
     }
-    return vim.tbl_deep_extend('force',
-        base_meta,
-        calculate_diff_meta(options.text, options.ciphertext, options.filename)
-    )
+    local diff_meta = calculate_diff_meta(options.text, options.ciphertext, options.filename)
+    return vim.tbl_deep_extend('force', base_meta, diff_meta)
 end
 
 local function generate_base_prompt(buf, position, options)
     local ctx = compute_editor_context(buf, position)
     local text = ctx.prefix .. ctx.suffix
-    local ciphertext = MD5.compute(text)
+    local ciphertext = MD5.compute(text):wait()
+    if not ciphertext or ciphertext:is_rejected() then
+        return
+    end
     local meta_datas = recalculate_meta_datas({
         text = text,
-        ciphertext = ciphertext,
+        ciphertext = ciphertext.value,
         prefix = ctx.prefix,
         suffix = ctx.suffix,
         filename = options.filename,
@@ -163,9 +166,13 @@ end
 ---@param buf number
 ---@param position FittenCode.Position
 function M.generate(buf, position, options)
-    return generate_base_prompt(buf, position, {
+    local prompt = generate_base_prompt(buf, position, {
         filename = options.filename
     })
+    if not prompt then
+        return Promise.reject()
+    end
+    return Promise.resolve(prompt)
 end
 
 return M.generate
