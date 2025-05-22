@@ -12,6 +12,28 @@ local promise = Promise.new() -- 创建未决Promise
 promise:manually_resolve("成功")       -- 手动解决
 promise:manually_reject("失败")        -- 手动拒绝
 
+----------------------------
+--- Promise.all
+----------------------------
+
+local p1 = Promise.resolve(1)
+local p2 = Promise.resolve(2)
+local p3 = Promise.resolve(3)
+
+Promise.all({p1, p2, p3}):forward(function(values)
+    print(vim.inspect(values)) -- 输出: { 1, 2, 3 }
+end, function(reason)
+    print("Error:", reason)
+end)
+
+-- 包含拒绝的示例
+local p4 = Promise.reject("failed")
+Promise.all({p1, p2, p4}):forward(function(values)
+    print(vim.inspect(values))
+end, function(reason)
+    print("Error2:", reason) -- 输出: Error: failed
+end)
+
 ]]
 
 -- A Promise is in one of these states:
@@ -294,6 +316,52 @@ function Promise.resolve(value)
     -- 创建立即解决的 Promise
     return Promise.new(function(resolve)
         resolve(value) -- 同步触发解决
+    end)
+end
+
+-- Promise.all(), https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all
+-- * The Promise.all() method takes an iterable of promises as input and returns a single Promise.
+-- * This returned promise fulfills when all of the input's promises fulfill (including when an empty iterable is passed),
+--   with an array of the fulfillment values.
+-- * It rejects when any of the input's promises rejects, with this first rejection reason.
+---@param promises table
+---@return FittenCode.Concurrency.Promise
+function Promise.all(promises)
+    -- 如果不是 table 或者没有长度（空表），则直接返回已解决的 Promise
+    if type(promises) ~= 'table' or #promises == 0 then
+        return Promise.resolve({})
+    end
+
+    return Promise.new(function(resolve, reject)
+        local results = {}
+        local remaining = #promises
+        local has_rejected = false
+
+        for i, promise in ipairs(promises) do
+            -- 确保每个元素都是 Promise
+            if not Promise.is_promise(promise) then
+                promise = Promise.resolve(promise)
+            end
+
+            promise:forward(
+                function(value)
+                    if not has_rejected then
+                        results[i] = value
+                        remaining = remaining - 1
+
+                        if remaining == 0 then
+                            resolve(results)
+                        end
+                    end
+                end,
+                function(reason)
+                    if not has_rejected then
+                        has_rejected = true
+                        reject(reason)
+                    end
+                end
+            )
+        end
     end)
 end
 

@@ -11,6 +11,7 @@ local Fim = require('fittencode.inline.fim_protocol.vsc')
 local Definitions = require('fittencode.inline.definitions')
 
 local LIFECYCLE = Definitions.SESSION_LIFECYCLE
+local COMPLETION_STATUS = Definitions.COMPLETION_STATUS
 
 -- 一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
 -- * 一个会话的生命周期为：创建 -> 开始（交互模式） -> 结束
@@ -27,12 +28,22 @@ function Session:_initialize(options)
     self.buf = options.buf
     self.position = options.position
     self.id = options.id
-    self.timing = {}
+    self.timing = {
+        completion = {},
+        lifecycle = {},
+    }
     self.requests = {}
     self.keymaps = {}
     self.triggering_completion = options.triggering_completion
-    self.update_status = options.update_status
+    self.update_status = function()
+        Fn.schedule_call(options.update_status, {
+            id = self.id,
+            lifecycle = self.lifecycle,
+            completion_status = self.completion_status,
+        })
+    end
     self.lifecycle = LIFECYCLE.CREATED
+    self:record_timing_lifecycle(LIFECYCLE.CREATED)
 end
 
 -- 设置 Model，计算补全数据
@@ -44,6 +55,8 @@ function Session:set_model(parsed_response)
             position = self.position,
             response = parsed_response,
         })
+        self:record_timing_lifecycle(LIFECYCLE.MODEL_READY)
+        self:update_status()
     end
 end
 
@@ -55,6 +68,8 @@ function Session:set_interactive()
         self:set_autocmds()
         self:update_view()
         self.lifecycle = LIFECYCLE.INTERACTIVE
+        self:record_timing_lifecycle(LIFECYCLE.INTERACTIVE)
+        self:update_status()
     end
 end
 
@@ -170,11 +185,8 @@ function Session:terminate()
         self:clear_autocmds()
     end
     self.lifecycle = LIFECYCLE.TERMINATED
-    self.update_status(self.id)
-end
-
-function Session:gc(timeout)
-    vim.defer_fn(function() self:terminate() end, timeout or 5000)
+    self:record_timing_lifecycle(LIFECYCLE.TERMINATED)
+    self.update_status()
 end
 
 ---@param key string
@@ -198,15 +210,12 @@ function Session:is_terminated()
     return self.lifecycle == LIFECYCLE.TERMINATED
 end
 
-function Session:get_status()
-    return self.completion_status:get()
+function Session:record_timing_lifecycle(event)
+    self.timing.lifecycle[#self.timing.lifecycle + 1] = { event = event, timestamp = vim.uv.hrtime() }
 end
 
-function Session:record_timing(event, timestamp)
-    if not timestamp then
-        timestamp = vim.uv.hrtime()
-    end
-    self.timing[#self.timing + 1] = { event = event, timestamp = timestamp }
+function Session:record_timing_completion(event)
+    self.timing.completion[#self.timing.completion + 1] = { event = event, timestamp = vim.uv.hrtime() }
 end
 
 function Session:add_request(handle)
@@ -217,7 +226,7 @@ function Session:generate_prompt()
     return Fim.generate(self.buf, self.position)
 end
 
-local function compress_prompt(prompt)
+local function async_compress_prompt(prompt)
     local _, data = pcall(vim.fn.json_encode, prompt)
     if not _ then
         return
@@ -231,15 +240,20 @@ end
 -- * reject 包含 error / no_more_suggestions
 ---@return FittenCode.Concurrency.Promise
 function Session:send_completions()
-    local prompt = self:generate_prompt()
-    local compressed_prompt = compress_prompt(prompt)
-    return self:get_completion_version():forward(function(completion_version)
-        return self:generate_one_stage_auth(completion_version, compressed_prompt)
-    end):forward(function(completion)
-        if self:is_terminated() then
+    return Promise.all({
+        self:generate_prompt():forward(function(prompt)
+            return async_compress_prompt(prompt)
+        end),
+        self:get_completion_version()
+    }):forward(function(_)
+        local compressed_prompt = _[1]
+        local completion_version = _[2]
+        if not compressed_prompt or not completion_version then
             return Promise.reject()
         end
-        if not completion then
+        return self:generate_one_stage_auth(completion_version, compressed_prompt)
+    end):forward(function(completion)
+        if self:is_terminated() or not completion then
             return Promise.reject()
         end
         self:set_model(completion)

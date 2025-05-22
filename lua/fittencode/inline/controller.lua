@@ -34,7 +34,7 @@ function Status:update(controller, event_type, data)
             self.completion = ''
         elseif event_type == EVENT.SESSION_UPDATED then
             assert(self.inline == INLINE.RUNNING)
-            self.completion = data.status
+            self.completion = data.completion_status
         end
     end
 
@@ -233,6 +233,7 @@ function Controller.triggering_completion(options)
     })
     self.sessions[session.id] = session
     self.selected_session_id = session.id
+    self.notify_observers(EVENT.SESSION_ADDED, { id = session.id, status = session.status })
 
     return session:send_completions()
 end
