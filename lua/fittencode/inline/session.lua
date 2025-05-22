@@ -8,6 +8,9 @@ local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
 local Zip = require('fittencode.fn.gzip')
 local Fim = require('fittencode.inline.fim_protocol.vsc')
+local Definitions = require('fittencode.inline.definitions')
+
+local LIFECYCLE = Definitions.SESSION_LIFECYCLE
 
 -- 一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
 -- * 一个会话的生命周期为：创建 -> 开始（交互模式） -> 结束
@@ -29,48 +32,34 @@ function Session:_initialize(options)
     self.keymaps = {}
     self.triggering_completion = options.triggering_completion
     self.update_status = options.update_status
-    self.phase = SESSION_LIFECYCLE.CREATED
+    self.lifecycle = LIFECYCLE.CREATED
 end
 
 -- 设置 Model，计算补全数据
 function Session:set_model(parsed_response)
-    if self.phase == SESSION_LIFECYCLE.CREATED then
-        self.phase = SESSION_LIFECYCLE.MODEL_READY
+    if self.lifecycle == LIFECYCLE.CREATED then
+        self.lifecycle = LIFECYCLE.MODEL_READY
         self.model = Model.new({
             buf = self.buf,
             position = self.position,
             response = parsed_response,
         })
-        self:advance_segmentation()
     end
-end
-
-function Session:advance_segmentation()
-    local promise, request = AdvanceSegmentation.send_segments(self.model:get_text())
-    if not request then
-        return
-    end
-    self:add_request(request)
-    promise:forward(function(segments)
-        self.model:update({
-            segments = segments
-        })
-    end)
 end
 
 -- 设置交互模式
 function Session:set_interactive()
-    if self.phase == SESSION_LIFECYCLE.MODEL_READY then
+    if self.lifecycle == LIFECYCLE.MODEL_READY then
         self.view = View:new({ buf = self.buf })
         self:set_keymaps()
         self:set_autocmds()
         self:update_view()
-        self.phase = SESSION_LIFECYCLE.INTERACTIVE
+        self.lifecycle = LIFECYCLE.INTERACTIVE
     end
 end
 
 function Session:is_interactive()
-    return self.phase == SESSION_LIFECYCLE.INTERACTIVE
+    return self.lifecycle == LIFECYCLE.INTERACTIVE
 end
 
 function Session:update_view()
@@ -171,16 +160,16 @@ end
 
 -- 终止不会清除 timing 等信息，方便后续做性能统计分析
 function Session:terminate()
-    if self.phase == SESSION_LIFECYCLE.TERMINATED then
+    if self.lifecycle == LIFECYCLE.TERMINATED then
         return
     end
-    if self.phase == SESSION_LIFECYCLE.INTERACTIVE then
+    if self.lifecycle == LIFECYCLE.INTERACTIVE then
         self:abort_and_clear_requests()
         self:clear_mv()
         self:restore_keymaps()
         self:clear_autocmds()
     end
-    self.phase = SESSION_LIFECYCLE.TERMINATED
+    self.lifecycle = LIFECYCLE.TERMINATED
     self.update_status(self.id)
 end
 
@@ -206,7 +195,7 @@ end
 -- * 判断是否已经终止
 -- * 跳出 Promise
 function Session:is_terminated()
-    return self.phase == SESSION_LIFECYCLE.TERMINATED
+    return self.lifecycle == LIFECYCLE.TERMINATED
 end
 
 function Session:get_status()
