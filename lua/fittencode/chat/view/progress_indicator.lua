@@ -44,17 +44,17 @@ local function update_progress()
     vim.api.nvim_buf_set_lines(progress_buf, 0, -1, false, { content })
 
     -- 设置时间部分的高亮
-    --   if progress_win and vim.api.nvim_win_is_valid(progress_win) then
-    --     local time_start = #config.frames[current_frame] + 1
-    --     vim.api.nvim_buf_add_highlight(
-    --       progress_buf,
-    --       -1,
-    --       config.time_highlight,
-    --       0,
-    --       time_start,
-    --       -1
-    --     )
-    --   end
+      if progress_win and vim.api.nvim_win_is_valid(progress_win) then
+        local time_start = #config.frames[current_frame] + 1
+        vim.api.nvim_buf_add_highlight(
+          progress_buf,
+          -1,
+          config.time_highlight,
+          0,
+          time_start,
+          -1
+        )
+      end
 
     current_frame = (current_frame % #config.frames) + 1
 end
