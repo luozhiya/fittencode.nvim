@@ -212,7 +212,7 @@ end
 function Session:sync_lifecycle(event)
     self.lifecycle = event
     self.timing.lifecycle[#self.timing.lifecycle + 1] = { event = event, timestamp = vim.uv.hrtime() }
-    self.on_completion_status()
+    self.on_session_status()
 end
 
 function Session:sync_completion(event)
