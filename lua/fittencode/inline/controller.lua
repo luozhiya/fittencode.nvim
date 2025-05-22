@@ -88,7 +88,7 @@ do
         { { 'CursorMovedI' },                    function(args) self.dismiss_suggestions({ event = args }) end },
         { { 'InsertLeave' },                     function(args) self.dismiss_suggestions({ event = args }) end },
         { { 'BufLeave' },                        function(args) self.dismiss_suggestions({ event = args }) end },
-        { { 'BufEnter' },                        function(args) self.on_bufenter({ event = args }) end }
+        { { 'BufEnter' },                        function(args) self.on_buffer_enter({ event = args }) end }
     }
     for _, autocmd in ipairs(autocmds) do
         vim.api.nvim_create_autocmd(autocmd[1], {
@@ -144,7 +144,7 @@ function Controller.__emit(event, data)
     end
 end
 
-function Controller.on_bufenter(event)
+function Controller.on_buffer_enter(event)
     local buf = event.buf
     if self.is_enabled(buf) then
         self.__emit(EVENT.INLINE_IDLE)
@@ -154,12 +154,12 @@ function Controller.on_bufenter(event)
 end
 
 function Controller.has_suggestions()
-    return self.session() ~= nil
+    return self.get_current_session() ~= nil
 end
 
 function Controller.accept(direction, scope)
-    if self.session() then
-        self.session():accept(direction, scope)
+    if self.get_current_session() then
+        self.get_current_session():accept(direction, scope)
     end
 end
 
@@ -173,7 +173,7 @@ function Controller.dismiss_suggestions(options)
 end
 
 ---@param buf number
-function Controller.is_filetype_excluded(buf)
+function Controller.is_ft_disabled(buf)
     local ft
     vim.api.nvim_buf_call(buf, function()
         ft = vim.api.nvim_get_option_value('filetype', { buf = buf })
@@ -190,7 +190,7 @@ end
 
 local function _preflight_check(options)
     local buf = vim.api.nvim_get_current_buf()
-    if self.is_filetype_excluded(buf) or not Fn.is_filebuf(buf) then
+    if self.is_ft_disabled(buf) or not Fn.is_filebuf(buf) then
         return
     end
     local api_key_manager = Client.get_api_key_manager()
@@ -207,7 +207,7 @@ local function _preflight_check(options)
         return
     end
     options.force = (options.force == nil) and false or options.force
-    if not options.force and self.session() and self.session():is_cached(position) then
+    if not options.force and self.get_current_session() and self.get_current_session():is_cached(position) then
         return
     end
     return buf, position
@@ -225,16 +225,17 @@ function Controller.triggering_completion(options)
         return Promise.reject()
     end
     self.cleanup_sessions()
+
+    self.selected_session_id = assert(Fn.uuid_v1())
     local session = Session.new({
         buf = buf,
         position = position,
-        id = assert(Fn.uuid_v4()),
+        id = self.selected_session_id,
         triggering_completion = function(...) self.triggering_completion_auto(...) end,
         on_completion_status = function(data) self.__emit(EVENT.SESSION_UPDATED, data) end,
         on_session_status = function(data) self.on_session_status(data) end,
     })
     self.sessions[session.id] = session
-    self.selected_session_id = session.id
 
     return session:send_completions()
 end
@@ -245,7 +246,7 @@ function Controller.on_session_status(data)
         self.__emit(EVENT.SESSION_ADDED, { id = data.id })
     elseif data.lifecycle == SESSION_LIFECYCLE.TERMINATED then
         self.__emit(EVENT.SESSION_DELETED, { id = data.id })
-        self.sessions[data.id] = nil
+        -- self.sessions[data.id] = nil
         if self.selected_session_id == data.id then
             self.selected_session_id = nil
             self.__emit(EVENT.INLINE_IDLE, { id = data.id })
@@ -253,7 +254,7 @@ function Controller.on_session_status(data)
     end
 end
 
-function Controller.session()
+function Controller.get_current_session()
     local session = self.sessions[self.selected_session_id]
     if session and not session:is_terminated() and session:is_interactive() then
         return session
@@ -265,14 +266,14 @@ end
 ---@param key string
 ---@return boolean
 function Controller.lazy_completion(key)
-    if self.session() then
-        return self.session():lazy_completion(key)
+    if self.get_current_session() then
+        return self.get_current_session():lazy_completion(key)
     end
     return false
 end
 
 function Controller.is_enabled(buf)
-    return Config.inline_completion.enable and Fn.is_filebuf(buf) == true and not self.is_filetype_excluded(buf)
+    return Config.inline_completion.enable and Fn.is_filebuf(buf) == true and not self.is_ft_disabled(buf)
 end
 
 ---@param msg string
