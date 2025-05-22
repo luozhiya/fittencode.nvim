@@ -53,6 +53,7 @@ function View:delete_text(start_pos, end_pos)
     vim.api.nvim_buf_set_text(self.buf, start_pos[1] - 1, start_pos[2] - 1, end_pos[1] - 1, end_pos[2] - 1, {})
 end
 
+-- 从 Chat 来看新版 Neovim 已经不需要这样处理了
 ---@param row integer
 ---@param col integer
 ---@param lines string[]
@@ -96,29 +97,35 @@ function View:__view_wrap(win, fn)
     end
 end
 
----@param row integer 0-based
----@param col integer 0-based
----@param lines string[]
-function View:move_cursor_to_text_end(window, row, col, lines)
-    local cursor = { row, col }
-    local count = vim.tbl_count(lines)
-    if count == 0 then
-        return { row, col }
+--- 计算插入文本后的光标位置，并可选择移动光标 {row, col} (0-based)
+---@param window integer 窗口ID
+---@param start_row integer 起始行(0-based)
+---@param start_col integer 起始列(0-based)
+---@param inserted_lines string[] 插入的文本行
+---@param should_move_cursor? boolean 是否移动光标
+---@return table
+function View:calculate_cursor_position_after_insertion(window, start_row, start_col, inserted_lines, should_move_cursor)
+    local cursor = { start_row, start_col }
+    local line_count = #inserted_lines
+    if line_count == 0 then
+        return cursor
     end
-    if count == 1 then
-        local first_len = string.len(lines[1])
-        cursor = { row + 1, col + first_len }
-        if window and vim.api.nvim_win_is_valid(window) then
-            vim.api.nvim_win_set_cursor(window, cursor)
-        end
+
+    if line_count == 1 then
+        -- 单行插入，光标在该行末尾
+        local first_line_length = #inserted_lines[1]
+        cursor = { start_row, start_col + first_line_length }
     else
-        local last_len = string.len(lines[count])
-        cursor = { row + count, last_len }
-        if window and vim.api.nvim_win_is_valid(window) then
-            vim.api.nvim_win_set_cursor(window, { row + count, last_len })
-        end
+        -- 多行插入，光标在最后一行末尾
+        local last_line_length = #inserted_lines[line_count]
+        cursor = { start_row + line_count - 1, last_line_length }
     end
-    return { cursor[1] - 1, cursor[2] }
+
+    if should_move_cursor and window and vim.api.nvim_win_is_valid(window) then
+        vim.api.nvim_win_set_cursor(window, { cursor[1] + 1, cursor[2] }) -- API需要1-based行号
+    end
+
+    return { cursor[1], cursor[2] } -- 返回0-based坐标
 end
 
 function View:update(state)
@@ -152,7 +159,7 @@ function View:update(state)
         self:delete_text(self.position, current_pos)
         -- -- 2. insert committed text
         self:insert_text(self.position, commit_lines)
-        self:move_cursor_to_text_end(win, self.position[1], self.position[2], commit_lines)
+        self:calculate_cursor_position_after_insertion(win, self.position[1], self.position[2], commit_lines, true)
         -- -- 3. render uncommitted text virtual text inline after
         self:render_stage(stage_lines)
     end
