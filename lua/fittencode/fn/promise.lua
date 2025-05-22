@@ -81,10 +81,12 @@ function Promise.new(executor)
             self:manually_reject(reason)
         end
 
-        local ok, err = pcall(executor, resolve, reject)
-        if not ok then
-            reject(err)
-        end
+        vim.schedule(function()
+            local ok, err = pcall(executor, resolve, reject)
+            if not ok then
+                reject(err)
+            end
+        end)
     end
 
     return self
