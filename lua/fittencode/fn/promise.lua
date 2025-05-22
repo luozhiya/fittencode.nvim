@@ -359,11 +359,9 @@ end
 
 -- 等待当前Promise完成
 -- 使用 vim.wait 阻塞当前执行直到 Promise 完成
--- @param timeout? number 超时时间（毫秒），默认无限等待
--- @param interval? number 检查间隔（毫秒），默认10ms
--- @return any 如果Promise解决，返回Promise解决值
--- @return any 如果Promise拒绝，返回Promise拒绝原因
--- @return string 如果超时，返回 nil
+---@param timeout? number 超时时间（毫秒），默认无限等待
+---@param interval? number 检查间隔（毫秒），默认10ms
+---@return FittenCode.Promise?
 function Promise:wait(timeout, interval)
     timeout = timeout or math.huge -- 默认无限等待
     interval = interval or 10      -- 默认检查间隔10ms
