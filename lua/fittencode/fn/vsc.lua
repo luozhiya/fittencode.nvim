@@ -371,11 +371,11 @@ end
 
 -- Check if the given text contains only ASCII characters.
 ---@param text string|string[]
-function M.onlyascii(text)
+function M.is_ascii_only(text)
     assert(text)
     if type(text) == 'table' then
         for _, t in ipairs(text) do
-            if not M.onlyascii(t) then
+            if not M.is_ascii_only(t) then
                 return false
             end
         end

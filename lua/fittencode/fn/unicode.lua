@@ -553,6 +553,7 @@ function M.utf8_position_index(s)
     }
 end
 
+-- str_byteindex
 ---@param s string utf-8 bytes
 ---@param encoding "utf-8"|"utf-16"|"utf-32"
 ---@param index integer
@@ -660,6 +661,7 @@ function M.utf_to_byteindex(s, encoding, index)
     end
 end
 
+-- str_utfindex
 ---@param s string
 ---@param encoding "utf-8"|"utf-16"|"utf-32"
 ---@param index? integer

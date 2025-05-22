@@ -27,6 +27,7 @@ end
 function Session:_initialize(options)
     self.buf = options.buf
     self.position = options.position
+    self.current_position = options.position
     self.id = options.id
     self.timing = {
         completion = {},
@@ -36,16 +37,10 @@ function Session:_initialize(options)
     self.keymaps = {}
     self.triggering_completion = options.triggering_completion
     self.on_completion_status = function()
-        Fn.schedule_call(options.on_completion_status, {
-            id = self.id,
-            completion_status = self.completion_status,
-        })
+        Fn.schedule_call(options.on_completion_status, { id = self.id, completion_status = self.completion_status, })
     end
     self.on_session_status = function()
-        Fn.schedule_call(options.on_session_status, {
-            id = self.id,
-            lifecycle = self.lifecycle,
-        })
+        Fn.schedule_call(options.on_session_status, { id = self.id, lifecycle = self.lifecycle, })
     end
     self:sync_lifecycle(LIFECYCLE.CREATED)
     self:sync_completion(COMPLETION_STATUS.START)
@@ -155,7 +150,9 @@ end
 
 ---@param position FittenCode.Position
 function Session:is_cached(position)
-    -- return self.model:eq_commit_pos(row, col)
+    -- 每次 Accept 会修改 cursor
+    -- 当 cursor 位置不变时，可以认为缓存命中
+    return self.current_position.row == position.row and self.current_position.col == position.col
 end
 
 function Session:abort_and_clear_requests()
@@ -165,15 +162,6 @@ function Session:abort_and_clear_requests()
     self.requests = {}
 end
 
-function Session:clear_mv()
-    if self.model then
-        self.model:clear()
-    end
-    if self.view then
-        self.view:clear()
-    end
-end
-
 -- 终止不会清除 timing 等信息，方便后续做性能统计分析
 function Session:terminate()
     if self.lifecycle == LIFECYCLE.TERMINATED then
@@ -181,7 +169,7 @@ function Session:terminate()
     end
     if self.lifecycle == LIFECYCLE.INTERACTIVE then
         self:abort_and_clear_requests()
-        self:clear_mv()
+        self.view:clear()
         self:restore_keymaps()
         self:clear_autocmds()
     end
@@ -221,7 +209,7 @@ function Session:sync_completion(event)
     self.on_completion_status()
 end
 
-function Session:add_request(handle)
+function Session:__add_request(handle)
     self.requests[#self.requests + 1] = handle
 end
 
@@ -230,7 +218,7 @@ function Session:generate_prompt()
     return Fim.generate(self.buf, self.position)
 end
 
-local function async_compress_prompt(prompt)
+function Session:async_compress_prompt(prompt)
     local _, data = pcall(vim.fn.json_encode, prompt)
     if not _ then
         return Promise.reject()
@@ -247,7 +235,7 @@ function Session:send_completions()
     local function __send_completions()
         return Promise.all({
             self:generate_prompt():forward(function(prompt)
-                return async_compress_prompt(prompt)
+                return self:async_compress_prompt(prompt)
             end),
             self:get_completion_version()
         }):forward(function(_)
@@ -286,7 +274,7 @@ function Session:get_completion_version()
     if not request then
         return Promise.reject()
     end
-    self:add_request(request)
+    self:__add_request(request)
 
     return request:async():forward(function(_)
         ---@type FittenCode.Protocol.Methods.GetCompletionVersion.Response
@@ -319,7 +307,7 @@ function Session:generate_one_stage_auth(completion_version, body)
     if not request then
         return Promise.reject()
     end
-    self:add_request(request)
+    self:__add_request(request)
 
     return request:async():forward(function(_)
         local response = _.json()

@@ -1,3 +1,9 @@
+local Fn = require('fittencode.fn')
+local Promise = require('fittencode.promise')
+local Log = require('fittencode.log')
+local Client = require('fittencode.client')
+local Protocol = require('fittencode.client.protocol')
+
 local M = {}
 
 -- 实现三阶段验证：
@@ -47,8 +53,7 @@ end
 -- 高级分词
 ---@return FittenCode.Concurrency.Promise, FittenCode.HTTP.Response?
 function M.send_segments(text)
-    if Editor.onlyascii(text) then
-        Log.debug('Generated text is only ascii, skip word segmentation')
+    if Fn.onlyascii(text) then
         return Promise.resolve()
     end
 

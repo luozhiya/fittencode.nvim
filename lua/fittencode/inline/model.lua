@@ -6,12 +6,13 @@ Model 的设计思路：
 
 ]]
 
-local CompletionModel = require('fittencode.inline.model.completion_model')
+local CompletionModel = require('fittencode.inline.completion_model')
 local Log = require('fittencode.log')
 local Fn = require('fittencode.fn')
 local Range = require('fittencode.fn.range')
 local Position = require('fittencode.fn.position')
-local Convert = require('fittencode.inline.model.convert')
+local Segment = require('fittencode.inline.segment')
+local Unicode = require('fittencode.fn.unicode')
 
 local Model = {}
 Model.__index = Model
@@ -34,7 +35,7 @@ function Model:_initialize(options)
         computed[#computed + 1] = {
             generated_text = completion.generated_text,
             row_delta = completion.line_delta,
-            col_delta = vim.str_byteindex(completion.generated_text, 'utf-16', completion.character_delta),
+            col_delta = Unicode.byte_to_utfindex(completion.generated_text, 'utf-16', completion.character_delta),
         }
     end
     self.computed_completions = computed
@@ -139,9 +140,6 @@ function Model:is_complete()
     return self:selected_completion():is_complete()
 end
 
-function Model:clear()
-end
-
 function Model:update(state)
     state = state or {}
     if state.segments then
@@ -157,20 +155,18 @@ function Model:update_segments(segments)
     end
     for i, seg in ipairs(segments) do
         local compl_model = self.completion_models[i]
-        local words = Convert.segments_to_words(compl_model:snapshot(), seg)
+        local words = Segment.segments_to_words(compl_model:snapshot(), seg)
         compl_model:update_words(words)
     end
 end
 
 -- 一旦开始 comletion 则不允许再选择其他的 completion
+-- TODO:?
 function Model:set_selected_completion(index)
     if self.selected_completion ~= nil then
         return
     end
     self.selected_completion = index
-end
-
-function Model:eq_peek(key)
 end
 
 return Model

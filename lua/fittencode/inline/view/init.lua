@@ -1,21 +1,14 @@
-local ns_ids = {
-    completion = vim.api.nvim_create_namespace('Fittencode.Inline.Session.Completion')
-}
-
----@class FittenCode.Inline.View
 local View = {}
 View.__index = View
 
-function View:new(opts)
-    local obj = {
-        buf = opts.buf,
-        extmark_ids = {
-            lines = {},
-            segments = {},
-        }
+function View.new(options)
+    local self = {
+        buf = options.buf,
+        position = options.position,
+        completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.View')
     }
-    setmetatable(obj, View)
-    return obj
+    setmetatable(self, View)
+    return self
 end
 
 function View:render_hints(state)
@@ -24,9 +17,9 @@ function View:render_hints(state)
         for _, line in ipairs(self.generated_text) do
             virt_text[#virt_text + 1] = { { line, 'FittenCodeSuggestion' } }
         end
-        self.extmark_ids.lines[#self.extmark_ids.lines + 1] = vim.api.nvim_buf_set_extmark(
+        vim.api.nvim_buf_set_extmark(
             self.buf,
-            ns_ids.completion,
+            self.completion_ns,
             self.commit_row - 1,
             self.commit_col,
             {
@@ -36,9 +29,9 @@ function View:render_hints(state)
             })
         table.remove(virt_text, 1)
         if vim.tbl_count(virt_text) > 0 then
-            self.extmark_ids.lines[#self.extmark_ids.lines + 1] = vim.api.nvim_buf_set_extmark(
+            vim.api.nvim_buf_set_extmark(
                 self.buf,
-                ns_ids.completion,
+                self.completion_ns,
                 self.commit_row - 1,
                 0,
                 {
@@ -48,22 +41,11 @@ function View:render_hints(state)
         end
     elseif self.mode == 'edit_completion' then
     elseif self.mode == 'multi_segments' then
-        local segments
-        for _, segment in ipairs(segments) do
-            -- Editor.set_virt_text()
-        end
     end
 end
 
 function View:clear()
-    for _, id in ipairs(self.extmark_ids.lines) do
-        vim.api.nvim_buf_del_extmark(self.buf, ns_ids.completion, id)
-    end
-    self.extmark_ids.lines = {}
-    for _, id in ipairs(self.extmark_ids.segments) do
-        vim.api.nvim_buf_del_extmark(self.buf, ns_ids.completion, id)
-    end
-    self.extmark_ids.segments = {}
+    vim.api.nvim_buf_clear_namespace(self.buf, self.completion_ns, 0, -1)
 end
 
 function View:delete_text(start_pos, end_pos)

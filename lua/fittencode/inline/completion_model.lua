@@ -1,22 +1,24 @@
 --[[
 
 -----------------------------------
--- 分词转换方法 convert_segments_to_words
+-- 分词转换方法 segments_to_words
 -----------------------------------
 
 local custom_segments = {'我', '吃', '苹果'}
 local model = CompletionModel.new(s, placeholder_ranges)
-local words = CompletionModel:convert_segments_to_words(custom_segments)
+local words = segments_to_words(custom_segments)
 model:update_words(words)
 
 --]]
+
+local Unicode = require('fittencode.fn.unicode')
 
 local function parse_chars(s)
     local chars = {}
     local i = 1
     while i <= #s do
         local b = s:byte(i)
-        local len = UTF8.len_by_first_byte(b)
+        local len = Unicode.utf8_bytes(b)
         table.insert(chars, { start = i, end_ = i + len - 1, content = s:sub(i, i + len - 1) })
         i = i + len
     end
@@ -32,7 +34,7 @@ local function parse_words(s, chars)
     end
 
     local function is_chinese(str)
-        return LangUnicode.is_chinese(UTF8.codepoint(str))
+        return Unicode.is_chinese(Unicode.js_codepoint(str))
     end
 
     for i, char in ipairs(chars) do
