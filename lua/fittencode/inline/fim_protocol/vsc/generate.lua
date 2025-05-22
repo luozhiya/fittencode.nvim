@@ -19,26 +19,26 @@ local M = {
     }
 }
 
-local function clean_fim_pattern(text)
+local function remove_fim_markers(text)
     return text and vim.fn.substitute(text, FIM_PATTERN, '', 'g') or ''
 end
 
-local function get_full_text(buf)
+local function get_entire_buffer_text(buf)
     local full_range = Range.new({
         start = Position.new({ row = 0, col = 0 }),
         end_ = Position.new({ row = -1, col = -1 })
     })
-    return clean_fim_pattern(Fn.get_text(buf, full_range))
+    return remove_fim_markers(Fn.get_text(buf, full_range))
 end
 
-local function get_text_segment(buf, start_pos, end_pos)
-    return clean_fim_pattern(Fn.get_text(buf, Range.new({
+local function get_buffer_segment(buf, start_pos, end_pos)
+    return remove_fim_markers(Fn.get_text(buf, Range.new({
         start = start_pos,
         end_ = end_pos
     })))
 end
 
-local function calculate_large_file_positions(buf, curoffset, charscount)
+local function calculate_large_file_segments(buf, curoffset, charscount)
     local curround = math.floor(curoffset / SAMPLE_SIZE) * SAMPLE_SIZE
     local curmax = charscount - math.floor((charscount - curoffset) / SAMPLE_SIZE) * SAMPLE_SIZE
     local suffixoffset = math.min(charscount, math.max(curmax + HALF_MAX, HALF_MAX * 2))
@@ -53,8 +53,8 @@ local function calculate_large_file_positions(buf, curoffset, charscount)
     }
 end
 
-local function small_file_context(buf, position)
-    local full_text = get_full_text(buf)
+local function get_small_file_context(buf, position)
+    local full_text = get_entire_buffer_text(buf)
     local prefix_end = Fn.offset_at(buf, position) or #full_text
     return {
         prefix = full_text:sub(1, prefix_end),
@@ -64,27 +64,27 @@ local function small_file_context(buf, position)
     }
 end
 
-local function large_file_context(buf, position, charscount)
+local function get_large_file_context(buf, position, charscount)
     local curoffset = Fn.offset_at(buf, position) or 0
-    local positions = calculate_large_file_positions(buf, curoffset, charscount)
+    local positions = calculate_large_file_segments(buf, curoffset, charscount)
 
     return {
-        prefix = get_text_segment(buf, positions.prefix_pos, positions.cur_pos),
-        suffix = get_text_segment(buf, positions.cur_pos, positions.suffix_pos),
+        prefix = get_buffer_segment(buf, positions.prefix_pos, positions.cur_pos),
+        suffix = get_buffer_segment(buf, positions.cur_pos, positions.suffix_pos),
         prefixoffset = positions.prefixoffset,
         norangecount = charscount - (Fn.offset_at(buf, positions.suffix_pos) or 0)
     }
 end
 
-local function compute_editor_context(buf, position)
+local function get_editor_context(buf, position)
     local wordcount = Fn.wordcount(buf)
     assert(wordcount)
 
     local ctx
     if wordcount.chars <= MAX_CHARS then
-        ctx = small_file_context(buf, position)
+        ctx = get_small_file_context(buf, position)
     else
-        ctx = large_file_context(buf, position, wordcount.chars)
+        ctx = get_large_file_context(buf, position, wordcount.chars)
     end
 
     ctx.prefix = ctx.prefix or ''
@@ -92,7 +92,7 @@ local function compute_editor_context(buf, position)
     return ctx
 end
 
-local function calculate_diff_meta(current_text, current_cipher, filename)
+local function get_text_diff_metadata(current_text, current_cipher, filename)
     if filename ~= M.last.filename then
         M.last = {
             filename = filename,
@@ -121,7 +121,7 @@ local function calculate_diff_meta(current_text, current_cipher, filename)
     return diff_meta
 end
 
-local function recalculate_meta_datas(options)
+local function generate_metadata(options)
     local base_meta = {
         cpos = Unicode.byte_to_utfindex(options.prefix, 'utf-16'),
         bcpos = #options.prefix,
@@ -137,18 +137,18 @@ local function recalculate_meta_datas(options)
         pc_prompt = '',
         pc_prompt_type = '0'
     }
-    local diff_meta = calculate_diff_meta(options.text, options.ciphertext, options.filename)
+    local diff_meta = get_text_diff_metadata(options.text, options.ciphertext, options.filename)
     return vim.tbl_deep_extend('force', base_meta, diff_meta)
 end
 
 local function generate_base_prompt(buf, position, options)
-    local ctx = compute_editor_context(buf, position)
+    local ctx = get_editor_context(buf, position)
     local text = ctx.prefix .. ctx.suffix
     local ciphertext = MD5.compute(text):wait()
     if not ciphertext or ciphertext:is_rejected() then
         return
     end
-    local meta_datas = recalculate_meta_datas({
+    local meta_datas = generate_metadata({
         text = text,
         ciphertext = ciphertext.value,
         prefix = ctx.prefix,
