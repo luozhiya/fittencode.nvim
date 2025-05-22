@@ -9,11 +9,11 @@ local Definitions = require('fittencode.inline.definitions')
 
 local EVENT = Definitions.CONTROLLER_EVENT
 local INLINE = Definitions.INLINE_STATUS
-local SESSION = Definitions.SESSION_STATUS
+local COMPLETION = Definitions.COMPLETION_STATUS
 
 ---@class FittenCode.Inline.Status
 ---@field inline string
----@field session string
+---@field completion string
 local Status = {}
 Status.__index = Status
 
@@ -21,7 +21,7 @@ Status.__index = Status
 function Status.new()
     local self = setmetatable({}, Status)
     self.inline = ''
-    self.session = ''
+    self.completion = ''
     return self
 end
 
@@ -29,21 +29,21 @@ end
 function Status:update(controller, event_type, data)
     if data.id == controller.selected_session_id then
         if event_type == EVENT.SESSION_ADDED then
-            self.session = SESSION.CREATED
+            self.completion = COMPLETION.CREATED
         elseif event_type == EVENT.SESSION_DELETED then
-            self.session = ''
+            self.completion = ''
         elseif event_type == EVENT.SESSION_UPDATED then
             assert(self.inline == INLINE.RUNNING)
-            self.session = data.status
+            self.completion = data.status
         end
     end
 
     if event_type == EVENT.INLINE_IDLE then
         self.inline = INLINE.IDLE
-        self.session = ''
+        self.completion = ''
     elseif event_type == EVENT.INLINE_DISABLED then
         self.inline = INLINE.DISABLED
-        self.session = ''
+        self.completion = ''
     elseif event_type == EVENT.INLINE_RUNNING then
         self.inline = INLINE.RUNNING
     end

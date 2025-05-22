@@ -13,7 +13,7 @@ local INLINE_STATUS = {
     RUNNING = 'running',
 }
 
-local SESSION_STATUS = {
+local COMPLETION_STATUS = {
     CREATED = 'created',
     GENERATING_PROMPT = 'generating_prompt',
     REQUESTING_COMPLETIONS = 'requesting_completions',
@@ -22,8 +22,15 @@ local SESSION_STATUS = {
     ERROR = 'error',
 }
 
+local SESSION_LIFECYCLE = {
+    CREATED = 'created',
+    MODEL_READY = 'model_ready',
+    INTERACTIVE = 'interactive',
+    TERMINATED = 'terminated',
+}
+
 return {
     CONTROLLER_EVENT = CONTROLLER_EVENT,
     INLINE_STATUS = INLINE_STATUS,
-    SESSION_STATUS = SESSION_STATUS,
+    COMPLETION_STATUS = COMPLETION_STATUS,
 }

@@ -14,13 +14,6 @@ local Fim = require('fittencode.inline.fim_protocol.vsc')
 -- * 通过配置交互模式来实现延时补全 (delay_completion)
 local Session = {}
 
-local PHASE = {
-    CREATED = 'created',
-    MODEL_READY = 'model_ready',
-    INTERACTIVE = 'interactive',
-    TERMINATED = 'terminated',
-}
-
 function Session.new(options)
     local self = setmetatable({}, Session)
     self:_initialize(options)
@@ -36,13 +29,13 @@ function Session:_initialize(options)
     self.keymaps = {}
     self.triggering_completion = options.triggering_completion
     self.update_status = options.update_status
-    self.phase = PHASE.CREATED
+    self.phase = SESSION_LIFECYCLE.CREATED
 end
 
 -- 设置 Model，计算补全数据
 function Session:set_model(parsed_response)
-    if self.phase == PHASE.CREATED then
-        self.phase = PHASE.MODEL_READY
+    if self.phase == SESSION_LIFECYCLE.CREATED then
+        self.phase = SESSION_LIFECYCLE.MODEL_READY
         self.model = Model.new({
             buf = self.buf,
             position = self.position,
@@ -67,17 +60,17 @@ end
 
 -- 设置交互模式
 function Session:set_interactive()
-    if self.phase == PHASE.MODEL_READY then
+    if self.phase == SESSION_LIFECYCLE.MODEL_READY then
         self.view = View:new({ buf = self.buf })
         self:set_keymaps()
         self:set_autocmds()
         self:update_view()
-        self.phase = PHASE.INTERACTIVE
+        self.phase = SESSION_LIFECYCLE.INTERACTIVE
     end
 end
 
 function Session:is_interactive()
-    return self.phase == PHASE.INTERACTIVE
+    return self.phase == SESSION_LIFECYCLE.INTERACTIVE
 end
 
 function Session:update_view()
@@ -178,16 +171,16 @@ end
 
 -- 终止不会清除 timing 等信息，方便后续做性能统计分析
 function Session:terminate()
-    if self.phase == PHASE.TERMINATED then
+    if self.phase == SESSION_LIFECYCLE.TERMINATED then
         return
     end
-    if self.phase == PHASE.INTERACTIVE then
+    if self.phase == SESSION_LIFECYCLE.INTERACTIVE then
         self:abort_and_clear_requests()
         self:clear_mv()
         self:restore_keymaps()
         self:clear_autocmds()
     end
-    self.phase = PHASE.TERMINATED
+    self.phase = SESSION_LIFECYCLE.TERMINATED
     self.update_status(self.id)
 end
 
@@ -213,7 +206,7 @@ end
 -- * 判断是否已经终止
 -- * 跳出 Promise
 function Session:is_terminated()
-    return self.phase == PHASE.TERMINATED
+    return self.phase == SESSION_LIFECYCLE.TERMINATED
 end
 
 function Session:get_status()
