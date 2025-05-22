@@ -228,13 +228,15 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     local scroll_bottom = false
     if self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win) then
         local cursor = vim.api.nvim_win_get_cursor(self.messages_exchange.win)
-        local height = vim.api.nvim_win_get_height(self.messages_exchange.win)
-        if cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) - height / 3 then
+        -- local height = vim.api.nvim_win_get_height(self.messages_exchange.win)
+        -- cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) - height/5
+        if cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) then
             scroll_bottom = true
         end
     end
 
     -- modify buffer
+    -- turn off treesitter?
 
     local streaming = false
     if conversation.content.state ~= nil and conversation.content.state.type == VIEW_TYPE.BOT_ANSWER_STREAMING then

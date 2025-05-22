@@ -28,6 +28,7 @@ local current_frame = 1
 local progress_win = nil
 local progress_buf = nil
 local start_time = nil
+local ns = vim.api.nvim_create_namespace('FittenCode.View.ProgressIndicator')
 
 local function update_progress()
     if not progress_buf or not vim.api.nvim_buf_is_valid(progress_buf) then
@@ -46,13 +47,12 @@ local function update_progress()
     -- 设置时间部分的高亮
     if progress_win and vim.api.nvim_win_is_valid(progress_win) then
         local time_start = #config.frames[current_frame] + 1
-        vim.api.nvim_buf_add_highlight(
+        vim.hl.range(
             progress_buf,
-            -1,
+            ns,
             config.time_highlight,
-            0,
-            time_start,
-            -1
+            { 0, 0 },
+            { 0, time_start }
         )
     end
 
