@@ -216,7 +216,7 @@ end
 -- 触发补全
 -- * resolve 成功时返回补全列表
 -- * reject 没有补全或者出错了
----@return FittenCode.Concurrency.Promise
+---@return FittenCode.Promise
 function Controller.triggering_completion(options)
     Log.debug('Triggering completion')
     options = options or {}

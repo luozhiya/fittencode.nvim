@@ -47,7 +47,7 @@ local PromiseState = {
 }
 
 -- The `Promise` object represents the eventual completion (or failure) of an asynchronous operation and its resulting value.
----@class FittenCode.Concurrency.Promise
+---@class FittenCode.Promise
 ---@field state integer
 ---@field value any
 ---@field reason any
@@ -58,7 +58,7 @@ Promise.__index = Promise
 -- Promise() constructor, https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/Promise
 -- 允许不传 executor 创建 Promise 实例（用于手动控制）
 ---@param executor? fun(resolve: function, reject: function): any
----@return FittenCode.Concurrency.Promise
+---@return FittenCode.Promise
 function Promise.new(executor)
     local self = {
         state = PromiseState.PENDING,
@@ -202,7 +202,7 @@ end
 -- * 当 `原Promise` 被 `拒绝` 且未提供 `on_rejected` 时，`新Promise` 会以相同的原因被 `拒绝`，确保后续的 `catch` 能捕获到 `原始错误`。
 ---@param on_fulfilled? function
 ---@param on_rejected? function
----@return FittenCode.Concurrency.Promise
+---@return FittenCode.Promise
 function Promise:forward(on_fulfilled, on_rejected)
     return Promise.new(function(resolve, reject)
         if self.state == PromiseState.PENDING then
@@ -296,7 +296,7 @@ end
 -- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/reject
 -- * The Promise.reject() method returns a new Promise object that is rejected with the given reason.
 ---@param reason any
----@return FittenCode.Concurrency.Promise
+---@return FittenCode.Promise
 function Promise.reject(reason)
     return Promise.new(function(_, reject)
         reject(reason) -- 同步触发拒绝
@@ -306,7 +306,7 @@ end
 -- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/resolve
 -- * The Promise.resolve() method returns a new Promise object that is resolved with the given value.
 ---@param value any
----@return FittenCode.Concurrency.Promise
+---@return FittenCode.Promise
 function Promise.resolve(value)
     -- 如果参数是 Promise 实例则直接返回
     if Promise.is_promise(value) then
@@ -325,7 +325,7 @@ end
 --   with an array of the fulfillment values.
 -- * It rejects when any of the input's promises rejects, with this first rejection reason.
 ---@param promises table
----@return FittenCode.Concurrency.Promise
+---@return FittenCode.Promise
 function Promise.all(promises)
     -- 如果不是 table 或者没有长度（空表），则直接返回已解决的 Promise
     if type(promises) ~= 'table' or #promises == 0 then
@@ -363,6 +363,57 @@ function Promise.all(promises)
             )
         end
     end)
+end
+
+-- 等待当前Promise完成
+-- 使用 vim.wait 阻塞当前执行直到 Promise 完成
+-- @param timeout? number 超时时间（毫秒），默认无限等待
+-- @param interval? number 检查间隔（毫秒），默认10ms
+-- @return any 如果Promise解决，返回Promise解决值
+-- @return any 如果Promise拒绝，返回Promise拒绝原因
+-- @return string 如果超时，返回 nil
+function Promise:wait(timeout, interval)
+    timeout = timeout or math.huge -- 默认无限等待
+    interval = interval or 10      -- 默认检查间隔10ms
+
+    local result
+    local resolved = false
+    local rejected = false
+    local rejection_reason
+
+    -- 如果Promise已经完成，直接返回结果
+    if self:is_fulfilled() then
+        return Promise.resolve(self.value)
+    elseif self:is_rejected() then
+        return Promise.reject(self.reason)
+    end
+
+    -- 设置Promise的回调
+    self:forward(
+        function(value)
+            result = value
+            resolved = true
+        end,
+        function(reason)
+            rejection_reason = reason
+            rejected = true
+        end
+    )
+
+    -- 使用vim.wait等待Promise完成
+    local waited = vim.wait(timeout, function()
+        return resolved or rejected
+    end, interval)
+
+    -- 处理等待结果
+    if not waited then
+        -- error('timeout')
+        return
+    elseif rejected then
+        Promise.reject(rejection_reason)
+    else
+        return Promise.resolve(result)
+    end
 end
 
 return Promise

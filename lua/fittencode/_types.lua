@@ -9,7 +9,7 @@
 ---@class FittenCode.HTTP.Response
 ---@field stream FittenCode.HTTP.Request.Stream @响应流对象
 ---@field abort fun() @中止请求方法
----@field async fun(): FittenCode.Concurrency.Promise? @启动请求并返回关联的 Promise 对象
+---@field async fun(): FittenCode.Promise? @启动请求并返回关联的 Promise 对象
 
 ---@class FittenCode.HTTP.Request.Stream
 ---@field on fun(self: FittenCode.HTTP.Request.Stream, event: FittenCode.HTTP.Request.Stream.Event, callback: function): FittenCode.HTTP.Request.Stream

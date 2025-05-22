@@ -230,7 +230,7 @@ end
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
 -- * resolve 包含 suggestions_ready
 -- * reject 包含 error / no_more_suggestions
----@return FittenCode.Concurrency.Promise
+---@return FittenCode.Promise
 function Session:send_completions()
     local function __send_completions()
         return Promise.all({
@@ -267,7 +267,7 @@ function Session:send_completions()
 end
 
 -- 获取补全版本号
----@return FittenCode.Concurrency.Promise
+---@return FittenCode.Promise
 function Session:get_completion_version()
     self:sync_completion(COMPLETION_STATUS.GETTING_COMPLETION_VERSION)
     local request = Client.make_request(Protocol.Methods.get_completion_version)

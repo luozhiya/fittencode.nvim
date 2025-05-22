@@ -51,7 +51,7 @@ function M.segments_to_words(model, segments)
 end
 
 -- 高级分词
----@return FittenCode.Concurrency.Promise, FittenCode.HTTP.Response?
+---@return FittenCode.Promise, FittenCode.HTTP.Response?
 function M.send_segments(text)
     if Fn.onlyascii(text) then
         return Promise.resolve()
