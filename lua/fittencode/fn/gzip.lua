@@ -14,7 +14,7 @@ function M.compress(options)
     return Promise.new(function(resolve, reject)
         if type(options.source) ~= 'string' then
             return reject({
-                code = 'INVALID_SOURCE',
+                code = 'GZIP_INVALID_SOURCE',
                 message = 'Source must be a string'
             })
         end

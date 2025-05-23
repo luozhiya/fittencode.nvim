@@ -230,7 +230,6 @@ end
 -- * reject 包含 error / no_more_suggestions
 ---@return FittenCode.Promise
 function Session:send_completions()
-    local compressed_prompt_binary
     local function __send_completions()
         return Promise.all({
             self:generate_prompt():forward(function(prompt)
@@ -239,7 +238,7 @@ function Session:send_completions()
             end),
             self:get_completion_version()
         }):forward(function(_)
-            compressed_prompt_binary = _[1]
+            local compressed_prompt_binary = _[1]
             local completion_version = _[2]
             Log.debug('Got completion version: {}', completion_version)
             Log.debug('Compressed prompt: {}', compressed_prompt_binary)

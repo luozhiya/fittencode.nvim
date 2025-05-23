@@ -219,10 +219,10 @@ function M.fetch(url, options)
         end
     end
 
-    if options.body_file then
+    if vim.fn.filereadable(options.body) == 1 then
         table.insert(args, '--data-binary')
-        table.insert(args, '@' .. options.body_file)
-    elseif options.body then
+        table.insert(args, '@' .. options.body)
+    else
         table.insert(args, '--data-binary')
         table.insert(args, '@-')
     end

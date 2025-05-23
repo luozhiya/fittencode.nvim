@@ -2,7 +2,6 @@
 ---@field method? string @HTTP 方法 (默认: 'GET')
 ---@field headers? table<string, string> @请求头
 ---@field body? string @请求体内容
----@field body_file? string @请求体文件路径
 ---@field timeout? number @超时时间（毫秒）
 ---@field follow_redirects? boolean @是否跟随重定向 (默认: true)
 

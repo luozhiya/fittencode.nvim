@@ -201,7 +201,6 @@ function M.make_request(protocol, options)
         method = protocol.method,
         headers = evaluated.headers,
         body = options.body,
-        body_file = options.body_file,
         timeout = options.timeout,
     })
 end
