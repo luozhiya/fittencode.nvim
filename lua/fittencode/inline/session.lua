@@ -256,9 +256,11 @@ function Session:send_completions()
                 return Promise.reject()
             end
             if not completion then
+                Log.debug('No more suggestions')
                 self:sync_completion(COMPLETION_STATUS.NO_MORE_SUGGESTIONS)
                 return Promise.reject()
             end
+            Log.debug('Got completion: {}', completion)
             self:set_model(completion)
             self:set_interactive()
             return Promise.resolve(completion)

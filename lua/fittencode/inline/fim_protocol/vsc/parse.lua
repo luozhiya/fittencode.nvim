@@ -13,6 +13,9 @@ local function build_completion_item(raw_response)
         return
     end
     local generated_text = clean_text .. (raw_response.ex_msg or '')
+    if generated_text == '' then
+        return
+    end
     return { {
         generated_text = generated_text,
         character_delta = raw_response.delta_char or 0,
