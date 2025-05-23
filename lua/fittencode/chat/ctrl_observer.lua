@@ -205,7 +205,7 @@ function TimingObserver:debug()
         end
 
         for _, phase_group in ipairs(conv.phases) do
-            output[#output + 1] = string.format('Message Metrics (%d):', _)
+            output[#output + 1] = string.format('Message %d Metrics:', _)
             for _, phase in pairs(phase_group) do
                 output[#output + 1] = string.format('  %-20s: %.2f ms', phase.phase_name, phase.duration)
             end
