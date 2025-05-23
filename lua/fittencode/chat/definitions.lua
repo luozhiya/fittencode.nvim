@@ -1,5 +1,5 @@
 local CONTROLLER_EVENT = {
-    CONVERSATION_ADDED = 'FittenCode.Chat.ConversationAdded',
+    CONVERSATION_ADDED = 'FittenCode.Chat.ConversationAdded', -- Same select
     CONVERSATION_DELETED = 'FittenCode.Chat.ConversationDeleted',
     CONVERSATION_UPDATED = 'FittenCode.Chat.ConversationUpdated',
     CONVERSATION_SELECTED = 'FittenCode.Chat.ConversationSelected',
@@ -7,12 +7,12 @@ local CONTROLLER_EVENT = {
 
 local CONVERSATION_PHASE = {
     INIT = 'init',
+    START = 'start',
     EVALUATE_TEMPLATE = 'evaluate_template',
     MAKE_REQUEST = 'make_request',
     STREAMING = 'streaming',
     COMPLETED = 'completed',
     ERROR = 'error',
-    IDLE = 'idle',
 }
 
 local CONVERSATION_VIEW_TYPE = {

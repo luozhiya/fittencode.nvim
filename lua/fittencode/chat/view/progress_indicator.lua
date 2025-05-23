@@ -27,7 +27,7 @@ local progress_timer = nil
 local current_frame = 1
 local progress_win = nil
 local progress_buf = nil
-local start_time = nil
+local progress_start_time = nil
 local ns = vim.api.nvim_create_namespace('FittenCode.View.ProgressIndicator')
 
 local function update_progress()
@@ -36,7 +36,7 @@ local function update_progress()
         return
     end
 
-    local elapsed = vim.loop.hrtime() - start_time
+    local elapsed = vim.loop.hrtime() - progress_start_time
     local elapsed_ms = elapsed / 1e9 -- 转换为毫秒
 
     local time_str = string.format(config.time_format, elapsed_ms)
@@ -59,7 +59,7 @@ local function update_progress()
     current_frame = (current_frame % #config.frames) + 1
 end
 
-function M.start()
+function M.start(start_time)
     if progress_timer then
         return
     end
@@ -91,8 +91,7 @@ function M.start()
     vim.api.nvim_set_option_value('winblend', 0, { win = progress_win })
     vim.api.nvim_set_option_value('winhl', 'Normal:' .. config.highlight_group, { win = progress_win })
 
-    -- 记录开始时间
-    start_time = vim.loop.hrtime()
+    progress_start_time = start_time
 
     progress_timer = vim.loop.new_timer()
     assert(progress_timer)

@@ -235,6 +235,8 @@ local function is_rag_chat(self)
 end
 
 local function start_normal_chat(self)
+    self.update_status({ id = self.id, phase = PHASE.START })
+
     local protocol = Protocal.Methods.chat_auth
     ---@type FittenCode.Chat.Template.InitialMessage | FittenCode.Chat.Template.Response | nil
     local ir = self.template.response

@@ -42,6 +42,7 @@ function Status:update(controller, event_type, data)
 end
 
 ---@class FittenCode.Chat.ProgressIndicatorObserver : FittenCode.Chat.Observer
+---@field start_time table<string, number>
 local ProgressIndicatorObserver = setmetatable({}, { __index = Observer })
 ProgressIndicatorObserver.__index = ProgressIndicatorObserver
 
@@ -50,6 +51,7 @@ function ProgressIndicatorObserver.new(id)
     ---@diagnostic disable-next-line: assign-type-mismatch
     local self = Observer.new(id or 'progress_indicator_observer')
     setmetatable(self, ProgressIndicatorObserver)
+    self.start_time = {}
     return self
 end
 
@@ -57,23 +59,22 @@ end
 ---@param event_type string
 ---@param data any
 function ProgressIndicatorObserver:update(controller, event_type, data)
-    if event_type ~= EVENT.CONVERSATION_UPDATED then return end
-
     local selected_id = controller.model:get_selected_conversation_id()
+    if data.id ~= selected_id or not controller.view:is_visible() or event_type ~= EVENT.CONVERSATION_UPDATED then
+        PI.stop()
+        return
+    end
     local is_busy = vim.tbl_contains({
         PHASE.EVALUATE_TEMPLATE,
         PHASE.MAKE_REQUEST,
         PHASE.STREAMING
     }, data.phase)
-
-    if controller.view:is_visible() and data.id == selected_id then
-        if is_busy then
-            PI.start()
-            self.active = true
-        else
-            PI.stop()
-            self.active = false
-        end
+    if data.phase == PHASE.START then
+        self.start_time[data.id] = vim.uv.hrtime()
+    elseif is_busy then
+        PI.start(self.start_time[data.id])
+    else
+        PI.stop()
     end
 end
 
@@ -191,8 +192,7 @@ function Controller:add_and_show_conversation(conversation, show)
         self:show_view()
     end
     self:notify_observers(EVENT.CONVERSATION_ADDED, {
-        conversation = conversation,
-        show = show
+        id = conversation.id,
     })
     return conversation
 end
@@ -272,7 +272,7 @@ function Controller:delete_conversation(id)
     self.model:delete_conversation(id)
     self:update_view()
     self:notify_observers(EVENT.CONVERSATION_DELETED, {
-        conversation_id = id
+        id = id
     })
 end
 
@@ -306,6 +306,9 @@ function Controller:select_conversation(id, show)
         if show then
             self:show_view()
         end
+        self:notify_observers(EVENT.CONVERSATION_SELECTED, {
+            id = id,
+        })
     end
 end
 
