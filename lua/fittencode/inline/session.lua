@@ -2,7 +2,8 @@ local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local ViewState = require('fittencode.inline.view.state')
 local Promise = require('fittencode.fn.promise')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.fn.core')
+local F = require('fittencode.fn.buf')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
@@ -210,7 +211,7 @@ end
 function Session:generate_prompt()
     self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
     return Fim.generate(self.buf, self.position, {
-        filename = Fn.filename(self.buf)
+        filename = F.filename(self.buf)
     })
 end
 

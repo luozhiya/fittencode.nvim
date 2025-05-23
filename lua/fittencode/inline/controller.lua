@@ -1,6 +1,7 @@
 local Client = require('fittencode.client')
 local Config = require('fittencode.config')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.fn.core')
+local F = require('fittencode.fn.buf')
 local Promise = require('fittencode.fn.promise')
 local Session = require('fittencode.inline.session')
 local i18n = require('fittencode.i18n')
@@ -199,7 +200,7 @@ end
 
 function Controller:_preflight_check(options)
     local buf = vim.api.nvim_get_current_buf()
-    if self:is_ft_disabled(buf) or not Fn.is_filebuf(buf) then
+    if self:is_ft_disabled(buf) or not F.is_filebuf(buf) then
         return
     end
     local api_key_manager = Client.get_api_key_manager()
@@ -209,9 +210,9 @@ function Controller:_preflight_check(options)
     if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
         return
     end
-    local position = Fn.position(vim.api.nvim_get_current_win())
+    local position = F.position(vim.api.nvim_get_current_win())
     assert(position)
-    local within_the_line = Fn.within_the_line(buf, position)
+    local within_the_line = F.within_the_line(buf, position)
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
         return
     end
@@ -282,7 +283,7 @@ function Controller:lazy_completion(key)
 end
 
 function Controller:is_enabled(buf)
-    return Config.inline_completion.enable and Fn.is_filebuf(buf) == true and not self:is_ft_disabled(buf)
+    return Config.inline_completion.enable and F.is_filebuf(buf) == true and not self:is_ft_disabled(buf)
 end
 
 ---@param msg string

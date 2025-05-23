@@ -1,6 +1,7 @@
 local Log = require('fittencode.log')
 local State = require('fittencode.chat.state')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.fn.core')
+local F = require('fittencode.fn.buf')
 local Config = require('fittencode.config')
 local i18n = require('fittencode.i18n')
 local Position = require('fittencode.fn.position')
@@ -263,7 +264,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
     end
     local switch = {
         ['context'] = function()
-            return { { name = Fn.filename(buf), language = Fn.language_id(buf), content = Fn.content(buf) } }
+            return { { name = F.filename(buf), language = F.language_id(buf), content = F.content(buf) } }
         end,
         ['constant'] = function()
             return variables.value
@@ -289,17 +290,17 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
             end
         end,
         ['selected-text'] = function()
-            return Fn.get_text(buf, context.selection.range)
+            return F.get_text(buf, context.selection.range)
         end,
         ['selected-location-text'] = function()
             -- TODO
             Log.error('Not implemented for selected-location-text')
         end,
         ['filename'] = function()
-            return Fn.filename(buf)
+            return F.filename(buf)
         end,
         ['language'] = function()
-            return Fn.language_id(buf)
+            return F.language_id(buf)
         end,
         ['comment-snippet'] = function()
             return Config.snippet.comment or ''
@@ -313,7 +314,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
                 tf['python'] = 'Python'
                 tf['javascript'] = 'JavaScript/TypeScript'
                 tf['typescript'] = tf['javascript']
-                return Config.unit_test_framework[tf[Fn.language_id()]] or ''
+                return Config.unit_test_framework[tf[F.language_id()]] or ''
             end
             local s = _unit_test_framework()
             return s == 'Not specified' and '' or s
@@ -391,7 +392,7 @@ function Controller:from_builtin_template_with_selection(type, mode)
         context.buf = buf
         local selection = {}
         local range = get_range_from_visual_selection(buf)
-        selection.range = Fn.normalize_range(buf, range)
+        selection.range = F.normalize_range(buf, range)
         -- Log.debug('Get range from visual selection = {}', range)
         -- Log.debug('Selected range = {}', selection.range)
         local REQUIRES_SELECTION = {
@@ -405,9 +406,9 @@ function Controller:from_builtin_template_with_selection(type, mode)
         if vim.tbl_contains(REQUIRES_SELECTION, type) and not selection.range then
             if type == TEMPLATE_CATEGORIES.EDIT_CODE then
                 -- TODO: Tree-sitter supported
-                -- Fn.expand_range_ts(buf, curpos, 'function') -- 'class'
-                local curpos = Fn.position(win)
-                selection.range = Fn.expand_range(buf, curpos, 20)
+                -- F.expand_range_ts(buf, curpos, 'function') -- 'class'
+                local curpos = F.position(win)
+                selection.range = F.expand_range(buf, curpos, 20)
             else
                 Log.notify_error('Please select the code in the editor.')
                 return

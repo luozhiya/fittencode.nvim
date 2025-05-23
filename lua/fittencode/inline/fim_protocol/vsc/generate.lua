@@ -1,5 +1,6 @@
 local MD5 = require('fittencode.fn.md5')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.fn.core')
+local F = require('fittencode.fn.buf')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local Config = require('fittencode.config')
@@ -29,11 +30,11 @@ local function fetch_full_buffer_content(buf)
         start = Position.new({ row = 0, col = 0 }),
         end_ = Position.new({ row = -1, col = -1 })
     })
-    return clean_fim_markers(Fn.get_text(buf, full_range))
+    return clean_fim_markers(F.get_text(buf, full_range))
 end
 
 local function extract_buffer_segment(buf, start_pos, end_pos)
-    return clean_fim_markers(Fn.get_text(buf, Range.new({
+    return clean_fim_markers(F.get_text(buf, Range.new({
         start = start_pos,
         end_ = end_pos
     })))
@@ -46,9 +47,9 @@ local function compute_large_file_positions(buf, curoffset, charscount)
     local prefixoffset = math.max(0, math.min(curround - HALF_MAX, charscount - HALF_MAX * 2))
 
     return {
-        prefix_pos = Fn.position_at(buf, prefixoffset) or Position.new(),
-        cur_pos = Fn.position_at(buf, curoffset) or Position.new(),
-        suffix_pos = Fn.position_at(buf, suffixoffset) or Position.new(),
+        prefix_pos = F.position_at(buf, prefixoffset) or Position.new(),
+        cur_pos = F.position_at(buf, curoffset) or Position.new(),
+        suffix_pos = F.position_at(buf, suffixoffset) or Position.new(),
         prefixoffset = prefixoffset,
         suffixoffset = suffixoffset
     }
@@ -56,7 +57,7 @@ end
 
 local function build_small_file_context(buf, position)
     local full_text = fetch_full_buffer_content(buf)
-    local prefix_end = Fn.offset_at(buf, position) or #full_text
+    local prefix_end = F.offset_at(buf, position) or #full_text
     return {
         prefix = full_text:sub(1, prefix_end),
         suffix = full_text:sub(prefix_end + 1),
@@ -66,19 +67,19 @@ local function build_small_file_context(buf, position)
 end
 
 local function build_large_file_context(buf, position, charscount)
-    local curoffset = Fn.offset_at(buf, position) or 0
+    local curoffset = F.offset_at(buf, position) or 0
     local positions = compute_large_file_positions(buf, curoffset, charscount)
 
     return {
         prefix = extract_buffer_segment(buf, positions.prefix_pos, positions.cur_pos),
         suffix = extract_buffer_segment(buf, positions.cur_pos, positions.suffix_pos),
         prefixoffset = positions.prefixoffset,
-        norangecount = charscount - (Fn.offset_at(buf, positions.suffix_pos) or 0)
+        norangecount = charscount - (F.offset_at(buf, positions.suffix_pos) or 0)
     }
 end
 
 local function fetch_editor_context(buf, position)
-    local wordcount = Fn.wordcount(buf)
+    local wordcount = F.wordcount(buf)
     assert(wordcount)
 
     local ctx
@@ -106,7 +107,7 @@ local function compute_text_diff_metadata(current_text, current_cipher, filename
         }
     end
 
-    local lbytes, rbytes = Fn.compare_bytes_order(M.last.text, current_text)
+    local lbytes, rbytes = F.compare_bytes_order(M.last.text, current_text)
     local diff_meta = {
         plen = Unicode.byte_to_utfindex(current_text:sub(1, lbytes), 'utf-16'),
         slen = Unicode.byte_to_utfindex(current_text:sub(-rbytes), 'utf-16'),

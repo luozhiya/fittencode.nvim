@@ -58,7 +58,7 @@ local Promise = require('fittencode.fn.promise')
 local Process = require('fittencode.fn.process')
 local Log = require('fittencode.log')
 local Config = require('fittencode.config')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.fn.core')
 
 local M = {}
 

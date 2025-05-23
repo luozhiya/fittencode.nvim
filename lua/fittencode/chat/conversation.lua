@@ -1,5 +1,5 @@
 local Log = require('fittencode.log')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.fn.core')
 local Config = require('fittencode.config')
 local Client = require('fittencode.client')
 local OPL = require('fittencode.opl')

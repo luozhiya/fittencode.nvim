@@ -1,4 +1,5 @@
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.fn.core')
+local F = require('fittencode.fn.buf')
 local Range = require('fittencode.fn.range')
 local Position = require('fittencode.fn.position')
 
@@ -10,14 +11,14 @@ local M = {
 }
 
 local function create_peek_range(buf, base_offset, direction)
-    local total_chars = Fn.wordcount(buf).chars
+    local total_chars = F.wordcount(buf).chars
     local peek_offset = Fn.clamp(
         base_offset + (direction * M._context_threshold),
         0,
         total_chars
     )
 
-    local peek_pos = Fn.position_at(buf, peek_offset) or Position.new()
+    local peek_pos = F.position_at(buf, peek_offset) or Position.new()
     return {
         start = (direction == -1) and peek_pos or Position.new(base_offset),
         end_ = (direction == -1) and Position.new(base_offset) or peek_pos
@@ -25,15 +26,15 @@ local function create_peek_range(buf, base_offset, direction)
 end
 
 local function retrieve_context_fragments(buf, start_pos, end_pos)
-    local start_offset = assert(Fn.offset_at(buf, start_pos))
-    local end_offset = assert(Fn.offset_at(buf, end_pos))
+    local start_offset = assert(F.offset_at(buf, start_pos))
+    local end_offset = assert(F.offset_at(buf, end_pos))
 
     local prefix_range = create_peek_range(buf, start_offset, -1)
     local suffix_range = create_peek_range(buf, end_offset, 1)
 
     return {
-        prefix = Fn.get_text(buf, Range.new(prefix_range)),
-        suffix = Fn.get_text(buf, Range.new(suffix_range))
+        prefix = F.get_text(buf, Range.new(prefix_range)),
+        suffix = F.get_text(buf, Range.new(suffix_range))
     }
 end
 

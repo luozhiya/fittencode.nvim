@@ -1,4 +1,5 @@
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.fn.core')
+local F = require('fittencode.fn.buf')
 local Promise = require('fittencode.fn.promise')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
@@ -53,7 +54,7 @@ end
 -- 高级分词
 ---@return FittenCode.Promise, FittenCode.HTTP.Response?
 function M.send_segments(text)
-    if Fn.onlyascii(text) then
+    if F.onlyascii(text) then
         return Promise.resolve()
     end
 

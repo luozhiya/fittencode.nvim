@@ -1,4 +1,5 @@
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.fn.core')
+local F = require('fittencode.fn.buf')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local Format = require('fittencode.fn.format')
@@ -230,7 +231,7 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
         local cursor = vim.api.nvim_win_get_cursor(self.messages_exchange.win)
         -- local height = vim.api.nvim_win_get_height(self.messages_exchange.win)
         -- cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) - height/5
-        if cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) or Fn.is_last_line_visible(self.messages_exchange.win) then
+        if cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) or F.is_last_line_visible(self.messages_exchange.win) then
             needs_scrolling = true
         end
     end

@@ -1,7 +1,8 @@
 local TemplateResolver = require('fittencode.chat.template_resolver')
 local ConversationType = require('fittencode.chat.conversation_type')
 local Promise = require('fittencode.fn.promise')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.fn.core')
+local F = require('fittencode.fn.buf')
 local Log = require('fittencode.log')
 local Path = require('fittencode.fn.path')
 local Perf = require('fittencode.fn.perf')
@@ -108,7 +109,7 @@ function ConversationTypesProvider:load_workspace_templates()
     --      ├── diagnose-errors-en.rdt.md
     --      ├── diagnose-errors-zh-cn.rdt.md
     local buf = vim.api.nvim_get_current_buf()
-    local workspace = Fn.workspace(buf)
+    local workspace = F.workspace(buf)
     if not workspace then
         return
     end

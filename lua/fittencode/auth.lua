@@ -1,7 +1,7 @@
 local Protocol = require('fittencode.client.protocol')
 local Log = require('fittencode.log')
 local i18n = require('fittencode.i18n')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.fn.core')
 local Client = require('fittencode.client')
 local Keyring = require('fittencode.client.keyring')
 

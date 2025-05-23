@@ -18,7 +18,7 @@ p:run()
 --]]
 
 local Log = require('fittencode.log')
-local Fn = require('fittencode.fn')
+local Fn = require('fittencode.fn.core')
 
 local M = {}
 

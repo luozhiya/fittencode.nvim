@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn')
+local F = require('fittencode.fn.buf')
 
 local View = {}
 View.__index = View
@@ -156,7 +156,7 @@ function View:update(state)
         -- -- 0. clear all previous hints
         self:clear()
         -- -- 1. remove all content from init_pos to current_pos
-        local current_pos = Fn.position(win)
+        local current_pos = F.position(win)
         self:delete_text(self.position, current_pos)
         -- -- 2. insert committed text
         self:insert_text(self.position, commit_lines)
