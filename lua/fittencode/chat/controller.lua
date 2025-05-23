@@ -199,7 +199,7 @@ function TimingObserver:debug()
         output[#output + 1] = string.format('ID: %s', id)
         output[#output + 1] = string.format('Created: %s', os.date('%Y-%m-%d %H:%M:%S', conv.created_at))
         output[#output + 1] = string.format('Conversation Duration: %.2f ms', conv.total_duration)
-        output[#output + 1] = 'Message Durations Total:'
+        output[#output + 1] = 'Message Durations Statistics:'
 
         local phases_total = {}
         for _, phase_group in ipairs(conv.phases) do
@@ -209,7 +209,7 @@ function TimingObserver:debug()
         end
 
         for phase_name, duration in pairs(phases_total) do
-            output[#output + 1] = string.format('  %-20s: %.2f ms', phase_name, duration)
+            output[#output + 1] = string.format('  %-20s: %.2f ms / %.2f ms', phase_name, duration, duration / #conv.phases)
         end
 
         for _, phase_group in ipairs(conv.phases) do
