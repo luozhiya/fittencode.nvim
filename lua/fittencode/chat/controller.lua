@@ -81,7 +81,6 @@ function ProgressIndicatorObserver:update(controller, event_type, data)
     end
 end
 
-
 ---@class FittenCode.Chat.Controller
 local Controller = {}
 Controller.__index = Controller
