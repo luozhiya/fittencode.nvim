@@ -30,10 +30,6 @@ function Session:_initialize(options)
     self.position = options.position
     self.current_position = options.position
     self.id = options.id
-    self.timing = {
-        completion = {},
-        lifecycle = {},
-    }
     self.requests = {}
     self.keymaps = {}
     self.triggering_completion = options.triggering_completion
@@ -41,7 +37,7 @@ function Session:_initialize(options)
         Fn.schedule_call(options.on_completion_event, { id = self.id, completion_status = self.completion_event, })
     end
     self.on_session_event = function()
-        Fn.schedule_call(options.on_session_event, { id = self.id, lifecycle = self.session_event, })
+        Fn.schedule_call(options.on_session_event, { id = self.id, session_event = self.session_event, })
     end
     self:sync_session_event(SESSION_EVENT.CREATED)
     self:sync_completion_event(COMPLETION_EVENT.START)
@@ -163,7 +159,6 @@ function Session:abort_and_clear_requests()
     self.requests = {}
 end
 
--- 终止不会清除 timing 等信息，方便后续做性能统计分析
 function Session:terminate()
     if self.session_event == SESSION_EVENT.TERMINATED then
         return
@@ -200,13 +195,11 @@ end
 
 function Session:sync_session_event(event)
     self.session_event = event
-    self.timing.lifecycle[#self.timing.lifecycle + 1] = { event = event, timestamp = vim.uv.hrtime() }
     self.on_session_event()
 end
 
 function Session:sync_completion_event(event)
     self.completion_event = event
-    self.timing.completion[#self.timing.completion + 1] = { event = event, timestamp = vim.uv.hrtime() }
     self.on_completion_event()
 end
 

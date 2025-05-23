@@ -7,10 +7,10 @@ local i18n = require('fittencode.i18n')
 local Log = require('fittencode.log')
 local Definitions = require('fittencode.inline.definitions')
 
-local EVENT = Definitions.CONTROLLER_EVENT
-local INLINE = Definitions.INLINE_EVENT
-local COMPLETION = Definitions.COMPLETION_EVENT
-local SESSION_LIFECYCLE = Definitions.SESSION_EVENT
+local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
+local INLINE_EVENT = Definitions.INLINE_EVENT
+local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
+local SESSION_EVENT = Definitions.SESSION_EVENT
 
 ---@class FittenCode.Inline.Status
 ---@field inline string
@@ -29,24 +29,24 @@ end
 -- -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
 function Status:update(controller, event, data)
     if data and data.id == controller.selected_session_id then
-        if event == EVENT.SESSION_ADDED then
-            self.completion = COMPLETION.CREATED
-        elseif event == EVENT.SESSION_DELETED then
+        if event == CONTROLLER_EVENT.SESSION_ADDED then
+            self.completion = COMPLETION_EVENT.CREATED
+        elseif event == CONTROLLER_EVENT.SESSION_DELETED then
             self.completion = ''
-        elseif event == EVENT.SESSION_UPDATED then
-            assert(self.inline == INLINE.RUNNING)
+        elseif event == CONTROLLER_EVENT.SESSION_UPDATED then
+            assert(self.inline == INLINE_EVENT.RUNNING)
             self.completion = data.completion_status
         end
     end
 
-    if event == EVENT.INLINE_IDLE then
-        self.inline = INLINE.IDLE
+    if event == CONTROLLER_EVENT.INLINE_IDLE then
+        self.inline = INLINE_EVENT.IDLE
         self.completion = ''
-    elseif event == EVENT.INLINE_DISABLED then
-        self.inline = INLINE.DISABLED
+    elseif event == CONTROLLER_EVENT.INLINE_DISABLED then
+        self.inline = INLINE_EVENT.DISABLED
         self.completion = ''
-    elseif event == EVENT.INLINE_RUNNING then
-        self.inline = INLINE.RUNNING
+    elseif event == CONTROLLER_EVENT.INLINE_RUNNING then
+        self.inline = INLINE_EVENT.RUNNING
     end
 end
 
@@ -157,9 +157,9 @@ end
 function Controller:on_buffer_enter(event)
     local buf = event.buf
     if self.is_enabled(buf) then
-        self:__emit(EVENT.INLINE_IDLE)
+        self:__emit(CONTROLLER_EVENT.INLINE_IDLE)
     else
-        self:__emit(EVENT.INLINE_DISABLED)
+        self:__emit(CONTROLLER_EVENT.INLINE_DISABLED)
     end
 end
 
@@ -242,7 +242,7 @@ function Controller:triggering_completion(options)
         position = position,
         id = self.selected_session_id,
         triggering_completion = function(...) self.triggering_completion_auto(...) end,
-        on_completion_event = function(data) self:__emit(EVENT.SESSION_UPDATED, data) end,
+        on_completion_event = function(data) self:__emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
         on_session_event = function(data) self:on_session_event(data) end,
     })
     self.sessions[session.id] = session
@@ -251,15 +251,15 @@ function Controller:triggering_completion(options)
 end
 
 function Controller:on_session_event(data)
-    if data.lifecycle == SESSION_LIFECYCLE.CREATED then
-        self:__emit(EVENT.INLINE_RUNNING, { id = data.id })
-        self:__emit(EVENT.SESSION_ADDED, { id = data.id })
-    elseif data.lifecycle == SESSION_LIFECYCLE.TERMINATED then
-        self:__emit(EVENT.SESSION_DELETED, { id = data.id })
+    if data.session_event == SESSION_EVENT.CREATED then
+        self:__emit(CONTROLLER_EVENT.INLINE_RUNNING, { id = data.id })
+        self:__emit(CONTROLLER_EVENT.SESSION_ADDED, { id = data.id })
+    elseif data.session_event == SESSION_EVENT.TERMINATED then
+        self:__emit(CONTROLLER_EVENT.SESSION_DELETED, { id = data.id })
         -- self.sessions[data.id] = nil
         if self.selected_session_id == data.id then
             self.selected_session_id = nil
-            self:__emit(EVENT.INLINE_IDLE, { id = data.id })
+            self:__emit(CONTROLLER_EVENT.INLINE_IDLE, { id = data.id })
         end
     end
 end
