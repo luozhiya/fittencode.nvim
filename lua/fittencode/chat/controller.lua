@@ -81,6 +81,131 @@ function ProgressIndicatorObserver:update(controller, event_type, data)
     end
 end
 
+---@class FittenCode.Chat.PhaseTiming
+---@field phase_name string
+---@field start_time number
+
+---@class FittenCode.Chat.ConversationTiming
+---@field id string
+---@field created_at number
+---@field phases table<table<string, FittenCode.Chat.PhaseTiming>>
+---@field total_duration number
+
+---@class FittenCode.Chat.TimingObserver : FittenCode.Chat.Observer
+---@field conversations table<string, FittenCode.Chat.ConversationTiming>
+local TimingObserver = setmetatable({}, { __index = Observer })
+TimingObserver.__index = TimingObserver
+
+function TimingObserver.new(id)
+    ---@type FittenCode.Chat.TimingObserver
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local self = Observer.new(id or 'timing_observer')
+    setmetatable(self, TimingObserver)
+    self.conversations = {}
+    return self
+end
+
+function TimingObserver:start_conversation(conversation_id)
+    self.conversations[conversation_id] = {
+        id = conversation_id,
+        created_at = os.time(),
+        phases = {},
+        total_duration = 0,
+    }
+end
+
+function TimingObserver:end_conversation(conversation_id)
+    local conv = self.conversations[conversation_id]
+    if conv then
+        conv.total_duration = os.time() - conv.created_at
+    end
+end
+
+function TimingObserver:start_phase(conversation_id, phase_name, new)
+    local conv = self.conversations[conversation_id]
+    assert(conv)
+
+    if new then
+        conv.phases[#conv.phases + 1] = {}
+    end
+
+    local phases = conv.phases[#conv.phases]
+    if not phases[phase_name] then
+        phases[phase_name] = {}
+    end
+    phases[phase_name].phase_name = phase_name
+    phases[phase_name].start_time = vim.uv.hrtime()
+end
+
+function TimingObserver:has_phase(conversation_id, phase_name)
+    local conv = self.conversations[conversation_id]
+    assert(conv)
+    local phases = conv.phases[#conv.phases]
+    return phases and phases[phase_name]
+end
+
+function TimingObserver:end_phase(conversation_id, phase_name)
+    local conv = self.conversations[conversation_id]
+    assert(conv)
+
+    local phases = conv.phases[#conv.phases]
+    assert(phases)
+    assert(phases[phase_name])
+    assert(phases[phase_name].start_time)
+
+    phases[phase_name].end_time = vim.uv.hrtime()
+    phases[phase_name].duration = (phases[phase_name].end_time - phases[phase_name].start_time) / 1e6
+end
+
+function TimingObserver:update(controller, event, data)
+    local conversation_id = data and data.id
+    local phase = data and data.phase
+
+    if not conversation_id then return end
+
+    if event == CONTROLLER_EVENT.CONVERSATION_ADDED then
+        self:start_conversation(conversation_id)
+    elseif event == CONTROLLER_EVENT.CONVERSATION_DELETED then
+        self:end_conversation(conversation_id)
+    end
+
+    if event == CONTROLLER_EVENT.CONVERSATION_UPDATED and phase then
+        if phase == CONVERSATION_PHASE.START then
+            self:start_phase(conversation_id, phase, true)
+        elseif phase == CONVERSATION_PHASE.EVALUATE_TEMPLATE then
+            self:end_phase(conversation_id, CONVERSATION_PHASE.START)
+            self:start_phase(conversation_id, phase)
+        elseif phase == CONVERSATION_PHASE.MAKE_REQUEST then
+            self:end_phase(conversation_id, CONVERSATION_PHASE.EVALUATE_TEMPLATE)
+            self:start_phase(conversation_id, phase)
+        elseif phase == CONVERSATION_PHASE.STREAMING then
+            if not self:has_phase(conversation_id, CONVERSATION_PHASE.STREAMING) then
+                self:end_phase(conversation_id, CONVERSATION_PHASE.MAKE_REQUEST)
+                self:start_phase(conversation_id, phase)
+            end
+        elseif phase == CONVERSATION_PHASE.COMPLETED or phase == CONVERSATION_PHASE.ERROR then
+            self:end_phase(conversation_id, CONVERSATION_PHASE.STREAMING)
+            self:debug()
+        end
+    end
+end
+
+function TimingObserver:debug()
+    for _, conv in pairs(self.conversations) do
+        Log.debug('Conversation timing: {}', conv.id)
+        Log.debug('Created at: {}', os.date('%Y-%m-%d %H:%M:%S', conv.created_at))
+        for _, pt in ipairs(conv.phases) do
+            for _, p in pairs(pt) do
+                Log.debug('Phase timing: {} = {} ms', p.phase_name, p.duration)
+            end
+        end
+    end
+end
+
+function TimingObserver:get_conversation_timing(conversation_id)
+    return self.conversations[conversation_id]
+end
+
 ---@class FittenCode.Chat.Controller
 local Controller = {}
 Controller.__index = Controller
@@ -103,6 +228,8 @@ function Controller:_initialize(options)
     self:add_observer(self.status_observer)
     self.progress_observer = ProgressIndicatorObserver.new()
     self:add_observer(self.progress_observer)
+    self.timing_observer = TimingObserver.new()
+    self:add_observer(self.timing_observer)
 end
 
 function Controller:add_observer(observer, callback)
