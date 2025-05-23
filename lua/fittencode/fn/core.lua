@@ -225,6 +225,14 @@ local function augroup(tag, name)
     return vim.api.nvim_create_augroup('FittenCode.' .. tag .. '.' .. name, { clear = true })
 end
 
+local function filereadable(path)
+    local ok, res = pcall(vim.fn.filereadable, path)
+    if not ok then
+        return false
+    end
+    return res == 1
+end
+
 return {
     clamp = clamp,
     debounce = debounce,
@@ -245,4 +253,5 @@ return {
     set_interval = set_interval,
     clear_interval = clear_interval,
     augroup = augroup,
+    filereadable = filereadable
 }

@@ -58,6 +58,7 @@ local Promise = require('fittencode.fn.promise')
 local Process = require('fittencode.fn.process')
 local Log = require('fittencode.log')
 local Config = require('fittencode.config')
+local Fn = require('fittencode.fn')
 
 local M = {}
 
@@ -219,7 +220,8 @@ function M.fetch(url, options)
         end
     end
 
-    if vim.fn.filereadable(options.body) == 1 then
+    -- Vim:E976: Using a Blob as a String
+    if Fn.filereadable(options.body) == 1 then
         table.insert(args, '--data-binary')
         table.insert(args, '@' .. options.body)
     else
