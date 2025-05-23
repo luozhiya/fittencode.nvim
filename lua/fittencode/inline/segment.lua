@@ -1,5 +1,5 @@
 local Fn = require('fittencode.fn')
-local Promise = require('fittencode.promise')
+local Promise = require('fittencode.fn.promise')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')

@@ -10,6 +10,7 @@ function M.setup(options)
     require('fittencode.config').init(options)
     require('fittencode.commands')
     require('fittencode.chat')
+    require('fittencode.inline')
 end
 
 return setmetatable(M, {
