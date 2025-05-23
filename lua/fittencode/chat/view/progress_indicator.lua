@@ -83,7 +83,7 @@ function M.start(start_time)
         width = win_width, -- 1
         height = 1,
         row = height - 2,
-        col = 0,
+        col = 0, -- width - 2
         style = 'minimal',
         focusable = false,
     })
@@ -116,7 +116,7 @@ function M.stop()
         vim.api.nvim_buf_delete(progress_buf, { force = true })
     end
     progress_buf = nil
-    start_time = nil
+    progress_start_time = nil
     current_frame = 1
 end
 

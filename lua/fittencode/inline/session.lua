@@ -61,7 +61,7 @@ end
 -- 设置交互模式
 function Session:set_interactive()
     if self.lifecycle == LIFECYCLE.MODEL_READY then
-        self.view = View:new({ buf = self.buf })
+        self.view = View.new({ buf = self.buf })
         self:set_keymaps()
         self:set_autocmds()
         self:update_view()
