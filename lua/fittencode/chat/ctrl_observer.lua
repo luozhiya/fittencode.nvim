@@ -214,7 +214,7 @@ function TimingObserver:debug()
             end
         end
 
-        output[#output + 1] = ''
+        -- output[#output + 1] = ''
     end
 
     Log.debug(table.concat(output, '\n'))
