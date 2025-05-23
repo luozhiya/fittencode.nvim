@@ -255,7 +255,7 @@ function Session:send_completions()
             if not compressed_prompt_file or not completion_version then
                 return Promise.reject()
             end
-            return self:__generate_one_stage_auth(completion_version, compressed_prompt_file)
+            return self:generate_one_stage_auth(completion_version, compressed_prompt_file)
         end):forward(function(completion)
             if self:is_terminated() then
                 return Promise.reject()
@@ -310,22 +310,23 @@ function Session:get_completion_version()
     end)
 end
 
-function Session:generate_one_stage_auth(completion_version, compressed_prompt)
+function Session:__with_tmpfile(data, callback, ...)
     local path
+    local args = { ... }
     return Promise.promisify(vim.uv.fs_mkstemp)(vim.fn.tempname() .. '.FittenCode_TEMP_XXXXXX'):forward(function(handle)
         local fd = handle[1]
         path = handle[2]
-        return Promise.promisify(vim.uv.fs_write)(fd, compressed_prompt):forward(function()
+        return Promise.promisify(vim.uv.fs_write)(fd, data):forward(function()
             return Promise.promisify(vim.uv.fs_close)(fd)
         end)
     end):forward(function()
-        return self:__generate_one_stage_auth(completion_version, path)
+        return callback(unpack(args))
     end):finally(function()
         Promise.promisify(vim.uv.fs_unlink)(path)
     end)
 end
 
-function Session:__generate_one_stage_auth(completion_version, path)
+function Session:generate_one_stage_auth(completion_version, path)
     self:sync_completion_event(COMPLETION_EVENT.GENERATE_ONE_STAGE)
     local vu = {
         ['0'] = '',
