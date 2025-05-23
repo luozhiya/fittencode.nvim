@@ -8,17 +8,21 @@ local Range = require('fittencode.fn.range')
 local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
 local PI = require('fittencode.chat.view.progress_indicator')
 local Definitions = require('fittencode.chat.definitions')
+local Observer = require('fittencode.chat.observer')
 local EVENT = Definitions.CONTROLLER_EVENT
 local PHASE = Definitions.CONVERSATION_PHASE
 
----@class FittenCode.Chat.Status
+---@class FittenCode.Chat.Status : FittenCode.Chat.Observer
 ---@field selected_conversation_id? string
----@field conversations table<string, table>
-local Status = {}
+---@field conversations table<string, FittenCode.Chat.Conversation>
+local Status = setmetatable({}, { __index = Observer })
 Status.__index = Status
 
-function Status.new()
-    local self = setmetatable({}, Status)
+function Status.new(id)
+    ---@type FittenCode.Chat.Status
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local self = Observer.new(id or 'status_observer')
+    setmetatable(self, Status)
     self.selected_conversation_id = nil
     self.conversations = {}
     return self
@@ -55,9 +59,7 @@ function Controller:_initialize(options)
     self.conversation_types_provider = options.conversation_types_provider
     self.observers = {}
     self.status_observer = Status.new()
-    self:add_observer(function(ctrl, event, data)
-        self.status_observer:update(ctrl, event, data)
-    end)
+    self:add_observer(self.status_observer)
     self:add_observer(function(ctrl, event, data)
         if event ~= EVENT.CONVERSATION_UPDATED then return end
         local BUSY = {
@@ -75,23 +77,33 @@ function Controller:_initialize(options)
     end)
 end
 
-function Controller:add_observer(observer)
-    table.insert(self.observers, observer)
-end
-
-function Controller:remove_observer(observer)
-    for i, obs in ipairs(self.observers) do
-        if obs == observer then
-            table.remove(self.observers, i)
-            break
-        end
+function Controller:add_observer(observer, callback)
+    -- 支持传入回调函数创建匿名观察者
+    if type(observer) == 'function' then
+        local id = 'callback_observer_' .. Fn.uuid_v1()
+        observer = setmetatable({
+            id = id,
+            update = function(_, ctrl, event, data)
+                observer(ctrl, event, data)
+            end
+        }, { __index = Observer })
     end
+    self.observers[observer.id] = observer
+    return observer
 end
 
----@param data? table Additional event data
+function Controller:remove_observer(identifier)
+    local id = type(identifier) == 'string' and identifier or identifier.id
+    self.observers[id] = nil
+end
+
+function Controller:get_observer(id)
+    return self.observers[id]
+end
+
 function Controller:notify_observers(event_type, data)
-    for _, observer in ipairs(self.observers) do
-        observer(self, event_type, data)
+    for _, observer in pairs(self.observers) do
+        observer:update(self, event_type, data)
     end
 end
 
