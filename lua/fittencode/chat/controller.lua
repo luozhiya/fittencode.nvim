@@ -9,12 +9,13 @@ local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLAT
 local PI = require('fittencode.chat.view.progress_indicator')
 local Definitions = require('fittencode.chat.definitions')
 local Observer = require('fittencode.chat.observer')
+
 local EVENT = Definitions.CONTROLLER_EVENT
 local PHASE = Definitions.CONVERSATION_PHASE
 
 ---@class FittenCode.Chat.Status : FittenCode.Chat.Observer
 ---@field selected_conversation_id? string
----@field conversations table<string, FittenCode.Chat.Conversation>
+---@field conversations table<string, table>
 local Status = setmetatable({}, { __index = Observer })
 Status.__index = Status
 
@@ -128,6 +129,10 @@ function Controller:notify_observers(event_type, data)
     for _, observer in pairs(self.observers) do
         observer:update(self, event_type, data)
     end
+end
+
+function Controller:__emit(event_type, data)
+    self:notify_observers(event_type, data)
 end
 
 ---@return string
