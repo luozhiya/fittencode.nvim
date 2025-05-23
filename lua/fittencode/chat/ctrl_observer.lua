@@ -220,3 +220,9 @@ end
 function TimingObserver:get_conversation_timing(conversation_id)
     return self.conversations[conversation_id]
 end
+
+return {
+    Status = Status,
+    ProgressIndicatorObserver = ProgressIndicatorObserver,
+    TimingObserver = TimingObserver,
+}
