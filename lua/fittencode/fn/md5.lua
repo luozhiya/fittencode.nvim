@@ -1,5 +1,6 @@
 local Promise = require('fittencode.fn.promise')
 local Process = require('fittencode.fn.process')
+local Log = require('fittencode.log')
 
 local M = {}
 
@@ -26,6 +27,7 @@ function M.compute(data, options)
             if code == 0 then
                 -- b026324c6904b2a9cb4b88d6d61c81d1  -
                 local hash = stdout:match('^([%x]+)')
+                Log.debug('Hash: {}', hash)
                 if hash then resolve(hash) else reject('Invalid output') end
             else
                 reject('Exit code: ' .. code)

@@ -5,6 +5,7 @@ local Range = require('fittencode.fn.range')
 local Config = require('fittencode.config')
 local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
+local Log = require('fittencode.log')
 
 local MAX_CHARS = 220000 -- ~200KB
 local HALF_MAX = MAX_CHARS / 2
@@ -145,6 +146,7 @@ local function build_base_prompt(buf, position, options)
     local ctx = fetch_editor_context(buf, position)
     local text = ctx.prefix .. ctx.suffix
     local ciphertext = MD5.compute(text):wait()
+    Log.debug('ciphertext = {}', ciphertext)
     if not ciphertext or ciphertext:is_rejected() then
         return
     end

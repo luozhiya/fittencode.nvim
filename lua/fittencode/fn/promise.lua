@@ -357,52 +357,28 @@ function Promise.all(promises)
     end)
 end
 
--- 等待当前Promise完成
--- 使用 vim.wait 阻塞当前执行直到 Promise 完成
----@param timeout? number 超时时间（毫秒），默认无限等待
+---@param timeout? number 超时时间（毫秒）
 ---@param interval? number 检查间隔（毫秒），默认10ms
 ---@return FittenCode.Promise?
 function Promise:wait(timeout, interval)
-    timeout = timeout or 10000 -- 默认无限等待
-    interval = interval or 10  -- 默认检查间隔10ms
+    timeout = timeout or 10000
+    interval = interval or 10
 
-    local result
-    local resolved = false
-    local rejected = false
-    local rejection_reason
-
-    -- 如果Promise已经完成，直接返回结果
     if self:is_fulfilled() then
         return Promise.resolve(self.value)
     elseif self:is_rejected() then
         return Promise.reject(self.reason)
     end
 
-    -- 设置Promise的回调
-    self:forward(
-        function(value)
-            result = value
-            resolved = true
-        end,
-        function(reason)
-            rejection_reason = reason
-            rejected = true
-        end
-    )
-
-    -- 使用vim.wait等待Promise完成
     local waited = vim.wait(timeout, function()
-        return resolved or rejected
+        return self.state ~= PromiseState.PENDING
     end, interval)
 
-    -- 处理等待结果
     if not waited then
         -- error('timeout')
         return
-    elseif rejected then
-        Promise.reject(rejection_reason)
     else
-        return Promise.resolve(result)
+        return self
     end
 end
 

@@ -238,12 +238,15 @@ function Session:send_completions()
     local function __send_completions()
         return Promise.all({
             self:generate_prompt():forward(function(prompt)
+                Log.debug('Generated prompt: {}', prompt)
                 return self:async_compress_prompt(prompt)
             end),
             self:get_completion_version()
         }):forward(function(_)
             local compressed_prompt = _[1]
             local completion_version = _[2]
+            Log.debug('Got completion version: {}', completion_version)
+            Log.debug('Compressed prompt: {}', compressed_prompt)
             if not compressed_prompt or not completion_version then
                 return Promise.reject()
             end
@@ -286,6 +289,7 @@ function Session:get_completion_version()
             Log.error('Failed to get completion version: {}', _)
             return Promise.reject()
         else
+            Log.debug('Got completion version: {}', response)
             return response
         end
     end):catch(function()
