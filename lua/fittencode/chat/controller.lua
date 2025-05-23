@@ -60,7 +60,10 @@ end
 ---@param data any
 function ProgressIndicatorObserver:update(controller, event_type, data)
     local selected_id = controller.model:get_selected_conversation_id()
-    if data.id ~= selected_id or not controller.view:is_visible() or event_type ~= EVENT.CONVERSATION_UPDATED then
+    if data.id ~= selected_id then
+        return
+    end
+    if event_type ~= EVENT.CONVERSATION_UPDATED or not controller.view:is_visible() then
         PI.stop()
         return
     end
