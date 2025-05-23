@@ -12,6 +12,26 @@ local promise = Promise.new() -- 创建未决Promise
 promise:manually_resolve("成功")       -- 手动解决
 promise:manually_reject("失败")        -- 手动拒绝
 
+Promise.new(function(resolve, reject)
+    reject('test')
+end):catch(function(reason)
+    print(reason)
+end):finally(function()
+    print('finally')
+end):wait()
+
+local p = Promise.new(function(resolve, reject)
+    reject('test')
+end):catch(function(reason)
+    print(reason)
+    return Promise.reject('catch')
+end):finally(function()
+    print('finally')
+end)
+print(vim.inspect(p))
+p:wait()
+print(vim.inspect(p))
+
 ----------------------------
 --- Promise.all
 ----------------------------
@@ -379,6 +399,30 @@ function Promise:wait(timeout, interval)
         return
     else
         return self
+    end
+end
+
+--- 通用 Promise 化装饰器
+---@param fn function 需要包装的 uv 函数
+---@param options? {multi_args:boolean} 是否保留多个返回参数
+function Promise.promisify(fn, options)
+    return function(...)
+        local args = { ... }
+        return Promise.new(function(resolve, reject)
+            local callback = function(err, ...)
+                if err then
+                    return reject(err)
+                end
+                if options and options.multi_args then
+                    resolve((...))
+                else
+                    resolve({ ... })
+                end
+            end
+
+            table.insert(args, callback)
+            fn(unpack(args))
+        end)
     end
 end
 

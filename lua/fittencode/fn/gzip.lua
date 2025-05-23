@@ -4,6 +4,7 @@ local Process = require('fittencode.fn.process')
 local M = {}
 
 function M.compress(input, option)
+    option = option or {}
     return Promise.new(function(resolve, reject)
         local args = { '-c', '--no-name' }
         if option.level then
