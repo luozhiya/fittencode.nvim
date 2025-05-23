@@ -1,6 +1,8 @@
 local bit = require('bit')
 
-local function schedule_call(fx, ...)
+local M = {}
+
+function M.schedule_call(fx, ...)
     if fx then
         local args = { ... }
         vim.schedule(function()
@@ -233,25 +235,4 @@ local function filereadable(path)
     return res == 1
 end
 
-return {
-    clamp = clamp,
-    debounce = debounce,
-    schedule_call = schedule_call,
-    schedule_call_wrap_fn = schedule_call_wrap_fn,
-    schedule_call_foreach = schedule_call_foreach,
-    check_call = check_call,
-    startswith = startswith,
-    fs_all_entries = fs_all_entries,
-    slice = slice,
-    uuid_v4 = uuid_v4,
-    uuid_v1 = uuid_v1,
-    get_unique_identifier = get_unique_identifier,
-    reverse = reverse,
-    random = random,
-    get_current_date = get_current_date,
-    set_timeout = set_timeout,
-    set_interval = set_interval,
-    clear_interval = clear_interval,
-    augroup = augroup,
-    filereadable = filereadable
-}
+return M
