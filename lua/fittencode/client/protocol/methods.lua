@@ -346,7 +346,7 @@ local Methods = {
     -- * `completion_version = { '', '2_1', '2_2', '2_3' }`
     generate_one_stage_auth = {
         method = 'POST',
-        headers = { ['Content-Type'] = 'application/json', ['Content-Encoding'] = 'gzip' },
+        headers = { ['Content-Type'] = 'application/json', ['Content-Encoding'] = 'gzip', ['Authorization'] = 'Bearer {{access_token}}' },
         url = '/codeapi/completion{{completion_version}}/generate_one_stage_auth/{{user_id}}',
         query = {
             ref = { '{{platform_info}}' },

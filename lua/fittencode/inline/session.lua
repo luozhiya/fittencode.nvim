@@ -313,7 +313,7 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt)
     --         return handle
     --     end)
     -- end)
-    local fd, path = vim.uv.fs_mkstemp('FittenCode_TEMP_XXXXXX')
+    local fd, path = vim.uv.fs_mkstemp(vim.fn.tempname() .. 'FittenCode_TEMP_XXXXXX')
     assert(fd)
     vim.uv.fs_write(fd, compressed_prompt)
     local request = Client.make_request(Protocol.Methods.generate_one_stage_auth, {
@@ -324,12 +324,14 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt)
         body_file = path,
     })
     if not request then
+        Log.error('Failed to make generate_one_stage_auth request')
         vim.uv.fs_unlink(path)
         return Promise.reject()
     end
     self:__add_request(request)
 
     return request:async():forward(function(_)
+        Log.debug('Got generate_one_stage_auth response: {}', _)
         local response = _.json()
         if not response then
             Log.error('Failed to decode completion raw response: {}', _)
@@ -337,9 +339,11 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt)
         end
         return Fim.parse(response, {
             buf = self.buf,
-            position = self.position,
+            ref_start = self.position,
+            ref_end = self.position,
         })
-    end):catch(function()
+    end):catch(function(_)
+        Log.error('Failed to generate_one_stage_auth: {}', _)
         return Promise.reject()
     end):finally(function()
         vim.uv.fs_unlink(path)

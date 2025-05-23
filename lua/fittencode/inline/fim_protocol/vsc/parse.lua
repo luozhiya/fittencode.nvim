@@ -31,11 +31,11 @@ local function parse(raw_response, options)
     return {
         request_id = raw_response.server_request_id or '',
         completions = completions,
-        context = Context.build_fim_context(
-            options.buf,
-            options.ref_start:clone(),
-            options.ref_end:clone()
-        )
+        -- context = Context.build_fim_context(
+        --     options.buf,
+        --     options.ref_start:clone(),
+        --     options.ref_end:clone()
+        -- )
     }
 end
 
