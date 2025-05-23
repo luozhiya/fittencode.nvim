@@ -4,11 +4,11 @@ local Log = require('fittencode.log')
 
 local M = {}
 
-function M.compress(input, option)
+function M.compress(option)
     option = option or {}
     return Promise.new(function(resolve, reject)
         local args = { '-c', '--no-name' }
-        local stdin = input
+        local stdin = option.input
         if option.input_file then
             stdin = nil
             args = { '--no-name', option.input_file }
@@ -39,8 +39,8 @@ function M.compress(input, option)
                     data = table.concat(output),
                     output_file = option.input_file .. '.gz',
                     meta = {
-                        original_size = #input,
-                        compressed_size = #table.concat(output)
+                        -- original_size = #option.input,
+                        -- compressed_size = #table.concat(output)
                     }
                 })
             else

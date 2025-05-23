@@ -220,17 +220,8 @@ function Session:async_compress_prompt(prompt)
         return Promise.reject('Failed to encode prompt to JSON')
     end
     assert(data)
-    local path
-    return Promise.promisify(vim.uv.fs_mkstemp)(vim.fn.tempname() .. '.FittenCode_TEMP_XXXXXX'):forward(function(handle)
-        local fd = handle[1]
-        path = handle[2]
-        return Promise.promisify(vim.uv.fs_write)(fd, data):forward(function()
-            return Promise.promisify(vim.uv.fs_close)(fd)
-        end)
-    end):forward(function()
-        return Zip.compress(data, {
-            input_file = path
-        })
+    return self:__with_tmpfile(data, function(path)
+        return Zip.compress({ input_file = path })
     end)
 end
 
@@ -320,7 +311,7 @@ function Session:__with_tmpfile(data, callback, ...)
             return Promise.promisify(vim.uv.fs_close)(fd)
         end)
     end):forward(function()
-        return callback(unpack(args))
+        return callback(path, unpack(args))
     end):finally(function()
         Promise.promisify(vim.uv.fs_unlink)(path)
     end)
