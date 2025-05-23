@@ -251,11 +251,12 @@ function Session:send_completions()
             if not completion then
                 Log.debug('No more suggestions')
                 self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
-                return Promise.reject()
+                return Promise.resolve()
             end
             Log.debug('Got completion: {}', completion)
             self:set_model(completion)
             self:set_interactive()
+            self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
             return Promise.resolve(completion)
         end):catch(function(_)
             return Promise.reject()
@@ -294,6 +295,21 @@ function Session:get_completion_version()
 end
 
 function Session:generate_one_stage_auth(completion_version, compressed_prompt)
+    local path
+    Promise.promisify(vim.uv.fs_mkstemp)(vim.fn.tempname() .. '.FittenCode_TEMP_XXXXXX'):forward(function(handle)
+        local fd = handle[1]
+        path = handle[2]
+        return Promise.promisify(vim.uv.fs_write)(fd, compressed_prompt):forward(function()
+            return Promise.promisify(vim.uv.fs_close)(fd)
+        end)
+    end):forward(function()
+        return self:__generate_one_stage_auth(completion_version, path)
+    end):finally(function()
+        Promise.promisify(vim.uv.fs_unlink)(path)
+    end)
+end
+
+function Session:__generate_one_stage_auth(completion_version, path)
     self:sync_completion_event(COMPLETION_EVENT.GENERATE_ONE_STAGE)
     local vu = {
         ['0'] = '',
@@ -301,26 +317,14 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt)
         ['2'] = '2_2',
         ['3'] = '2_3',
     }
-    -- Promise.promisify(vim.uv.fs_mkstemp)('FittenCode_TEMP_XXXXXX'):forward(function(handle)
-    --     local fd = handle[1]
-    --     local path = handle[2]
-    --     return Promise.promisify(vim.uv.write)(fd, compressed_prompt):forward(function()
-    --         return handle
-    --     end)
-    -- end)
-    local fd, path = vim.uv.fs_mkstemp(vim.fn.tempname() .. 'FittenCode_TEMP_XXXXXX')
-    assert(fd)
-    vim.uv.fs_write(fd, compressed_prompt)
     local request = Client.make_request(Protocol.Methods.generate_one_stage_auth, {
         variables = {
             completion_version = vu[completion_version],
         },
-        -- body = compressed_prompt,
         body_file = path,
     })
     if not request then
         Log.error('Failed to make generate_one_stage_auth request')
-        vim.uv.fs_unlink(path)
         return Promise.reject()
     end
     self:__add_request(request)
@@ -341,7 +345,6 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt)
         Log.error('Failed to generate_one_stage_auth: {}', _)
         return Promise.reject()
     end):finally(function()
-        vim.uv.fs_unlink(path)
     end)
 end
 
