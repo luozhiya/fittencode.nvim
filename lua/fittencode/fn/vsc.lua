@@ -451,4 +451,26 @@ function M.normalize_range(buf, range)
     return range
 end
 
+-- 检查当前 buffer 的最后一行是否在当前 window 中可见
+function M.is_last_line_visible(win)
+    -- 获取当前窗口和缓冲区
+    local buf_id = vim.api.nvim_win_get_buf(win)
+
+    -- 获取缓冲区的总行数
+    local last_line = vim.api.nvim_buf_line_count(buf_id)
+
+    -- 获取窗口的视图信息
+    local win_info = vim.fn.getwininfo(win)[1]
+    if not win_info then
+        return false
+    end
+
+    -- 获取窗口可见的第一行和最后一行
+    local top_line = win_info.topline
+    local bot_line = win_info.botline
+
+    -- 检查最后一行是否在可见范围内
+    return last_line >= top_line and last_line <= bot_line
+end
+
 return M

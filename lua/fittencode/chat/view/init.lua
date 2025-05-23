@@ -225,18 +225,21 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
 
     self.rendering[conversation.id] = self.rendering[conversation.id] or {}
 
-    local scroll_bottom = false
+    local needs_scrolling = false
     if self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win) then
         local cursor = vim.api.nvim_win_get_cursor(self.messages_exchange.win)
         -- local height = vim.api.nvim_win_get_height(self.messages_exchange.win)
         -- cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) - height/5
-        if cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) then
-            scroll_bottom = true
+        if cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) or Fn.is_last_line_visible(self.messages_exchange.win) then
+            needs_scrolling = true
         end
     end
 
     -- modify buffer
     -- turn off treesitter?
+    -- vim.treesitter.stop(self.messages_exchange.buf)
+    local ts_highlight = vim.b[self.messages_exchange.buf].ts_highlight
+    vim.b[self.messages_exchange.buf].ts_highlight = false
 
     local streaming = false
     if conversation.content.state ~= nil and conversation.content.state.type == VIEW_TYPE.BOT_ANSWER_STREAMING then
@@ -305,8 +308,10 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     end
 
     -- modify buffer
+    -- vim.treesitter.start(self.messages_exchange.buf)
+    vim.b[self.messages_exchange.buf].ts_highlight = ts_highlight
 
-    if scroll_bottom then
+    if needs_scrolling then
         if self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win) then
             vim.api.nvim_win_call(self.messages_exchange.win, function()
                 vim.api.nvim_win_set_cursor(self.messages_exchange.win, { vim.api.nvim_buf_line_count(self.messages_exchange.buf), 0 })
