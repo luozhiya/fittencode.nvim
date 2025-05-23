@@ -236,10 +236,6 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     end
 
     -- modify buffer
-    -- turn off treesitter?
-    -- vim.treesitter.stop(self.messages_exchange.buf)
-    local ts_highlight = vim.b[self.messages_exchange.buf].ts_highlight
-    vim.b[self.messages_exchange.buf].ts_highlight = false
 
     local streaming = false
     if conversation.content.state ~= nil and conversation.content.state.type == VIEW_TYPE.BOT_ANSWER_STREAMING then
@@ -308,8 +304,6 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     end
 
     -- modify buffer
-    -- vim.treesitter.start(self.messages_exchange.buf)
-    vim.b[self.messages_exchange.buf].ts_highlight = ts_highlight
 
     if needs_scrolling then
         if self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win) then
