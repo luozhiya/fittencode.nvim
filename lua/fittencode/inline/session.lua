@@ -311,9 +311,10 @@ function Session:get_completion_version()
 end
 
 function Session:generate_one_stage_auth(completion_version, compressed_prompt)
-    local path = vim.fn.tempname() .. '.FittenCode_TEMP_XXXXXX'
-    return Promise.promisify(vim.uv.fs_mkstemp)(path):forward(function(handle)
+    local path
+    return Promise.promisify(vim.uv.fs_mkstemp)(vim.fn.tempname() .. '.FittenCode_TEMP_XXXXXX'):forward(function(handle)
         local fd = handle[1]
+        path = handle[2]
         return Promise.promisify(vim.uv.fs_write)(fd, compressed_prompt):forward(function()
             return Promise.promisify(vim.uv.fs_close)(fd)
         end)
