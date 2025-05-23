@@ -51,9 +51,9 @@ function Status:update(controller, event_type, data)
 end
 
 local Controller = {}
-Controller:__index = Controller
+Controller.__index = Controller
 
-function Controller:new(options)
+function Controller.new(options)
     local self = setmetatable({}, Controller)
     self:__initialize(options)
     return self
