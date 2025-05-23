@@ -221,7 +221,9 @@ function Session:async_compress_prompt(prompt)
     end
     assert(data)
     return self:__with_tmpfile(data, function(path)
-        return Zip.compress({ input_file = path })
+        return Zip.compress({ input_file = path }):forward(function(_)
+            return _.output_file
+        end)
     end)
 end
 
@@ -239,7 +241,7 @@ function Session:send_completions()
             end),
             self:get_completion_version()
         }):forward(function(_)
-            compressed_prompt_file = _[1].output_file
+            compressed_prompt_file = _[1]
             local completion_version = _[2]
             Log.debug('Got completion version: {}', completion_version)
             Log.debug('Compressed prompt: {}', compressed_prompt_file)
