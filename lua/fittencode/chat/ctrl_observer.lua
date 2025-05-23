@@ -184,6 +184,7 @@ function TimingObserver:update(controller, event, data)
 end
 
 function TimingObserver:debug()
+    local is_show_message = false
     local output = {}
     output[#output + 1] = '\nConversation Metrics:'
 
@@ -204,10 +205,12 @@ function TimingObserver:debug()
             output[#output + 1] = string.format('  %-20s: %.2f ms / %.2f ms', phase_name, duration, duration / #conv.phases)
         end
 
-        for _, phase_group in ipairs(conv.phases) do
-            output[#output + 1] = string.format('Message %d Metrics:', _)
-            for _, phase in pairs(phase_group) do
-                output[#output + 1] = string.format('  %-20s: %.2f ms', phase.phase_name, phase.duration)
+        if is_show_message then
+            for _, phase_group in ipairs(conv.phases) do
+                output[#output + 1] = string.format('Message %d Metrics:', _)
+                for _, phase in pairs(phase_group) do
+                    output[#output + 1] = string.format('  %-20s: %.2f ms', phase.phase_name, phase.duration)
+                end
             end
         end
 
