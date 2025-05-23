@@ -125,7 +125,6 @@ function M.workspace(buf)
 end
 
 function M.is_valid_buf(buf)
-    assert(buf)
     local ok, r = pcall(vim.api.nvim_buf_is_valid, buf)
     if not ok or not r then
         return false
@@ -137,7 +136,6 @@ end
 -- 并在满足这个条件下返回该文件的路径 (路径是和平台相关的)
 ---@return boolean, string?
 function M.is_filebuf(buf)
-    assert(buf)
     if not M.is_valid_buf(buf) then
         return false
     end

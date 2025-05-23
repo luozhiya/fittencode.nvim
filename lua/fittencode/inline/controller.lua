@@ -27,25 +27,25 @@ function Status.new()
 end
 
 -- -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
-function Status:update(controller, event_type, data)
-    if data.id == controller.selected_session_id then
-        if event_type == EVENT.SESSION_ADDED then
+function Status:update(controller, event, data)
+    if data and data.id == controller.selected_session_id then
+        if event == EVENT.SESSION_ADDED then
             self.completion = COMPLETION.CREATED
-        elseif event_type == EVENT.SESSION_DELETED then
+        elseif event == EVENT.SESSION_DELETED then
             self.completion = ''
-        elseif event_type == EVENT.SESSION_UPDATED then
+        elseif event == EVENT.SESSION_UPDATED then
             assert(self.inline == INLINE.RUNNING)
             self.completion = data.completion_status
         end
     end
 
-    if event_type == EVENT.INLINE_IDLE then
+    if event == EVENT.INLINE_IDLE then
         self.inline = INLINE.IDLE
         self.completion = ''
-    elseif event_type == EVENT.INLINE_DISABLED then
+    elseif event == EVENT.INLINE_DISABLED then
         self.inline = INLINE.DISABLED
         self.completion = ''
-    elseif event_type == EVENT.INLINE_RUNNING then
+    elseif event == EVENT.INLINE_RUNNING then
         self.inline = INLINE.RUNNING
     end
 end
