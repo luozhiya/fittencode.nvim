@@ -190,32 +190,36 @@ function TimingObserver:update(controller, event, data)
     end
 end
 
+-- 简化版本，使用更少的竖线分隔符
 function TimingObserver:debug()
     local output = {}
-    table.insert(output, '\n')
-    table.insert(output, '╭───────────────────────────────────────────────────╮')
-    table.insert(output, '│                 Conversation Phase Timing         │')
-    table.insert(output, '├───────────────────────────────────────────────────┤')
+    output[#output + 1] = '\nConversation Metrics:'
 
     for id, conv in pairs(self.conversations) do
-        table.insert(output, string.format('│ Conversation ID: %-30s │', id))
-        table.insert(output, string.format('│ Created At: %-34s │', os.date('%Y-%m-%d %H:%M:%S', conv.created_at)))
-        table.insert(output, string.format('│ Total Duration: %-32.2f ms │', conv.total_duration))
-        table.insert(output, '├────────────────┬──────────────────────────────────┤')
-        table.insert(output, '│ Phase Name     │ Duration                         │')
-        table.insert(output, '├────────────────┼──────────────────────────────────┤')
+        output[#output + 1] = string.format('ID: %s', id)
+        output[#output + 1] = string.format('Created: %s', os.date('%Y-%m-%d %H:%M:%S', conv.created_at))
+        output[#output + 1] = string.format('Conversation Duration: %.2f ms', conv.total_duration)
+        output[#output + 1] = 'Message Durations Total:'
 
+        local phases_total = {}
         for _, phase_group in ipairs(conv.phases) do
             for _, phase in pairs(phase_group) do
-                if phase.duration then
-                    table.insert(output, string.format('│ %-14s │ %-32.2f ms │',
-                        phase.phase_name, phase.duration))
-                end
+                phases_total[phase.phase_name] = (phases_total[phase.phase_name] or 0) + phase.duration
             end
         end
 
-        table.insert(output, '╰────────────────┴──────────────────────────────────╯')
-        table.insert(output, '')
+        for phase_name, duration in pairs(phases_total) do
+            output[#output + 1] = string.format('  %-20s: %.2f ms', phase_name, duration)
+        end
+
+        for _, phase_group in ipairs(conv.phases) do
+            output[#output + 1] = string.format('Message %d Metrics:', _)
+            for _, phase in pairs(phase_group) do
+                output[#output + 1] = string.format('  %-20s: %.2f ms', phase.phase_name, phase.duration)
+            end
+        end
+
+        output[#output + 1] = ''
     end
 
     Log.debug(table.concat(output, '\n'))
