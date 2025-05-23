@@ -190,7 +190,6 @@ function TimingObserver:update(controller, event, data)
     end
 end
 
--- 简化版本，使用更少的竖线分隔符
 function TimingObserver:debug()
     local output = {}
     output[#output + 1] = '\nConversation Metrics:'
@@ -199,7 +198,7 @@ function TimingObserver:debug()
         output[#output + 1] = string.format('ID: %s', id)
         output[#output + 1] = string.format('Created: %s', os.date('%Y-%m-%d %H:%M:%S', conv.created_at))
         output[#output + 1] = string.format('Conversation Duration: %.2f ms', conv.total_duration)
-        output[#output + 1] = 'Message Durations Statistics:'
+        output[#output + 1] = string.format('Message Durations Statistics (%d):', #conv.phases)
 
         local phases_total = {}
         for _, phase_group in ipairs(conv.phases) do
@@ -213,7 +212,7 @@ function TimingObserver:debug()
         end
 
         for _, phase_group in ipairs(conv.phases) do
-            output[#output + 1] = string.format('Message %d Metrics:', _)
+            output[#output + 1] = string.format('Message Metrics (%d):', _)
             for _, phase in pairs(phase_group) do
                 output[#output + 1] = string.format('  %-20s: %.2f ms', phase.phase_name, phase.duration)
             end
