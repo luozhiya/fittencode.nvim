@@ -363,8 +363,8 @@ end
 ---@param interval? number 检查间隔（毫秒），默认10ms
 ---@return FittenCode.Promise?
 function Promise:wait(timeout, interval)
-    timeout = timeout or math.huge -- 默认无限等待
-    interval = interval or 10      -- 默认检查间隔10ms
+    timeout = timeout or 10000 -- 默认无限等待
+    interval = interval or 10  -- 默认检查间隔10ms
 
     local result
     local resolved = false

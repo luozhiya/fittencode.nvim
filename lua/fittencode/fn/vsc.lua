@@ -235,7 +235,7 @@ end
 
 function M.is_valid_win(win)
     assert(win)
-    local ok, r = pcall(vim.api.nvim_buf_is_valid, win)
+    local ok, r = pcall(vim.api.nvim_win_is_valid, win)
     if not ok or not r then
         return false
     end

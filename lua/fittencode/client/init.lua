@@ -173,6 +173,7 @@ end
 ---@param protocol FittenCode.Protocol.Element
 ---@return FittenCode.HTTP.Response?
 function M.make_request(protocol, options)
+    options = options or {}
     local variables = vim.tbl_deep_extend('force', preset_variables(), options.variables or {})
 
     local _, evaluated = pcall(evaluate_protocol_request, protocol, variables)

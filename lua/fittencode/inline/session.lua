@@ -17,6 +17,7 @@ local COMPLETION_STATUS = Definitions.COMPLETION_STATUS
 -- * 一个会话的生命周期为：创建 -> 开始（交互模式） -> 结束
 -- * 通过配置交互模式来实现延时补全 (delay_completion)
 local Session = {}
+Session.__index = Session
 
 function Session.new(options)
     local self = setmetatable({}, Session)
@@ -215,7 +216,9 @@ end
 
 function Session:generate_prompt()
     self:sync_completion(COMPLETION_STATUS.GENERATING_PROMPT)
-    return Fim.generate(self.buf, self.position)
+    return Fim.generate(self.buf, self.position, {
+        filename = Fn.filename(self.buf)
+    })
 end
 
 function Session:async_compress_prompt(prompt)

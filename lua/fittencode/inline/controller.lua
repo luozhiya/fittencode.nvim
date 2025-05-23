@@ -91,16 +91,18 @@ function Controller:__initialize(options)
         -- 只在 'TextChangedI', 'CompleteChanged' 触发自动补全，和 VSCode 一致
         -- 后续做撤销的话，还需注意撤销产生的事件，并进行过滤
         local autocmds = {
-            { { 'TextChangedI', 'CompleteChanged' }, function(args) self:triggering_completion_auto({ event = args }) end },
-            { { 'CursorMovedI' },                    function(args) self:dismiss_suggestions({ event = args }) end },
-            { { 'InsertLeave' },                     function(args) self:dismiss_suggestions({ event = args }) end },
-            { { 'BufLeave' },                        function(args) self:dismiss_suggestions({ event = args }) end },
-            { { 'BufEnter' },                        function(args) self:on_buffer_enter({ event = args }) end }
+            { 'TriggeringCompletionAuto', { 'TextChangedI', 'CompleteChanged' },         function(args) self:triggering_completion_auto({ event = args }) end },
+            { 'DismissingSuggestions',    { 'CursorMovedI', 'InsertLeave', 'BufLeave' }, function(args) self:dismiss_suggestions({ event = args }) end },
+            { 'BufferEnterCheck',         { 'BufEnter' },                                function(args) self:on_buffer_enter({ event = args }) end }
         }
         for _, autocmd in ipairs(autocmds) do
-            vim.api.nvim_create_autocmd(autocmd[1], {
-                group = vim.api.nvim_create_augroup('Fittencode.Inline', { clear = true }),
-                callback = autocmd[2],
+            Log.debug('Registering autocmd: {}', autocmd)
+            vim.api.nvim_create_autocmd(autocmd[2], {
+                group = Fn.augroup('Inline', autocmd[1]),
+                pattern = '*',
+                callback = function(args)
+                    autocmd[3](args)
+                end,
             })
         end
     end
@@ -241,7 +243,7 @@ function Controller:triggering_completion(options)
         id = self.selected_session_id,
         triggering_completion = function(...) self.triggering_completion_auto(...) end,
         on_completion_status = function(data) self:__emit(EVENT.SESSION_UPDATED, data) end,
-        on_session_status = function(data) self.on_session_status(data) end,
+        on_session_status = function(data) self:on_session_status(data) end,
     })
     self.sessions[session.id] = session
 
@@ -324,7 +326,7 @@ function Controller:triggering_completion_auto(options)
     if not Config.inline_completion.auto_triggering_completion then
         return
     end
-    self.triggering_completion(options)
+    self:triggering_completion(options)
 end
 
 -- 这个比 VSCode 的情况更复杂，suffixes 支持多个（非当前 buf filetype 也可以）

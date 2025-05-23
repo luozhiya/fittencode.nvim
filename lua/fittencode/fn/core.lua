@@ -221,6 +221,10 @@ local function clear_interval(timer)
     end
 end
 
+local function augroup(tag, name)
+    return vim.api.nvim_create_augroup('FittenCode.' .. tag .. '.' .. name, { clear = true })
+end
+
 return {
     clamp = clamp,
     debounce = debounce,
@@ -239,5 +243,6 @@ return {
     get_current_date = get_current_date,
     set_timeout = set_timeout,
     set_interval = set_interval,
-    clear_interval = clear_interval
+    clear_interval = clear_interval,
+    augroup = augroup,
 }
