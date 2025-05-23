@@ -1,5 +1,6 @@
 local Promise = require('fittencode.fn.promise')
 local Process = require('fittencode.fn.process')
+local Log = require('fittencode.log')
 
 local M = {}
 
@@ -7,12 +8,16 @@ function M.compress(input, option)
     option = option or {}
     return Promise.new(function(resolve, reject)
         local args = { '-c', '--no-name' }
+        local stdin = input
+        if option.input_file then
+            stdin = nil
+            args = { '--no-name', option.input_file }
+        end
         if option.level then
             table.insert(args, '-' .. option.level)
         end
-
         local p = Process.new('gzip', args, {
-            stdin = input,
+            stdin = stdin,
         })
 
         local output = {}
@@ -32,6 +37,7 @@ function M.compress(input, option)
             if code == 0 then
                 resolve({
                     data = table.concat(output),
+                    output_file = option.input_file .. '.gz',
                     meta = {
                         original_size = #input,
                         compressed_size = #table.concat(output)

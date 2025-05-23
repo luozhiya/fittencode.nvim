@@ -96,7 +96,6 @@ function Controller:__initialize(options)
             { 'BufferEnterCheck',         { 'BufEnter' },                                function(args) self:on_buffer_enter({ event = args }) end }
         }
         for _, autocmd in ipairs(autocmds) do
-            Log.debug('Registering autocmd: {}', autocmd)
             vim.api.nvim_create_autocmd(autocmd[2], {
                 group = Fn.augroup('Inline', autocmd[1]),
                 pattern = '*',

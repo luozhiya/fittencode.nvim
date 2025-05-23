@@ -220,7 +220,18 @@ function Session:async_compress_prompt(prompt)
         return Promise.reject('Failed to encode prompt to JSON')
     end
     assert(data)
-    return Zip.compress(data)
+    local path
+    return Promise.promisify(vim.uv.fs_mkstemp)(vim.fn.tempname() .. '.FittenCode_TEMP_XXXXXX'):forward(function(handle)
+        local fd = handle[1]
+        path = handle[2]
+        return Promise.promisify(vim.uv.fs_write)(fd, data):forward(function()
+            return Promise.promisify(vim.uv.fs_close)(fd)
+        end)
+    end):forward(function()
+        return Zip.compress(data, {
+            input_file = path
+        })
+    end)
 end
 
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
@@ -228,6 +239,7 @@ end
 -- * reject 包含 error / no_more_suggestions
 ---@return FittenCode.Promise
 function Session:send_completions()
+    local compressed_prompt_file
     local function __send_completions()
         return Promise.all({
             self:generate_prompt():forward(function(prompt)
@@ -236,14 +248,14 @@ function Session:send_completions()
             end),
             self:get_completion_version()
         }):forward(function(_)
-            local compressed_prompt = _[1].data
+            compressed_prompt_file = _[1].output_file
             local completion_version = _[2]
             Log.debug('Got completion version: {}', completion_version)
-            Log.debug('Compressed prompt: {}', compressed_prompt)
-            if not compressed_prompt or not completion_version then
+            Log.debug('Compressed prompt: {}', compressed_prompt_file)
+            if not compressed_prompt_file or not completion_version then
                 return Promise.reject()
             end
-            return self:generate_one_stage_auth(completion_version, compressed_prompt)
+            return self:__generate_one_stage_auth(completion_version, compressed_prompt_file)
         end):forward(function(completion)
             if self:is_terminated() then
                 return Promise.reject()
@@ -260,6 +272,11 @@ function Session:send_completions()
             return Promise.resolve(completion)
         end):catch(function(_)
             return Promise.reject()
+        end):finally(function()
+            if compressed_prompt_file then
+                Log.debug('Removing compressed prompt file: {}', compressed_prompt_file)
+                Promise.promisify(vim.uv.fs_unlink)(compressed_prompt_file)
+            end
         end)
     end
     return __send_completions():catch(function(_)
@@ -286,7 +303,6 @@ function Session:get_completion_version()
             Log.error('Failed to get completion version: {}', _)
             return Promise.reject()
         else
-            Log.debug('Got completion version: {}', response)
             return response
         end
     end):catch(function()
