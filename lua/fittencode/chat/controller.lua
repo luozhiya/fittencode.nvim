@@ -10,8 +10,8 @@ local PI = require('fittencode.chat.view.progress_indicator')
 local Definitions = require('fittencode.chat.definitions')
 local Observer = require('fittencode.chat.observer')
 
-local EVENT = Definitions.CONTROLLER_EVENT
-local PHASE = Definitions.CONVERSATION_PHASE
+local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
+local CONVERSATION_PHASE = Definitions.CONVERSATION_PHASE
 
 ---@class FittenCode.Chat.Status : FittenCode.Chat.Observer
 ---@field selected_conversation_id? string
@@ -32,7 +32,7 @@ end
 ---@param controller FittenCode.Chat.Controller
 function Status:update(controller, event_type, data)
     self.selected_conversation_id = controller.model:get_selected_conversation_id()
-    if event_type == EVENT.CONVERSATION_UPDATED then
+    if event_type == CONTROLLER_EVENT.CONVERSATION_UPDATED then
         assert(data)
         if not self.conversations[data.id] then
             self.conversations[data.id] = {}
@@ -63,21 +63,85 @@ function ProgressIndicatorObserver:update(controller, event_type, data)
     if data.id ~= selected_id then
         return
     end
-    if event_type ~= EVENT.CONVERSATION_UPDATED or not controller.view:is_visible() then
+    if event_type ~= CONTROLLER_EVENT.CONVERSATION_UPDATED or not controller.view:is_visible() then
         PI.stop()
         return
     end
     local is_busy = vim.tbl_contains({
-        PHASE.EVALUATE_TEMPLATE,
-        PHASE.MAKE_REQUEST,
-        PHASE.STREAMING
+        CONVERSATION_PHASE.EVALUATE_TEMPLATE,
+        CONVERSATION_PHASE.MAKE_REQUEST,
+        CONVERSATION_PHASE.STREAMING
     }, data.phase)
-    if data.phase == PHASE.START then
+    if data.phase == CONVERSATION_PHASE.START then
         self.start_time[data.id] = vim.uv.hrtime()
     elseif is_busy then
         PI.start(self.start_time[data.id])
     else
         PI.stop()
+    end
+end
+
+---@class FittenCode.Chat.TimingObserver : FittenCode.Chat.Observer
+---@field records table<string, table>
+local TimingObserver = setmetatable({}, { __index = Observer })
+TimingObserver.__index = TimingObserver
+
+function TimingObserver.new(id)
+    ---@type FittenCode.Chat.TimingObserver
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local self = Observer.new(id or 'timing_observer')
+    setmetatable(self, TimingObserver)
+    self.records = {} -- 存储性能记录 {event_path: {start_time, end_time, duration, children}}
+    return self
+end
+
+function TimingObserver:start(event_path)
+    assert(event_path, 'event_path is required')
+    self.records[event_path] = self.records[event_path] or {
+        start_time = vim.uv.hrtime(),
+        end_time = nil,
+        duration = 0,
+        children = {}, -- 子事件
+        count = 0
+    }
+    self.records[event_path].count = self.records[event_path].count + 1 -- 统计调用次数
+end
+
+function TimingObserver:stop(event_path)
+    local target_event = event_path
+    if not target_event or not self.records[target_event] then return end
+
+    local record = self.records[target_event]
+    if record.end_time then return end -- 防止重复停止
+
+    record.end_time = vim.loop.hrtime()
+    record.duration = (record.end_time - record.start_time) / 1e6 -- 转换为毫秒
+end
+
+function TimingObserver:update(controller, event_type, data)
+    local event_path, phase = nil, data and data.phase
+
+    -- 处理 CONTROLLER_EVENT 事件
+    if event_type == CONTROLLER_EVENT.CONVERSATION_UPDATED then
+        -- 细分到 CONVERSATION_PHASE 阶段
+        if phase then
+            event_path = CONTROLLER_EVENT.CONVERSATION_UPDATED .. '.' .. phase
+        end
+    elseif event_type == CONTROLLER_EVENT.CONVERSATION_ADDED then
+        event_path = CONTROLLER_EVENT.CONVERSATION_ADDED
+    elseif event_type == CONTROLLER_EVENT.CONVERSATION_DELETED then
+        event_path = CONTROLLER_EVENT.CONVERSATION_DELETED
+    elseif event_type == CONTROLLER_EVENT.CONVERSATION_SELECTED then
+        event_path = CONTROLLER_EVENT.CONVERSATION_SELECTED
+    end
+
+    -- 处理事件计时
+    if event_path then
+        if phase == CONVERSATION_PHASE.START then
+            self:start(event_path) -- 阶段开始时计时
+        elseif phase == CONVERSATION_PHASE.COMPLETED or phase == CONVERSATION_PHASE.ERROR then
+            self:stop(event_path)  -- 阶段结束时停止计时
+        end
     end
 end
 
@@ -194,7 +258,7 @@ function Controller:add_and_show_conversation(conversation, show)
     if show then
         self:show_view()
     end
-    self:notify_observers(EVENT.CONVERSATION_ADDED, {
+    self:notify_observers(CONTROLLER_EVENT.CONVERSATION_ADDED, {
         id = conversation.id,
     })
     return conversation
@@ -247,7 +311,7 @@ function Controller:create_conversation(template_id, show, mode, context)
         init_variables = variables,
         context = context,
         update_view = function(...) self:update_view(...) end,
-        update_status = function(data) self:notify_observers(EVENT.CONVERSATION_UPDATED, data) end,
+        update_status = function(data) self:notify_observers(CONTROLLER_EVENT.CONVERSATION_UPDATED, data) end,
         resolve_variables = function(...) self:_resolve_variables(...) end,
     })
 
@@ -274,7 +338,7 @@ end
 function Controller:delete_conversation(id)
     self.model:delete_conversation(id)
     self:update_view()
-    self:notify_observers(EVENT.CONVERSATION_DELETED, {
+    self:notify_observers(CONTROLLER_EVENT.CONVERSATION_DELETED, {
         id = id
     })
 end
@@ -309,7 +373,7 @@ function Controller:select_conversation(id, show)
         if show then
             self:show_view()
         end
-        self:notify_observers(EVENT.CONVERSATION_SELECTED, {
+        self:notify_observers(CONTROLLER_EVENT.CONVERSATION_SELECTED, {
             id = id,
         })
     end
