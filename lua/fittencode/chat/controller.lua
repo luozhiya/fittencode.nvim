@@ -191,15 +191,34 @@ function TimingObserver:update(controller, event, data)
 end
 
 function TimingObserver:debug()
-    for _, conv in pairs(self.conversations) do
-        Log.debug('Conversation timing: {}', conv.id)
-        Log.debug('Created at: {}', os.date('%Y-%m-%d %H:%M:%S', conv.created_at))
-        for _, pt in ipairs(conv.phases) do
-            for _, p in pairs(pt) do
-                Log.debug('Phase timing: {} = {} ms', p.phase_name, p.duration)
+    local output = {}
+    table.insert(output, '\n')
+    table.insert(output, '╭───────────────────────────────────────────────────╮')
+    table.insert(output, '│                 Conversation Phase Timing         │')
+    table.insert(output, '├───────────────────────────────────────────────────┤')
+
+    for id, conv in pairs(self.conversations) do
+        table.insert(output, string.format('│ Conversation ID: %-30s │', id))
+        table.insert(output, string.format('│ Created At: %-34s │', os.date('%Y-%m-%d %H:%M:%S', conv.created_at)))
+        table.insert(output, string.format('│ Total Duration: %-32.2f ms │', conv.total_duration))
+        table.insert(output, '├────────────────┬──────────────────────────────────┤')
+        table.insert(output, '│ Phase Name     │ Duration                         │')
+        table.insert(output, '├────────────────┼──────────────────────────────────┤')
+
+        for _, phase_group in ipairs(conv.phases) do
+            for _, phase in pairs(phase_group) do
+                if phase.duration then
+                    table.insert(output, string.format('│ %-14s │ %-32.2f ms │',
+                        phase.phase_name, phase.duration))
+                end
             end
         end
+
+        table.insert(output, '╰────────────────┴──────────────────────────────────╯')
+        table.insert(output, '')
     end
+
+    Log.debug(table.concat(output, '\n'))
 end
 
 function TimingObserver:get_conversation_timing(conversation_id)
