@@ -8,9 +8,9 @@ local Log = require('fittencode.log')
 local Definitions = require('fittencode.inline.definitions')
 
 local EVENT = Definitions.CONTROLLER_EVENT
-local INLINE = Definitions.INLINE_STATUS
-local COMPLETION = Definitions.COMPLETION_STATUS
-local SESSION_LIFECYCLE = Definitions.SESSION_LIFECYCLE
+local INLINE = Definitions.INLINE_EVENT
+local COMPLETION = Definitions.COMPLETION_EVENT
+local SESSION_LIFECYCLE = Definitions.SESSION_EVENT
 
 ---@class FittenCode.Inline.Status
 ---@field inline string
@@ -242,15 +242,15 @@ function Controller:triggering_completion(options)
         position = position,
         id = self.selected_session_id,
         triggering_completion = function(...) self.triggering_completion_auto(...) end,
-        on_completion_status = function(data) self:__emit(EVENT.SESSION_UPDATED, data) end,
-        on_session_status = function(data) self:on_session_status(data) end,
+        on_completion_event = function(data) self:__emit(EVENT.SESSION_UPDATED, data) end,
+        on_session_event = function(data) self:on_session_event(data) end,
     })
     self.sessions[session.id] = session
 
     return session:send_completions()
 end
 
-function Controller:on_session_status(data)
+function Controller:on_session_event(data)
     if data.lifecycle == SESSION_LIFECYCLE.CREATED then
         self:__emit(EVENT.INLINE_RUNNING, { id = data.id })
         self:__emit(EVENT.SESSION_ADDED, { id = data.id })

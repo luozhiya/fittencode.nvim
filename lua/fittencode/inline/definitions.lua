@@ -7,14 +7,14 @@ local CONTROLLER_EVENT = {
     INLINE_IDLE = 'FittenCode.Inline.Idle',
 }
 
-local INLINE_STATUS = {
+local INLINE_EVENT = {
     IDLE = 'idle',
     DISABLED = 'disabled',
     RUNNING = 'running',
 }
 
 -- COMPLETION_STATUS 仅描述补全流程的进度（如请求中、建议就绪），属于会话交互阶段的子逻辑。
-local COMPLETION_STATUS = {
+local COMPLETION_EVENT = {
     START                      = 'start',                      -- 创建了 Session，COMPLETION
     GENERATING_PROMPT          = 'generating_prompt',          -- 正在构建补全请求的提示词（如代码片段、自然语言问题）。
     GETTING_COMPLETION_VERSION = 'getting_completion_version', -- 正在获取补全服务版本。
@@ -25,7 +25,7 @@ local COMPLETION_STATUS = {
 }
 
 -- 仅描述 Session 的生命周期（创建、初始化、交互、终止），不涉及补全细节。
-local SESSION_LIFECYCLE = {
+local SESSION_EVENT = {
     CREATED = 'created',         -- 调用 Session.new() 后立即进入，仅完成实例化，未初始化任何资源。
     MODEL_READY = 'model_ready', -- 完成 Model 初始化
     INTERACTIVE = 'interactive', -- 会话正在处理补全或用户交互（对应补全流程中的活跃状态）。
@@ -34,7 +34,7 @@ local SESSION_LIFECYCLE = {
 
 return {
     CONTROLLER_EVENT = CONTROLLER_EVENT,
-    INLINE_STATUS = INLINE_STATUS,
-    COMPLETION_STATUS = COMPLETION_STATUS,
-    SESSION_LIFECYCLE = SESSION_LIFECYCLE,
+    INLINE_EVENT = INLINE_EVENT,
+    COMPLETION_EVENT = COMPLETION_EVENT,
+    SESSION_EVENT = SESSION_EVENT,
 }

@@ -10,8 +10,8 @@ local Zip = require('fittencode.fn.gzip')
 local Fim = require('fittencode.inline.fim_protocol.vsc')
 local Definitions = require('fittencode.inline.definitions')
 
-local LIFECYCLE = Definitions.SESSION_LIFECYCLE
-local COMPLETION_STATUS = Definitions.COMPLETION_STATUS
+local SESSION_EVENT = Definitions.SESSION_EVENT
+local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
 
 -- 一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
 -- * 一个会话的生命周期为：创建 -> 开始（交互模式） -> 结束
@@ -37,41 +37,41 @@ function Session:_initialize(options)
     self.requests = {}
     self.keymaps = {}
     self.triggering_completion = options.triggering_completion
-    self.on_completion_status = function()
-        Fn.schedule_call(options.on_completion_status, { id = self.id, completion_status = self.completion_status, })
+    self.on_completion_event = function()
+        Fn.schedule_call(options.on_completion_event, { id = self.id, completion_status = self.completion_event, })
     end
-    self.on_session_status = function()
-        Fn.schedule_call(options.on_session_status, { id = self.id, lifecycle = self.lifecycle, })
+    self.on_session_event = function()
+        Fn.schedule_call(options.on_session_event, { id = self.id, lifecycle = self.session_event, })
     end
-    self:sync_lifecycle(LIFECYCLE.CREATED)
-    self:sync_completion(COMPLETION_STATUS.START)
+    self:sync_session_event(SESSION_EVENT.CREATED)
+    self:sync_completion_event(COMPLETION_EVENT.START)
 end
 
 -- 设置 Model，计算补全数据
 function Session:set_model(parsed_response)
-    if self.lifecycle == LIFECYCLE.CREATED then
+    if self.session_event == SESSION_EVENT.CREATED then
         self.model = Model.new({
             buf = self.buf,
             position = self.position,
             response = parsed_response,
         })
-        self:sync_lifecycle(LIFECYCLE.MODEL_READY)
+        self:sync_session_event(SESSION_EVENT.MODEL_READY)
     end
 end
 
 -- 设置交互模式
 function Session:set_interactive()
-    if self.lifecycle == LIFECYCLE.MODEL_READY then
+    if self.session_event == SESSION_EVENT.MODEL_READY then
         self.view = View.new({ buf = self.buf })
         self:set_keymaps()
         self:set_autocmds()
         self:update_view()
-        self:sync_lifecycle(LIFECYCLE.INTERACTIVE)
+        self:sync_session_event(SESSION_EVENT.INTERACTIVE)
     end
 end
 
 function Session:is_interactive()
-    return self.lifecycle == LIFECYCLE.INTERACTIVE
+    return self.session_event == SESSION_EVENT.INTERACTIVE
 end
 
 function Session:update_view()
@@ -165,16 +165,16 @@ end
 
 -- 终止不会清除 timing 等信息，方便后续做性能统计分析
 function Session:terminate()
-    if self.lifecycle == LIFECYCLE.TERMINATED then
+    if self.session_event == SESSION_EVENT.TERMINATED then
         return
     end
-    if self.lifecycle == LIFECYCLE.INTERACTIVE then
+    if self.session_event == SESSION_EVENT.INTERACTIVE then
         self:abort_and_clear_requests()
         self.view:clear()
         self:restore_keymaps()
         self:clear_autocmds()
     end
-    self:sync_lifecycle(LIFECYCLE.TERMINATED)
+    self:sync_session_event(SESSION_EVENT.TERMINATED)
 end
 
 ---@param key string
@@ -195,19 +195,19 @@ end
 -- * 判断是否已经终止
 -- * 跳出 Promise
 function Session:is_terminated()
-    return self.lifecycle == LIFECYCLE.TERMINATED
+    return self.session_event == SESSION_EVENT.TERMINATED
 end
 
-function Session:sync_lifecycle(event)
-    self.lifecycle = event
+function Session:sync_session_event(event)
+    self.session_event = event
     self.timing.lifecycle[#self.timing.lifecycle + 1] = { event = event, timestamp = vim.uv.hrtime() }
-    self.on_session_status()
+    self.on_session_event()
 end
 
-function Session:sync_completion(event)
-    self.completion_status = event
+function Session:sync_completion_event(event)
+    self.completion_event = event
     self.timing.completion[#self.timing.completion + 1] = { event = event, timestamp = vim.uv.hrtime() }
-    self.on_completion_status()
+    self.on_completion_event()
 end
 
 function Session:__add_request(handle)
@@ -215,7 +215,7 @@ function Session:__add_request(handle)
 end
 
 function Session:generate_prompt()
-    self:sync_completion(COMPLETION_STATUS.GENERATING_PROMPT)
+    self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
     return Fim.generate(self.buf, self.position, {
         filename = Fn.filename(self.buf)
     })
@@ -257,7 +257,7 @@ function Session:send_completions()
             end
             if not completion then
                 Log.debug('No more suggestions')
-                self:sync_completion(COMPLETION_STATUS.NO_MORE_SUGGESTIONS)
+                self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
                 return Promise.reject()
             end
             Log.debug('Got completion: {}', completion)
@@ -269,7 +269,7 @@ function Session:send_completions()
         end)
     end
     return __send_completions():catch(function(_)
-        self:sync_completion(COMPLETION_STATUS.ERROR)
+        self:sync_completion_event(COMPLETION_EVENT.ERROR)
         Log.error('Failed to send completions: {}', _)
         return Promise.reject()
     end)
@@ -278,7 +278,7 @@ end
 -- 获取补全版本号
 ---@return FittenCode.Promise
 function Session:get_completion_version()
-    self:sync_completion(COMPLETION_STATUS.GETTING_COMPLETION_VERSION)
+    self:sync_completion_event(COMPLETION_EVENT.GETTING_COMPLETION_VERSION)
     local request = Client.make_request(Protocol.Methods.get_completion_version)
     if not request then
         return Promise.reject()
@@ -301,7 +301,7 @@ function Session:get_completion_version()
 end
 
 function Session:generate_one_stage_auth(completion_version, compressed_prompt)
-    self:sync_completion(COMPLETION_STATUS.GENERATE_ONE_STAGE)
+    self:sync_completion_event(COMPLETION_EVENT.GENERATE_ONE_STAGE)
     local vu = {
         ['0'] = '',
         ['1'] = '2_1',
