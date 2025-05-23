@@ -40,6 +40,42 @@ function Status:update(controller, event_type, data)
     end
 end
 
+---@class FittenCode.Chat.ProgressIndicatorObserver : FittenCode.Chat.Observer
+local ProgressIndicatorObserver = setmetatable({}, { __index = Observer })
+ProgressIndicatorObserver.__index = ProgressIndicatorObserver
+
+function ProgressIndicatorObserver.new(id)
+    ---@type FittenCode.Chat.ProgressIndicatorObserver
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local self = Observer.new(id or 'progress_indicator_observer')
+    setmetatable(self, ProgressIndicatorObserver)
+    return self
+end
+
+---@param controller FittenCode.Chat.Controller
+---@param event_type string
+---@param data any
+function ProgressIndicatorObserver:update(controller, event_type, data)
+    if event_type ~= EVENT.CONVERSATION_UPDATED then return end
+
+    local selected_id = controller.model:get_selected_conversation_id()
+    local is_busy = vim.tbl_contains({
+        PHASE.EVALUATE_TEMPLATE,
+        PHASE.MAKE_REQUEST,
+        PHASE.STREAMING
+    }, data.phase)
+
+    if controller.view:is_visible() and data.id == selected_id then
+        if is_busy then
+            PI.start()
+            self.active = true
+        else
+            PI.stop()
+            self.active = false
+        end
+    end
+end
+
 ---@class FittenCode.Chat.Controller
 local Controller = {}
 Controller.__index = Controller
@@ -60,21 +96,8 @@ function Controller:_initialize(options)
     self.observers = {}
     self.status_observer = Status.new()
     self:add_observer(self.status_observer)
-    self:add_observer(function(ctrl, event, data)
-        if event ~= EVENT.CONVERSATION_UPDATED then return end
-        local BUSY = {
-            PHASE.EVALUATE_TEMPLATE,
-            PHASE.MAKE_REQUEST,
-            PHASE.STREAMING
-        }
-        if self.view:is_visible() and data.id == self.model:get_selected_conversation_id() then
-            if vim.tbl_contains(BUSY, data.phase) then
-                PI.start()
-            else
-                PI.stop()
-            end
-        end
-    end)
+    self.progress_observer = ProgressIndicatorObserver.new()
+    self:add_observer(self.progress_observer)
 end
 
 function Controller:add_observer(observer, callback)
