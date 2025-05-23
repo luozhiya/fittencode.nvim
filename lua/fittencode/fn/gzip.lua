@@ -5,18 +5,31 @@ local Log = require('fittencode.log')
 local M = {}
 
 ---@class FittenCode.GzipOption
----@field input_file string Input file (file path)
+---@field source string Input file (file path or stdin data)
 ---@field level number [optional] Compression level 1-9 (default 6)
 ---@field force boolean [optional] Overwrite existing file
 ---@field keep boolean [optional] Keep (don't delete) input files
 function M.compress(options)
     options = options or {}
     return Promise.new(function(resolve, reject)
-        if type(options.input_file) ~= 'string' or vim.fn.filereadable(options.input_file) ~= 1 then
-            return reject()
+        if type(options.source) ~= 'string' then
+            return reject({
+                code = 'INVALID_SOURCE',
+                message = 'Source must be a string'
+            })
         end
 
-        local args = { options.input_file, '--no-name' }
+        local args = { '--no-name' }
+
+        local stdin
+        local is_file = false
+        if vim.fn.filereadable(options.source) == 1 then
+            is_file = true
+            table.insert(args, options.source)
+        else
+            stdin = options.source
+            table.insert(args, '-c') -- output to stdout
+        end
 
         local level = options.level or 6
         if level >= 1 and level <= 9 then
@@ -29,7 +42,9 @@ function M.compress(options)
             table.insert(args, '-k')
         end
 
-        local p = Process.new('gzip', args)
+        local p = Process.new('gzip', args, {
+            stdin = stdin
+        })
 
         local output = {}
         local errors = {}
@@ -47,7 +62,7 @@ function M.compress(options)
                 })
             end
             local result = {
-                output_file = options.input_file .. '.gz',
+                output = is_file and (options.source .. '.gz') or table.concat(output, ''),
             }
             resolve(result)
         end)

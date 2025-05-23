@@ -220,10 +220,8 @@ function Session:async_compress_prompt(prompt)
         return Promise.reject('Failed to encode prompt to JSON')
     end
     assert(data)
-    return self:__with_tmpfile(data, function(path)
-        return Zip.compress({ input_file = path }):forward(function(_)
-            return _.output_file
-        end)
+    return Zip.compress({ source = data }):forward(function(_)
+        return _.output
     end)
 end
 
@@ -232,7 +230,7 @@ end
 -- * reject 包含 error / no_more_suggestions
 ---@return FittenCode.Promise
 function Session:send_completions()
-    local compressed_prompt_file
+    local compressed_prompt_binary
     local function __send_completions()
         return Promise.all({
             self:generate_prompt():forward(function(prompt)
@@ -241,14 +239,14 @@ function Session:send_completions()
             end),
             self:get_completion_version()
         }):forward(function(_)
-            compressed_prompt_file = _[1]
+            compressed_prompt_binary = _[1]
             local completion_version = _[2]
             Log.debug('Got completion version: {}', completion_version)
-            Log.debug('Compressed prompt: {}', compressed_prompt_file)
-            if not compressed_prompt_file or not completion_version then
+            Log.debug('Compressed prompt: {}', compressed_prompt_binary)
+            if not compressed_prompt_binary or not completion_version then
                 return Promise.reject()
             end
-            return self:generate_one_stage_auth(completion_version, compressed_prompt_file)
+            return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
         end):forward(function(completion)
             if self:is_terminated() then
                 return Promise.reject()
@@ -266,10 +264,6 @@ function Session:send_completions()
         end):catch(function(_)
             return Promise.reject()
         end):finally(function()
-            if compressed_prompt_file then
-                Log.debug('Removing compressed prompt file: {}', compressed_prompt_file)
-                Promise.promisify(vim.uv.fs_unlink)(compressed_prompt_file)
-            end
         end)
     end
     return __send_completions():catch(function(_)
@@ -319,7 +313,7 @@ function Session:__with_tmpfile(data, callback, ...)
     end)
 end
 
-function Session:generate_one_stage_auth(completion_version, path)
+function Session:generate_one_stage_auth(completion_version, compressed_prompt_binary)
     self:sync_completion_event(COMPLETION_EVENT.GENERATE_ONE_STAGE)
     local vu = {
         ['0'] = '',
@@ -331,7 +325,7 @@ function Session:generate_one_stage_auth(completion_version, path)
         variables = {
             completion_version = vu[completion_version],
         },
-        body_file = path,
+        body = compressed_prompt_binary,
     })
     if not request then
         Log.error('Failed to make generate_one_stage_auth request')

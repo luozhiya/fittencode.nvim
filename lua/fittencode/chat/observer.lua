@@ -1,4 +1,4 @@
-local Fn = require('fittencode.Fn')
+local Fn = require('fittencode.fn')
 
 ---@class FittenCode.Chat.Observer
 ---@field id string
