@@ -220,6 +220,7 @@ function M.fetch(url, options)
         end
     end
 
+    local stdin_data
     -- Vim:E976: Using a Blob as a String
     if Fn.filereadable(options.body) == 1 then
         table.insert(args, '--data-binary')
@@ -227,6 +228,7 @@ function M.fetch(url, options)
     else
         table.insert(args, '--data-binary')
         table.insert(args, '@-')
+        stdin_data = options.body
     end
 
     table.insert(args, url)
@@ -235,15 +237,27 @@ function M.fetch(url, options)
     local headers_processed = false
 
     local process = Process.new(curl_command, args, {
-        stdin = options.body
+        stdin = stdin_data
     })
 
     process:on('stdout', function(chunk)
-        -- Log.debug('curl stdout: {}', chunk)
+        Log.debug('curl stdout: {}', chunk)
         if handle.aborted then return end
 
         if not headers_processed then
+            -- 检查是否为代理的 Connection established 响应
+            local proxy_response = chunk:match('^HTTP/1%.1 200 Connection established\r?\n\r?\n')
+            if proxy_response then
+                stream._proxy_response = vim.trim(proxy_response)
+                Log.debug('Proxy connection established')
+                local proxy_end = #proxy_response
+                -- 移除代理响应部分，继续处理剩余数据
+                chunk = chunk:sub(proxy_end + 1)
+                -- 如果剩余数据为空，等待下一个数据块
+                if #chunk == 0 then return end
+            end
             local header_end = chunk:find('\r\n\r\n') or chunk:find('\n\n')
+            Log.debug('header_end: {}', header_end)
             if header_end then
                 headers_processed = true
                 local header_str = chunk:sub(1, header_end - 1)
@@ -299,6 +313,7 @@ function M.fetch(url, options)
             local response = {
                 status = stream._status,
                 headers = stream._headers,
+                proxy_response = stream._proxy_response,
                 ok = stream._status and (stream._status >= 200 and stream._status < 300) or false,
                 timing = timing,
                 text = function() return stream._buffer end,

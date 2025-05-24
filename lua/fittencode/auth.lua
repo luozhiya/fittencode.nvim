@@ -116,9 +116,13 @@ function M.login(username, password)
     })
     if not request then return end
 
+    Log.debug('Login request: {}', request)
+
     request:async():forward(function(_)
         ---@type FittenCode.Protocol.Methods.Login.Response
         local response = _.json()
+        Log.debug('Login response: {}', _)
+        Log.debug('Login response json: {}', _.text())
         if response and response.access_token and response.refresh_token and response.user_info then
             api_key_manager:update(Keyring.make(response))
             Log.notify_info(i18n.tr('[Fitten Code] Login successful'))
@@ -126,14 +130,16 @@ function M.login(username, password)
         else
             ---@type FittenCode.Protocol.Methods.Login.ResponseError
             local re = _.json()
-            local error_msg = i18n.tr('Failed to login')
+            local error_msg
             if re and re.msg and re.msg ~= '' then
-                error_msg = re.msg
+                -- error_msg = re.msg
             end
+            error_msg = i18n.tr('Failed to login: {}', _)
             Log.notify_error(error_msg)
         end
     end):catch(function(err)
-        handle_curl_errors(err, i18n.tr('Failed to login'))
+        Log.debug('Login error: {}', err)
+        -- handle_curl_errors(err, i18n.tr('Failed to login'))
         Log.error('Login failed: {}', err)
     end)
 end
