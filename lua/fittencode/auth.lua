@@ -63,6 +63,31 @@ function M.try_web()
     Client.request(Protocol.URLs.try)
 end
 
+local function handle_curl_errors(err, default_msg)
+    if err then
+        if err.type == 'USER_ABORT' then
+            Log.info('User abort')
+            return 'USER_ABORT'
+        elseif err.type == 'PROCESS_ERROR' then
+            if err.message.type == 'SpawnError' then
+                if vim.fn.filereadable(err.message.message) ~= 1 then
+                    Log.notify_error(i18n.tr('{} curl not found, please check your installation.', default_msg))
+                else
+                    Log.notify_error(i18n.tr('{} Failed to execute curl.', default_msg))
+                end
+            else
+                Log.notify_error(i18n.tr('{} Process unexpectedly exited.', default_msg))
+            end
+            return 'PROCESS_ERROR'
+        elseif err.type == 'CURL_ERROR' then
+            Log.notify_error(i18n.tr('{} CURL internal error.', default_msg))
+            return 'CURL_ERROR'
+        end
+    end
+    Log.notify_error(default_msg)
+    return 'UNKNOWN_ERROR'
+end
+
 ---@param username? string
 ---@param password? string
 function M.login(username, password)
@@ -108,28 +133,8 @@ function M.login(username, password)
             Log.notify_error(error_msg)
         end
     end):catch(function(err)
-        -- 底层错误
-        Log.error('Failed to login: {}', err)
-        if err then
-            if err.type == 'USER_ABORT' then
-                -- 用户取消操作
-                Log.info('User abort')
-            elseif err.type == 'PROCESS_ERROR' then
-                -- 找不到可执行文件或者程序运行意外错误
-                if err.message.type == 'SpawnError' then
-                    if vim.fn.filereadable(err.message.message) ~= 1 then
-                        Log.notify_error(i18n.tr('Failed to login. curl not found, please check your installation.'))
-                    else
-                        Log.notify_error(i18n.tr('Failed to login. Failed to execute curl.'))
-                    end
-                else
-                    Log.notify_error(i18n.tr('Failed to login. Process unexpectedly exited.'))
-                end
-            elseif err.type == 'CURL_ERROR' then
-                -- Curl内部错误
-                Log.notify_error(i18n.tr('Failed to login. CURL internal error.'))
-            end
-        end
+        handle_curl_errors(err, i18n.tr('Failed to login'))
+        Log.error('Login failed: {}', err)
     end)
 end
 
@@ -202,23 +207,10 @@ function M.login3rd(source, options)
                 end
             end
         end):catch(function(err)
-            -- 底层错误
-            Log.error('Failed to login with 3rd-party provider: {}, try count: {}, error: {}', source, login3rd.try_count, err)
-            if err then
-                if err.type == 'PROCESS_ERROR' then
-                    -- 找不到可执行文件或者程序运行意外错误
-                    if err.message.type == 'SpawnError' then
-                        if vim.fn.filereadable(err.message.message) ~= 1 then
-                            Log.notify_error(i18n.tr('Failed to login. curl not found, please check your installation.'))
-                            abort_all_operations()
-                        else
-                            Log.error(i18n.tr('Failed to login. Failed to execute curl.'))
-                        end
-                    end
-                elseif err.type == 'CURL_ERROR' then
-                    -- Curl内部错误
-                    Log.error(i18n.tr('Failed to login. Curl internal error.'))
-                end
+            local err_type = handle_curl_errors(err, i18n.tr('Failed to check 3rd-party login status'))
+            Log.error('3rd-party login check failed (try #{}, source: {}): {}', login3rd.try_count, source, err)
+            if err_type == 'PROCESS_ERROR' then
+                abort_all_operations()
             end
         end)
     end
