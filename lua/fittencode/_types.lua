@@ -41,7 +41,7 @@
 ---@field type string @错误类型标识
 ---@field code? integer @CURL 错误码
 ---@field signal? integer @系统信号码
----@field message string @错误描述
+---@field message string|string[] @错误描述
 ---@field timing? fun(): FittenCode.HTTP.Timing @请求计时信息
 ---@field readable_type string @可读错误类型
 

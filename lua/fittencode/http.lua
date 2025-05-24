@@ -309,12 +309,17 @@ function M.fetch(url, options)
             }
             stream:_emit('end', response)
         else
+            stderr_data = stderr_data:gsub('\r\n', '\n')
+            local err_lines = vim.split(stderr_data, '\n')
+            if err_lines[#err_lines] == '' then
+                table.remove(err_lines)
+            end
             ---@class FittenCode.HTTP.Request.Stream.ErrorEvent
             local error_obj = {
                 type = 'CURL_ERROR',
                 code = code,
                 signal = signal,
-                message = stderr_data,
+                message = err_lines,
                 timing = timing,
                 readable_type = CURL_ERROR_CODES[code] or 'UNKNOWN_ERROR'
             }

@@ -127,7 +127,7 @@ function M.login(username, password)
                 end
             elseif err.type == 'CURL_ERROR' then
                 -- Curl内部错误
-                Log.notify_error(i18n.tr('Failed to login. Curl internal error.'))
+                Log.notify_error(i18n.tr('Failed to login. CURL internal error.'))
             end
         end
     end)
