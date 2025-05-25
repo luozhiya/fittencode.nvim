@@ -374,12 +374,12 @@ function M.fetch(url, options)
             end
             ---@class FittenCode.HTTP.Request.Stream.ErrorEvent
             local error_obj = {
-                type = 'CURL_ERROR',
+                type = 'HTTP_CURL_ERROR',
                 code = code,
                 signal = signal,
                 message = err_lines,
                 timing = timing,
-                readable_type = CURL_ERROR_CODES[code] or 'UNKNOWN_ERROR'
+                readable_type = CURL_ERROR_CODES[code] or ''
             }
             stream:_emit('error', error_obj)
         end
@@ -388,7 +388,7 @@ function M.fetch(url, options)
     process:on('error', function(err)
         -- Log.error('curl error: {}', err)
         stream:_emit('error', {
-            type = 'PROCESS_ERROR',
+            type = 'HTTP_PROCESS_ERROR',
             message = err
         })
     end)
@@ -396,7 +396,7 @@ function M.fetch(url, options)
     process:on('abort', function()
         -- Log.debug('curl aborted')
         stream:_emit('abort', {
-            type = 'USER_ABORT'
+            type = 'HTTP_USER_ABORT'
         })
     end)
 
@@ -415,7 +415,7 @@ function M.fetch(url, options)
                     resolve(response)
                 else
                     reject({
-                        type = 'HTTP_ERROR',
+                        type = 'HTTP_REQUEST_ERROR',
                         status = response.status,
                         response = response
                     })

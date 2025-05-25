@@ -4,6 +4,7 @@ local i18n = require('fittencode.i18n')
 local Fn = require('fittencode.fn.core')
 local Client = require('fittencode.client')
 local Keyring = require('fittencode.client.keyring')
+local Promise = require('fittencode.fn.promise')
 
 local M = {}
 
@@ -63,29 +64,27 @@ function M.try_web()
     Client.request(Protocol.URLs.try)
 end
 
-local function handle_curl_errors(err, default_msg)
+local function handle_curl_errors(err)
     if err then
-        if err.type == 'USER_ABORT' then
+        if err.type == 'HTTP_USER_ABORT' then
             Log.info('User abort')
-            return 'USER_ABORT'
-        elseif err.type == 'PROCESS_ERROR' then
-            if err.message.type == 'SpawnError' then
+        elseif err.type == 'HTTP_PROCESS_ERROR' then
+            if err.message.type == 'PROCESS_SPAWN_ERROR' then
                 if vim.fn.filereadable(err.message.message) ~= 1 then
-                    Log.notify_error(i18n.tr('{} curl not found, please check your installation.', default_msg))
+                    Log.notify_error(i18n.tr('CURL not found, please check your installation.'))
                 else
-                    Log.notify_error(i18n.tr('{} Failed to execute curl.', default_msg))
+                    Log.notify_error(i18n.tr('Failed to execute curl.'))
                 end
             else
-                Log.notify_error(i18n.tr('{} Process unexpectedly exited.', default_msg))
+                Log.notify_error(i18n.tr('Process unexpectedly exited.'))
             end
-            return 'PROCESS_ERROR'
-        elseif err.type == 'CURL_ERROR' then
-            Log.notify_error(i18n.tr('{} CURL internal error.', default_msg))
-            return 'CURL_ERROR'
+        elseif err.type == 'HTTP_CURL_ERROR' then
+            Log.notify_error(i18n.tr('CURL internal error.'))
+        elseif err.type == 'RESPONSE_ERROR' then
+            Log.notify_error(err.message)
         end
     end
-    Log.notify_error(default_msg)
-    return 'UNKNOWN_ERROR'
+    return err and err.type or nil
 end
 
 ---@param username? string
@@ -105,6 +104,7 @@ function M.login(username, password)
     end
 
     if not username or not password then
+        Log.notify_error(i18n.tr('[Fitten Code] Invalid username or password'))
         return
     end
 
@@ -114,15 +114,17 @@ function M.login(username, password)
     request = Client.make_request(Protocol.Methods.login, {
         body = assert(vim.fn.json_encode(body)),
     })
-    if not request then return end
+    if not request then
+        Log.notify_error(i18n.tr('[Fitten Code] Internal error'))
+        Log.error('Failed to make login request')
+        return
+    end
 
     Log.debug('Login request: {}', request)
 
     request:async():forward(function(_)
         ---@type FittenCode.Protocol.Methods.Login.Response
         local response = _.json()
-        Log.debug('Login response: {}', _)
-        Log.debug('Login response json: {}', _.text())
         if response and response.access_token and response.refresh_token and response.user_info then
             api_key_manager:update(Keyring.make(response))
             Log.notify_info(i18n.tr('[Fitten Code] Login successful'))
@@ -130,17 +132,17 @@ function M.login(username, password)
         else
             ---@type FittenCode.Protocol.Methods.Login.ResponseError
             local re = _.json()
-            local error_msg
+            local error_msg = i18n.tr('Failed to login, response is invalid')
             if re and re.msg and re.msg ~= '' then
-                -- error_msg = re.msg
+                error_msg = re.msg
             end
-            error_msg = i18n.tr('Failed to login: {}', _)
-            Log.notify_error(error_msg)
+            return Promise.reject({
+                type = 'RESPONSE_ERROR',
+                message = error_msg
+            })
         end
     end):catch(function(err)
-        Log.debug('Login error: {}', err)
-        -- handle_curl_errors(err, i18n.tr('Failed to login'))
-        Log.error('Login failed: {}', err)
+        handle_curl_errors(err)
     end)
 end
 
@@ -215,7 +217,7 @@ function M.login3rd(source, options)
         end):catch(function(err)
             local err_type = handle_curl_errors(err, i18n.tr('Failed to check 3rd-party login status'))
             Log.error('3rd-party login check failed (try #{}, source: {}): {}', login3rd.try_count, source, err)
-            if err_type == 'PROCESS_ERROR' then
+            if err_type == 'HTTP_PROCESS_ERROR' then
                 abort_all_operations()
             end
         end)

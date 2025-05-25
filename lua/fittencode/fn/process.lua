@@ -97,7 +97,7 @@ local function run(process)
 
     if not state.uv_process then
         process:_emit('error', {
-            type = 'SpawnError',
+            type = 'PROCESS_SPAWN_ERROR',
             message = command
         })
     end
@@ -136,7 +136,7 @@ local function run(process)
         process.timer:start(options.timeout, 0, function()
             if vim.uv.is_active(state.uv_process) then
                 process:_emit('error', {
-                    type = 'TimeoutError',
+                    type = 'PROCESS_TIMEOUT_ERROR',
                     message = 'Process timeout'
                 })
                 process.timer:stop()

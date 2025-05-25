@@ -57,8 +57,8 @@
 ---@field CURL_ERROR_CODES table<integer, string> @CURL 错误码映射表
 
 ---@alias FittenCode.HTTP.Error.Type
----| '"CURL_ERROR"'    # CURL 底层错误
----| '"HTTP_ERROR"'    # HTTP 4xx/5xx 错误
----| '"USER_ABORT"'    # 用户主动取消
+---| '"HTTP_CURL_ERROR"'    # CURL 底层错误
+---| '"HTTP_REQUEST_ERROR"'    # HTTP 4xx/5xx 错误
+---| '"HTTP_USER_ABORT"'    # 用户主动取消
 ---| '"PARSE_ERROR"'   # 数据解析错误
 ---| '"NETWORK_ERROR"' # 网络连接错误
