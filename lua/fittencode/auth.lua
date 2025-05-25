@@ -64,13 +64,13 @@ function M.try_web()
     Client.request(Protocol.URLs.try)
 end
 
-local function handle_curl_errors(err)
+local function handle_http_errors(err)
     if err then
         if err.type == 'HTTP_USER_ABORT' then
             Log.info('User abort')
         elseif err.type == 'HTTP_PROCESS_ERROR' then
-            if err.message.type == 'PROCESS_SPAWN_ERROR' then
-                if vim.fn.filereadable(err.message.message) ~= 1 then
+            if err.stack.type == 'PROCESS_SPAWN_ERROR' then
+                if vim.fn.filereadable(err.stack.command) ~= 1 then
                     Log.notify_error(i18n.tr('CURL not found, please check your installation.'))
                 else
                     Log.notify_error(i18n.tr('Failed to execute curl.'))
@@ -80,7 +80,7 @@ local function handle_curl_errors(err)
             end
         elseif err.type == 'HTTP_CURL_ERROR' then
             Log.notify_error(i18n.tr('CURL internal error.'))
-        elseif err.type == 'RESPONSE_ERROR' then
+        elseif err.type == 'AUTH_RESPONSE_ERROR' then
             Log.notify_error(err.message)
         end
     end
@@ -137,12 +137,12 @@ function M.login(username, password)
                 error_msg = re.msg
             end
             return Promise.reject({
-                type = 'RESPONSE_ERROR',
+                type = 'AUTH_RESPONSE_ERROR',
                 message = error_msg
             })
         end
     end):catch(function(err)
-        handle_curl_errors(err)
+        handle_http_errors(err)
     end)
 end
 
@@ -176,10 +176,14 @@ function M.login3rd(source, options)
     request = Client.request(Protocol.Methods.fb_sign_in, {
         variables = { sign_in_source = source, client_token = client_token }
     })
-    if not request then return end
+    if not request then
+        Log.notify_error(i18n.tr('[Fitten Code] Internal error'))
+        Log.error('Failed to make 3rd-party login request')
+        return
+    end
 
     -- 定时检查登录状态
-    local function check_login()
+    local function __check_login()
         if not login3rd.start_check then return end
 
         login3rd.try_count = login3rd.try_count + 1
@@ -196,12 +200,15 @@ function M.login3rd(source, options)
         request = Client.make_request(Protocol.Methods.fb_check_login_auth, {
             variables = { client_token = client_token }
         })
-        if not request then return end
+        if not request then
+            return
+        end
 
         request:async():forward(function(res)
             ---@type FittenCode.Protocol.Methods.FBCheckLoginAuth.Response
             local response = res.json()
             if response and response.access_token and response.refresh_token and response.user_info then
+                abort_all_operations()
                 api_key_manager:update(Keyring.make(response))
                 Log.info('Login with 3rd-party provider: {}, try count: {}', source, login3rd.try_count)
                 Log.notify_info(i18n.tr('[Fitten Code] Login successful'))
@@ -215,16 +222,13 @@ function M.login3rd(source, options)
                 end
             end
         end):catch(function(err)
-            local err_type = handle_curl_errors(err, i18n.tr('Failed to check 3rd-party login status'))
+            local err_type = handle_http_errors(err)
             Log.error('3rd-party login check failed (try #{}, source: {}): {}', login3rd.try_count, source, err)
-            if err_type == 'HTTP_PROCESS_ERROR' then
-                abort_all_operations()
-            end
         end)
     end
 
     -- 启动定时检查
-    login3rd.check_timer = Fn.set_interval(login3rd.time_delta * 1000, check_login)
+    login3rd.check_timer = Fn.set_interval(login3rd.time_delta * 1000, __check_login)
 end
 
 function M.logout()

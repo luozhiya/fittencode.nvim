@@ -389,7 +389,7 @@ function M.fetch(url, options)
         -- Log.error('curl error: {}', err)
         stream:_emit('error', {
             type = 'HTTP_PROCESS_ERROR',
-            message = err
+            stack = err
         })
     end)
 

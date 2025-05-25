@@ -98,7 +98,7 @@ local function run(process)
     if not state.uv_process then
         process:_emit('error', {
             type = 'PROCESS_SPAWN_ERROR',
-            message = command
+            command = command
         })
     end
 
