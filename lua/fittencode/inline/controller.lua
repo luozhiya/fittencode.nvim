@@ -51,6 +51,12 @@ function Status:update(controller, event, data)
     end
 end
 
+---@class FittenCode.Inline.Controller
+---@field observers table<number, function>
+---@field sessions table<number, FittenCode.Inline.Session>
+---@field filter_events table<string, boolean>
+---@field status_observer FittenCode.Inline.Status
+---@field keymaps table<number, any>
 local Controller = {}
 Controller.__index = Controller
 
@@ -68,7 +74,7 @@ function Controller:__initialize(options)
         self.status_observer = Status.new()
         self.keymaps = {}
         self:set_suffix_permissions(Config.inline_completion.enable)
-        self.no_more_suggestion = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
+        self.no_more_suggestion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
         self:add_observer(function(ctrl, event, data)
             self.status_observer:update(ctrl, event, data)
         end)
@@ -294,7 +300,7 @@ function Controller:_show_no_more_suggestion(msg, timeout)
     local row, col = unpack(vim.api.nvim_win_get_cursor(win))
     vim.api.nvim_buf_set_extmark(
         buf,
-        self.no_more_suggestion,
+        self.no_more_suggestion_ns,
         row - 1,
         col - 1,
         {
@@ -303,12 +309,12 @@ function Controller:_show_no_more_suggestion(msg, timeout)
             hl_mode = 'replace',
         })
     vim.defer_fn(function()
-        vim.api.nvim_buf_clear_namespace(buf, self.no_more_suggestion, 0, -1)
+        vim.api.nvim_buf_clear_namespace(buf, self.no_more_suggestion_ns, 0, -1)
     end, timeout)
     vim.api.nvim_create_autocmd({ 'InsertLeave', 'BufLeave', 'CursorMovedI' }, {
         group = vim.api.nvim_create_augroup('Fittencode.Inline.NoMoreSuggestion', { clear = true }),
         callback = function()
-            vim.api.nvim_buf_clear_namespace(buf, self.no_more_suggestion, 0, -1)
+            vim.api.nvim_buf_clear_namespace(buf, self.no_more_suggestion_ns, 0, -1)
         end,
         once = true,
     })
