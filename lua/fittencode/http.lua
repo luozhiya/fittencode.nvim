@@ -116,14 +116,12 @@ local function parse_timing(chunk)
             return
         end
 
-        -- 验证timing字段结构
         local timing = data.timing
         if type(timing) ~= 'table' then
             Log.warn('curl timing data is not a table: {}', data)
             return
         end
 
-        -- 检查所有必需的计时字段是否存在且为数值类型
         -- seconds
         local required_fields = {
             'namelookup', 'connect', 'appconnect',
@@ -154,25 +152,20 @@ local function parse_stderr(stderr_buffer)
     local timing
     local stderr_data = table.concat(stderr_buffer)
 
-    -- 定义标签
     local start_tag = '<|FittenCodeTimings|>'
     local end_tag = '<|FittenCodeTimings|>'
 
-    -- 查找标签的起始和结束位置
     local start_pos, end_pos = stderr_data:find(start_tag .. '(.-)' .. end_tag)
 
-    -- 如果找到标签，则提取并解析 JSON 数据
     if start_pos and end_pos then
         local json_data = stderr_data:sub(start_pos + #start_tag, end_pos - #end_tag)
         timing = parse_timing(json_data)
     end
 
-    -- 移除 stderr_data 中 timing 部分
     if start_pos and end_pos then
         stderr_data = stderr_data:sub(1, start_pos - 1) .. stderr_data:sub(end_pos + #end_tag + 1)
     end
 
-    -- 返回解析后的 timing 和原始的 stderr_data
     return timing, stderr_data
 end
 
