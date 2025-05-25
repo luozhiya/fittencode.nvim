@@ -17,7 +17,6 @@ local login3rd = {
     time_delta = 3,        -- 检查间隔（秒）
     total_time_limit = 600 -- 总超时时间（秒）
 }
--- 第三方登录提供商
 local login3rd_providers = {
     'google',
     'github',
@@ -30,19 +29,16 @@ function M.supported_login3rd_providers()
 end
 
 local function abort_all_operations()
-    -- 终止所有可能的请求
     if request then
         request.abort()
         request = nil
     end
 
-    -- 清除第三方登录的定时器
     if login3rd.check_timer then
         Fn.clear_interval(login3rd.check_timer)
         login3rd.check_timer = nil
     end
 
-    -- 重置第三方登录状态
     login3rd.start_check = false
     login3rd.total_time = 0
     login3rd.try_count = 0
@@ -90,7 +86,7 @@ end
 ---@param username? string
 ---@param password? string
 function M.login(username, password)
-    abort_all_operations() -- 终止其他操作
+    abort_all_operations()
 
     local api_key_manager = Client.get_api_key_manager()
     if api_key_manager:get_fitten_user_id() then
@@ -149,7 +145,7 @@ end
 ---@param source string
 function M.login3rd(source, options)
     options = options or {}
-    abort_all_operations() -- 终止其他操作
+    abort_all_operations()
 
     local api_key_manager = Client.get_api_key_manager()
     if api_key_manager:get_fitten_user_id() then
@@ -168,11 +164,9 @@ function M.login3rd(source, options)
         return
     end
 
-    -- 初始化第三方登录状态
     login3rd.start_check = true
     login3rd.total_time = 0
 
-    -- 发起第三方登录请求
     request = Client.request(Protocol.Methods.fb_sign_in, {
         variables = { sign_in_source = source, client_token = client_token }
     })
@@ -182,7 +176,6 @@ function M.login3rd(source, options)
         return
     end
 
-    -- 定时检查登录状态
     local function __check_login()
         if not login3rd.start_check then return end
 
@@ -190,13 +183,11 @@ function M.login3rd(source, options)
 
         login3rd.total_time = login3rd.total_time + login3rd.time_delta
         if login3rd.total_time > login3rd.total_time_limit then
-            login3rd.start_check = false
             Log.notify_info('[Fitten Code] Login timeout')
             abort_all_operations()
             return
         end
 
-        -- 发起状态检查请求
         request = Client.make_request(Protocol.Methods.fb_check_login_auth, {
             variables = { client_token = client_token }
         })
@@ -213,7 +204,6 @@ function M.login3rd(source, options)
                 Log.info('Login with 3rd-party provider: {}, try count: {}', source, login3rd.try_count)
                 Log.notify_info(i18n.tr('[Fitten Code] Login successful'))
 
-                -- 发送统计信息
                 Client.request(Protocol.Methods.click_count, {
                     variables = { click_count_type = response.create and 'register_fb' or 'login_fb' }
                 })
@@ -221,9 +211,6 @@ function M.login3rd(source, options)
                     Client.request(Protocol.URLs.register_cvt)
                 end
             end
-        end):catch(function(err)
-            local err_type = handle_http_errors(err)
-            Log.error('3rd-party login check failed (try #{}, source: {}): {}', login3rd.try_count, source, err)
         end)
     end
 
@@ -232,7 +219,7 @@ function M.login3rd(source, options)
 end
 
 function M.logout()
-    abort_all_operations() -- 终止所有进行中的操作
+    abort_all_operations()
 
     local api_key_manager = Client.get_api_key_manager()
     if not api_key_manager:get_fitten_user_id() then
