@@ -86,8 +86,6 @@ local CURL_ERROR_CODES = {
 
 local function create_stream()
     return {
-        _buffer = '',
-        _headers = nil,
         _status = nil,
         _callbacks = {},
         on = function(self, event, cb)
@@ -178,6 +176,78 @@ local function parse_stderr(stderr_buffer)
     return timing, stderr_data
 end
 
+local function parse_http_message(stdout_data)
+    local http_message = {
+        status_line = {
+            protocal_version = nil,
+            status_code = nil,
+            reason_phrase = nil
+        },
+        response_headers = {
+        }
+    }
+    -- 第一行必然是状态行
+    local first_line = stdout_data:match('^.-\r?\n')
+    if not first_line then
+        Log.warn('Invalid http message: {}', stdout_data)
+        return
+    end
+    local version, code, message = first_line:match('^(HTTP/[0-9.]+) (%d+) (.-)\r?\n$')
+    if not version or not code or not message then
+        Log.warn('Invalid http status line: {}', first_line)
+        return
+    end
+    http_message.status_line.protocal_version = version
+    http_message.status_line.status_code = tonumber(code)
+    http_message.status_line.reason_phrase = message
+
+    stdout_data = stdout_data:sub(#first_line + 1)
+
+    local emptyline = stdout_data:match('^\r?\n')
+    if emptyline then
+        -- status line only
+        return http_message, stdout_data:sub(#emptyline + 1)
+    end
+
+    -- 处理 Response Headers
+    local headers_data = stdout_data:match('^(.-\r?\n\r?\n)')
+    if not headers_data then
+        Log.warn('Invalid http headers: {}', stdout_data)
+        return
+    end
+    for line in headers_data:gmatch('(.-)\r?\n') do
+        local name, value = line:match('^([^:]+): (.*)$')
+        if name and value then
+            http_message.response_headers[name] = value
+        end
+    end
+    stdout_data = stdout_data:sub(#headers_data + 1)
+
+    return http_message, stdout_data
+end
+
+local function parse_http_messages(stdout_data)
+    local http_messages = {}
+    local content = ''
+    local next_d = stdout_data
+    while true do
+        local m, d = parse_http_message(next_d)
+        if not m then
+            content = next_d
+            break
+        end
+        http_messages[#http_messages + 1] = m
+        next_d = d
+    end
+    return http_messages, content
+end
+
+local function parse_stdout(stdout_buffer)
+    -- 处理 HTTP 响应头 (包括有无 Proxy response)
+    local stdout_data = table.concat(stdout_buffer)
+    return parse_http_messages(stdout_data)
+end
+
 -- 返回一个可控制的句柄
 -- * stream:   一个可订阅的事件流对象，用于监听请求过程中的各个事件
 -- * abort():  用于中止请求
@@ -234,63 +304,18 @@ function M.fetch(url, options)
     table.insert(args, url)
 
     local stderr_buffer = {}
-    local headers_processed = false
+    local stdout_buffer = {}
 
     local process = Process.new(curl_command, args, {
         stdin = stdin_data
     })
 
     process:on('stdout', function(chunk)
-        Log.debug('curl stdout: {}', chunk)
-        if handle.aborted then return end
-
-        if not headers_processed then
-            -- 检查是否为代理的 Connection established 响应
-            local proxy_response = chunk:match('^HTTP/1%.1 200 Connection established\r?\n\r?\n')
-            if proxy_response then
-                stream._proxy_response = vim.trim(proxy_response)
-                Log.debug('Proxy connection established')
-                local proxy_end = #proxy_response
-                -- 移除代理响应部分，继续处理剩余数据
-                chunk = chunk:sub(proxy_end + 1)
-                -- 如果剩余数据为空，等待下一个数据块
-                if #chunk == 0 then return end
-            end
-            local header_end = chunk:find('\r\n\r\n') or chunk:find('\n\n')
-            Log.debug('header_end: {}', header_end)
-            if header_end then
-                headers_processed = true
-                local header_str = chunk:sub(1, header_end - 1)
-
-                -- 解析状态码
-                stream._status = tonumber(header_str:match('HTTP/%d%.%d (%d+)'))
-
-                -- 解析 headers
-                local headers = {}
-                for line in vim.gsplit(header_str, '\r?\n') do
-                    local name, val = line:match('^([^%s:]+):%s*(.*)$')
-                    if name then headers[name:lower()] = val end
-                end
-                stream._headers = headers
-
-                -- 触发 headers 事件
-                stream:_emit('headers', {
-                    status = stream._status,
-                    headers = headers
-                })
-
-                -- 处理剩余 body 数据
-                local body = chunk:sub(header_end + 4)
-                if #body > 0 then
-                    stream._buffer = stream._buffer .. body
-                    stream:_emit('data', body)
-                end
-            end
-        else
-            -- 直接处理 body 数据
-            stream._buffer = stream._buffer .. chunk
-            stream:_emit('data', chunk)
+        if handle.aborted then
+            return
         end
+        stream:_emit('stdout', { chunk = chunk })
+        table.insert(stdout_buffer, chunk)
     end)
 
     process:on('stderr', function(chunk)
@@ -298,6 +323,7 @@ function M.fetch(url, options)
         if handle.aborted then
             return
         end
+        stream:_emit('stderr', { chunk = chunk })
         table.insert(stderr_buffer, chunk)
     end)
 
@@ -307,18 +333,35 @@ function M.fetch(url, options)
             return
         end
         local timing, stderr_data = parse_stderr(stderr_buffer)
+        local http_messages, content = parse_stdout(stdout_buffer)
+        local status = {}
+        for _, m in ipairs(http_messages) do
+            if m.status_line.status_code then
+                status[#status + 1] = m.status_line.status_code
+            end
+        end
+        local function __is_ok(c)
+            return c and (c >= 200 and c < 300) or false
+        end
+        local function __is_all_ok(ss)
+            for _, s in ipairs(ss) do
+                if not __is_ok(s) then
+                    return false
+                end
+            end
+            return true
+        end
 
         if code == 0 then
             ---@class FittenCode.HTTP.Request.Stream.EndEvent
             local response = {
-                status = stream._status,
-                headers = stream._headers,
-                proxy_response = stream._proxy_response,
-                ok = stream._status and (stream._status >= 200 and stream._status < 300) or false,
+                status = status,
+                http_messages = http_messages,
+                ok = __is_all_ok(status),
                 timing = timing,
-                text = function() return stream._buffer end,
+                text = function() return content end,
                 json = function()
-                    local _, json = pcall(vim.json.decode, stream._buffer)
+                    local _, json = pcall(vim.json.decode, content)
                     if _ then return json end
                 end
             }

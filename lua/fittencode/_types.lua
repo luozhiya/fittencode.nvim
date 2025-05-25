@@ -30,7 +30,7 @@
 ---@field headers table<string, string> @响应头表
 
 ---@class FittenCode.HTTP.Request.Stream.EndEvent
----@field status integer @HTTP 状态码
+---@field status integer|integer[] @HTTP 状态码
 ---@field headers table<string, string> @响应头表
 ---@field ok boolean @是否成功状态码 (200-299)
 ---@field timing? fun(): FittenCode.HTTP.Timing @请求计时信息
