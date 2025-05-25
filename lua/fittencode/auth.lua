@@ -65,8 +65,8 @@ local function handle_http_errors(err)
         if err.type == 'HTTP_USER_ABORT' then
             Log.info('User abort')
         elseif err.type == 'HTTP_PROCESS_ERROR' then
-            if err.stack.type == 'PROCESS_SPAWN_ERROR' then
-                if vim.fn.filereadable(err.stack.command) ~= 1 then
+            if err.cause.type == 'PROCESS_SPAWN_ERROR' then
+                if vim.fn.filereadable(err.cause.metadata.command) ~= 1 then
                     Log.notify_error(i18n.tr('CURL not found, please check your installation.'))
                 else
                     Log.notify_error(i18n.tr('Failed to execute curl.'))

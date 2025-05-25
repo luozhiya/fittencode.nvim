@@ -96,10 +96,18 @@ local function run(process)
     end)
 
     if not state.uv_process then
-        process:_emit('error', {
+        ---@type FittenCode.Error
+        local _ = {
             type = 'PROCESS_SPAWN_ERROR',
-            command = command
-        })
+            message = 'Failed to spawn process',
+            metadata = {
+                command = command,
+                args = args,
+                env = options.env,
+                cwd = options.cwd,
+            }
+        }
+        process:_emit('error', _)
     end
 
     stdout:read_start(function(err, chunk)
@@ -135,10 +143,15 @@ local function run(process)
         process.timer = vim.loop.new_timer()
         process.timer:start(options.timeout, 0, function()
             if vim.uv.is_active(state.uv_process) then
-                process:_emit('error', {
+                ---@type FittenCode.Error
+                local _ = {
                     type = 'PROCESS_TIMEOUT_ERROR',
-                    message = 'Process timeout'
-                })
+                    message = 'Process timeout',
+                    metadata = {
+                        timeout = options.timeout,
+                    }
+                }
+                process:_emit('error', _)
                 process.timer:stop()
                 process.timer:close()
                 process.timer = nil

@@ -1,3 +1,9 @@
+---@class FittenCode.Error
+---@field type string @错误类型标识
+---@field message string|string[] @错误描述
+---@field cause? FittenCode.Error @错误原因
+---@field metadata? table<string, any> @附加信息
+
 ---@class FittenCode.HTTP.Request
 ---@field method? string @HTTP 方法 (默认: 'GET')
 ---@field headers? table<string, string> @请求头
@@ -37,13 +43,14 @@
 ---@field text fun(): string @获取响应文本方法
 ---@field json fun(): any? @解析响应JSON方法
 
----@class FittenCode.HTTP.Request.Stream.ErrorEvent
----@field type string @错误类型标识
+---@class FittenCode.HTTP.Request.Stream.ErrorEvent.Metadata
 ---@field code? integer @CURL 错误码
 ---@field signal? integer @系统信号码
----@field message string|string[] @错误描述
 ---@field timing? fun(): FittenCode.HTTP.Timing @请求计时信息
----@field readable_type string @可读错误类型
+---@field readable_code string @可读错误类型
+
+---@class FittenCode.HTTP.Request.Stream.ErrorEvent : FittenCode.Error
+---@field metadata? FittenCode.HTTP.Request.Stream.ErrorEvent.Metadata @附加信息
 
 ---@class FittenCode.HTTP.Timing
 ---@field dns number      @DNS 查询耗时（毫秒）

@@ -182,12 +182,12 @@ local function parse_http_message(stdout_data)
     -- 第一行必然是状态行
     local first_line = stdout_data:match('^.-\r?\n')
     if not first_line then
-        Log.warn('Invalid http message: {}', stdout_data)
+        -- Log.warn('Invalid http message: {}', stdout_data)
         return
     end
     local version, code, message = first_line:match('^(HTTP/[0-9.]+) (%d+) (.-)\r?\n$')
     if not version or not code or not message then
-        Log.warn('Invalid http status line: {}', first_line)
+        -- Log.warn('Invalid http status line: {}', first_line)
         return
     end
     http_message.status_line.protocal_version = version
@@ -205,7 +205,7 @@ local function parse_http_message(stdout_data)
     -- 处理 Response Headers
     local headers_data = stdout_data:match('^(.-\r?\n\r?\n)')
     if not headers_data then
-        Log.warn('Invalid http headers: {}', stdout_data)
+        -- Log.warn('Invalid http headers: {}', stdout_data)
         return
     end
     for line in headers_data:gmatch('(.-)\r?\n') do
@@ -345,6 +345,9 @@ function M.fetch(url, options)
             return true
         end
 
+        Log.debug('CURL exit: code = {}, signal = {}', code, signal)
+        Log.debug('CURL HTTP messages: {}', http_messages)
+
         if code == 0 then
             ---@class FittenCode.HTTP.Request.Stream.EndEvent
             local response = {
@@ -365,32 +368,40 @@ function M.fetch(url, options)
             if err_lines[#err_lines] == '' then
                 table.remove(err_lines)
             end
-            ---@class FittenCode.HTTP.Request.Stream.ErrorEvent
-            local error_obj = {
+            ---@type FittenCode.HTTP.Request.Stream.ErrorEvent
+            local _ = {
                 type = 'HTTP_CURL_ERROR',
-                code = code,
-                signal = signal,
                 message = err_lines,
-                timing = timing,
-                readable_type = CURL_ERROR_CODES[code] or ''
+                metadata = {
+                    code = code,
+                    signal = signal,
+                    timing = timing,
+                    readable_code = CURL_ERROR_CODES[code] or ''
+                }
             }
-            stream:_emit('error', error_obj)
+            stream:_emit('error', _)
         end
     end)
 
     process:on('error', function(err)
         -- Log.error('curl error: {}', err)
-        stream:_emit('error', {
+        ---@type FittenCode.Error
+        local _ = {
             type = 'HTTP_PROCESS_ERROR',
-            stack = err
-        })
+            message = 'Process error',
+            cause = err
+        }
+        stream:_emit('error', _)
     end)
 
     process:on('abort', function()
         -- Log.debug('curl aborted')
-        stream:_emit('abort', {
-            type = 'HTTP_USER_ABORT'
-        })
+        ---@type FittenCode.Error
+        local _ = {
+            type = 'HTTP_USER_ABORT',
+            message = 'User aborted'
+        }
+        stream:_emit('abort', _)
     end)
 
     handle.abort = function(self)
@@ -407,11 +418,16 @@ function M.fetch(url, options)
                 if response.ok then
                     resolve(response)
                 else
-                    reject({
+                    ---@type FittenCode.Error
+                    local _ = {
                         type = 'HTTP_REQUEST_ERROR',
-                        status = response.status,
-                        response = response
-                    })
+                        message = 'Request error',
+                        metadata = {
+                            status = response.status,
+                            response = response
+                        }
+                    }
+                    reject(_)
                 end
             end)
 

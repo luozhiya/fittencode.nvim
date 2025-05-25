@@ -186,7 +186,7 @@ function Controller:create_conversation(template_id, show, mode, context)
         context = context,
         update_view = function(...) self:update_view(...) end,
         update_status = function(data) self:notify_observers(CONTROLLER_EVENT.CONVERSATION_UPDATED, data) end,
-        resolve_variables = function(...) self:_resolve_variables(...) end,
+        resolve_variables = function(...) return self:_resolve_variables(...) end,
     })
 
     if created_conversation.type == 'unavailable' then
