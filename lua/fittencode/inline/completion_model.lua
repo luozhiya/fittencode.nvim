@@ -12,6 +12,7 @@ model:update_words(words)
 --]]
 
 local Unicode = require('fittencode.fn.unicode')
+local Log = require('fittencode.log')
 
 local function parse_chars(s)
     local chars = {}
@@ -138,9 +139,11 @@ local function parse_lines(s)
 end
 
 local function merge_ranges(ranges)
+    Log.debug('Merging ranges: {}', ranges)
     if #ranges == 0 then
         return {}
     end
+    ranges = vim.tbl_filter(function(r) return r.start ~= nil and r.end_ ~= nil end, ranges)
     table.sort(ranges, function(a, b) return a.start < b.start end)
     local merged = { ranges[1] }
     for i = 2, #ranges do
@@ -155,6 +158,16 @@ local function merge_ranges(ranges)
     return merged
 end
 
+---@class FittenCode.Inline.CompletionModel
+---@field source string
+---@field cursor integer
+---@field commit_history table<table<table<integer>>>
+---@field placeholder_ranges table<table<integer>>
+---@field commit_ranges table<table<integer>>
+---@field stage_ranges table<table<integer>>
+---@field chars table<table<integer>>
+---@field words table<table<integer>>
+---@field lines table<table<integer>>
 local CompletionModel = {}
 CompletionModel.__index = CompletionModel
 
@@ -166,6 +179,7 @@ function CompletionModel.new(source, placeholder_ranges)
 
     -- 新增 placeholder 范围验证
     local merged_ph = merge_ranges(placeholder_ranges or {})
+    Log.debug('Placeholder ranges: {}', merged_ph)
     for _, r in ipairs(merged_ph) do
         if r.start < 1 or r.end_ > #source then
             error('Placeholder ranges out of bounds')

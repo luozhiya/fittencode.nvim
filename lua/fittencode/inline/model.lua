@@ -15,6 +15,14 @@ local Position = require('fittencode.fn.position')
 local Segment = require('fittencode.inline.segment')
 local Unicode = require('fittencode.fn.unicode')
 
+---@class FittenCode.Inline.Model
+---@field buf number
+---@field position FittenCode.Position
+---@field response any
+---@field selected_completion_index? number
+---@field computed_completions table<table<string, any>>
+---@field placeholder_ranges table<table<number>>
+---@field completion_models table<FittenCode.Inline.CompletionModel>
 local Model = {}
 Model.__index = Model
 
@@ -28,7 +36,7 @@ function Model:_initialize(options)
     self.buf = options.buf
     self.position = options.position
     self.response = options.response or {}
-    self.selected_completion = nil
+    self.selected_completion_index = nil
 
     -- 1. 转换 delta
     local computed = {}
@@ -116,8 +124,9 @@ function Model:generate_placeholder_ranges(buf, position, computed_completions)
     return placeholder_ranges
 end
 
+---@return FittenCode.Inline.CompletionModel
 function Model:selected_completion()
-    return assert(self.completion_models[self.selected_completion], 'No completion model selected')
+    return assert(self.completion_models[assert(self.selected_completion_index)], 'No completion model selected')
 end
 
 function Model:get_text()
@@ -133,7 +142,7 @@ function Model:accept(direction, scope)
     if direction == 'forward' then
         cmp:accept(scope)
     elseif direction == 'backward' then
-        cmp:revoke(scope)
+        cmp:revoke()
     end
 end
 
@@ -164,10 +173,14 @@ end
 -- 一旦开始 comletion 则不允许再选择其他的 completion
 -- TODO:?
 function Model:set_selected_completion(index)
-    if self.selected_completion ~= nil then
+    if self.selected_completion_index ~= nil then
         return
     end
-    self.selected_completion = index
+    self.selected_completion_index = index
+end
+
+function Model:snapshot()
+    return self:selected_completion():snapshot()
 end
 
 return Model

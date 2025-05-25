@@ -11,14 +11,13 @@ end
 function State.get_state_from_model(model)
     local state = State.new()
 
-    -- 合并所有范围并排序
     local all_ranges = {}
     for _, r in ipairs(model.commit_ranges) do
         table.insert(all_ranges, {
             type = 'commit',
             start = r.start,
             end_ = r.end_,
-            text = model.source:sub(r.start, r.end_) -- 新增文本内容
+            text = model.source:sub(r.start, r.end_)
         })
     end
     for _, r in ipairs(model.stage_ranges) do
@@ -39,7 +38,6 @@ function State.get_state_from_model(model)
     end
     table.sort(all_ranges, function(a, b) return a.start < b.start end)
 
-    -- 按行分组
     for line_num, line in ipairs(model.lines) do
         local line_state = {}
         for _, range in ipairs(all_ranges) do

@@ -163,12 +163,11 @@ local DEFAULTS = {
     keymaps = {
         inline = {
             ['triggering_completion'] = '<A-\\>',
-            ['accept'] = '<Tab>',
-            ['cancel'] = '<Esc>',
+            ['accept_all'] = '<Tab>',
             ['accept_line'] = '<C-Down>',
-            ['revoke_line'] = '<C-Up>',
             ['accept_word'] = '<C-Right>',
-            ['revoke_word'] = '<C-Left>',
+            ['revoke'] = { '<C-Left>', '<C-Up>' },
+            ['cancel'] = '<Esc>',
         },
         chat = {
             ['add_to_chat'] = 'A-X',

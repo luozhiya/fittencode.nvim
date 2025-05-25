@@ -1,3 +1,11 @@
+--[[
+
+一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
+* 一个会话的生命周期为：创建 -> 开始（交互模式） -> 结束
+* 通过配置交互模式来实现延时补全 (delay_completion)
+
+]]
+
 local Model = require('fittencode.inline.model')
 local View = require('fittencode.inline.view')
 local ViewState = require('fittencode.inline.view.state')
@@ -14,9 +22,13 @@ local Definitions = require('fittencode.inline.definitions')
 local SESSION_EVENT = Definitions.SESSION_EVENT
 local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
 
--- 一个 Session 代表一个补全会话，包括 Model、View、状态、请求、定时器、键盘映射、自动命令等
--- * 一个会话的生命周期为：创建 -> 开始（交互模式） -> 结束
--- * 通过配置交互模式来实现延时补全 (delay_completion)
+---@class FittenCode.Inline.Session
+---@field buf number
+---@field position FittenCode.Position
+---@field current_position FittenCode.Position
+---@field id string
+---@field requests table<number, FittenCode.HTTP.Response>
+---@field keymaps table<number, any>
 local Session = {}
 Session.__index = Session
 
@@ -100,30 +112,20 @@ function Session:accept_char()
     self:accept('forward', 'char')
 end
 
-function Session:revoke_line()
-    self:accept('backward', 'line')
-end
-
-function Session:revoke_word()
-    self:accept('backward', 'word')
-end
-
-function Session:revoke_char()
-    self:accept('backward', 'char')
+function Session:revoke()
+    self:accept('backward')
 end
 
 function Session:set_keymaps()
     local maps = {
         { '<Tab>', function() self:accept_all_suggestions() end },
     }
-    if self.model.mode == 'lines' then
-        vim.tbl_deep_extend('force', maps, {
-            { '<C-Down>',  function() self:accept_line() end },
-            { '<C-Right>', function() self:accept_word() end },
-            { '<C-Up>',    function() self:revoke_line() end },
-            { '<C-Left>',  function() self:revoke_word() end },
-        })
-    end
+    vim.tbl_deep_extend('force', maps, {
+        { '<C-Down>',  function() self:accept_line() end },
+        { '<C-Right>', function() self:accept_word() end },
+        { '<C-Up>',    function() self:revoke() end },
+        { '<C-Left>',  function() self:revoke() end },
+    })
     self.keymaps = {}
     for _, map in ipairs(maps) do
         self.keymaps[#self.keymaps + 1] = vim.fn.maparg(map[1], 'i', false, true)
