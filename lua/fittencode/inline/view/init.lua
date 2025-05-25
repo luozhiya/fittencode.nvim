@@ -1,5 +1,11 @@
 local F = require('fittencode.fn.buf')
 
+---@class FittenCode.Inline.View
+---@field buf integer
+---@field position FittenCode.Position
+---@field completion_ns integer
+---@field commit_row integer
+---@field commit_col integer
 local View = {}
 View.__index = View
 

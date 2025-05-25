@@ -1,3 +1,5 @@
+---@class FittenCode.Inline.State
+---@field lines table<number, table<number, table>>
 local State = {}
 State.__index = State
 
