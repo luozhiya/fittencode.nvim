@@ -106,7 +106,6 @@ function Session:accept(range)
     if self.model:is_complete() then
         Log.debug('Completion completed')
         self:terminate()
-        -- vim.schedule(function() self.trigger_inline_suggestion({ force = true }) end)
         vim.defer_fn(function() self.trigger_inline_suggestion({ force = true }) end, 10)
     end
 end
@@ -117,33 +116,22 @@ function Session:revoke()
 end
 
 function Session:set_keymaps()
-    local maps = {
+    self.keymaps = {
         { '<Tab>',     function() self:accept('all') end },
         { '<C-Down>',  function() self:accept('line') end },
         { '<C-Right>', function() self:accept('word') end },
         { '<C-Up>',    function() self:revoke() end },
         { '<C-Left>',  function() self:revoke() end },
     }
-    self.keymaps = {}
-    for _, map in ipairs(maps) do
-        self.keymaps[#self.keymaps + 1] = vim.fn.maparg(map[1], 'i', false, true)
+    for _, map in ipairs(self.keymaps) do
         vim.keymap.set('i', map[1], map[2], { noremap = true, silent = true })
     end
 end
 
 function Session:restore_keymaps()
-    --   vim._with({ buf = self.buf }, function()
-    --     local keymap = vim.fn.maparg('K', 'n', false, true)
-    --     if keymap and keymap.buffer == 1 then
-    --       vim.keymap.del('n', 'K', { buffer =  self.buf })
-    --     end
-    --   end)
-    Log.debug('Restoring keymaps, keymap = {}', self.keymaps)
-    for _, map in ipairs(self.keymaps) do
-        if map then
-            vim.fn.mapset('i', false, map)
-        end
-    end
+    vim.tbl_map(function(map)
+        pcall(vim.keymap.del, 'i', map[1], { noremap = true, silent = true })
+    end, self.keymaps)
     self.keymaps = {}
 end
 

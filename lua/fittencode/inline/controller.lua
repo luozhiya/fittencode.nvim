@@ -88,12 +88,11 @@ function Controller:__initialize(options)
     end
 
     do
-        local maps = {
+        self.keymaps = {
             { 'Alt-\\', function() self:trigger_inline_suggestion_by_shortcut() end },
             { '<ESC>',  function() self:edit_completion_cancel({ force = true }) end }
         }
-        for _, v in ipairs(maps) do
-            self.keymaps[#self.keymaps + 1] = vim.fn.maparg(v[1], 'i', false, true)
+        for _, v in ipairs(self.keymaps) do
             vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
         end
     end
