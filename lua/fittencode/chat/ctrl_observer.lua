@@ -1,4 +1,4 @@
-local Observer = require('fittencode.chat.observer')
+local Observer = require('fittencode.fn.observer')
 local Definitions = require('fittencode.chat.definitions')
 local Log = require('fittencode.log')
 
