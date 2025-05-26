@@ -1,3 +1,10 @@
+--[[
+
+Inline Controller
+- 控制 Session 的产生和销毁，期间具体的补全操作由 Session 完成
+
+]]
+
 local Client = require('fittencode.client')
 local Config = require('fittencode.config')
 local Fn = require('fittencode.fn.core')
@@ -83,6 +90,7 @@ function Controller:__initialize(options)
     do
         local maps = {
             { 'Alt-\\', function() self:trigger_inline_suggestion_by_shortcut() end },
+            { '<ESC>', function() self:edit_completion_cancel({ force = true }) end }
         }
         for _, v in ipairs(maps) do
             self.keymaps[#self.keymaps + 1] = vim.fn.maparg(v[1], 'i', false, true)
@@ -91,19 +99,22 @@ function Controller:__initialize(options)
     end
 
     do
-        -- 输入事件顺序
-        -- * vim.on_key
-        -- * CursorMovedI
-        -- * TextChangedI
         vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteChanged' }, {
-            group = vim.api.nvim_create_augroup('TriggerInlineSuggestion', { clear = true }),
+            group = vim.api.nvim_create_augroup('FittenCode.Inline.TriggerInlineSuggestion', { clear = true }),
             pattern = '*',
             callback = function(args)
                 self:trigger_inline_suggestion_auto({ event = args })
             end,
         })
+        vim.api.nvim_create_autocmd({ 'CursorMovedI', 'InsertLeave', 'BufLeave' }, {
+            group = vim.api.nvim_create_augroup('FittenCode.Inline.EditCompletionCancel', { clear = true }),
+            pattern = '*',
+            callback = function(args)
+                self:edit_completion_cancel({ event = args })
+            end,
+        })
         vim.api.nvim_create_autocmd({ 'BufEnter' }, {
-            group = vim.api.nvim_create_augroup('BufferEnterCheck', { clear = true }),
+            group = vim.api.nvim_create_augroup('FittenCode.Inline.BufferEnterCheck', { clear = true }),
             pattern = '*',
             callback = function(args)
                 self:on_buffer_enter({ event = args })

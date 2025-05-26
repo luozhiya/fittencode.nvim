@@ -77,7 +77,6 @@ function Session:set_interactive()
             position = self.position,
         })
         self:set_keymaps()
-        self:set_autocmds()
         self:update_view()
         self:sync_session_event(SESSION_EVENT.INTERACTIVE)
     end
@@ -131,19 +130,6 @@ function Session:restore_keymaps()
     self.keymaps = {}
 end
 
-function Session:set_autocmds()
-    vim.api.nvim_create_autocmd({ 'CursorMovedI', 'InsertLeave', 'BufLeave' }, {
-        group = vim.api.nvim_create_augroup('FittenCode.Inline.EditCompletionCancel', { clear = true }),
-        pattern = '*',
-        callback = function(args)
-            self:edit_completion_cancel({ event = args })
-        end,
-    })
-end
-
-function Session:clear_autocmds()
-end
-
 function Session:set_onkey()
     -- If {fn} returns an empty string, {key} is discarded/ignored.
     vim.on_key(function(key)
@@ -180,7 +166,6 @@ function Session:terminate()
         self:abort_and_clear_requests()
         self.view:clear()
         self:restore_keymaps()
-        self:clear_autocmds()
     end
     self:sync_session_event(SESSION_EVENT.TERMINATED)
 end
@@ -188,7 +173,7 @@ end
 ---@param key string
 ---@return boolean
 function Session:lazy_completion(key)
-    if self.model:eq_peek(key) then
+    if self.model:is_match_next_char(key) then
         self.model:accept('char')
         -- 此时不能立即刷新，因为还处于 on_key 的回调中，要等到下一个 main loop?
         vim.schedule(function()

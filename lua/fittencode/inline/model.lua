@@ -129,7 +129,7 @@ function Model:selected_completion()
     return assert(self.completion_models[assert(self.selected_completion_index)], 'No completion model selected')
 end
 
-function Model:get_text()
+function Model:get_generated_texts()
     local text = {}
     for _, completion in ipairs(self.computed_completions) do
         text[#text + 1] = completion.generated_text
@@ -180,6 +180,10 @@ end
 
 function Model:snapshot()
     return self:selected_completion():snapshot()
+end
+
+function Model:is_match_next_char(key)
+    local selected_completion = self:selected_completion()
 end
 
 return Model
