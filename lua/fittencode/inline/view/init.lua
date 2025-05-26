@@ -148,8 +148,6 @@ local function ignoreevent_wrap(fx)
     -- https://github.com/vim/vim/issues/8641
     local eventignore = vim.o.eventignore
     vim.o.eventignore = 'all'
-    local geventignore = vim.go.eventignore
-    vim.go.eventignore = 'all'
 
     local ret = nil
     if fx then
@@ -157,7 +155,6 @@ local function ignoreevent_wrap(fx)
     end
 
     vim.o.eventignore = eventignore
-    vim.go.eventignore = geventignore
     return ret
 end
 
@@ -202,7 +199,8 @@ function View:update(state)
     end
 
     ignoreevent_wrap(function()
-        self:__view_wrap(win, __update)
+        -- self:__view_wrap(win, __update)
+        __update()
         -- 4. update position
         self:update_win_cursor(win, self.commit)
     end)

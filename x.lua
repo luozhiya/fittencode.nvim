@@ -13,14 +13,47 @@ vim.api.nvim_create_autocmd({ 'CursorMovedI' }, {
     end,
 })
 
-vim.on_key(function(key)
-    local buf = vim.api.nvim_get_current_buf()
-    if vim.api.nvim_get_mode().mode == 'i' then
-        if key == 'a' then
-            return ''
-        end
+---@param fx? function
+---@return any
+local function ignoreevent_wrap(fx)
+    local eventignore = vim.o.eventignore
+    print(vim.inspect(eventignore))
+    print('---')
+    vim.o.eventignore = 'all'
+    local geventignore = vim.go.eventignore
+    print(geventignore)
+    print('---')
+    vim.go.eventignore = 'all'
+
+    local ret = nil
+    if fx then
+        ret = fx()
     end
+
+    vim.o.eventignore = eventignore
+    print(vim.inspect(vim.o.eventignore))
+    print('---')
+    vim.go.eventignore = geventignore
+    print(vim.inspect(vim.go.eventignore))
+    print('---')
+    return ret
+end
+
+-- 
+-- vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, { 'aaa' })
+
+ignoreevent_wrap(function()
+    vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, { 'aaa' })
 end)
+
+-- vim.on_key(function(key)
+--     local buf = vim.api.nvim_get_current_buf()
+--     if vim.api.nvim_get_mode().mode == 'i' then
+--         if key == 'a' then
+--             return ''
+--         end
+--     end
+-- end)
 
 -- ---@param fx? function
 -- ---@return any
