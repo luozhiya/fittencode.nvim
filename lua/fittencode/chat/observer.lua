@@ -5,11 +5,12 @@ local Fn = require('fittencode.fn.core')
 local Observer = {}
 Observer.__index = Observer
 
----@param id string
+---@param options table
 ---@return FittenCode.Chat.Observer
-function Observer.new(id)
+function Observer.new(options)
+    options = options or {}
     local self = setmetatable({}, Observer)
-    self.id = id or ('observer_' .. Fn.uuid_v1())
+    self.id = options.id or ('observer_' .. Fn.uuid_v1())
     return self
 end
 
