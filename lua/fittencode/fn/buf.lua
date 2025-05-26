@@ -198,8 +198,9 @@ function M.offset_at(buf, position)
             if not offset then
                 offset = 0
             end
-            offset = offset + #byte_counts + 1 -- 加上换行符
+            offset = offset + #byte_counts
         end, lines)
+        offset = offset + #lines - 1 -- 最后一行不计入
     end)
     -- Log.debug('offset_at, offset = {}', offset)
     return offset
