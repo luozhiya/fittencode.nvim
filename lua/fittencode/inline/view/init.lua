@@ -205,10 +205,9 @@ function View:update(state)
     end
 
     ignoreevent_wrap(function()
-        __update()
-        -- self:__view_wrap(win, __update)
+        self:__view_wrap(win, __update)
         -- 4. update position
-        -- self:update_win_cursor(win, self.commit)
+        self:update_win_cursor(win, self.commit)
     end)
 end
 
