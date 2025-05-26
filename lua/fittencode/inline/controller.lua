@@ -135,7 +135,6 @@ function Controller:__initialize(options)
             local buf = vim.api.nvim_get_current_buf()
             self.filter_events = {}
             if vim.api.nvim_get_mode().mode == 'i' and self:is_enabled(buf) then
-                Log.debug('on key = {}', key)
                 if vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
                     self.filter_events = { 'CursorMovedI', 'TextChangedI', }
                     return

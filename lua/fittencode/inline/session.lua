@@ -118,14 +118,12 @@ end
 
 function Session:set_keymaps()
     local maps = {
-        { '<Tab>', function() self:accept('all') end },
-    }
-    vim.tbl_deep_extend('force', maps, {
+        { '<Tab>',     function() self:accept('all') end },
         { '<C-Down>',  function() self:accept('line') end },
         { '<C-Right>', function() self:accept('word') end },
         { '<C-Up>',    function() self:revoke() end },
         { '<C-Left>',  function() self:revoke() end },
-    })
+    }
     self.keymaps = {}
     for _, map in ipairs(maps) do
         self.keymaps[#self.keymaps + 1] = vim.fn.maparg(map[1], 'i', false, true)
@@ -134,9 +132,16 @@ function Session:set_keymaps()
 end
 
 function Session:restore_keymaps()
-    for _, v in pairs(self.keymaps) do
-        if v then
-            vim.fn.mapset(v)
+    --   vim._with({ buf = self.buf }, function()
+    --     local keymap = vim.fn.maparg('K', 'n', false, true)
+    --     if keymap and keymap.buffer == 1 then
+    --       vim.keymap.del('n', 'K', { buffer =  self.buf })
+    --     end
+    --   end)
+    Log.debug('Restoring keymaps, keymap = {}', self.keymaps)
+    for _, map in ipairs(self.keymaps) do
+        if map then
+            vim.fn.mapset('i', false, map)
         end
     end
     self.keymaps = {}
