@@ -69,17 +69,32 @@ end
 ---@param event string
 ---@param data any
 function ProgressIndicatorObserver:update(controller, event, data)
+    Log.debug('ProgressIndicatorObserver:update, event = {}, data = {}', event, data)
+    if event == CONTROLLER_EVENT.SESSION_ADDED then
+        self.start_time = vim.uv.hrtime()
+    end
+    local busy = {
+        COMPLETION_EVENT.START,
+        COMPLETION_EVENT.GENERATE_ONE_STAGE,
+        COMPLETION_EVENT.GENERATING_PROMPT,
+        COMPLETION_EVENT.GETTING_COMPLETION_VERSION,
+    }
+    local is_busy = false
+    if event == CONTROLLER_EVENT.SESSION_UPDATED then
+        if vim.tbl_contains(busy, data.completion_status) then
+            is_busy = true
+        end
+    end
     local current_session = controller:get_current_session()
     if not current_session then
         self.pi:stop()
+        return
+    end
+    if is_busy then
+        assert(self.start_time)
+        self.pi:start(self.start_time)
     else
-        Log.debug('ProgressIndicatorObserver:update, event = {}', event)
-        if event == CONTROLLER_EVENT.SESSION_ADDED then
-            self.start_time = vim.uv.hrtime()
-        end
-        if self.start_time then
-            self.pi:start(self.start_time)
-        end
+        self.pi:stop()
     end
 end
 
