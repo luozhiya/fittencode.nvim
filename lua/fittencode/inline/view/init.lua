@@ -154,7 +154,7 @@ local function ignoreevent_wrap(fx)
 
     vim.defer_fn(function()
         vim.o.eventignore = eventignore
-    end, 100)
+    end, 10)
 
     return ret
 end

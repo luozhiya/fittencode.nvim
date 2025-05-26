@@ -108,7 +108,7 @@ function Session:accept(range)
     if self.model:is_complete() then
         Log.debug('Completion completed')
         self:terminate()
-        vim.schedule(function() self.trigger_inline_suggestion({ force = true }) end)
+        -- vim.schedule(function() self.trigger_inline_suggestion({ force = true }) end)
     end
 end
 
