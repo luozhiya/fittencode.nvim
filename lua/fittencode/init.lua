@@ -9,6 +9,7 @@ function M.setup(options)
     end
     require('fittencode.config').init(options)
     require('fittencode.commands')
+    require('fittencode.color')
     require('fittencode.chat')
     require('fittencode.inline')
 end

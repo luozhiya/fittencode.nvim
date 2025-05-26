@@ -25,6 +25,7 @@ function View:render_stage(lines)
     for _, line in ipairs(lines) do
         virt_lines[#virt_lines + 1] = { { line, 'FittenCodeSuggestion' } }
     end
+    Log.debug('View:render_stage, virt_lines = {}', virt_lines)
     vim.api.nvim_buf_set_extmark(
         self.buf,
         self.completion_ns,
@@ -92,6 +93,10 @@ function View:append_text_at_pos(buffer, row, col, lines)
 end
 
 function View:insert_text(pos, lines)
+    Log.debug('View:insert_text, pos = {}, lines = {}', pos, lines)
+    if vim.tbl_isempty(lines) then
+        return
+    end
     vim.api.nvim_buf_set_text(self.buf, pos.row, pos.col, pos.row, pos.col, lines)
 end
 
@@ -195,8 +200,8 @@ function View:update(state)
         self:calculate_cursor_position_after_insertion(win, self.position.row, self.position.col, commit_lines, true)
     end
 
-    ignoreevent_wrap(function()
-        self:__view_wrap(win, __update)
+    self:__view_wrap(win, function()
+        ignoreevent_wrap(__update)
     end)
 end
 

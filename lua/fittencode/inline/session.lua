@@ -48,7 +48,7 @@ function Session:_initialize(options)
     self.id = options.id
     self.requests = {}
     self.keymaps = {}
-    self.triggering_completion = options.triggering_completion
+    self.trigger_inline_suggestion = options.trigger_inline_suggestion
     self.on_completion_event = function()
         Fn.schedule_call(options.on_completion_event, { id = self.id, completion_status = self.completion_event, })
     end
@@ -96,7 +96,7 @@ function Session:accept(range)
     self:update_view()
     if self.model:is_complete() then
         self:terminate()
-        vim.schedule(function() self.triggering_completion({ force = true }) end)
+        vim.schedule(function() self.trigger_inline_suggestion({ force = true }) end)
     end
 end
 

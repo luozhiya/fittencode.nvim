@@ -20,7 +20,7 @@ vim.api.nvim_create_autocmd({ 'ColorScheme', 'VimEnter' }, {
     callback = function()
         for name, color in pairs(PRESET_THEME) do
             local _ = Config.colors[name] or {}
-            if vim.tbl_isempty(_) then
+            if not vim.tbl_isempty(_) then
                 color = _
             end
             vim.api.nvim_set_hl(0, 'FittenCode' .. name, color)

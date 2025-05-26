@@ -99,7 +99,8 @@ function Controller:__initialize(options)
         -- 后续做撤销的话，还需注意撤销产生的事件，并进行过滤
         local autocmds = {
             { 'TriggeringCompletionAuto', { 'TextChangedI', 'CompleteChanged' },         function(args) self:trigger_inline_suggestion_auto({ event = args }) end },
-            { 'DismissingSuggestions',    { 'CursorMovedI', 'InsertLeave', 'BufLeave' }, function(args) self:edit_completion_cancel({ event = args }) end },
+            -- { 'DismissingSuggestions',    { 'CursorMovedI', 'InsertLeave', 'BufLeave' }, function(args) self:edit_completion_cancel({ event = args }) end },
+            { 'DismissingSuggestions',    { 'CursorMovedI', 'InsertLeave', 'BufLeave' }, function(args) Log.debug('DismissingSuggestions by event = {}', args) end },
             { 'BufferEnterCheck',         { 'BufEnter' },                                function(args) self:on_buffer_enter({ event = args }) end }
         }
         for _, autocmd in ipairs(autocmds) do
@@ -180,7 +181,7 @@ function Controller:accept(direction, scope)
 end
 
 function Controller:edit_completion_cancel(options)
-    Log.debug('Dismissing suggestions')
+    Log.debug('edit completion cancel, options = {}', options)
     options = options or {}
     if not options.force and options.event and vim.tbl_contains(self.filter_events, options.event.event) then
         return
@@ -246,7 +247,7 @@ function Controller:trigger_inline_suggestion(options)
         buf = buf,
         position = position,
         id = self.selected_session_id,
-        triggering_completion = function(...) self.trigger_inline_suggestion_auto(...) end,
+        trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
         on_completion_event = function(data) self:__emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
         on_session_event = function(data) self:on_session_event(data) end,
     })
@@ -331,6 +332,7 @@ function Controller:trigger_inline_suggestion_auto(options)
     if not Config.inline_completion.auto_triggering_completion then
         return
     end
+    Log.debug('Triggering inline suggestion auto, options = {}', options)
     self:trigger_inline_suggestion(options)
 end
 

@@ -162,7 +162,7 @@ local DEFAULTS = {
     -- Default keymaps for Fitten Code.
     keymaps = {
         inline = {
-            ['triggering_completion'] = '<A-\\>',
+            ['trigger_inline_suggestion'] = '<A-\\>',
             ['accept_all'] = '<Tab>',
             ['accept_next_line'] = '<C-Down>',
             ['accept_next_word'] = '<C-Right>',
