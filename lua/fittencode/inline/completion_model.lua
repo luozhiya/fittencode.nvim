@@ -303,7 +303,10 @@ function CompletionModel:accept(scope)
     local region = self:find_valid_region(scope)
     if not region then return end
 
-    table.insert(self.commit_history, { region })
+    -- Log.debug('commit_history Before commit: {}', self.commit_history)
+    table.insert(self.commit_history, vim.deepcopy({ region }))
+    -- Log.debug('commit_history After commit: {}', self.commit_history)
+
     self.commit_ranges = merge_ranges(vim.list_extend(self.commit_ranges, { region }))
     self.cursor = region.end_
     self:update_stage_ranges()
@@ -312,13 +315,18 @@ end
 function CompletionModel:revoke()
     if #self.commit_history == 0 then return end
 
+    -- Log.debug('commit_history  Before remove last commit: {}', self.commit_history)
     -- 移除最后一次commit
     local last_commit = table.remove(self.commit_history)
     self.commit_ranges = {}
     for _, c in ipairs(self.commit_history) do
-        self.commit_ranges = merge_ranges(vim.list_extend(self.commit_ranges, c))
+        self.commit_ranges = merge_ranges(vim.list_extend(self.commit_ranges, vim.deepcopy(c)))
     end
+    -- Log.debug('commit_history  After remove last commit: {}', self.commit_history)
 
+    -- Log.debug('Commit ranges: {}', self.commit_ranges)
+
+    -- Log.debug('Cursor before revoke: {}', self.cursor)
     -- 恢复cursor
     if #self.commit_history > 0 then
         local last = self.commit_history[#self.commit_history]
@@ -326,6 +334,8 @@ function CompletionModel:revoke()
     else
         self.cursor = 0
     end
+    -- Log.debug('Cursor after revoke: {}', self.cursor)
+
     self:update_stage_ranges()
 end
 

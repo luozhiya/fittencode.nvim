@@ -203,6 +203,10 @@ function View:update(state)
     commit_lines = __parse_newline(commit_lines)
     stage_lines = __parse_newline(stage_lines)
 
+    Log.debug('View:update, state = {}', state)
+    Log.debug('View:update, commit_lines = {}', commit_lines)
+    Log.debug('View:update, stage_lines = {}', stage_lines)
+
     -- TODO: 现在只支持单个连续区域，以后支持 placeholder 等复杂情况
     -- 从左到右，先把commit和placeholder填充，然后再依次填充stage这样坐标就不会错乱
     -- 把 update作为一个pipeline，对state中lines逐行处理
