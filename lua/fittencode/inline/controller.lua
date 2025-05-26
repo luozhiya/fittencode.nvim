@@ -82,7 +82,7 @@ function Controller:__initialize(options)
 
     do
         local maps = {
-            { 'Alt-\\', function() self:triggering_completion_by_shortcut() end },
+            { 'Alt-\\', function() self:trigger_inline_suggestion_by_shortcut() end },
         }
         for _, v in ipairs(maps) do
             self.keymaps[#self.keymaps + 1] = vim.fn.maparg(v[1], 'i', false, true)
@@ -320,7 +320,7 @@ function Controller:_show_no_more_suggestion(msg, timeout)
     })
 end
 
-function Controller:triggering_completion_by_shortcut()
+function Controller:trigger_inline_suggestion_by_shortcut()
     self:triggering_completion({
         force = true,
     }):catch(function()
