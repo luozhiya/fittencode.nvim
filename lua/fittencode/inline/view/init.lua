@@ -188,9 +188,14 @@ function View:update(state)
 
     local function __parse_newline(lines)
         local res = {}
-        for _, line in ipairs(lines) do
+        for i, line in ipairs(lines) do
             if line == '\n' then
-                res[#res + 1] = ''
+                if i == 1 and #lines == 1 then
+                    res[#res + 1] = ''
+                    res[#res + 1] = ''
+                else
+                    res[#res + 1] = ''
+                end
             else
                 local vs = vim.split(line, '\n', { trimempty = true })
                 for j, v in ipairs(vs) do
