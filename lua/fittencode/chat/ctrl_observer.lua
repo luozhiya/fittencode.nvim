@@ -5,7 +5,7 @@ local Log = require('fittencode.log')
 local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
 local CONVERSATION_PHASE = Definitions.CONVERSATION_PHASE
 
----@class FittenCode.Chat.Status : FittenCode.Chat.Observer
+---@class FittenCode.Chat.Status : FittenCode.Observer
 ---@field selected_conversation_id? string
 ---@field conversations table<string, table>
 local Status = setmetatable({}, { __index = Observer })
@@ -33,7 +33,7 @@ function Status:update(controller, event_type, data)
     end
 end
 
----@class FittenCode.Chat.ProgressIndicatorObserver : FittenCode.Chat.Observer
+---@class FittenCode.Chat.ProgressIndicatorObserver : FittenCode.Observer
 ---@field start_time table<string, number>
 ---@field pi FittenCode.View.ProgressIndicator
 local ProgressIndicatorObserver = setmetatable({}, { __index = Observer })
@@ -90,7 +90,7 @@ end
 ---@field phases table<table<string, FittenCode.Chat.PhaseTiming>>
 ---@field total_duration number
 
----@class FittenCode.Chat.TimingObserver : FittenCode.Chat.Observer
+---@class FittenCode.Chat.TimingObserver : FittenCode.Observer
 ---@field conversations table<string, FittenCode.Chat.ConversationTiming>
 local TimingObserver = setmetatable({}, { __index = Observer })
 TimingObserver.__index = TimingObserver

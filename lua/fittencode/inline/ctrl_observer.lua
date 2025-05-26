@@ -44,8 +44,8 @@ function Status:update(controller, event, data)
     end
 end
 
----@class FittenCode.Inline.ProgressIndicatorObserver : FittenCode.Chat.Observer
----@field start_time table<string, number>
+---@class FittenCode.Inline.ProgressIndicatorObserver : FittenCode.Observer
+---@field start_time number?
 ---@field pi FittenCode.View.ProgressIndicator
 local ProgressIndicatorObserver = setmetatable({}, { __index = Observer })
 ProgressIndicatorObserver.__index = ProgressIndicatorObserver
@@ -54,40 +54,29 @@ ProgressIndicatorObserver.__index = ProgressIndicatorObserver
 function ProgressIndicatorObserver.new(options)
     assert(options)
     assert(options.pi)
-    ---@type FittenCode.Chat.ProgressIndicatorObserver
+    ---@type FittenCode.Inline.ProgressIndicatorObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
     local self = Observer.new({
         id = options.id or 'progress_indicator_observer'
     })
     setmetatable(self, ProgressIndicatorObserver)
     self.pi = options.pi
-    self.start_time = {}
+    self.start_time = nil
     return self
 end
 
----@param controller FittenCode.Chat.Controller
----@param event_type string
+---@param controller FittenCode.Inline.Controller
+---@param event string
 ---@param data any
-function ProgressIndicatorObserver:update(controller, event_type, data)
-    local selected_id = controller.model:get_selected_conversation_id()
-    if data.id ~= selected_id then
-        return
-    end
-    if event_type ~= CONTROLLER_EVENT.CONVERSATION_UPDATED or not controller.view:is_visible() then
+function ProgressIndicatorObserver:update(controller, event, data)
+    local current_session = controller:get_current_session()
+    if not current_session then
         self.pi:stop()
-        return
-    end
-    local is_busy = vim.tbl_contains({
-        CONVERSATION_PHASE.EVALUATE_TEMPLATE,
-        CONVERSATION_PHASE.MAKE_REQUEST,
-        CONVERSATION_PHASE.STREAMING
-    }, data.phase)
-    if data.phase == CONVERSATION_PHASE.START then
-        self.start_time[data.id] = vim.uv.hrtime()
-    elseif is_busy then
-        self.pi:start(self.start_time[data.id])
     else
-        self.pi:stop()
+        if event == CONTROLLER_EVENT.SESSION_ADDED then
+            self.start_time = vim.uv.hrtime()
+        end
+        self.pi:start(self.start_time)
     end
 end
 

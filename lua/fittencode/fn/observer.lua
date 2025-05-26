@@ -1,12 +1,12 @@
 local Fn = require('fittencode.fn.core')
 
----@class FittenCode.Chat.Observer
+---@class FittenCode.Observer
 ---@field id string
 local Observer = {}
 Observer.__index = Observer
 
 ---@param options table
----@return FittenCode.Chat.Observer
+---@return FittenCode.Observer
 function Observer.new(options)
     options = options or {}
     local self = setmetatable({}, Observer)
@@ -14,10 +14,10 @@ function Observer.new(options)
     return self
 end
 
----@param controller FittenCode.Chat.Controller
----@param event_type string
+---@param controller FittenCode.Chat.Controller | FittenCode.Inline.Controller
+---@param event string
 ---@param data any
-function Observer:update(controller, event_type, data)
+function Observer:update(controller, event, data)
     -- 基类方法，由子类实现
 end
 
