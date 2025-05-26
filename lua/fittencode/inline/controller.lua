@@ -14,49 +14,15 @@ local Session = require('fittencode.inline.session')
 local i18n = require('fittencode.i18n')
 local Log = require('fittencode.log')
 local Definitions = require('fittencode.inline.definitions')
+local CtrlObserver = require('fittencode.inline.ctrl_observer')
+local ProgressIndicator = require('fittencode.fn.progress_indicator')
+
+local Status = CtrlObserver.Status
+local ProgressIndicatorObserver = CtrlObserver.ProgressIndicatorObserver
+local TimingObserver = CtrlObserver.TimingObserver
 
 local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
-local INLINE_EVENT = Definitions.INLINE_EVENT
-local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
 local SESSION_EVENT = Definitions.SESSION_EVENT
-
----@class FittenCode.Inline.Status
----@field inline string
----@field completion string
-local Status = {}
-Status.__index = Status
-
----@return FittenCode.Inline.Status
-function Status.new()
-    local self = setmetatable({}, Status)
-    self.inline = ''
-    self.completion = ''
-    return self
-end
-
--- -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
-function Status:update(controller, event, data)
-    if data and data.id == controller.selected_session_id then
-        if event == CONTROLLER_EVENT.SESSION_ADDED then
-            self.completion = COMPLETION_EVENT.CREATED
-        elseif event == CONTROLLER_EVENT.SESSION_DELETED then
-            self.completion = ''
-        elseif event == CONTROLLER_EVENT.SESSION_UPDATED then
-            assert(self.inline == INLINE_EVENT.RUNNING)
-            self.completion = data.completion_status
-        end
-    end
-
-    if event == CONTROLLER_EVENT.INLINE_IDLE then
-        self.inline = INLINE_EVENT.IDLE
-        self.completion = ''
-    elseif event == CONTROLLER_EVENT.INLINE_DISABLED then
-        self.inline = INLINE_EVENT.DISABLED
-        self.completion = ''
-    elseif event == CONTROLLER_EVENT.INLINE_RUNNING then
-        self.inline = INLINE_EVENT.RUNNING
-    end
-end
 
 ---@class FittenCode.Inline.Controller
 ---@field observers table<number, function>
@@ -85,6 +51,11 @@ function Controller:__initialize(options)
         self:add_observer(function(ctrl, event, data)
             self.status_observer:update(ctrl, event, data)
         end)
+        self.pi = ProgressIndicator.new()
+        self.progress_observer = ProgressIndicatorObserver.new({
+            pi = self.pi
+        })
+        self:add_observer(self.progress_observer)
     end
 
     do

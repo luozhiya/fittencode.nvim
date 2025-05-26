@@ -45,7 +45,9 @@ function ProgressIndicatorObserver.new(options)
     assert(options.pi)
     ---@type FittenCode.Chat.ProgressIndicatorObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(options.id or 'progress_indicator_observer')
+    local self = Observer.new({
+        id = options.id or 'progress_indicator_observer'
+    })
     setmetatable(self, ProgressIndicatorObserver)
     self.pi = options.pi
     self.start_time = {}
