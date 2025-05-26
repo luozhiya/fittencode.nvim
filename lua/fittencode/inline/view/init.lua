@@ -200,8 +200,8 @@ function View:update(state)
         self:calculate_cursor_position_after_insertion(win, self.position.row, self.position.col, commit_lines, true)
     end
 
-    self:__view_wrap(win, function()
-        ignoreevent_wrap(__update)
+    ignoreevent_wrap(function()
+        self:__view_wrap(win, __update)
     end)
 end
 
