@@ -201,6 +201,9 @@ function View:update(state)
                 for j, v in ipairs(vs) do
                     res[#res + 1] = v
                 end
+                if i == #lines and line:sub(-1) == '\n' then
+                    res[#res + 1] = ''
+                end
             end
         end
         return res
