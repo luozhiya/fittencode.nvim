@@ -160,27 +160,48 @@ local function ignoreevent_wrap(fx)
 end
 
 function View:update(state)
-    local lines = state.lines
     local win = vim.api.nvim_get_current_win()
-    local commit_lines = {}
-    local stage_lines = {}
-    for i, line_state in ipairs(lines) do
-        if #line_state == 1 then
-            if line_state[1].type == 'commit' then
-                commit_lines[#commit_lines + 1] = line_state[1].text
-            elseif line_state[1].type == 'stage' then
-                stage_lines[#stage_lines + 1] = line_state[1].text
-            end
-        else
-            for j, lstate in ipairs(line_state) do
-                if lstate.type == 'commit' then
-                    commit_lines[#commit_lines + 1] = lstate.text
-                elseif lstate.type == 'stage' then
-                    stage_lines[#stage_lines + 1] = lstate.text
+
+    local function __parse_cs(lines)
+        local commit_lines = {}
+        local stage_lines = {}
+        for i, line_state in ipairs(lines) do
+            if #line_state == 1 then
+                if line_state[1].type == 'commit' then
+                    commit_lines[#commit_lines + 1] = line_state[1].text
+                elseif line_state[1].type == 'stage' then
+                    stage_lines[#stage_lines + 1] = line_state[1].text
+                end
+            else
+                for j, lstate in ipairs(line_state) do
+                    if lstate.type == 'commit' then
+                        commit_lines[#commit_lines + 1] = lstate.text
+                    elseif lstate.type == 'stage' then
+                        stage_lines[#stage_lines + 1] = lstate.text
+                    end
                 end
             end
         end
+        return commit_lines, stage_lines
     end
+    local commit_lines, stage_lines = __parse_cs(state.lines)
+
+    local function __parse_newline(lines)
+        local res = {}
+        for _, line in ipairs(lines) do
+            if line == '\n' then
+                res[#res + 1] = ''
+            else
+                local vs = vim.split(line, '\n', { trimempty = true })
+                for j, v in ipairs(vs) do
+                    res[#res + 1] = v
+                end
+            end
+        end
+        return res
+    end
+    commit_lines = __parse_newline(commit_lines)
+    stage_lines = __parse_newline(stage_lines)
 
     -- TODO: 现在只支持单个连续区域，以后支持 placeholder 等复杂情况
     -- 从左到右，先把commit和placeholder填充，然后再依次填充stage这样坐标就不会错乱
