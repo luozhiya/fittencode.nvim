@@ -137,13 +137,12 @@ function Model:get_text()
     return text
 end
 
-function Model:accept(direction, scope)
-    local cmp = self:selected_completion()
-    if direction == 'forward' then
-        cmp:accept(scope)
-    elseif direction == 'backward' then
-        cmp:revoke()
-    end
+function Model:accept(scope)
+    assert(self:selected_completion()):accept(scope)
+end
+
+function Model:revoke()
+    assert(self:selected_completion()):revoke()
 end
 
 function Model:is_complete()

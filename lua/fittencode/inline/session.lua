@@ -88,42 +88,27 @@ function Session:update_view()
     self.view.update(ViewState.get_state_from_model(self.model:snapshot()))
 end
 
-function Session:accept(direction, range)
-    self.model:accept(direction, range)
+function Session:accept(range)
+    self.model:accept(range)
     self:update_view()
-    if direction == 'forward' and self.model:is_complete() then
+    if self.model:is_complete() then
         self:terminate()
         vim.schedule(function() self.triggering_completion({ force = true }) end)
     end
 end
 
-function Session:accept_all_suggestions()
-    self:accept('forward', 'all')
-end
-
-function Session:accept_line()
-    self:accept('forward', 'line')
-end
-
-function Session:accept_word()
-    self:accept('forward', 'word')
-end
-
-function Session:accept_char()
-    self:accept('forward', 'char')
-end
-
 function Session:revoke()
-    self:accept('backward')
+    self.model:revoke()
+    self:update_view()
 end
 
 function Session:set_keymaps()
     local maps = {
-        { '<Tab>', function() self:accept_all_suggestions() end },
+        { '<Tab>', function() self:accept('all') end },
     }
     vim.tbl_deep_extend('force', maps, {
-        { '<C-Down>',  function() self:accept_line() end },
-        { '<C-Right>', function() self:accept_word() end },
+        { '<C-Down>',  function() self:accept('line') end },
+        { '<C-Right>', function() self:accept('word') end },
         { '<C-Up>',    function() self:revoke() end },
         { '<C-Left>',  function() self:revoke() end },
     })
