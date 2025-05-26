@@ -81,10 +81,10 @@ local CHAT = {
             end
         end
     },
-    add_to_chat = {
+    add_selection_context_to_input = {
         execute = function()
             local controller = require('fittencode.chat')
-            controller:add_to_chat()
+            controller:add_selection_context_to_input()
         end
     },
     document_code = {

@@ -162,7 +162,7 @@ end
 -- Keymaps
 do
     local actions = {
-        add_to_chat = { mode = { 'x' } },
+        add_selection_context_to_input = { mode = { 'x' } },
         document_code = { mode = { 'x' }, template = TEMPLATE_CATEGORIES.DOCUMENT_CODE },
         edit_code = { mode = { 'x', 'n' }, template = TEMPLATE_CATEGORIES.EDIT_CODE },
         explain_code = { mode = { 'x' }, template = TEMPLATE_CATEGORIES.EXPLAIN_CODE },
@@ -175,8 +175,8 @@ do
         local key = Config.keymaps.chat[k]
         if key and key ~= '' then
             for _, mode in ipairs(v.mode) do
-                if k == 'add_to_chat' then
-                    vim.keymap.set(mode, key, function() controller:add_to_chat() end, { noremap = true, silent = true })
+                if k == 'add_selection_context_to_input' then
+                    vim.keymap.set(mode, key, function() controller:add_selection_context_to_input() end, { noremap = true, silent = true })
                 else
                     vim.keymap.set(mode, key, function() controller:from_builtin_template_with_selection(v.template) end, { noremap = true, silent = true })
                 end

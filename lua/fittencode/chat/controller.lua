@@ -420,7 +420,7 @@ function Controller:from_builtin_template_with_selection(type, mode)
     self:create_conversation(type, true, mode, context)
 end
 
-function Controller:add_to_chat()
+function Controller:add_selection_context_to_input()
     local buf = vim.api.nvim_get_current_buf()
     local range = get_range_from_visual_selection()
     local conversation = self:selected_conversation()
@@ -432,7 +432,7 @@ function Controller:add_to_chat()
         Log.error('No range selected')
         return
     end
-    conversation:add_to_chat(buf, range)
+    conversation:add_selection_context_to_input(buf, range)
 end
 
 return Controller

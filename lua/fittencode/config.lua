@@ -170,7 +170,7 @@ local DEFAULTS = {
             ['cancel'] = '<Esc>',
         },
         chat = {
-            ['add_to_chat'] = 'A-X',
+            ['add_selection_context_to_input'] = 'A-X',
             ['document_code'] = '',
             ['edit_code'] = '',
             ['explain_code'] = '',

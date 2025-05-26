@@ -385,7 +385,7 @@ function Conversation:update_partial_bot_message(msg)
 end
 
 -- Add reference to chat
-function Conversation:add_to_chat(buf, range)
+function Conversation:add_selection_context_to_input(buf, range)
 end
 
 return Conversation
