@@ -90,7 +90,7 @@ function Controller:__initialize(options)
     do
         local maps = {
             { 'Alt-\\', function() self:trigger_inline_suggestion_by_shortcut() end },
-            { '<ESC>', function() self:edit_completion_cancel({ force = true }) end }
+            { '<ESC>',  function() self:edit_completion_cancel({ force = true }) end }
         }
         for _, v in ipairs(maps) do
             self.keymaps[#self.keymaps + 1] = vim.fn.maparg(v[1], 'i', false, true)
