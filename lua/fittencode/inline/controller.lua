@@ -25,7 +25,7 @@ local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
 local SESSION_EVENT = Definitions.SESSION_EVENT
 
 ---@class FittenCode.Inline.Controller
----@field observers table<number, function>
+---@field observers table<number, FittenCode.Observer>
 ---@field sessions table<number, FittenCode.Inline.Session>
 ---@field filter_events table<string, boolean>
 ---@field status_observer FittenCode.Inline.Status
@@ -127,11 +127,15 @@ function Controller:remove_observer(observer)
     end
 end
 
+function Controller:notify_observers(event, data)
+    for _, observer in pairs(self.observers) do
+        observer:update(self, event, data)
+    end
+end
+
 ---@param data? table
 function Controller:__emit(event, data)
-    for _, observer in ipairs(self.observers) do
-        Fn.schedule_call(observer, self, event, data)
-    end
+    self:notify_observers(event, data)
 end
 
 function Controller:on_buffer_enter(event)

@@ -81,5 +81,6 @@ function ProgressIndicatorObserver:update(controller, event, data)
 end
 
 return {
-    Status = Status
+    Status = Status,
+    ProgressIndicatorObserver = ProgressIndicatorObserver
 }
