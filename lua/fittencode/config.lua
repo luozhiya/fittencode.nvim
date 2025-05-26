@@ -165,7 +165,7 @@ local DEFAULTS = {
             ['triggering_completion'] = '<A-\\>',
             ['accept_all'] = '<Tab>',
             ['accept_line'] = '<C-Down>',
-            ['accept_word'] = '<C-Right>',
+            ['accept_next_word'] = '<C-Right>',
             ['revoke'] = { '<C-Left>', '<C-Up>' },
             ['cancel'] = '<Esc>',
         },
