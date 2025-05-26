@@ -9,6 +9,7 @@ local Range = require('fittencode.fn.range')
 local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
 local Definitions = require('fittencode.chat.definitions')
 local Observer = require('fittencode.chat.observer')
+local ProgressIndicator = require('fittencode.chat.view.progress_indicator')
 local CtrlObserver = require('fittencode.chat.ctrl_observer')
 local Status = CtrlObserver.Status
 local ProgressIndicatorObserver = CtrlObserver.ProgressIndicatorObserver
@@ -37,7 +38,10 @@ function Controller:_initialize(options)
     self.observers = {}
     self.status_observer = Status.new()
     self:add_observer(self.status_observer)
-    self.progress_observer = ProgressIndicatorObserver.new()
+    self.pi = ProgressIndicator.new()
+    self.progress_observer = ProgressIndicatorObserver.new({
+        pi = self.pi
+    })
     self:add_observer(self.progress_observer)
     self.timing_observer = TimingObserver.new()
     self:add_observer(self.timing_observer)

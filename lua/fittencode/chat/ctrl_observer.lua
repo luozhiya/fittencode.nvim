@@ -1,6 +1,5 @@
 local Observer = require('fittencode.chat.observer')
 local Definitions = require('fittencode.chat.definitions')
-local PI = require('fittencode.chat.view.progress_indicator')
 local Log = require('fittencode.log')
 
 local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
@@ -36,14 +35,19 @@ end
 
 ---@class FittenCode.Chat.ProgressIndicatorObserver : FittenCode.Chat.Observer
 ---@field start_time table<string, number>
+---@field pi FittenCode.View.ProgressIndicator
 local ProgressIndicatorObserver = setmetatable({}, { __index = Observer })
 ProgressIndicatorObserver.__index = ProgressIndicatorObserver
 
-function ProgressIndicatorObserver.new(id)
+---@param options table
+function ProgressIndicatorObserver.new(options)
+    assert(options)
+    assert(options.pi)
     ---@type FittenCode.Chat.ProgressIndicatorObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or 'progress_indicator_observer')
+    local self = Observer.new(options.id or 'progress_indicator_observer')
     setmetatable(self, ProgressIndicatorObserver)
+    self.pi = options.pi
     self.start_time = {}
     return self
 end
@@ -57,7 +61,7 @@ function ProgressIndicatorObserver:update(controller, event_type, data)
         return
     end
     if event_type ~= CONTROLLER_EVENT.CONVERSATION_UPDATED or not controller.view:is_visible() then
-        PI.stop()
+        self.pi:stop()
         return
     end
     local is_busy = vim.tbl_contains({
@@ -68,9 +72,9 @@ function ProgressIndicatorObserver:update(controller, event_type, data)
     if data.phase == CONVERSATION_PHASE.START then
         self.start_time[data.id] = vim.uv.hrtime()
     elseif is_busy then
-        PI.start(self.start_time[data.id])
+        self.pi:start(self.start_time[data.id])
     else
-        PI.stop()
+        self.pi:stop()
     end
 end
 
