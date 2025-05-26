@@ -183,7 +183,7 @@ function Model:snapshot()
 end
 
 function Model:is_match_next_char(key)
-    local selected_completion = self:selected_completion()
+    return key == assert(self:selected_completion()):get_next_char()
 end
 
 return Model

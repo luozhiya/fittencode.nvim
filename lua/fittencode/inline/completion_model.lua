@@ -352,4 +352,12 @@ function CompletionModel:snapshot()
     return result
 end
 
+function CompletionModel:get_cursor_char()
+    return self.source:sub(self.cursor, self.cursor)
+end
+
+function CompletionModel:get_next_char()
+    return self.source:sub(self.cursor + 1, self.cursor + 1)
+end
+
 return CompletionModel
