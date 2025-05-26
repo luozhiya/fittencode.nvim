@@ -144,17 +144,18 @@ end
 ---@param fx? function
 ---@return any
 local function ignoreevent_wrap(fx)
-    -- Out-of-order execution about eventignore and CursorMoved.
-    -- https://github.com/vim/vim/issues/8641
     local eventignore = vim.o.eventignore
     vim.o.eventignore = 'all'
 
-    local ret = nil
+    local ret
     if fx then
         ret = fx()
     end
 
-    vim.o.eventignore = eventignore
+    vim.defer_fn(function()
+        vim.o.eventignore = eventignore
+    end, 100)
+
     return ret
 end
 

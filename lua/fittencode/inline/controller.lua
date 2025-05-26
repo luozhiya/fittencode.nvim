@@ -248,6 +248,7 @@ end
 -- * reject 没有补全或者出错了
 ---@return FittenCode.Promise
 function Controller:trigger_inline_suggestion(options)
+    Log.debug('Triggering inline suggestion, options = {}', options)
     options = options or {}
     local buf, position = self:_preflight_check(options)
     if not buf or not position then

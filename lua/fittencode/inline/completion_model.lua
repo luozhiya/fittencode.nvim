@@ -331,6 +331,7 @@ end
 
 function CompletionModel:is_complete()
     -- 通过检查 stage_ranges 是否为空来判断是否全部完成
+    Log.debug('Stage ranges: {}', self.stage_ranges)
     return #self.stage_ranges == 0
 end
 

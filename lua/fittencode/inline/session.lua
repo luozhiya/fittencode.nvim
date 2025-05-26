@@ -102,10 +102,13 @@ end
 
 function Session:accept(range)
     self.model:accept(range)
-    self:update_view()
+    vim.schedule(function()
+        self:update_view()
+    end)
     if self.model:is_complete() then
+        Log.debug('Completion completed')
         self:terminate()
-        -- vim.schedule(function() self.trigger_inline_suggestion({ force = true }) end)
+        vim.schedule(function() self.trigger_inline_suggestion({ force = true }) end)
     end
 end
 
@@ -156,6 +159,7 @@ function Session:set_onkey()
 end
 
 function Session:restore_onkey()
+    vim.on_key(nil, self.filter_onkey_ns)
     vim.api.nvim_buf_clear_namespace(self.buf, self.filter_onkey_ns, 0, -1)
 end
 
@@ -182,10 +186,8 @@ end
 ---@return boolean
 function Session:lazy_completion(key)
     if self.model:is_match_next_char(key) then
-        self.model:accept('char')
-        vim.schedule(function()
-            self:update_view()
-        end)
+        -- self.model:accept('char')
+        self:accept('char')
         return true
     end
     return false
