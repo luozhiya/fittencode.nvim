@@ -102,13 +102,12 @@ end
 
 function Session:accept(range)
     self.model:accept(range)
-    vim.schedule(function()
-        self:update_view()
-    end)
+    self:update_view()
     if self.model:is_complete() then
         Log.debug('Completion completed')
         self:terminate()
         -- vim.schedule(function() self.trigger_inline_suggestion({ force = true }) end)
+        vim.defer_fn(function() self.trigger_inline_suggestion({ force = true }) end, 10)
     end
 end
 
@@ -340,12 +339,13 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
     self:__add_request(request)
 
     return request:async():forward(function(_)
-        Log.debug('Got generate_one_stage_auth response: {}', _)
+        Log.debug('Got generate_one_stage_auth raw response: {}', _)
         local response = _.json()
         if not response then
             Log.error('Failed to decode completion raw response: {}', _)
             return Promise.reject()
         end
+        Log.debug('Decoded generate_one_stage_auth raw response: {}', response)
         return Fim.parse(response, {
             buf = self.buf,
             ref_start = self.position,

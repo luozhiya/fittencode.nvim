@@ -336,7 +336,6 @@ function Controller:trigger_inline_suggestion_auto(options)
     if not Config.inline_completion.auto_triggering_completion then
         return
     end
-    Log.debug('Triggering inline suggestion auto, options = {}', options)
     self:trigger_inline_suggestion(options)
 end
 
