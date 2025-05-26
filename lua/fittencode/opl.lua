@@ -1232,7 +1232,7 @@ local function CompilerRunner(env, source)
     local ast = Parser:new(source):parse()
     -- Log.debug('opl ast {}', ast)
     local code = Compiler:new(env_name, ast):compile();
-    Log.debug('opl code {}', code)
+    -- Log.debug('opl code {}', code)
     return env_name, code
 end
 

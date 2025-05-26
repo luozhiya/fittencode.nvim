@@ -1,44 +1,48 @@
+
+
 vim.api.nvim_create_autocmd({ 'TextChangedI' }, {
     group = vim.api.nvim_create_augroup('TextChangedIAAA', { clear = true }),
     pattern = '*',
     callback = function(args)
-        print('TextChanged-' .. os.date('%Y-%m-%d %H:%M:%S'))
-    end,
-})
-vim.api.nvim_create_autocmd({ 'CursorMovedI' }, {
-    group = vim.api.nvim_create_augroup('CursorMovedIVVV', { clear = true }),
-    pattern = '*',
-    callback = function(args)
-        print('CursorMoved-' .. os.date('%Y-%m-%d %H:%M:%S'))
+        local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+        print('TextChanged-' .. col .. '-' .. os.date('%Y-%m-%d %H:%M:%S'))
     end,
 })
 
----@param fx? function
----@return any
-local function ignoreevent_wrap(fx)
-    local eventignore = vim.o.eventignore
-    vim.o.eventignore = 'all'
+-- vim.api.nvim_create_autocmd({ 'CursorMovedI' }, {
+--     group = vim.api.nvim_create_augroup('CursorMovedIVVV', { clear = true }),
+--     pattern = '*',
+--     callback = function(args)
+--         print('CursorMoved-' .. os.date('%Y-%m-%d %H:%M:%S'))
+--     end,
+-- })
 
-    local ret = nil
-    if fx then
-        ret = fx()
-    end
+-- ---@param fx? function
+-- ---@return any
+-- local function ignoreevent_wrap(fx)
+--     local eventignore = vim.o.eventignore
+--     vim.o.eventignore = 'all'
 
-    vim.o.eventignore = eventignore
-    return ret
-end
+--     local ret = nil
+--     if fx then
+--         ret = fx()
+--     end
 
-vim.on_key(function(key)
-    local buf = vim.api.nvim_get_current_buf()
-    if vim.api.nvim_get_mode().mode == 'i' then
-        if key == 'a' then
-            ignoreevent_wrap(function()
-                vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, { 'aaa' })
-            end)
-            return ''
-        end
-    end
-end)
+--     vim.o.eventignore = eventignore
+--     return ret
+-- end
+
+-- vim.on_key(function(key)
+--     local buf = vim.api.nvim_get_current_buf()
+--     if vim.api.nvim_get_mode().mode == 'i' then
+--         if key == 'a' then
+--             ignoreevent_wrap(function()
+--                 vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, { 'aaa' })
+--             end)
+--             return ''
+--         end
+--     end
+-- end)
 
 -- ---@param fx? function
 -- ---@return any

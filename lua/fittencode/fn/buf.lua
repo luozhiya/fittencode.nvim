@@ -192,14 +192,16 @@ function M.offset_at(buf, position)
     local offset
     vim.api.nvim_buf_call(buf, function()
         local lines = assert(M.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = position })))
+        -- Log.debug('offset_at, position = {}, lines = {}', position, lines)
         vim.tbl_map(function(line)
             local byte_counts = Unicode.utf8_position_index(line).byte_counts
             if not offset then
                 offset = 0
             end
-            offset = offset + #byte_counts
+            offset = offset + #byte_counts + 1 -- 加上换行符
         end, lines)
     end)
+    -- Log.debug('offset_at, offset = {}', offset)
     return offset
 end
 

@@ -251,6 +251,7 @@ function Controller:trigger_inline_suggestion(options)
     Log.debug('Triggering inline suggestion, options = {}', options)
     options = options or {}
     local buf, position = self:_preflight_check(options)
+    Log.debug('Triggering inline suggestion, buf = {}, position = {}', buf, position)
     if not buf or not position then
         return Promise.reject()
     end
