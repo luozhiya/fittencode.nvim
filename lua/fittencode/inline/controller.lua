@@ -95,23 +95,20 @@ function Controller:__initialize(options)
         -- * vim.on_key
         -- * CursorMovedI
         -- * TextChangedI
-        -- 只在 'TextChangedI', 'CompleteChanged' 触发自动补全，和 VSCode 一致
-        -- 后续做撤销的话，还需注意撤销产生的事件，并进行过滤
-        local autocmds = {
-            { 'TriggeringCompletionAuto', { 'TextChangedI', 'CompleteChanged' },         function(args) self:trigger_inline_suggestion_auto({ event = args }) end },
-            -- { 'DismissingSuggestions',    { 'CursorMovedI', 'InsertLeave', 'BufLeave' }, function(args) self:edit_completion_cancel({ event = args }) end },
-            { 'DismissingSuggestions',    { 'CursorMovedI', 'InsertLeave', 'BufLeave' }, function(args) Log.debug('DismissingSuggestions by event = {}', args) end },
-            { 'BufferEnterCheck',         { 'BufEnter' },                                function(args) self:on_buffer_enter({ event = args }) end }
-        }
-        for _, autocmd in ipairs(autocmds) do
-            vim.api.nvim_create_autocmd(autocmd[2], {
-                group = Fn.augroup('Inline', autocmd[1]),
-                pattern = '*',
-                callback = function(args)
-                    autocmd[3](args)
-                end,
-            })
-        end
+        vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteChanged' }, {
+            group = vim.api.nvim_create_augroup('TriggerInlineSuggestion', { clear = true }),
+            pattern = '*',
+            callback = function(args)
+                self:trigger_inline_suggestion_auto({ event = args })
+            end,
+        })
+        vim.api.nvim_create_autocmd({ 'BufEnter' }, {
+            group = vim.api.nvim_create_augroup('BufferEnterCheck', { clear = true }),
+            pattern = '*',
+            callback = function(args)
+                self:on_buffer_enter({ event = args })
+            end,
+        })
     end
 
     do
@@ -131,10 +128,6 @@ function Controller:__initialize(options)
                 if vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
                     self.filter_events = { 'CursorMovedI', 'TextChangedI', }
                     return
-                end
-                if self:lazy_completion(key) then
-                    -- >= 0.11.0 忽视输入，用户输入的字符由底层处理
-                    return ''
                 end
             end
         end)

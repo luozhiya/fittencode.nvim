@@ -132,9 +132,30 @@ function Session:restore_keymaps()
 end
 
 function Session:set_autocmds()
+    vim.api.nvim_create_autocmd({ 'CursorMovedI', 'InsertLeave', 'BufLeave' }, {
+        group = vim.api.nvim_create_augroup('FittenCode.Inline.EditCompletionCancel', { clear = true }),
+        pattern = '*',
+        callback = function(args)
+            self:edit_completion_cancel({ event = args })
+        end,
+    })
 end
 
 function Session:clear_autocmds()
+end
+
+function Session:set_onkey()
+    -- If {fn} returns an empty string, {key} is discarded/ignored.
+    vim.on_key(function(key)
+        local buf = vim.api.nvim_get_current_buf()
+        self.filter_events = {}
+        if vim.api.nvim_get_mode().mode == 'i' and buf == self.buf and self:is_interactive() then
+            if self:lazy_completion(key) then
+                -- >= 0.11.0 忽视输入，用户输入的字符由底层处理
+                return ''
+            end
+        end
+    end)
 end
 
 ---@param position FittenCode.Position
@@ -168,7 +189,7 @@ end
 ---@return boolean
 function Session:lazy_completion(key)
     if self.model:eq_peek(key) then
-        self.model:accept('forward', 'char')
+        self.model:accept('char')
         -- 此时不能立即刷新，因为还处于 on_key 的回调中，要等到下一个 main loop?
         vim.schedule(function()
             self:update_view()
