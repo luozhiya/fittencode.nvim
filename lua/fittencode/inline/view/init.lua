@@ -194,16 +194,25 @@ function View:update(state)
         -- 2. insert committed text
         self:insert_text(self.position, commit_lines)
         self.commit = self:calculate_cursor_position_after_insertion(self.position, commit_lines)
+        self.receive_view_message({
+            type = 'update_commit_position',
+            data = {
+                commit_position = self.commit
+            }
+        })
         -- 3. render uncommitted text virtual text inline after
         self:render_stage(stage_lines)
     end
 
     ignoreevent_wrap(function()
-        -- self:__view_wrap(win, __update)
-        __update()
+        self:__view_wrap(win, __update)
         -- 4. update position
         self:update_win_cursor(win, self.commit)
     end)
+end
+
+function View:register_message_receiver(receive_view_message)
+    self.receive_view_message = receive_view_message
 end
 
 return View

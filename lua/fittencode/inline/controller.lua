@@ -178,17 +178,26 @@ function Controller:has_suggestions()
     return self:get_current_session() ~= nil
 end
 
-function Controller:accept(direction, scope)
-    if self:get_current_session() then
-        self:get_current_session():accept(direction, scope)
-    end
+function Controller:accept(scope)
+    assert(self:get_current_session()):accept(scope)
+end
+
+function Controller:revoke()
+    assert(self:get_current_session()):revoke()
 end
 
 function Controller:edit_completion_cancel(options)
     Log.debug('edit completion cancel, options = {}', options)
     options = options or {}
-    if not options.force and options.event and vim.tbl_contains(self.filter_events, options.event.event) then
-        return
+    if options.event and options.event.event == 'CursorMovedI' then
+        local current = self:get_current_session()
+        if current and not options.force then
+            local match = current:is_match_commit_position(F.position(vim.api.nvim_get_current_win()))
+            if vim.tbl_contains(self.filter_events, options.event.event) or match then
+                Log.debug('Edit completion cancel, match = {}', match)
+                return
+            end
+        end
     end
     self:cleanup_sessions()
 end
@@ -228,7 +237,7 @@ function Controller:_preflight_check(options)
         return
     end
     options.force = (options.force == nil) and false or options.force
-    if not options.force and self:get_current_session() and self:get_current_session():is_cached(position) then
+    if not options.force and self:get_current_session() and self:get_current_session():is_match_commit_position(position) then
         return
     end
     return buf, position
@@ -274,6 +283,7 @@ function Controller:on_session_event(data)
     end
 end
 
+---@return FittenCode.Inline.Session?
 function Controller:get_current_session()
     local session = self.sessions[self.selected_session_id]
     if session and not session:is_terminated() and session:is_interactive() then

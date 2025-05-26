@@ -26,7 +26,7 @@ local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
 ---@class FittenCode.Inline.Session
 ---@field buf number
 ---@field position FittenCode.Position
----@field current_position FittenCode.Position
+---@field commit_position FittenCode.Position
 ---@field id string
 ---@field requests table<number, FittenCode.HTTP.Response>
 ---@field keymaps table<number, any>
@@ -44,7 +44,7 @@ end
 function Session:_initialize(options)
     self.buf = options.buf
     self.position = options.position
-    self.current_position = options.position
+    self.commit_position = options.position
     self.id = options.id
     self.requests = {}
     self.keymaps = {}
@@ -71,12 +71,20 @@ function Session:set_model(parsed_response)
     end
 end
 
+function Session:receive_view_message(msg)
+    local ty = msg.type
+    if ty == 'update_commit_position' then
+        self.commit_position = msg.data.commit_position
+    end
+end
+
 function Session:set_interactive()
     if self.session_event == SESSION_EVENT.MODEL_READY then
         self.view = View.new({
             buf = self.buf,
             position = self.position,
         })
+        self.view:register_message_receiver(function(...) self:receive_view_message(...) end)
         self:set_keymaps()
         self:set_onkey()
         self:update_view()
@@ -97,7 +105,7 @@ function Session:accept(range)
     self:update_view()
     if self.model:is_complete() then
         self:terminate()
-        vim.schedule(function() self.trigger_inline_suggestion({ force = true }) end)
+        -- vim.schedule(function() self.trigger_inline_suggestion({ force = true }) end)
     end
 end
 
@@ -149,13 +157,6 @@ end
 
 function Session:restore_onkey()
     vim.api.nvim_buf_clear_namespace(self.buf, self.filter_onkey_ns, 0, -1)
-end
-
----@param position FittenCode.Position
-function Session:is_cached(position)
-    -- 每次 Accept 会修改 cursor
-    -- 当 cursor 位置不变时，可以认为缓存命中
-    return self.current_position.row == position.row and self.current_position.col == position.col
 end
 
 function Session:abort_and_clear_requests()
@@ -354,6 +355,10 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
         return Promise.reject()
     end):finally(function()
     end)
+end
+
+function Session:is_match_commit_position(position)
+    return self.commit_position:is_equal(position)
 end
 
 return Session
