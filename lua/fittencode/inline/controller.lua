@@ -187,7 +187,6 @@ function Controller:revoke()
 end
 
 function Controller:edit_completion_cancel(options)
-    Log.debug('edit completion cancel, options = {}', options)
     options = options or {}
     if options.event and options.event.event == 'CursorMovedI' then
         local current = self:get_current_session()
@@ -199,6 +198,7 @@ function Controller:edit_completion_cancel(options)
             end
         end
     end
+    Log.debug('Edit completion cancel, options = {}', options)
     self:cleanup_sessions()
 end
 

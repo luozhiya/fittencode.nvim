@@ -183,7 +183,6 @@ end
 function Session:lazy_completion(key)
     if self.model:is_match_next_char(key) then
         self.model:accept('char')
-        -- 此时不能立即刷新，因为还处于 on_key 的回调中，要等到下一个 main loop?
         vim.schedule(function()
             self:update_view()
         end)

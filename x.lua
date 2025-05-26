@@ -2,14 +2,14 @@ vim.api.nvim_create_autocmd({ 'TextChangedI' }, {
     group = vim.api.nvim_create_augroup('TextChangedIAAA', { clear = true }),
     pattern = '*',
     callback = function(args)
-        print('TextChangedIAAA')
+        print('TextChanged-' .. os.date('%Y-%m-%d %H:%M:%S'))
     end,
 })
 vim.api.nvim_create_autocmd({ 'CursorMovedI' }, {
     group = vim.api.nvim_create_augroup('CursorMovedIVVV', { clear = true }),
     pattern = '*',
     callback = function(args)
-        print('CursorMovedIVVV')
+        print('CursorMoved-' .. os.date('%Y-%m-%d %H:%M:%S'))
     end,
 })
 
@@ -17,13 +17,7 @@ vim.api.nvim_create_autocmd({ 'CursorMovedI' }, {
 ---@return any
 local function ignoreevent_wrap(fx)
     local eventignore = vim.o.eventignore
-    print(vim.inspect(eventignore))
-    print('---')
     vim.o.eventignore = 'all'
-    local geventignore = vim.go.eventignore
-    print(geventignore)
-    print('---')
-    vim.go.eventignore = 'all'
 
     local ret = nil
     if fx then
@@ -31,29 +25,20 @@ local function ignoreevent_wrap(fx)
     end
 
     vim.o.eventignore = eventignore
-    print(vim.inspect(vim.o.eventignore))
-    print('---')
-    vim.go.eventignore = geventignore
-    print(vim.inspect(vim.go.eventignore))
-    print('---')
     return ret
 end
 
--- 
--- vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, { 'aaa' })
-
-ignoreevent_wrap(function()
-    vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, { 'aaa' })
+vim.on_key(function(key)
+    local buf = vim.api.nvim_get_current_buf()
+    if vim.api.nvim_get_mode().mode == 'i' then
+        if key == 'a' then
+            ignoreevent_wrap(function()
+                vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, { 'aaa' })
+            end)
+            return ''
+        end
+    end
 end)
-
--- vim.on_key(function(key)
---     local buf = vim.api.nvim_get_current_buf()
---     if vim.api.nvim_get_mode().mode == 'i' then
---         if key == 'a' then
---             return ''
---         end
---     end
--- end)
 
 -- ---@param fx? function
 -- ---@return any
