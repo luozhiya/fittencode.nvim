@@ -73,10 +73,13 @@ function ProgressIndicatorObserver:update(controller, event, data)
     if not current_session then
         self.pi:stop()
     else
+        Log.debug('ProgressIndicatorObserver:update, event = {}', event)
         if event == CONTROLLER_EVENT.SESSION_ADDED then
             self.start_time = vim.uv.hrtime()
         end
-        self.pi:start(self.start_time)
+        if self.start_time then
+            self.pi:start(self.start_time)
+        end
     end
 end
 

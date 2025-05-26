@@ -44,13 +44,11 @@ function Controller:__initialize(options)
         self.observers = {}
         self.sessions = {}
         self.filter_events = {}
-        self.status_observer = Status.new()
         self.keymaps = {}
         self:set_suffix_permissions(Config.inline_completion.enable)
         self.no_more_suggestion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
-        self:add_observer(function(ctrl, event, data)
-            self.status_observer:update(ctrl, event, data)
-        end)
+        self.status_observer = Status.new()
+        self:add_observer(self.status_observer)
         self.pi = ProgressIndicator.new()
         self.progress_observer = ProgressIndicatorObserver.new({
             pi = self.pi
@@ -128,13 +126,14 @@ function Controller:remove_observer(observer)
 end
 
 function Controller:notify_observers(event, data)
-    for _, observer in pairs(self.observers) do
+    for _, observer in ipairs(self.observers) do
         observer:update(self, event, data)
     end
 end
 
 ---@param data? table
 function Controller:__emit(event, data)
+    Log.debug('Emitting event, event = {}, data = {}', event, data)
     self:notify_observers(event, data)
 end
 
@@ -245,6 +244,7 @@ function Controller:trigger_inline_suggestion(options)
 end
 
 function Controller:on_session_event(data)
+    Log.debug('Session event, data = {}', data)
     if data.session_event == SESSION_EVENT.CREATED then
         self:__emit(CONTROLLER_EVENT.INLINE_RUNNING, { id = data.id })
         self:__emit(CONTROLLER_EVENT.SESSION_ADDED, { id = data.id })
