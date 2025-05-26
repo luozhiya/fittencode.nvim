@@ -49,6 +49,7 @@ function Session:_initialize(options)
     self.requests = {}
     self.keymaps = {}
     self.trigger_inline_suggestion = options.trigger_inline_suggestion
+    self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey')
     self.on_completion_event = function()
         Fn.schedule_call(options.on_completion_event, { id = self.id, completion_status = self.completion_event, })
     end
@@ -77,6 +78,7 @@ function Session:set_interactive()
             position = self.position,
         })
         self:set_keymaps()
+        self:set_onkey()
         self:update_view()
         self:sync_session_event(SESSION_EVENT.INTERACTIVE)
     end
@@ -134,14 +136,19 @@ function Session:set_onkey()
     -- If {fn} returns an empty string, {key} is discarded/ignored.
     vim.on_key(function(key)
         local buf = vim.api.nvim_get_current_buf()
-        self.filter_events = {}
         if vim.api.nvim_get_mode().mode == 'i' and buf == self.buf and self:is_interactive() then
             if self:lazy_completion(key) then
                 -- >= 0.11.0 忽视输入，用户输入的字符由底层处理
+                Log.debug('Ignoring input: {}', key)
+                Log.debug('Lazy completion triggered')
                 return ''
             end
         end
-    end)
+    end, self.filter_onkey_ns)
+end
+
+function Session:restore_onkey()
+    vim.api.nvim_buf_clear_namespace(self.buf, self.filter_onkey_ns, 0, -1)
 end
 
 ---@param position FittenCode.Position

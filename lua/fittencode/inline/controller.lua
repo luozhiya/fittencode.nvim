@@ -281,17 +281,6 @@ function Controller:get_current_session()
     end
 end
 
--- Lazy 模式，在输入字符与下一个字符相等时（ascii），不触发新的补全
--- * 回车换行比较特殊，会触发 Neovim 的自动缩进，暂不支持
----@param key string
----@return boolean
-function Controller:lazy_completion(key)
-    if self:get_current_session() then
-        return self:get_current_session():lazy_completion(key)
-    end
-    return false
-end
-
 function Controller:is_enabled(buf)
     return Config.inline_completion.enable and F.is_filebuf(buf) == true and not self:is_ft_disabled(buf)
 end

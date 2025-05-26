@@ -1,5 +1,6 @@
 local F = require('fittencode.fn.buf')
 local Log = require('fittencode.log')
+local Position = require('fittencode.fn.position')
 
 ---@class FittenCode.Inline.View
 ---@field buf integer
@@ -112,34 +113,32 @@ function View:__view_wrap(win, fn)
 end
 
 --- 计算插入文本后的光标位置，并可选择移动光标 {row, col} (0-based)
----@param window integer 窗口ID
----@param start_row integer 起始行(0-based)
----@param start_col integer 起始列(0-based)
 ---@param inserted_lines string[] 插入的文本行
----@param should_move_cursor? boolean 是否移动光标
 ---@return table
-function View:calculate_cursor_position_after_insertion(window, start_row, start_col, inserted_lines, should_move_cursor)
-    local cursor = { start_row, start_col }
+function View:calculate_cursor_position_after_insertion(start_pos, inserted_lines)
+    local cursor = Position.new()
     local line_count = #inserted_lines
     if line_count == 0 then
-        return cursor
+        return start_pos
     end
 
     if line_count == 1 then
         -- 单行插入，光标在该行末尾
         local first_line_length = #inserted_lines[1]
-        cursor = { start_row, start_col + first_line_length }
+        cursor = Position.of(start_pos.row, start_pos.col + first_line_length)
     else
         -- 多行插入，光标在最后一行末尾
         local last_line_length = #inserted_lines[line_count]
-        cursor = { start_row + line_count - 1, last_line_length }
+        cursor = Position.of(start_pos.row + line_count - 1, last_line_length)
     end
 
-    if should_move_cursor and window and vim.api.nvim_win_is_valid(window) then
-        vim.api.nvim_win_set_cursor(window, { cursor[1] + 1, cursor[2] }) -- API需要1-based行号
-    end
+    return cursor
+end
 
-    return { cursor[1], cursor[2] } -- 返回0-based坐标
+function View:update_win_cursor(win, pos)
+    if win and vim.api.nvim_win_is_valid(win) then
+        vim.api.nvim_win_set_cursor(win, { pos.row + 1, pos.col }) -- API需要1-based行号
+    end
 end
 
 ---@param fx? function
@@ -149,6 +148,8 @@ local function ignoreevent_wrap(fx)
     -- https://github.com/vim/vim/issues/8641
     local eventignore = vim.o.eventignore
     vim.o.eventignore = 'all'
+    local geventignore = vim.go.eventignore
+    vim.go.eventignore = 'all'
 
     local ret = nil
     if fx then
@@ -156,6 +157,7 @@ local function ignoreevent_wrap(fx)
     end
 
     vim.o.eventignore = eventignore
+    vim.go.eventignore = geventignore
     return ret
 end
 
@@ -194,14 +196,15 @@ function View:update(state)
         self:delete_text(self.position, current_pos)
         -- 2. insert committed text
         self:insert_text(self.position, commit_lines)
+        self.commit = self:calculate_cursor_position_after_insertion(self.position, commit_lines)
         -- 3. render uncommitted text virtual text inline after
         self:render_stage(stage_lines)
-        -- 4. update position
-        self:calculate_cursor_position_after_insertion(win, self.position.row, self.position.col, commit_lines, true)
     end
 
     ignoreevent_wrap(function()
         self:__view_wrap(win, __update)
+        -- 4. update position
+        self:update_win_cursor(win, self.commit)
     end)
 end
 

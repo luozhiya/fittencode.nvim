@@ -14,9 +14,10 @@ Position.__index = Position
 
 ---@return FittenCode.Position
 function Position.new(options)
+    options = options or {}
     local self = {
-        row = options.row,
-        col = options.col,
+        row = options.row or 0,
+        col = options.col or 0,
     }
     setmetatable(self, Position)
     return self
