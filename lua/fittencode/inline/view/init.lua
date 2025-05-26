@@ -228,6 +228,13 @@ function View:update(state)
         -- 2. insert committed text
         self:insert_text(self.position, commit_lines)
         self.commit = self:calculate_cursor_position_after_insertion(self.position, commit_lines)
+        vim.hl.range(
+            self.buf,
+            self.completion_ns,
+            'Statement',
+            { self.position.row, self.position.col },
+            { self.commit.row, self.commit.col }
+        )
         self.receive_view_message({
             type = 'update_commit_position',
             data = {
