@@ -321,7 +321,7 @@ function Controller:_show_no_more_suggestion(msg, timeout)
 end
 
 function Controller:triggering_completion_by_shortcut()
-    self.triggering_completion({
+    self:triggering_completion({
         force = true,
     }):catch(function()
         self:_show_no_more_suggestion(i18n.translate('  (Currently no completion options available)'), 2000)
