@@ -30,6 +30,8 @@ local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
 ---@field id string
 ---@field requests table<number, FittenCode.HTTP.Response>
 ---@field keymaps table<number, any>
+---@field view FittenCode.Inline.View
+---@field model FittenCode.Inline.Model
 local Session = {}
 Session.__index = Session
 
@@ -57,7 +59,6 @@ function Session:_initialize(options)
     self:sync_completion_event(COMPLETION_EVENT.START)
 end
 
--- 设置 Model，计算补全数据
 function Session:set_model(parsed_response)
     if self.session_event == SESSION_EVENT.CREATED then
         self.model = Model.new({
@@ -69,10 +70,12 @@ function Session:set_model(parsed_response)
     end
 end
 
--- 设置交互模式
 function Session:set_interactive()
     if self.session_event == SESSION_EVENT.MODEL_READY then
-        self.view = View.new({ buf = self.buf })
+        self.view = View.new({
+            buf = self.buf,
+            position = self.position,
+        })
         self:set_keymaps()
         self:set_autocmds()
         self:update_view()
@@ -85,7 +88,7 @@ function Session:is_interactive()
 end
 
 function Session:update_view()
-    self.view.update(ViewState.get_state_from_model(self.model:snapshot()))
+    self.view:update(ViewState.get_state_from_model(self.model:snapshot()))
 end
 
 function Session:accept(range)

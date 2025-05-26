@@ -1,11 +1,11 @@
 local F = require('fittencode.fn.buf')
+local Log = require('fittencode.log')
 
 ---@class FittenCode.Inline.View
 ---@field buf integer
 ---@field position FittenCode.Position
 ---@field completion_ns integer
----@field commit_row integer
----@field commit_col integer
+---@field commit FittenCode.Position
 local View = {}
 View.__index = View
 
@@ -13,6 +13,7 @@ function View.new(options)
     local self = {
         buf = options.buf,
         position = options.position,
+        commit = options.position,
         completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.View')
     }
     setmetatable(self, View)
@@ -27,8 +28,8 @@ function View:render_stage(lines)
     vim.api.nvim_buf_set_extmark(
         self.buf,
         self.completion_ns,
-        self.commit_row - 1,
-        self.commit_col,
+        self.commit.row,
+        self.commit.col,
         {
             virt_text = virt_lines[1],
             virt_text_pos = 'inline',
@@ -39,7 +40,7 @@ function View:render_stage(lines)
         vim.api.nvim_buf_set_extmark(
             self.buf,
             self.completion_ns,
-            self.commit_row - 1,
+            self.commit.row,
             0,
             {
                 virt_lines = virt_lines,
@@ -53,7 +54,12 @@ function View:clear()
 end
 
 function View:delete_text(start_pos, end_pos)
-    vim.api.nvim_buf_set_text(self.buf, start_pos[1] - 1, start_pos[2] - 1, end_pos[1] - 1, end_pos[2] - 1, {})
+    Log.debug('View:delete_text, start_pos = {}, end_pos = {}', start_pos, end_pos)
+    -- Indexing is zero-based. Row indices are end-inclusive, and column indices are end-exclusive.
+    if start_pos:is_equal(end_pos) then
+        return
+    end
+    vim.api.nvim_buf_set_text(self.buf, start_pos.row, start_pos.col, end_pos.row, end_pos.col, {})
 end
 
 -- 从 Chat 来看新版 Neovim 已经不需要这样处理了
@@ -86,7 +92,7 @@ function View:append_text_at_pos(buffer, row, col, lines)
 end
 
 function View:insert_text(pos, lines)
-    vim.api.nvim_buf_set_text(self.buf, pos[1] - 1, pos[2] - 1, pos[1] - 1, pos[2] - 1, lines)
+    vim.api.nvim_buf_set_text(self.buf, pos.row, pos.col, pos.row, pos.col, lines)
 end
 
 function View:__view_wrap(win, fn)
@@ -131,6 +137,23 @@ function View:calculate_cursor_position_after_insertion(window, start_row, start
     return { cursor[1], cursor[2] } -- 返回0-based坐标
 end
 
+---@param fx? function
+---@return any
+local function ignoreevent_wrap(fx)
+    -- Out-of-order execution about eventignore and CursorMoved.
+    -- https://github.com/vim/vim/issues/8641
+    local eventignore = vim.o.eventignore
+    vim.o.eventignore = 'all'
+
+    local ret = nil
+    if fx then
+        ret = fx()
+    end
+
+    vim.o.eventignore = eventignore
+    return ret
+end
+
 function View:update(state)
     local lines = state.lines
     local win = vim.api.nvim_get_current_win()
@@ -159,19 +182,22 @@ function View:update(state)
     -- 把 update作为一个pipeline，对state中lines逐行处理
     -- 经过测试，extmark 不会影响行列数的计算，只会影响渲染位置
     local function __update()
-        -- -- 0. clear all previous hints
+        -- 0. clear all previous hints
         self:clear()
-        -- -- 1. remove all content from init_pos to current_pos
+        -- 1. remove all content from init_pos to current_pos
         local current_pos = F.position(win)
         self:delete_text(self.position, current_pos)
-        -- -- 2. insert committed text
+        -- 2. insert committed text
         self:insert_text(self.position, commit_lines)
-        self:calculate_cursor_position_after_insertion(win, self.position[1], self.position[2], commit_lines, true)
-        -- -- 3. render uncommitted text virtual text inline after
+        -- 3. render uncommitted text virtual text inline after
         self:render_stage(stage_lines)
+        -- 4. update position
+        self:calculate_cursor_position_after_insertion(win, self.position.row, self.position.col, commit_lines, true)
     end
 
-    self:__view_wrap(win, __update)
+    ignoreevent_wrap(function()
+        self:__view_wrap(win, __update)
+    end)
 end
 
 return View

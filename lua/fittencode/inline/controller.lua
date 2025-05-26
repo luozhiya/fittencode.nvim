@@ -98,8 +98,8 @@ function Controller:__initialize(options)
         -- 只在 'TextChangedI', 'CompleteChanged' 触发自动补全，和 VSCode 一致
         -- 后续做撤销的话，还需注意撤销产生的事件，并进行过滤
         local autocmds = {
-            { 'TriggeringCompletionAuto', { 'TextChangedI', 'CompleteChanged' },         function(args) self:triggering_completion_auto({ event = args }) end },
-            { 'DismissingSuggestions',    { 'CursorMovedI', 'InsertLeave', 'BufLeave' }, function(args) self:dismiss_suggestions({ event = args }) end },
+            { 'TriggeringCompletionAuto', { 'TextChangedI', 'CompleteChanged' },         function(args) self:trigger_inline_suggestion_auto({ event = args }) end },
+            { 'DismissingSuggestions',    { 'CursorMovedI', 'InsertLeave', 'BufLeave' }, function(args) self:edit_completion_cancel({ event = args }) end },
             { 'BufferEnterCheck',         { 'BufEnter' },                                function(args) self:on_buffer_enter({ event = args }) end }
         }
         for _, autocmd in ipairs(autocmds) do
@@ -179,7 +179,7 @@ function Controller:accept(direction, scope)
     end
 end
 
-function Controller:dismiss_suggestions(options)
+function Controller:edit_completion_cancel(options)
     Log.debug('Dismissing suggestions')
     options = options or {}
     if not options.force and options.event and vim.tbl_contains(self.filter_events, options.event.event) then
@@ -233,8 +233,7 @@ end
 -- * resolve 成功时返回补全列表
 -- * reject 没有补全或者出错了
 ---@return FittenCode.Promise
-function Controller:triggering_completion(options)
-    Log.debug('Triggering completion')
+function Controller:trigger_inline_suggestion(options)
     options = options or {}
     local buf, position = self:_preflight_check(options)
     if not buf or not position then
@@ -247,7 +246,7 @@ function Controller:triggering_completion(options)
         buf = buf,
         position = position,
         id = self.selected_session_id,
-        triggering_completion = function(...) self.triggering_completion_auto(...) end,
+        triggering_completion = function(...) self.trigger_inline_suggestion_auto(...) end,
         on_completion_event = function(data) self:__emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
         on_session_event = function(data) self:on_session_event(data) end,
     })
@@ -321,18 +320,18 @@ function Controller:_show_no_more_suggestion(msg, timeout)
 end
 
 function Controller:trigger_inline_suggestion_by_shortcut()
-    self:triggering_completion({
+    self:trigger_inline_suggestion({
         force = true,
     }):catch(function()
         self:_show_no_more_suggestion(i18n.translate('  (Currently no completion options available)'), 2000)
     end)
 end
 
-function Controller:triggering_completion_auto(options)
+function Controller:trigger_inline_suggestion_auto(options)
     if not Config.inline_completion.auto_triggering_completion then
         return
     end
-    self:triggering_completion(options)
+    self:trigger_inline_suggestion(options)
 end
 
 -- 这个比 VSCode 的情况更复杂，suffixes 支持多个（非当前 buf filetype 也可以）
