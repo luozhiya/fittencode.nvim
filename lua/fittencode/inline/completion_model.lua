@@ -246,8 +246,8 @@ function CompletionModel:find_valid_region(scope)
     local candidates = {}
     local list = ({ char = self.chars, word = self.words, line = self.lines })[scope]
 
-    Log.debug('list for scope: {}', list)
-    Log.debug('Cursor: {}', self.cursor)
+    -- Log.debug('list for scope: {}', list)
+    -- Log.debug('Cursor: {}', self.cursor)
 
     -- 生成候选区域时包含跨过 cursor 的完整区域
     for _, item in ipairs(list) do
@@ -255,9 +255,9 @@ function CompletionModel:find_valid_region(scope)
             table.insert(candidates, item)
         end
     end
-    Log.debug('Candidates for scope: {}', candidates)
-    Log.debug('Placeholder ranges: {}', self.placeholder_ranges)
-    Log.debug('Stage ranges: {}', self.stage_ranges)
+    -- Log.debug('Candidates for scope: {}', candidates)
+    -- Log.debug('Placeholder ranges: {}', self.placeholder_ranges)
+    -- Log.debug('Stage ranges: {}', self.stage_ranges)
 
     for _, cand in ipairs(candidates) do
         -- 创建可修改的副本
@@ -317,11 +317,11 @@ function CompletionModel:accept(scope)
         Log.debug('No valid region found for scope: {}', scope)
         return
     end
-    Log.debug('Valid region: {}', region)
+    -- Log.debug('Valid region: {}', region)
 
-    Log.debug('commit_history Before commit: {}', self.commit_history)
+    -- Log.debug('commit_history Before commit: {}', self.commit_history)
     table.insert(self.commit_history, vim.deepcopy({ region }))
-    Log.debug('commit_history After commit: {}', self.commit_history)
+    -- Log.debug('commit_history After commit: {}', self.commit_history)
 
     self.commit_ranges = merge_ranges(vim.list_extend(self.commit_ranges, { region }))
     self.cursor = region.end_
@@ -384,6 +384,10 @@ function CompletionModel:get_cursor_char()
 end
 
 function CompletionModel:get_next_char()
+    -- Log.debug('Cursor: {}', self.cursor)
+    -- Log.debug('Source length: {}', #self.source)
+    -- Log.debug('Source: {}', self.source)
+    -- Log.debug('Next char: {}', self.source:sub(self.cursor + 1, self.cursor + 1))
     return self.source:sub(self.cursor + 1, self.cursor + 1)
 end
 

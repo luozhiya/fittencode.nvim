@@ -136,14 +136,15 @@ function Session:restore_keymaps()
 end
 
 function Session:set_onkey()
-    -- If {fn} returns an empty string, {key} is discarded/ignored.
     vim.on_key(function(key)
         local buf = vim.api.nvim_get_current_buf()
         if vim.api.nvim_get_mode().mode == 'i' and buf == self.buf and self:is_interactive() then
+            if vim.fn.keytrans(key) == '<CR>' then
+                key = '\n'
+            end
             if self:lazy_completion(key) then
                 -- >= 0.11.0 忽视输入，用户输入的字符由底层处理
-                Log.debug('Ignoring input: {}', key)
-                Log.debug('Lazy completion triggered')
+                Log.debug('Lazy completion triggered, Ignoring input: {}', key)
                 return ''
             end
         end
@@ -178,7 +179,7 @@ end
 ---@return boolean
 function Session:lazy_completion(key)
     if self.model:is_match_next_char(key) then
-        -- self.model:accept('char')
+        Log.debug('Lazy completion triggered: {}', key)
         self:accept('char')
         return true
     end
