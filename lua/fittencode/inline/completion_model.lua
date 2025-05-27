@@ -246,12 +246,18 @@ function CompletionModel:find_valid_region(scope)
     local candidates = {}
     local list = ({ char = self.chars, word = self.words, line = self.lines })[scope]
 
+    Log.debug('list for scope: {}', list)
+    Log.debug('Cursor: {}', self.cursor)
+
     -- 生成候选区域时包含跨过 cursor 的完整区域
     for _, item in ipairs(list) do
         if item.end_ > self.cursor then
             table.insert(candidates, item)
         end
     end
+    Log.debug('Candidates for scope: {}', candidates)
+    Log.debug('Placeholder ranges: {}', self.placeholder_ranges)
+    Log.debug('Stage ranges: {}', self.stage_ranges)
 
     for _, cand in ipairs(candidates) do
         -- 创建可修改的副本
@@ -270,12 +276,16 @@ function CompletionModel:find_valid_region(scope)
         -- 阶段二：验证是否在 stage 范围内
         local valid = false
         for _, sr in ipairs(self.stage_ranges) do
-            if region.start >= sr.start and region.end_ <= sr.end_ then
+            if region.end_ <= sr.end_ then
+                Log.debug('Valid region: {}', region)
                 valid = true
                 break
             end
         end
-        if not valid then goto continue end
+        if not valid then
+            Log.debug('Invalid region: {}', region)
+            goto continue
+        end
 
         -- 阶段三：最终有效性检查
         if region.end_ > self.cursor then
@@ -291,6 +301,8 @@ function CompletionModel:find_valid_region(scope)
 end
 
 function CompletionModel:accept(scope)
+    Log.debug('Committing {}', scope)
+
     if scope == 'all' then
         local new_commit = vim.deepcopy(self.stage_ranges)
         table.insert(self.commit_history, new_commit)
@@ -301,11 +313,15 @@ function CompletionModel:accept(scope)
     end
 
     local region = self:find_valid_region(scope)
-    if not region then return end
+    if not region then
+        Log.debug('No valid region found for scope: {}', scope)
+        return
+    end
+    Log.debug('Valid region: {}', region)
 
-    -- Log.debug('commit_history Before commit: {}', self.commit_history)
+    Log.debug('commit_history Before commit: {}', self.commit_history)
     table.insert(self.commit_history, vim.deepcopy({ region }))
-    -- Log.debug('commit_history After commit: {}', self.commit_history)
+    Log.debug('commit_history After commit: {}', self.commit_history)
 
     self.commit_ranges = merge_ranges(vim.list_extend(self.commit_ranges, { region }))
     self.cursor = region.end_
