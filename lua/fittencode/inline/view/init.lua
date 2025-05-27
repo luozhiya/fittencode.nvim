@@ -4,16 +4,18 @@ local Position = require('fittencode.fn.position')
 
 ---@class FittenCode.Inline.View
 ---@field buf integer
----@field position FittenCode.Position
+---@field origin_pos FittenCode.Position
 ---@field completion_ns integer
 ---@field commit FittenCode.Position
+---@field last_insert_pos FittenCode.Position
 local View = {}
 View.__index = View
 
 function View.new(options)
     local self = {
         buf = options.buf,
-        position = options.position,
+        origin_pos = options.position,
+        last_insert_pos = options.position,
         commit = options.position,
         completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.View')
     }
@@ -21,7 +23,7 @@ function View.new(options)
     return self
 end
 
-function View:render_stage(lines)
+function View:render_stage(pos, lines)
     local virt_lines = {}
     for _, line in ipairs(lines) do
         virt_lines[#virt_lines + 1] = { { line, 'FittenCodeSuggestion' } }
@@ -30,8 +32,8 @@ function View:render_stage(lines)
     vim.api.nvim_buf_set_extmark(
         self.buf,
         self.completion_ns,
-        self.commit.row,
-        self.commit.col,
+        pos.row,
+        pos.col,
         {
             virt_text = virt_lines[1],
             virt_text_pos = 'inline',
@@ -42,7 +44,7 @@ function View:render_stage(lines)
         vim.api.nvim_buf_set_extmark(
             self.buf,
             self.completion_ns,
-            self.commit.row,
+            pos.row,
             0,
             {
                 virt_lines = virt_lines,
@@ -136,6 +138,7 @@ function View:calculate_cursor_position_after_insertion(start_pos, inserted_line
 end
 
 function View:update_win_cursor(win, pos)
+    Log.debug('View:update_win_cursor, pos = {}', pos)
     if win and vim.api.nvim_win_is_valid(win) then
         vim.api.nvim_win_set_cursor(win, { pos.row + 1, pos.col }) -- API需要1-based行号
     end
@@ -162,87 +165,73 @@ end
 function View:update(state)
     local win = vim.api.nvim_get_current_win()
 
-    local function __parse_cs(lines)
-        local commit_lines = {}
-        local stage_lines = {}
+    local function __set_text(lines)
+        local old_commit = vim.deepcopy(self.commit)
+        self.commit = self.origin_pos
+        self.last_insert_pos = self.origin_pos
+
+        local pre_packed = {}
         for i, line_state in ipairs(lines) do
-            if #line_state == 1 then
-                if line_state[1].type == 'commit' then
-                    commit_lines[#commit_lines + 1] = line_state[1].text
-                elseif line_state[1].type == 'stage' then
-                    stage_lines[#stage_lines + 1] = line_state[1].text
+            for j, lstate in ipairs(line_state) do
+                local last_line = (i == #lines and j == #line_state)
+                pre_packed[#pre_packed + 1] = lstate.text
+                if (line_state[j + 1] and line_state[j + 1].type == line_state[j].type) or (lines[i + 1] and lines[i + 1][1].type == line_state[j].type) then
+                    goto continue
                 end
-            else
-                for j, lstate in ipairs(line_state) do
-                    if lstate.type == 'commit' then
-                        commit_lines[#commit_lines + 1] = lstate.text
-                    elseif lstate.type == 'stage' then
-                        stage_lines[#stage_lines + 1] = lstate.text
+                Log.debug('View:update, pre_packed = {}', pre_packed)
+                local packed = {}
+                for k, text in ipairs(pre_packed) do
+                    if text == '\n' then
+                        if k == #pre_packed and not last_line then
+                            vim.list_extend(packed, { '', '' })
+                        else
+                            vim.list_extend(packed, { '' })
+                        end
+                    else
+                        local trimempty = not (k == #pre_packed and text:find('\n'))
+                        vim.list_extend(packed, vim.split(text, '\n', { trimempty = trimempty }))
                     end
                 end
+                Log.debug('View:update, packed = {}', packed)
+                pre_packed = {}
+                if lstate.type == 'commit' or lstate.type == 'placeholder' then
+                    self:insert_text(self.last_insert_pos, packed)
+                    self.last_insert_pos = self:calculate_cursor_position_after_insertion(self.last_insert_pos, packed)
+                    if lstate.type == 'commit' then
+                        self.commit = self.last_insert_pos
+                    end
+                    Log.debug('View:update, self.last_insert_pos = {}, self.commit = {}', self.last_insert_pos, self.commit)
+                elseif lstate.type == 'stage' then
+                    self:render_stage(self.last_insert_pos, packed)
+                end
+                ::continue::
             end
         end
-        return commit_lines, stage_lines
-    end
-    local commit_lines, stage_lines = __parse_cs(state.lines)
 
-    local function __parse_newline(lines)
-        local res = {}
-        for i, line in ipairs(lines) do
-            if line == '\n' then
-                if i == 1 and #lines == 1 then
-                    res[#res + 1] = ''
-                    res[#res + 1] = ''
-                else
-                    res[#res + 1] = ''
-                end
-            else
-                local vs = vim.split(line, '\n', { trimempty = true })
-                for j, v in ipairs(vs) do
-                    res[#res + 1] = v
-                end
-                if i == #lines and line:sub(-1) == '\n' then
-                    res[#res + 1] = ''
-                end
-            end
+        if not self.commit:is_equal(old_commit) and not self.commit:is_equal(self.origin_pos) then
+            vim.hl.range(
+                self.buf,
+                self.completion_ns,
+                'Statement',
+                { self.origin_pos.row, self.origin_pos.col },
+                { self.commit.row, self.commit.col }
+            )
+            self.receive_view_message({
+                type = 'update_commit_position',
+                data = {
+                    commit_position = self.commit
+                }
+            })
         end
-        return res
     end
-    commit_lines = __parse_newline(commit_lines)
-    stage_lines = __parse_newline(stage_lines)
 
-    Log.debug('View:update, state = {}', state)
-    Log.debug('View:update, commit_lines = {}', commit_lines)
-    Log.debug('View:update, stage_lines = {}', stage_lines)
-
-    -- TODO: 现在只支持单个连续区域，以后支持 placeholder 等复杂情况
-    -- 从左到右，先把commit和placeholder填充，然后再依次填充stage这样坐标就不会错乱
-    -- 把 update作为一个pipeline，对state中lines逐行处理
-    -- 经过测试，extmark 不会影响行列数的计算，只会影响渲染位置
     local function __update()
         -- 0. clear all previous hints
         self:clear()
-        -- 1. remove all content from init_pos to current_pos
-        local current_pos = F.position(win)
-        self:delete_text(self.position, current_pos)
-        -- 2. insert committed text
-        self:insert_text(self.position, commit_lines)
-        self.commit = self:calculate_cursor_position_after_insertion(self.position, commit_lines)
-        vim.hl.range(
-            self.buf,
-            self.completion_ns,
-            'Statement',
-            { self.position.row, self.position.col },
-            { self.commit.row, self.commit.col }
-        )
-        self.receive_view_message({
-            type = 'update_commit_position',
-            data = {
-                commit_position = self.commit
-            }
-        })
-        -- 3. render uncommitted text virtual text inline after
-        self:render_stage(stage_lines)
+        -- 1. Remove all content
+        self:delete_text(self.origin_pos, self.last_insert_pos)
+        -- 2. Set text
+        __set_text(state.lines)
     end
 
     ignoreevent_wrap(function()
