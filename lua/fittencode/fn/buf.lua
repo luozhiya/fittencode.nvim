@@ -235,7 +235,6 @@ function M.is_valid_win(win)
 end
 
 -- Return the zero-based current position of the cursor in the window
--- 如果是计算插入模式，则需要 col-1
 ---@param win integer?
 ---@return FittenCode.Position?
 function M.position(win)
@@ -345,7 +344,7 @@ function M.get_lines(buf, range)
         -- end_col   exclusive
         local end_col = roundrange.end_.col
         if not roundrange.end_:rel_eol() then
-            -- end_col = end_col + 1
+            end_col = end_col + 1
         end
         lines = vim.api.nvim_buf_get_text(buf, roundrange.start.row, roundrange.start.col, roundrange.end_.row, end_col, {})
     end)
