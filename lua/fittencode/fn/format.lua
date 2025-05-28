@@ -259,7 +259,13 @@ local function format_arg(arg, spec_str)
         'userdata'
     }
     if vim.tbl_contains(by_inspect, arg_type) then
-        return vim.inspect(arg)
+        return vim.inspect(arg, {
+            process = function(item, path)
+                if item ~= getmetatable(arg) then
+                    return item
+                end
+            end
+        })
     end
 
     error('unsupported argument type: ' .. arg_type)

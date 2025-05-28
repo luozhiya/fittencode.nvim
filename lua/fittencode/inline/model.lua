@@ -122,10 +122,12 @@ function Model:generate_placeholder_ranges(buf, position, computed_completions)
                 col = zrp.col + col_delta,
             }),
         }))
+        Log.debug('Replace text = {}', replace_text)
         -- 2. 对比 T0 与 completion.generated_text 的文本差异，获取 placeholder 范围
         -- 代表前面有 start 个字符相同
         -- 后面有 end_ 个字符相同
         local start, end_ = F.compare_bytes_order(replace_text, completion.generated_text)
+        Log.debug('Start = {}, End = {}', start, end_)
         -- 从 start 到 #generated_text - end_ 之间的字符都可以认为是 stage
         if start ~= 0 then
             placeholder_ranges[#placeholder_ranges + 1] = { start = 1, end_ = start }
