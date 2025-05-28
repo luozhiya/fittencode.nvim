@@ -83,6 +83,7 @@ function Session:set_interactive()
         self.view = View.new({
             buf = self.buf,
             position = self.position,
+            col_delta = self.model:get_col_delta(),
         })
         self.view:register_message_receiver(function(...) self:receive_view_message(...) end)
         self:set_keymaps()
@@ -104,7 +105,6 @@ function Session:accept(range)
     self.model:accept(range)
     self:update_view()
     if self.model:is_complete() then
-        Log.debug('Completion completed')
         self:terminate()
         vim.defer_fn(function() self.trigger_inline_suggestion({ force = true }) end, 10)
     end

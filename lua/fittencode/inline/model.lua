@@ -115,6 +115,8 @@ function Model:generate_placeholder_ranges(buf, position, computed_completions)
         -- 2. 对比 T0 与 completion.generated_text 的文本差异，获取 placeholder 范围
         -- 代表前面有 start 个字符相同
         -- 后面有 end_ 个字符相同
+        Log.debug('Replace text: {}', replace_text)
+        Log.debug('Generated text: {}', completion.generated_text)
         local start, end_ = F.compare_bytes_order(replace_text, completion.generated_text)
         -- 从 start 到 #generated_text - end_ 之间的字符都可以认为是 placeholder
         local placeholder_range = { start = start, end_ = #completion.generated_text - end_ }
@@ -184,6 +186,10 @@ end
 
 function Model:is_match_next_char(key)
     return key == assert(self:selected_completion()):get_next_char()
+end
+
+function Model:get_col_delta()
+    return assert(self.computed_completions[self.selected_completion_index]).col_delta
 end
 
 return Model

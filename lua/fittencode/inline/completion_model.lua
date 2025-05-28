@@ -1,5 +1,7 @@
 --[[
 
+基于 source string，Index 采用 Lua 字符串 1 开始的索引
+
 -----------------------------------
 -- 分词转换方法 segments_to_words
 -----------------------------------
@@ -179,6 +181,7 @@ function CompletionModel.new(source, placeholder_ranges)
 
     -- 新增 placeholder 范围验证
     local merged_ph = merge_ranges(placeholder_ranges or {})
+    Log.debug('source: {}', source)
     Log.debug('Placeholder ranges: {}', merged_ph)
     for _, r in ipairs(merged_ph) do
         if r.start < 1 or r.end_ > #source then

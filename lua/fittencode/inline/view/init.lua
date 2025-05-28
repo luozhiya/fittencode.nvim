@@ -12,15 +12,18 @@ local View = {}
 View.__index = View
 
 function View.new(options)
-    local self = {
-        buf = options.buf,
-        origin_pos = options.position,
-        last_insert_pos = options.position,
-        commit = options.position,
-        completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.View')
-    }
-    setmetatable(self, View)
+    local self = setmetatable({}, View)
+    self:__initialize(options)
     return self
+end
+
+function View:__initialize(options)
+    self.buf = options.buf
+    self.origin_pos = options.position
+    self.col_delta = options.col_delta
+    self.commit = options.position
+    self.completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.View')
+    self.last_insert_pos = self.origin_pos:translate(0, self.col_delta)
 end
 
 function View:render_stage(pos, lines)
@@ -28,7 +31,6 @@ function View:render_stage(pos, lines)
     for _, line in ipairs(lines) do
         virt_lines[#virt_lines + 1] = { { line, 'FittenCodeSuggestion' } }
     end
-    Log.debug('View:render_stage, virt_lines = {}', virt_lines)
     vim.api.nvim_buf_set_extmark(
         self.buf,
         self.completion_ns,
@@ -58,7 +60,6 @@ function View:clear()
 end
 
 function View:delete_text(start_pos, end_pos)
-    Log.debug('View:delete_text, start_pos = {}, end_pos = {}', start_pos, end_pos)
     -- Indexing is zero-based. Row indices are end-inclusive, and column indices are end-exclusive.
     if start_pos:is_equal(end_pos) then
         return
@@ -96,7 +97,6 @@ function View:append_text_at_pos(buffer, row, col, lines)
 end
 
 function View:insert_text(pos, lines)
-    Log.debug('View:insert_text, pos = {}, lines = {}', pos, lines)
     if vim.tbl_isempty(lines) then
         return
     end
@@ -138,7 +138,6 @@ function View:calculate_cursor_position_after_insertion(start_pos, inserted_line
 end
 
 function View:update_win_cursor(win, pos)
-    Log.debug('View:update_win_cursor, pos = {}', pos)
     if win and vim.api.nvim_win_is_valid(win) then
         vim.api.nvim_win_set_cursor(win, { pos.row + 1, pos.col }) -- API需要1-based行号
     end
@@ -178,7 +177,6 @@ function View:update(state)
                 if (line_state[j + 1] and line_state[j + 1].type == line_state[j].type) or (lines[i + 1] and lines[i + 1][1].type == line_state[j].type) then
                     goto continue
                 end
-                Log.debug('View:update, pre_packed = {}', pre_packed)
                 local packed = {}
                 for k, text in ipairs(pre_packed) do
                     if text == '\n' then
@@ -192,7 +190,6 @@ function View:update(state)
                         vim.list_extend(packed, vim.split(text, '\n', { trimempty = trimempty }))
                     end
                 end
-                Log.debug('View:update, packed = {}', packed)
                 pre_packed = {}
                 if lstate.type == 'commit' or lstate.type == 'placeholder' then
                     self:insert_text(self.last_insert_pos, packed)
@@ -200,7 +197,6 @@ function View:update(state)
                     if lstate.type == 'commit' then
                         self.commit = self.last_insert_pos
                     end
-                    Log.debug('View:update, self.last_insert_pos = {}, self.commit = {}', self.last_insert_pos, self.commit)
                 elseif lstate.type == 'stage' then
                     self:render_stage(self.last_insert_pos, packed)
                 end
@@ -209,13 +205,13 @@ function View:update(state)
         end
 
         if not self.commit:is_equal(old_commit) and not self.commit:is_equal(self.origin_pos) then
-            vim.hl.range(
-                self.buf,
-                self.completion_ns,
-                'Statement',
-                { self.origin_pos.row, self.origin_pos.col },
-                { self.commit.row, self.commit.col }
-            )
+            -- vim.hl.range(
+            --     self.buf,
+            --     self.completion_ns,
+            --     'Statement',
+            --     { self.origin_pos.row, self.origin_pos.col },
+            --     { self.commit.row, self.commit.col }
+            -- )
             self.receive_view_message({
                 type = 'update_commit_position',
                 data = {

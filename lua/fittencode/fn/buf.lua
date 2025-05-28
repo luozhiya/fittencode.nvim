@@ -192,7 +192,6 @@ function M.offset_at(buf, position)
     local offset
     vim.api.nvim_buf_call(buf, function()
         local lines = assert(M.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = position })))
-        -- Log.debug('offset_at, position = {}, lines = {}', position, lines)
         vim.tbl_map(function(line)
             local byte_counts = Unicode.utf8_position_index(line).byte_counts
             if not offset then
@@ -202,7 +201,6 @@ function M.offset_at(buf, position)
         end, lines)
         offset = offset + #lines - 1 -- 最后一行不计入
     end)
-    -- Log.debug('offset_at, offset = {}', offset)
     return offset
 end
 
@@ -245,7 +243,25 @@ function M.is_valid_win(win)
     return true
 end
 
+-- 插入模式下的 Position 计算不一样
+-- 在 Neovim 中当插入一个字符，在 TextChangedI 响应中，col 是会加 +1 的
+-- 但我们调用 nvim_buf_get_text 等接口时，col 是 Normal 模式的
+---@param win integer?
+---@return FittenCode.Position?
+function M.position_i(win)
+    assert(win)
+    if not M.is_valid_win(win) then
+        return
+    end
+    local row, col = unpack(vim.api.nvim_win_get_cursor(win))
+    return Position.new({
+        row = row - 1,
+        col = col - 1,
+    })
+end
+
 -- Return the zero-based current position of the cursor in the window
+-- 如果是计算插入模式，则需要 col-1
 ---@param win integer?
 ---@return FittenCode.Position?
 function M.position(win)
@@ -339,8 +355,9 @@ function M.round_region(buf, range)
     return roundrange
 end
 
+-- 给定 Buffer 和 Range，返回 Range 对应的文本内容
 ---@param buf integer?
----@param range FittenCode.Range
+---@param range FittenCode.Range 包含起点和终点
 ---@return string[]?
 function M.get_lines(buf, range)
     assert(buf)
@@ -349,14 +366,13 @@ function M.get_lines(buf, range)
         local roundrange = M.round_region(buf, range)
         -- Indexing is zero-based.
         -- start_row inclusive
-        -- start_col inclusive
+        -- start_col exclusive
         -- end_row   inclusive
         -- end_col   exclusive
         local end_col = roundrange.end_.col
         if not roundrange.end_:rel_eol() then
             end_col = end_col + 1
         end
-        -- Log.debug('get_lines, range = {}, roundrange = {}, end_col = {}', range, roundrange, end_col)
         lines = vim.api.nvim_buf_get_text(buf, roundrange.start.row, roundrange.start.col, roundrange.end_.row, end_col, {})
     end)
     return lines

@@ -57,9 +57,7 @@ end
 
 local function build_small_file_context(buf, position)
     local full_text = fetch_full_buffer_content(buf)
-    -- Log.debug('full_text = {}', full_text)
     local prefix_end = F.offset_at(buf, position) or #full_text
-    -- Log.debug('prefix_end = {}', prefix_end)
     return {
         prefix = full_text:sub(1, prefix_end),
         suffix = full_text:sub(prefix_end + 1),
@@ -90,7 +88,6 @@ local function fetch_editor_context(buf, position)
     else
         ctx = build_large_file_context(buf, position, wordcount.chars)
     end
-    -- Log.debug('ctx = {}', ctx)
 
     ctx.prefix = ctx.prefix or ''
     ctx.suffix = ctx.suffix or ''
@@ -150,7 +147,6 @@ local function build_base_prompt(buf, position, options)
     local ctx = fetch_editor_context(buf, position)
     local text = ctx.prefix .. ctx.suffix
     local ciphertext = MD5.compute(text):wait()
-    Log.debug('ciphertext = {}', ciphertext)
     if not ciphertext or ciphertext:is_rejected() then
         return
     end
