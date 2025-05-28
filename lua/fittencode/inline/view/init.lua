@@ -258,7 +258,7 @@ end
 
 --[[
 
-大概有三种情况，如果最末的模块是 Stage转Commit的则不需要调整cursor位置
+大概有2种情况，如果最末的模块是 Stage转Commit的则不需要调整cursor位置
 
 A
 AB
