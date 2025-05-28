@@ -264,9 +264,6 @@ A
 AB
 
 A
-BAB
-
-A
 BA
 
 ]]
