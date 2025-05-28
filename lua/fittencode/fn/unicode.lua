@@ -559,8 +559,8 @@ end
 ---@param index integer
 ---@return integer
 function M.utf_to_byteindex(s, encoding, index)
-    if index < 1 then
-        return 1 -- Lua strings are 1-based
+    if index == 0 or #s == 0 then
+        return 0
     end
 
     local byte_index = 1

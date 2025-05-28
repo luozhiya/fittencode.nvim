@@ -180,6 +180,11 @@ function CompletionModel.new(source, placeholder_ranges)
 
     -- 新增 placeholder 范围验证
     local merged_ph = merge_ranges(placeholder_ranges or {})
+
+    Log.debug('CompletionModel initializing')
+    Log.debug('Placeholder ranges = {}', placeholder_ranges)
+    Log.debug('Placeholder merge_ranges = {}', merged_ph)
+    
     for _, r in ipairs(merged_ph) do
         if r.start < 1 or r.end_ > #source then
             error('Placeholder ranges out of bounds')
@@ -206,6 +211,9 @@ function CompletionModel.new(source, placeholder_ranges)
     -- 初始化范围
     self.commit_ranges = {}
     self:update_stage_ranges()
+
+    Log.debug('Commit ranges = {}', self.commit_ranges)
+    Log.debug('Stage ranges = {}', self.stage_ranges)
 
     return self
 end

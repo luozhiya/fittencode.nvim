@@ -38,13 +38,15 @@ function Model:_initialize(options)
     self.response = options.response or {}
     self.selected_completion_index = nil
 
+    Log.debug('Model Initializing')
+
     -- 1. 转换 delta
     local computed = {}
     for _, completion in ipairs(self.response.completions) do
         computed[#computed + 1] = {
             generated_text = completion.generated_text,
             row_delta = completion.line_delta,
-            col_delta = Unicode.byte_to_utfindex(completion.generated_text, 'utf-16', completion.character_delta),
+            col_delta = Unicode.utf_to_byteindex(completion.generated_text, 'utf-16', completion.character_delta),
         }
     end
     self.computed_completions = computed
@@ -55,7 +57,9 @@ function Model:_initialize(options)
     -- - range， 则删除旧内容，插入新内容
 
     -- 2. 解析 placeholder 范围
+    Log.debug('Computing placeholder ranges, computed_completions = {}', self.computed_completions)
     self.placeholder_ranges = self:generate_placeholder_ranges(self.buf, self.position, self.computed_completions)
+    Log.debug('Placeholder ranges = {}', self.placeholder_ranges)
 
     -- 3. 创建 CompletionModel 实例
     self.completion_models = {}
@@ -96,29 +100,39 @@ end
 -- TODO
 -- * 暂不支持 row_delta
 -- * 只支持 generated_text 比原来的文本长的情况
+---@param buf number
+---@param position FittenCode.Position
 function Model:generate_placeholder_ranges(buf, position, computed_completions)
     local placeholder_ranges = {}
+    local zrp = position:translate(0, -1)
     for _, completion in ipairs(computed_completions) do
         local col_delta = completion.col_delta
         if col_delta == 0 then
             placeholder_ranges[#placeholder_ranges + 1] = {}
             goto continue
         end
-        -- 1. 获取 postion 往后 col_delta 个字符 T0
+        -- 1. 获取 postion + col_delta 个字符 T0
         local replace_text = F.get_text(buf, Range.new({
-            start = position,
+            start = Position.new({
+                row = zrp.row,
+                col = zrp.col,
+            }),
             end_ = Position.new({
-                row = position.row,
-                col = position.col + col_delta,
+                row = zrp.row,
+                col = zrp.col + col_delta,
             }),
         }))
         -- 2. 对比 T0 与 completion.generated_text 的文本差异，获取 placeholder 范围
         -- 代表前面有 start 个字符相同
         -- 后面有 end_ 个字符相同
         local start, end_ = F.compare_bytes_order(replace_text, completion.generated_text)
-        -- 从 start 到 #generated_text - end_ 之间的字符都可以认为是 placeholder
-        local placeholder_range = { start = start, end_ = #completion.generated_text - end_ }
-        placeholder_ranges[#placeholder_ranges + 1] = placeholder_range
+        -- 从 start 到 #generated_text - end_ 之间的字符都可以认为是 stage
+        if start ~= 0 then
+            placeholder_ranges[#placeholder_ranges + 1] = { start = 1, end_ = start }
+        end
+        if end_ ~= #completion.generated_text then
+            placeholder_ranges[#placeholder_ranges + 1] = { start = #completion.generated_text - end_ + 1, end_ = #completion.generated_text }
+        end
         ::continue::
     end
     return placeholder_ranges
