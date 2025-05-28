@@ -244,9 +244,6 @@ function M.position(win)
         return
     end
     local row, col = unpack(vim.api.nvim_win_get_cursor(win))
-    if vim.api.nvim_get_mode().mode == 'i' then
-        col = col - 1
-    end
     return Position.new({
         row = row - 1,
         col = col,
@@ -343,12 +340,12 @@ function M.get_lines(buf, range)
         local roundrange = M.round_region(buf, range)
         -- Indexing is zero-based.
         -- start_row inclusive
-        -- start_col exclusive
+        -- start_col inclusive
         -- end_row   inclusive
         -- end_col   exclusive
         local end_col = roundrange.end_.col
         if not roundrange.end_:rel_eol() then
-            end_col = end_col + 1
+            -- end_col = end_col + 1
         end
         lines = vim.api.nvim_buf_get_text(buf, roundrange.start.row, roundrange.start.col, roundrange.end_.row, end_col, {})
     end)

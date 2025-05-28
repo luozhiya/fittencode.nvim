@@ -48,7 +48,7 @@ function Session:_initialize(options)
     self.id = options.id
     self.requests = {}
     self.keymaps = {}
-    self.trigger_inline_suggestion = options.trigger_inline_suggestion
+    self.trigger_inline_suggestion = Fn.schedule_call_wrap_fn(options.trigger_inline_suggestion)
     self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey')
     self.on_completion_event = function()
         Fn.schedule_call(options.on_completion_event, { id = self.id, completion_status = self.completion_event, })
