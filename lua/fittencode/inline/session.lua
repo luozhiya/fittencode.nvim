@@ -144,7 +144,6 @@ function Session:set_onkey()
             end
             if self:lazy_completion(key) then
                 -- >= 0.11.0 忽视输入，用户输入的字符由底层处理
-                Log.debug('Lazy completion triggered, Ignoring input: {}', key)
                 return ''
             end
         end
@@ -179,7 +178,6 @@ end
 ---@return boolean
 function Session:lazy_completion(key)
     if self.model:is_match_next_char(key) then
-        Log.debug('Lazy completion triggered: {}', key)
         self:accept('char')
         return true
     end

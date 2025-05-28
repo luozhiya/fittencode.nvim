@@ -141,7 +141,6 @@ local function parse_lines(s)
 end
 
 local function merge_ranges(ranges)
-    Log.debug('Merging ranges: {}', ranges)
     if #ranges == 0 then
         return {}
     end
@@ -181,8 +180,6 @@ function CompletionModel.new(source, placeholder_ranges)
 
     -- 新增 placeholder 范围验证
     local merged_ph = merge_ranges(placeholder_ranges or {})
-    Log.debug('source: {}', source)
-    Log.debug('Placeholder ranges: {}', merged_ph)
     for _, r in ipairs(merged_ph) do
         if r.start < 1 or r.end_ > #source then
             error('Placeholder ranges out of bounds')
@@ -249,18 +246,12 @@ function CompletionModel:find_valid_region(scope)
     local candidates = {}
     local list = ({ char = self.chars, word = self.words, line = self.lines })[scope]
 
-    -- Log.debug('list for scope: {}', list)
-    -- Log.debug('Cursor: {}', self.cursor)
-
     -- 生成候选区域时包含跨过 cursor 的完整区域
     for _, item in ipairs(list) do
         if item.end_ > self.cursor then
             table.insert(candidates, item)
         end
     end
-    -- Log.debug('Candidates for scope: {}', candidates)
-    -- Log.debug('Placeholder ranges: {}', self.placeholder_ranges)
-    -- Log.debug('Stage ranges: {}', self.stage_ranges)
 
     for _, cand in ipairs(candidates) do
         -- 创建可修改的副本
@@ -280,13 +271,11 @@ function CompletionModel:find_valid_region(scope)
         local valid = false
         for _, sr in ipairs(self.stage_ranges) do
             if region.end_ <= sr.end_ then
-                Log.debug('Valid region: {}', region)
                 valid = true
                 break
             end
         end
         if not valid then
-            Log.debug('Invalid region: {}', region)
             goto continue
         end
 
@@ -304,8 +293,6 @@ function CompletionModel:find_valid_region(scope)
 end
 
 function CompletionModel:accept(scope)
-    Log.debug('Committing {}', scope)
-
     if scope == 'all' then
         local new_commit = vim.deepcopy(self.stage_ranges)
         table.insert(self.commit_history, new_commit)
@@ -317,14 +304,9 @@ function CompletionModel:accept(scope)
 
     local region = self:find_valid_region(scope)
     if not region then
-        Log.debug('No valid region found for scope: {}', scope)
         return
     end
-    -- Log.debug('Valid region: {}', region)
-
-    -- Log.debug('commit_history Before commit: {}', self.commit_history)
     table.insert(self.commit_history, vim.deepcopy({ region }))
-    -- Log.debug('commit_history After commit: {}', self.commit_history)
 
     self.commit_ranges = merge_ranges(vim.list_extend(self.commit_ranges, { region }))
     self.cursor = region.end_
@@ -334,18 +316,13 @@ end
 function CompletionModel:revoke()
     if #self.commit_history == 0 then return end
 
-    -- Log.debug('commit_history  Before remove last commit: {}', self.commit_history)
     -- 移除最后一次commit
     local last_commit = table.remove(self.commit_history)
     self.commit_ranges = {}
     for _, c in ipairs(self.commit_history) do
         self.commit_ranges = merge_ranges(vim.list_extend(self.commit_ranges, vim.deepcopy(c)))
     end
-    -- Log.debug('commit_history  After remove last commit: {}', self.commit_history)
 
-    -- Log.debug('Commit ranges: {}', self.commit_ranges)
-
-    -- Log.debug('Cursor before revoke: {}', self.cursor)
     -- 恢复cursor
     if #self.commit_history > 0 then
         local last = self.commit_history[#self.commit_history]
@@ -353,14 +330,12 @@ function CompletionModel:revoke()
     else
         self.cursor = 0
     end
-    -- Log.debug('Cursor after revoke: {}', self.cursor)
 
     self:update_stage_ranges()
 end
 
 function CompletionModel:is_complete()
     -- 通过检查 stage_ranges 是否为空来判断是否全部完成
-    Log.debug('Stage ranges: {}', self.stage_ranges)
     return #self.stage_ranges == 0
 end
 
@@ -387,10 +362,6 @@ function CompletionModel:get_cursor_char()
 end
 
 function CompletionModel:get_next_char()
-    -- Log.debug('Cursor: {}', self.cursor)
-    -- Log.debug('Source length: {}', #self.source)
-    -- Log.debug('Source: {}', self.source)
-    -- Log.debug('Next char: {}', self.source:sub(self.cursor + 1, self.cursor + 1))
     return self.source:sub(self.cursor + 1, self.cursor + 1)
 end
 

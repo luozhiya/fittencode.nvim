@@ -133,7 +133,6 @@ end
 
 ---@param data? table
 function Controller:__emit(event, data)
-    Log.debug('Emitting event, event = {}, data = {}', event, data)
     self:notify_observers(event, data)
 end
 
@@ -165,12 +164,10 @@ function Controller:edit_completion_cancel(options)
         if current and not options.force then
             local match = current:is_match_commit_position(F.position(vim.api.nvim_get_current_win()))
             if vim.tbl_contains(self.filter_events, options.event.event) or match then
-                Log.debug('Edit completion cancel, match = {}', match)
                 return
             end
         end
     end
-    Log.debug('Edit completion cancel, options = {}', options)
     self:cleanup_sessions()
 end
 
@@ -220,10 +217,8 @@ end
 -- * reject 没有补全或者出错了
 ---@return FittenCode.Promise
 function Controller:trigger_inline_suggestion(options)
-    Log.debug('Triggering inline suggestion, options = {}', options)
     options = options or {}
     local buf, position = self:_preflight_check(options)
-    Log.debug('Triggering inline suggestion, buf = {}, position = {}', buf, position)
     if not buf or not position then
         return Promise.reject()
     end
@@ -244,7 +239,6 @@ function Controller:trigger_inline_suggestion(options)
 end
 
 function Controller:on_session_event(data)
-    Log.debug('Session event, data = {}', data)
     if data.session_event == SESSION_EVENT.CREATED then
         self:__emit(CONTROLLER_EVENT.INLINE_RUNNING, { id = data.id })
         self:__emit(CONTROLLER_EVENT.SESSION_ADDED, { id = data.id })

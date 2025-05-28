@@ -69,7 +69,6 @@ end
 ---@param event string
 ---@param data any
 function ProgressIndicatorObserver:update(controller, event, data)
-    Log.debug('ProgressIndicatorObserver:update, event = {}, data = {}', event, data)
     if event == CONTROLLER_EVENT.SESSION_ADDED then
         self.start_time = vim.uv.hrtime()
     end
