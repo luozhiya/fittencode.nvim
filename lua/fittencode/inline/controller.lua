@@ -169,7 +169,7 @@ function Controller:edit_completion_cancel(options)
             end
         end
     end
-    self:cleanup_sessions()
+    self:terminate_sessions()
 end
 
 ---@param buf number
@@ -181,7 +181,7 @@ function Controller:is_ft_disabled(buf)
     return vim.tbl_contains(Config.disable_specific_inline_completion.suffixes, ft)
 end
 
-function Controller:cleanup_sessions()
+function Controller:terminate_sessions()
     for k, v in pairs(self.sessions) do
         v:terminate()
     end
@@ -234,7 +234,7 @@ function Controller:trigger_inline_suggestion(options)
     if not buf or not position then
         return Promise.reject()
     end
-    self:cleanup_sessions()
+    self:terminate_sessions()
 
     self.selected_session_id = assert(Fn.uuid_v1())
     local session = Session.new({
