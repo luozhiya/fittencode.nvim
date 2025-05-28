@@ -331,13 +331,13 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
     self:__add_request(request)
 
     return request:async():forward(function(_)
-        Log.debug('Got generate_one_stage_auth raw response: {}', _)
+        -- Log.debug('Got generate_one_stage_auth raw response: {}', _)
         local response = _.json()
         if not response then
             Log.error('Failed to decode completion raw response: {}', _)
             return Promise.reject()
         end
-        Log.debug('Decoded generate_one_stage_auth raw response: {}', response)
+        -- Log.debug('Decoded generate_one_stage_auth raw response: {}', response)
         return Fim.parse(response, {
             buf = self.buf,
             ref_start = self.position,

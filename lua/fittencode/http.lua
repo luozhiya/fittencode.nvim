@@ -252,8 +252,8 @@ end
 function M.fetch(url, options)
     options = options or {}
 
-    Log.debug('Fetching url: {}', url)
-    Log.debug('Fetch options: {}', options)
+    -- Log.debug('Fetching url: {}', url)
+    -- Log.debug('Fetch options: {}', options)
 
     local stream = create_stream()
     local handle = { aborted = false }
@@ -345,8 +345,8 @@ function M.fetch(url, options)
             return true
         end
 
-        Log.debug('CURL exit: code = {}, signal = {}', code, signal)
-        Log.debug('CURL HTTP messages: {}', http_messages)
+        -- Log.debug('CURL exit: code = {}, signal = {}', code, signal)
+        -- Log.debug('CURL HTTP messages: {}', http_messages)
 
         if code == 0 then
             ---@class FittenCode.HTTP.Request.Stream.EndEvent
