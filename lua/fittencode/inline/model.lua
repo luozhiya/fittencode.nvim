@@ -104,37 +104,33 @@ end
 ---@param position FittenCode.Position
 function Model:generate_placeholder_ranges(buf, position, computed_completions)
     local placeholder_ranges = {}
-    local zrp = position:translate(0, -1)
+    local zrp = position:translate(0, 0)
     for _, completion in ipairs(computed_completions) do
+        ---@type string
+        local generated_text = completion.generated_text
         local col_delta = completion.col_delta
         if col_delta == 0 then
             placeholder_ranges[#placeholder_ranges + 1] = {}
             goto continue
         end
         -- 1. 获取 postion + col_delta 个字符 T0
-        local replace_text = F.get_text(buf, Range.new({
+        local replaced_text = assert(F.get_text(buf, Range.new({
             start = Position.new({
                 row = zrp.row,
                 col = zrp.col,
             }),
             end_ = Position.new({
                 row = zrp.row,
-                col = zrp.col + col_delta,
+                col = zrp.col + col_delta - 1,
             }),
-        }))
-        Log.debug('Replace text = {}', replace_text)
-        -- 2. 对比 T0 与 completion.generated_text 的文本差异，获取 placeholder 范围
-        -- 代表前面有 start 个字符相同
-        -- 后面有 end_ 个字符相同
-        local start, end_ = F.compare_bytes_order(replace_text, completion.generated_text)
+        })))
+        Log.debug('Replace text = {}', replaced_text)
+        assert(#replaced_text < #generated_text)
+        -- 2. 对比 T0 与 generated_text 的文本差异，获取 placeholder 范围
+        local start, end_ = generated_text:find(replaced_text)
         Log.debug('Start = {}, End = {}', start, end_)
         -- 从 start 到 #generated_text - end_ 之间的字符都可以认为是 stage
-        if start ~= 0 then
-            placeholder_ranges[#placeholder_ranges + 1] = { start = 1, end_ = start }
-        end
-        if end_ ~= #completion.generated_text then
-            placeholder_ranges[#placeholder_ranges + 1] = { start = #completion.generated_text - end_ + 1, end_ = #completion.generated_text }
-        end
+        placeholder_ranges[#placeholder_ranges + 1] = { start = start, end_ = end_ }
         ::continue::
     end
     return placeholder_ranges

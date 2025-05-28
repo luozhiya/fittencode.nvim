@@ -105,6 +105,7 @@ function Session:accept(range)
     self.model:accept(range)
     self:update_view()
     if self.model:is_complete() then
+        self.view:update_cursor_with_col_delta()
         self:terminate()
         vim.defer_fn(function() self.trigger_inline_suggestion({ force = true }) end, 10)
     end

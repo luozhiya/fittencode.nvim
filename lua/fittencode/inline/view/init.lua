@@ -141,9 +141,10 @@ function View:calculate_cursor_position_after_insertion(start_pos, inserted_line
     return cursor
 end
 
-function View:update_win_cursor(win, pos)
+function View:update_win_cursor(win, pos, col_offset)
+    col_offset = col_offset or 0
     if win and vim.api.nvim_win_is_valid(win) then
-        vim.api.nvim_win_set_cursor(win, { pos.row + 1, pos.col }) -- API需要1-based行号
+        vim.api.nvim_win_set_cursor(win, { pos.row + 1, pos.col + col_offset }) -- API需要1-based行号
     end
 end
 
@@ -252,6 +253,30 @@ function View:update(state)
         self:__view_wrap(win, __update)
         -- 4. update position
         self:update_win_cursor(win, self.commit)
+    end)
+end
+
+--[[
+
+大概有三种情况，如果最末的模块是 Stage转Commit的则不需要调整cursor位置
+
+A
+AB
+
+A
+BAB
+
+A
+BA
+
+]]
+function View:update_cursor_with_col_delta()
+    if self.col_delta == 0 or self.commit:is_equal(self.last_insert_pos) then
+        return
+    end
+    ignoreevent_wrap(function()
+        local win = vim.api.nvim_get_current_win()
+        self:update_win_cursor(win, self.commit, self.col_delta)
     end)
 end
 
