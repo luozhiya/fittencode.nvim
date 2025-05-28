@@ -2,6 +2,7 @@
 
 Inline Controller
 - 控制 Session 的产生和销毁，期间具体的补全操作由 Session 完成
+- IC 运行在 Insert 模式中，需要注意 cursor 的不同
 
 ]]
 
@@ -187,9 +188,20 @@ function Controller:cleanup_sessions()
     self.selected_session_id = nil
 end
 
+-- position 0-based
+local function is_within_the_line(position)
+    local line = vim.api.nvim_get_current_line()
+    local col = position.col
+    -- [0, #line-1]
+    if col == 0 or col == #line - 1 then
+        return false
+    end
+    return true
+end
+
 function Controller:_preflight_check(options)
     local buf = vim.api.nvim_get_current_buf()
-    if self:is_ft_disabled(buf) or not F.is_filebuf(buf) then
+    if vim.api.nvim_get_mode().mode ~= 'i' or self:is_ft_disabled(buf) or not F.is_filebuf(buf) then
         return
     end
     local api_key_manager = Client.get_api_key_manager()
@@ -201,7 +213,7 @@ function Controller:_preflight_check(options)
     end
     local position = F.position(vim.api.nvim_get_current_win())
     assert(position)
-    local within_the_line = F.within_the_line(buf, position)
+    local within_the_line = is_within_the_line(position)
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
         return
     end
@@ -270,15 +282,15 @@ end
 
 ---@param msg string
 ---@param timeout number
-function Controller:_show_no_more_suggestion(msg, timeout)
+function Controller:__show_no_more_suggestion(msg, timeout)
     local buf = vim.api.nvim_get_current_buf()
     local win = vim.api.nvim_get_current_win()
-    local row, col = unpack(vim.api.nvim_win_get_cursor(win))
+    local position = assert(F.position(win))
     vim.api.nvim_buf_set_extmark(
         buf,
         self.no_more_suggestion_ns,
-        row - 1,
-        col - 1,
+        position.row,
+        position.col,
         {
             virt_text = { { msg, 'FittenCodeNoMoreSuggestion' } },
             virt_text_pos = 'inline',
@@ -300,7 +312,7 @@ function Controller:trigger_inline_suggestion_by_shortcut()
     self:trigger_inline_suggestion({
         force = true,
     }):catch(function()
-        self:_show_no_more_suggestion(i18n.translate('  (Currently no completion options available)'), 2000)
+        self:__show_no_more_suggestion(i18n.translate('  (Currently no completion options available)'), 2000)
     end)
 end
 

@@ -411,8 +411,8 @@ function Controller:from_builtin_template_with_selection(type, mode)
             if type == TEMPLATE_CATEGORIES.EDIT_CODE then
                 -- TODO: Tree-sitter supported
                 -- F.expand_range_ts(buf, curpos, 'function') -- 'class'
-                local curpos = F.position(win)
-                selection.range = F.expand_range(buf, curpos, 20)
+                -- local curpos = F.position(win)
+                -- selection.range = F.expand_range(buf, curpos, 20)
             else
                 Log.notify_error('Please select the code in the editor.')
                 return

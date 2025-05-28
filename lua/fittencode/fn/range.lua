@@ -145,7 +145,7 @@ function Range.from_line(row, line)
         }),
         end_ = Position.new({
             row = row,
-            col = #line,
+            col = #line - 1,
         }),
     })
 end

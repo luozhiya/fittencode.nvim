@@ -9,15 +9,6 @@ local Unicode = require('fittencode.fn.unicode')
 
 local M = {}
 
-function M.filetype(buf)
-    assert(buf)
-    local ft
-    vim.api.nvim_buf_call(buf, function()
-        ft = vim.api.nvim_get_option_value('filetype', { buf = buf })
-    end)
-    return ft
-end
-
 ---@return string?
 function M.language_id(buf)
     assert(buf)
@@ -243,23 +234,6 @@ function M.is_valid_win(win)
     return true
 end
 
--- 插入模式下的 Position 计算不一样
--- 在 Neovim 中当插入一个字符，在 TextChangedI 响应中，col 是会加 +1 的
--- 但我们调用 nvim_buf_get_text 等接口时，col 是 Normal 模式的
----@param win integer?
----@return FittenCode.Position?
-function M.position_i(win)
-    assert(win)
-    if not M.is_valid_win(win) then
-        return
-    end
-    local row, col = unpack(vim.api.nvim_win_get_cursor(win))
-    return Position.new({
-        row = row - 1,
-        col = col - 1,
-    })
-end
-
 -- Return the zero-based current position of the cursor in the window
 -- 如果是计算插入模式，则需要 col-1
 ---@param win integer?
@@ -270,6 +244,9 @@ function M.position(win)
         return
     end
     local row, col = unpack(vim.api.nvim_win_get_cursor(win))
+    if vim.api.nvim_get_mode().mode == 'i' then
+        col = col - 1
+    end
     return Position.new({
         row = row - 1,
         col = col,
