@@ -284,8 +284,7 @@ end
 ---@param timeout number
 function Controller:__show_no_more_suggestion(msg, timeout)
     local buf = vim.api.nvim_get_current_buf()
-    local win = vim.api.nvim_get_current_win()
-    local position = assert(F.position(win))
+    local position = assert(F.position(vim.api.nvim_get_current_win()))
     vim.api.nvim_buf_set_extmark(
         buf,
         self.no_more_suggestion_ns,
