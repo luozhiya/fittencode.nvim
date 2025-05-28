@@ -104,7 +104,6 @@ end
 ---@param position FittenCode.Position
 function Model:generate_placeholder_ranges(buf, position, computed_completions)
     local placeholder_ranges = {}
-    local zrp = position:translate(0, 0)
     for _, completion in ipairs(computed_completions) do
         ---@type string
         local generated_text = completion.generated_text
@@ -116,12 +115,12 @@ function Model:generate_placeholder_ranges(buf, position, computed_completions)
         -- 1. 获取 postion + col_delta 个字符 T0
         local replaced_text = assert(F.get_text(buf, Range.new({
             start = Position.new({
-                row = zrp.row,
-                col = zrp.col,
+                row = position.row,
+                col = position.col,
             }),
             end_ = Position.new({
-                row = zrp.row,
-                col = zrp.col + col_delta - 1,
+                row = position.row,
+                col = position.col + col_delta - 1,
             }),
         })))
         Log.debug('Replace text = {}', replaced_text)
