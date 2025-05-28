@@ -184,7 +184,7 @@ function CompletionModel.new(source, placeholder_ranges)
     Log.debug('CompletionModel initializing')
     Log.debug('Placeholder ranges = {}', placeholder_ranges)
     Log.debug('Placeholder merge_ranges = {}', merged_ph)
-    
+
     for _, r in ipairs(merged_ph) do
         if r.start < 1 or r.end_ > #source then
             error('Placeholder ranges out of bounds')
