@@ -25,28 +25,6 @@ local function clean_fim_markers(text)
     return text and vim.fn.substitute(text, FIM_PATTERN, '', 'g') or ''
 end
 
-local function extract_buffer_segment(buf, start_pos, end_pos)
-    return clean_fim_markers(F.get_text(buf, Range.new({
-        start = start_pos,
-        end_ = end_pos
-    })))
-end
-
-local function compute_large_file_positions(buf, curoffset, charscount)
-    local curround = math.floor(curoffset / SAMPLE_SIZE) * SAMPLE_SIZE
-    local curmax = charscount - math.floor((charscount - curoffset) / SAMPLE_SIZE) * SAMPLE_SIZE
-    local suffixoffset = math.min(charscount, math.max(curmax + HALF_MAX, HALF_MAX * 2))
-    local prefixoffset = math.max(0, math.min(curround - HALF_MAX, charscount - HALF_MAX * 2))
-
-    return {
-        prefix_pos = F.position_at(buf, prefixoffset) or Position.new(),
-        cur_pos = F.position_at(buf, curoffset) or Position.new(),
-        suffix_pos = F.position_at(buf, suffixoffset) or Position.new(),
-        prefixoffset = prefixoffset,
-        suffixoffset = suffixoffset
-    }
-end
-
 local function build_small_file_context(buf, position)
     local full_range = Range.new({
         start = Position.new({ row = 0, col = 0 }),
@@ -68,7 +46,26 @@ end
 
 local function build_large_file_context(buf, position, charscount)
     local curoffset = F.offset_at(buf, position) or 0
-    local positions = compute_large_file_positions(buf, curoffset, charscount)
+
+    local curround = math.floor(curoffset / SAMPLE_SIZE) * SAMPLE_SIZE
+    local curmax = charscount - math.floor((charscount - curoffset) / SAMPLE_SIZE) * SAMPLE_SIZE
+    local suffixoffset = math.min(charscount, math.max(curmax + HALF_MAX, HALF_MAX * 2))
+    local prefixoffset = math.max(0, math.min(curround - HALF_MAX, charscount - HALF_MAX * 2))
+
+    local positions = {
+        prefix_pos = F.position_at(buf, prefixoffset) or Position.new(),
+        cur_pos = F.position_at(buf, curoffset) or Position.new(),
+        suffix_pos = F.position_at(buf, suffixoffset) or Position.new(),
+        prefixoffset = prefixoffset,
+        suffixoffset = suffixoffset
+    }
+
+    local function extract_buffer_segment(buf, start_pos, end_pos)
+        return clean_fim_markers(F.get_text(buf, Range.new({
+            start = start_pos,
+            end_ = end_pos
+        })))
+    end
 
     return {
         prefix = extract_buffer_segment(buf, positions.prefix_pos, positions.cur_pos),
@@ -76,22 +73,6 @@ local function build_large_file_context(buf, position, charscount)
         prefixoffset = positions.prefixoffset,
         norangecount = charscount - (F.offset_at(buf, positions.suffix_pos) or 0)
     }
-end
-
-local function fetch_editor_context(buf, position)
-    local wordcount = F.wordcount(buf)
-    assert(wordcount)
-
-    local ctx
-    if wordcount.chars <= MAX_CHARS then
-        ctx = build_small_file_context(buf, position)
-    else
-        ctx = build_large_file_context(buf, position, wordcount.chars)
-    end
-
-    ctx.prefix = ctx.prefix or ''
-    ctx.suffix = ctx.suffix or ''
-    return ctx
 end
 
 --[[
@@ -112,7 +93,11 @@ local function compute_text_diff_metadata(current_text, current_cipher, filename
         }
     end
 
+    ---@type table<number>
+    ---@diagnostic disable-next-line: assign-type-mismatch
     local u1 = Unicode.utf8_to_utf16(current_text, Unicode.ENDIAN.LE, Unicode.FORMAT.UNIT)
+    ---@type table<number>
+    ---@diagnostic disable-next-line: assign-type-mismatch
     local u2 = Unicode.utf8_to_utf16(M.last.text, Unicode.ENDIAN.LE, Unicode.FORMAT.UNIT)
 
     Log.debug('u1 = {}', u1)
@@ -188,7 +173,19 @@ local function build_metadata(options)
 end
 
 local function build_base_prompt(buf, position, options)
-    local ctx = fetch_editor_context(buf, position)
+    local wordcount = F.wordcount(buf)
+    assert(wordcount)
+
+    local ctx
+    if wordcount.chars <= MAX_CHARS then
+        ctx = build_small_file_context(buf, position)
+    else
+        ctx = build_large_file_context(buf, position, wordcount.chars)
+    end
+
+    ctx.prefix = ctx.prefix or ''
+    ctx.suffix = ctx.suffix or ''
+
     Log.debug('build_base_prompt ctx = {}', ctx)
     local text = ctx.prefix .. ctx.suffix
     local ciphertext = MD5.compute(text):wait()
