@@ -8,9 +8,8 @@ local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 
-local MAX_CHARS = 22 -- ~200KB 220000 22
+local MAX_CHARS = 220000 -- ~200KB 220000 22
 local HALF_MAX = MAX_CHARS / 2
-local FIM_PATTERN = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
 local M = {
     last = {
@@ -20,8 +19,13 @@ local M = {
     }
 }
 
-local function clean_fim_markers(text)
-    return text and vim.fn.substitute(text, FIM_PATTERN, '', 'g') or ''
+local function clean_fim_markers(str)
+    str = str or ''
+    str = str:gsub('<fim_prefix>', '')
+    str = str:gsub('<fim_suffix>', '')
+    str = str:gsub('<fim_middle>', '')
+    str = str:gsub('<|[a-z]*|>', '')
+    return str
 end
 
 --[[
