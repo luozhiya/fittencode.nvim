@@ -176,7 +176,7 @@ function M.surrogate_pairs_to_utf8(surrogate_pairs)
     local codepoints = {}
     for _, pair in ipairs(surrogate_pairs) do
         if #pair == 2 then
-            local high, low = table.unpack(pair)
+            local high, low = unpack(pair)
             if high < 0xD800 or high > 0xDBFF or low < 0xDC00 or low > 0xDFFF then
                 error('Invalid surrogate pair')
             end
@@ -200,10 +200,15 @@ function M.utf8_to_utf16(input, endian, format)
     endian = endian or ENDIAN.LE
     format = format or FORMAT.BYTE
 
+    local cps = M.utf8_to_codepoints(input)
+    print(vim.inspect(cps))
+
     local units = {}
-    for _, cp in ipairs(M.utf8_to_codepoints(input)) do
+    for _, cp in ipairs(cps) do
         if cp >= 0x10000 then
-            local high, low = table.unpack(M.get_surrogate_pairs(cp))
+            local pair = M.get_surrogate_pairs(cp)
+            print(vim.inspect(pair))
+            local high, low = unpack(pair)
             table.insert(units, high)
             table.insert(units, low)
         else
@@ -792,5 +797,12 @@ function M.byte_to_utfindex(s, encoding, index)
         error('Unsupported encoding: ' .. encoding)
     end
 end
+
+--[[
+
+local str = '👩🏽';
+print(vim.inspect(M.utf8_to_utf16(str, ENDIAN.LE, FORMAT.UNIT)))
+
+]]
 
 return M

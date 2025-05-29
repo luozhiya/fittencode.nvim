@@ -16,7 +16,7 @@
             "name": "Lua Debugger",
             "type": "lua",
             "request": "launch",
-            "program": "${workspaceFolder}/1.lua"
+            "program": "${workspaceFolder}\\lua\\fittencode\\fn\\unicode.lua"
         }
     ]
 }

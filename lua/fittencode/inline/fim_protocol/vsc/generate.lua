@@ -98,8 +98,6 @@ end
 
 FittenCode VSCode 采用 UTF-16 的编码计算
 
-
-
 ]]
 local function compute_text_diff_metadata(current_text, current_cipher, filename)
     if filename ~= M.last.filename then
