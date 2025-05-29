@@ -10,7 +10,6 @@ local Log = require('fittencode.log')
 
 local MAX_CHARS = 220000 -- ~200KB
 local HALF_MAX = MAX_CHARS / 2
-local SAMPLE_SIZE = 2000
 local FIM_PATTERN = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
 local M = {
@@ -134,14 +133,34 @@ local function build_base_prompt(buf, position, options)
         end_ = Position.new({ row = -1, col = -1 })
     })
 
-    if F.wordcount(buf).chars > MAX_CHARS then
-        -- rel_pos
+    -- TODO: VERY SLOW!!!
+    local charscount = F.wordcount(buf).chars
+    if charscount > MAX_CHARS then
+        -- 对于大文档，在positon前后取 HALF_MAX 长度的文本作为 prefix 和 suffix
+        -- 当前 position 的字符数
+        local current_chars = F.offset_at(buf, position)
+        Log.debug('current_chars = {}', current_chars)
+        -- 前半部分的字符数
+        local start_chars = math.max(0, math.floor(current_chars - HALF_MAX))
+        local start_pos = F.position_at(buf, start_chars)
+        Log.debug('start_pos = {}', start_pos)
+        Log.debug('start_chars = {}', start_chars)
+        -- 后半部分的字符数
+        local end_chars = math.min(charscount, math.floor(current_chars + HALF_MAX))
+        local end_pos = F.position_at(buf, end_chars)
+        Log.debug('end_pos = {}', end_pos)
+        Log.debug('end_chars = {}', end_chars)
+        -- Current new relative position
         range = Range.new({
-            start = Position.new({ row = 0, col = 0 }),
-            end_ = Position.new({ row = -1, col = -1 })
+            start = start_pos,
+            end_ = end_pos
         })
+        rel_pos = assert(F.position_at(buf, current_chars - start_chars))
+        Log.debug('range = {}', range)
+        Log.debug('rel_pos = {}', rel_pos)
     end
 
+    -- 假定在 position处没有 FIM Marker正好被分割？
     local original = assert(F.get_text(buf, range))
     local prefix = clean_fim_markers(original:sub(1, rel_pos.col))
     local suffix = clean_fim_markers(original:sub(rel_pos.col + 1))
