@@ -25,56 +25,6 @@ local function clean_fim_markers(text)
     return text and vim.fn.substitute(text, FIM_PATTERN, '', 'g') or ''
 end
 
-local function build_small_file_context(buf, position)
-    local full_range = Range.new({
-        start = Position.new({ row = 0, col = 0 }),
-        end_ = Position.new({ row = -1, col = -1 })
-    })
-    local full_text = assert(F.get_text(buf, full_range))
-    Log.debug('build_small_file_context full_text = {}', full_text)
-    local prefix = clean_fim_markers(full_text:sub(1, position.col))
-    local suffix = clean_fim_markers(full_text:sub(position.col + 1))
-    Log.debug('prefix = {}', prefix)
-    Log.debug('suffix = {}', suffix)
-    return {
-        prefix = prefix,
-        suffix = suffix,
-        prefixoffset = 0,
-        norangecount = 0
-    }
-end
-
-local function build_large_file_context(buf, position, charscount)
-    local curoffset = F.offset_at(buf, position) or 0
-
-    local curround = math.floor(curoffset / SAMPLE_SIZE) * SAMPLE_SIZE
-    local curmax = charscount - math.floor((charscount - curoffset) / SAMPLE_SIZE) * SAMPLE_SIZE
-    local suffixoffset = math.min(charscount, math.max(curmax + HALF_MAX, HALF_MAX * 2))
-    local prefixoffset = math.max(0, math.min(curround - HALF_MAX, charscount - HALF_MAX * 2))
-
-    local positions = {
-        prefix_pos = F.position_at(buf, prefixoffset) or Position.new(),
-        cur_pos = F.position_at(buf, curoffset) or Position.new(),
-        suffix_pos = F.position_at(buf, suffixoffset) or Position.new(),
-        prefixoffset = prefixoffset,
-        suffixoffset = suffixoffset
-    }
-
-    local function _segment(start_pos, end_pos)
-        return clean_fim_markers(F.get_text(buf, Range.new({
-            start = start_pos,
-            end_ = end_pos
-        })))
-    end
-
-    return {
-        prefix = _segment(positions.prefix_pos, positions.cur_pos),
-        suffix = _segment(positions.cur_pos, positions.suffix_pos),
-        prefixoffset = positions.prefixoffset,
-        norangecount = charscount - (F.offset_at(buf, positions.suffix_pos) or 0)
-    }
-end
-
 --[[
 
 FittenCode VSCode 采用 UTF-16 的编码计算
@@ -172,22 +122,31 @@ local function build_metadata(options)
     return vim.tbl_deep_extend('force', base_meta, diff_meta)
 end
 
-local function build_base_prompt(buf, position, options)
-    local wordcount = F.wordcount(buf)
-    assert(wordcount)
+--[[
 
-    local ctx
-    if wordcount.chars <= MAX_CHARS then
-        ctx = build_small_file_context(buf, position)
-    else
-        ctx = build_large_file_context(buf, position, wordcount.chars)
+-- TODO：存在 FIM Marker 的话会影响 position 的计算？
+
+]]
+local function build_base_prompt(buf, position, options)
+    local rel_pos = position:clone()
+    local range = Range.new({
+        start = Position.new({ row = 0, col = 0 }),
+        end_ = Position.new({ row = -1, col = -1 })
+    })
+
+    if F.wordcount(buf).chars > MAX_CHARS then
+        -- rel_pos
+        range = Range.new({
+            start = Position.new({ row = 0, col = 0 }),
+            end_ = Position.new({ row = -1, col = -1 })
+        })
     end
 
-    ctx.prefix = ctx.prefix or ''
-    ctx.suffix = ctx.suffix or ''
+    local original = assert(F.get_text(buf, range))
+    local prefix = clean_fim_markers(original:sub(1, rel_pos.col))
+    local suffix = clean_fim_markers(original:sub(rel_pos.col + 1))
+    local text = prefix .. suffix
 
-    Log.debug('build_base_prompt ctx = {}', ctx)
-    local text = ctx.prefix .. ctx.suffix
     local ciphertext = MD5.compute(text):wait()
     if not ciphertext or ciphertext:is_rejected() then
         return
@@ -195,11 +154,9 @@ local function build_base_prompt(buf, position, options)
     local meta_datas = build_metadata({
         text = text,
         ciphertext = ciphertext.value,
-        prefix = ctx.prefix,
-        suffix = ctx.suffix,
+        prefix = prefix,
+        suffix = suffix,
         filename = options.filename,
-        prefixoffset = ctx.prefixoffset,
-        norangecount = ctx.norangecount
     })
     return {
         inputs = '',
