@@ -32,10 +32,12 @@ local function parse(raw_response, options)
         return
     end
 
+    local fragments = Context.retrieve_context_fragments(options.buf, options.position, DEFAULT_CONTEXT_THRESHOLD)
+
     return {
         request_id = raw_response.server_request_id or '',
         completions = completions,
-        context = table.concat({ prefix, FIM_MIDDLE_TOKEN, suffix })
+        context = table.concat({ fragments.prefix, FIM_MIDDLE_TOKEN, fragments.suffix })
     }
 end
 

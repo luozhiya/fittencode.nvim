@@ -7,6 +7,7 @@ local Config = require('fittencode.config')
 local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
+local Context = require('fittencode.inline.fim_protocol.vsc.context')
 
 local MAX_CHARS = 220000 -- ~200KB 220000 22
 local HALF_MAX = MAX_CHARS / 2
@@ -127,38 +128,6 @@ local function build_metadata(options)
     return vim.tbl_deep_extend('force', base_meta, diff_meta)
 end
 
-local function retrieve_context_fragments(buf, position, threshold, start_fallback, end_fallback)
-    local current_line = assert(F.line_at(buf, position.row))
-    local round_curr_col = F.round_col_end(current_line.text, position.col)
-    local next_position = Position.new({ row = position.row, col = round_curr_col + 1 })
-    -- 对于大文档，在positon前后取 HALF_MAX 长度的文本作为 prefix 和 suffix
-    -- 当前 position 的字符数
-    local current_chars_off = F.offset_at(buf, position)
-    Log.debug('current_chars = {}', current_chars_off)
-    -- 前半部分的字符数
-    local start_chars_off = math.max(start_fallback, math.floor(current_chars_off - threshold + 1))
-    local start_pos = F.position_at(buf, start_chars_off) or Position.new({ row = 0, col = 0 })
-    Log.debug('start_pos = {}', start_pos)
-    Log.debug('start_chars = {}', start_chars_off)
-    -- 后半部分的字符数
-    local end_chars_off = math.min(end_fallback, math.floor(current_chars_off + threshold))
-    local end_pos = F.position_at(buf, end_chars_off) or Position.new({ row = -1, col = -1 })
-    Log.debug('end_pos = {}', end_pos)
-    Log.debug('end_chars = {}', end_chars_off)
-    local prefix = F.get_text(buf, Range.new({
-        start = start_pos,
-        end_ = position
-    }))
-    local suffix = F.get_text(buf, Range.new({
-        start = next_position,
-        end_ = end_pos
-    }))
-    return {
-        prefix = prefix,
-        suffix = suffix
-    }
-end
-
 --[[
 
 -- TODO：存在 FIM Marker 的话会影响 position 的计算？
@@ -182,7 +151,7 @@ local function build_base_prompt(buf, position, options)
             end_ = Position.new({ row = -1, col = -1 })
         }))
     else
-        local fragments = retrieve_context_fragments(buf, position, HALF_MAX, 0, charscount)
+        local fragments = Context.retrieve_context_fragments(buf, position, HALF_MAX, 0, charscount)
         prefix = fragments.prefix
         suffix = fragments.suffix
     end
