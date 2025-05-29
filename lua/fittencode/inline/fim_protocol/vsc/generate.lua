@@ -60,7 +60,7 @@ local function build_large_file_context(buf, position, charscount)
         suffixoffset = suffixoffset
     }
 
-    local function extract_buffer_segment(buf, start_pos, end_pos)
+    local function _segment(start_pos, end_pos)
         return clean_fim_markers(F.get_text(buf, Range.new({
             start = start_pos,
             end_ = end_pos
@@ -68,8 +68,8 @@ local function build_large_file_context(buf, position, charscount)
     end
 
     return {
-        prefix = extract_buffer_segment(buf, positions.prefix_pos, positions.cur_pos),
-        suffix = extract_buffer_segment(buf, positions.cur_pos, positions.suffix_pos),
+        prefix = _segment(positions.prefix_pos, positions.cur_pos),
+        suffix = _segment(positions.cur_pos, positions.suffix_pos),
         prefixoffset = positions.prefixoffset,
         norangecount = charscount - (F.offset_at(buf, positions.suffix_pos) or 0)
     }
