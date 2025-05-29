@@ -343,8 +343,7 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
         local zerepos = self.position:translate(0, -1)
         return Fim.parse(response, {
             buf = self.buf,
-            ref_start = zerepos,
-            ref_end = zerepos,
+            position = zerepos,
         })
     end):catch(function(_)
         Log.error('Failed to generate_one_stage_auth: {}', _)
