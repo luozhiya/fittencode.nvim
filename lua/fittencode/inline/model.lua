@@ -38,8 +38,6 @@ function Model:_initialize(options)
     self.response = options.response or {}
     self.selected_completion_index = nil
 
-    Log.debug('Model Initializing')
-
     -- 1. 转换 delta
     local computed = {}
     for _, completion in ipairs(self.response.completions) do
@@ -51,15 +49,8 @@ function Model:_initialize(options)
     end
     self.computed_completions = computed
 
-    -- worksapce
-    -- 工作区域
-    -- - 单个point，则内容往后填充
-    -- - range， 则删除旧内容，插入新内容
-
     -- 2. 解析 placeholder 范围
-    Log.debug('Computing placeholder ranges, computed_completions = {}', self.computed_completions)
     self.placeholder_ranges = self:generate_placeholder_ranges(self.buf, self.position, self.computed_completions)
-    Log.debug('Placeholder ranges = {}', self.placeholder_ranges)
 
     -- 3. 创建 CompletionModel 实例
     self.completion_models = {}
