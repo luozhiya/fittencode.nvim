@@ -1,6 +1,8 @@
 local Context = require('fittencode.inline.fim_protocol.vsc.context')
 
 local END_OF_TEXT_TOKEN = '<|endoftext|>'
+local DEFAULT_CONTEXT_THRESHOLD = 100
+local FIM_MIDDLE_TOKEN = '<fim_middle>'
 
 local function build_completion_item(raw_response)
     local clean_text = vim.fn.substitute(
@@ -33,10 +35,7 @@ local function parse(raw_response, options)
     return {
         request_id = raw_response.server_request_id or '',
         completions = completions,
-        context = Context.build_fim_context(
-            options.buf,
-            options.ref_position:clone()
-        )
+        context = table.concat({ prefix, FIM_MIDDLE_TOKEN, suffix })
     }
 end
 
