@@ -315,7 +315,7 @@ function Controller:trigger_inline_suggestion_by_shortcut()
             return Promise.reject()
         end
     end):catch((function()
-        self:__show_no_more_suggestion(i18n.translate('  (Currently no completion options available)'), 2000)
+        self:__show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000)
     end))
 end
 
