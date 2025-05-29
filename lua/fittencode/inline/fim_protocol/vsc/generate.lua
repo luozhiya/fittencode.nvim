@@ -25,14 +25,6 @@ local function clean_fim_markers(text)
     return text and vim.fn.substitute(text, FIM_PATTERN, '', 'g') or ''
 end
 
-local function fetch_full_buffer_content(buf)
-    local full_range = Range.new({
-        start = Position.new({ row = 0, col = 0 }),
-        end_ = Position.new({ row = -1, col = -1 })
-    })
-    return clean_fim_markers(F.get_text(buf, full_range))
-end
-
 local function extract_buffer_segment(buf, start_pos, end_pos)
     return clean_fim_markers(F.get_text(buf, Range.new({
         start = start_pos,
@@ -56,11 +48,19 @@ local function compute_large_file_positions(buf, curoffset, charscount)
 end
 
 local function build_small_file_context(buf, position)
-    local full_text = fetch_full_buffer_content(buf)
-    local prefix_end = F.offset_at(buf, position) or #full_text
+    local full_range = Range.new({
+        start = Position.new({ row = 0, col = 0 }),
+        end_ = Position.new({ row = -1, col = -1 })
+    })
+    local full_text = assert(F.get_text(buf, full_range))
+    Log.debug('build_small_file_context full_text = {}', full_text)
+    local prefix = clean_fim_markers(full_text:sub(1, position.col))
+    local suffix = clean_fim_markers(full_text:sub(position.col + 1))
+    Log.debug('prefix = {}', prefix)
+    Log.debug('suffix = {}', suffix)
     return {
-        prefix = full_text:sub(1, prefix_end),
-        suffix = full_text:sub(prefix_end + 1),
+        prefix = prefix,
+        suffix = suffix,
         prefixoffset = 0,
         norangecount = 0
     }
@@ -94,6 +94,13 @@ local function fetch_editor_context(buf, position)
     return ctx
 end
 
+--[[
+
+FittenCode VSCode 采用 UTF-16 的编码计算
+
+
+
+]]
 local function compute_text_diff_metadata(current_text, current_cipher, filename)
     if filename ~= M.last.filename then
         M.last = {
@@ -107,15 +114,53 @@ local function compute_text_diff_metadata(current_text, current_cipher, filename
         }
     end
 
-    local lbytes, rbytes = F.compare_bytes_order(M.last.text, current_text)
+    local u1 = Unicode.utf8_to_utf16(current_text, Unicode.ENDIAN.LE, Unicode.FORMAT.UNIT)
+    local u2 = Unicode.utf8_to_utf16(M.last.text, Unicode.ENDIAN.LE, Unicode.FORMAT.UNIT)
+
+    Log.debug('u1 = {}', u1)
+    Log.debug('u2 = {}', u2)
+
+    local n = 0
+    for i = 1, math.min(#u1, #u2) do
+        if u1[i] == u2[i] then
+            n = n + 1
+        else
+            break
+        end
+    end
+    local i = 0
+    while i + n < math.min(#u1, #u2) do
+        if u1[#u1 - i] == u2[#u2 - i] then
+            i = i + 1
+        else
+            break
+        end
+    end
+    Log.debug('n = {}, i = {}', n, i)
+
+    local lu32 = vim.list_slice(u1, 1, n)
+    local ru32 = vim.list_slice(u1, #u1 - i + 1, #u1)
+    local diffu32 = vim.list_slice(u1, n + 1, #u1 - i)
+    Log.debug('lu32 = {}', lu32)
+    Log.debug('ru32 = {}', ru32)
+    Log.debug('diffu32 = {}', diffu32)
+
+    local lu8 = Unicode.utf16_to_utf8(lu32, Unicode.ENDIAN.LE, Unicode.FORMAT.UNIT)
+    local ru8 = Unicode.utf16_to_utf8(ru32, Unicode.ENDIAN.LE, Unicode.FORMAT.UNIT)
+    local diffu8 = Unicode.utf16_to_utf8(diffu32, Unicode.ENDIAN.LE, Unicode.FORMAT.UNIT)
+    Log.debug('lu8 = {}', lu8)
+    Log.debug('ru8 = {}', ru8)
+    Log.debug('diffu8 = {}', diffu8)
+
     local diff_meta = {
-        plen = Unicode.byte_to_utfindex(current_text:sub(1, lbytes), 'utf-16'),
-        slen = Unicode.byte_to_utfindex(current_text:sub(-rbytes), 'utf-16'),
-        bplen = lbytes,
-        bslen = rbytes,
+        plen = n,
+        slen = i,
+        bplen = #lu8,
+        bslen = #ru8,
         pmd5 = M.last.ciphertext,
-        diff = current_text:sub(lbytes + 1, #current_text - rbytes)
+        diff = diffu8
     }
+    Log.debug('diff_meta = {}', diff_meta)
 
     M.last.text = current_text
     M.last.ciphertext = current_cipher
@@ -124,6 +169,7 @@ local function compute_text_diff_metadata(current_text, current_cipher, filename
 end
 
 local function build_metadata(options)
+    Log.debug('build_metadata options = {}', options)
     local base_meta = {
         cpos = Unicode.byte_to_utfindex(options.prefix, 'utf-16'),
         bcpos = #options.prefix,
@@ -145,6 +191,7 @@ end
 
 local function build_base_prompt(buf, position, options)
     local ctx = fetch_editor_context(buf, position)
+    Log.debug('build_base_prompt ctx = {}', ctx)
     local text = ctx.prefix .. ctx.suffix
     local ciphertext = MD5.compute(text):wait()
     if not ciphertext or ciphertext:is_rejected() then

@@ -32,11 +32,13 @@ local FORMAT = {
     BYTE = 'byte',
     UNIT = 'unit'
 }
+M.FORMAT = FORMAT
 
 local ENDIAN = {
     LE = 'le',
     BE = 'be'
 }
+M.ENDIAN = ENDIAN
 
 -- 根据首字节判断 UTF-8 编码的字节数
 ---@param byte number

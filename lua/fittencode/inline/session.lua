@@ -208,8 +208,7 @@ end
 
 function Session:generate_prompt()
     self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
-    local zerepos = self.position:translate(0, -1)
-    return Fim.generate(self.buf, zerepos, {
+    return Fim.generate(self.buf, self.position, {
         filename = F.filename(self.buf)
     })
 end
@@ -340,11 +339,10 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
             return Promise.reject()
         end
         -- Log.debug('Decoded generate_one_stage_auth raw response: {}', response)
-        local zerepos = self.position:translate(0, -1)
         return Fim.parse(response, {
             buf = self.buf,
-            ref_start = zerepos,
-            ref_end = zerepos,
+            ref_start = self.position,
+            ref_end = self.position,
         })
     end):catch(function(_)
         Log.error('Failed to generate_one_stage_auth: {}', _)
