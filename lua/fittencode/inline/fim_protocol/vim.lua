@@ -24,6 +24,8 @@ end
 
 function M.parse(raw)
     local generated_text = vim.fn.substitute(raw.generated_text, END_OF_TEXT_TOKEN, '', 'g') or ''
+    generated_text = generated_text:gsub('\r\n', '\n')
+    generated_text = generated_text:gsub('\r', '\n')
     if generated_text == '' then
         return
     end

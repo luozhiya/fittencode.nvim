@@ -354,7 +354,7 @@ end
 
 ---@param buf number?
 ---@param range FittenCode.Range
----@return string?
+---@return string
 function M.get_text(buf, range)
     assert(buf)
     return table.concat(assert(M.get_lines(buf, range)), '\n')

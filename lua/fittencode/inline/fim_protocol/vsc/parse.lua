@@ -9,9 +9,8 @@ local function build_completion_item(raw_response)
         '',
         'g'
     )
-    if clean_text == '' and not raw_response.ex_msg then
-        return
-    end
+    clean_text = clean_text:gsub('\r\n', '\n')
+    clean_text = clean_text:gsub('\r', '\n')
     local generated_text = clean_text .. (raw_response.ex_msg or '')
     if generated_text == '' then
         return

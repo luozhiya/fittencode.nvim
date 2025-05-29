@@ -127,53 +127,52 @@ end
 
 ]]
 local function build_base_prompt(buf, position, options)
-    local cursor = F.offset_at(buf, position)
-    local range = Range.new({
-        start = Position.new({ row = 0, col = 0 }),
-        end_ = Position.new({ row = -1, col = -1 })
-    })
-
-    -- TODO: VERY SLOW!!!
-    --[[
-        AB
-        A   HALF_MAX
-        B   HALF_MAX
-    ]]
     local charscount = F.wordcount(buf).chars
-    if charscount > MAX_CHARS then
+    local prefix
+    local suffix
+
+    local current_line = assert(F.line_at(buf, position.row))
+    local round_curr_col = F.round_col_end(current_line.text, position.col)
+    local next_position = Position.new({ row = position.row, col = round_curr_col + 1 })
+
+    if charscount <= MAX_CHARS then
+        prefix = F.get_text(buf, Range.new({
+            start = Position.new({ row = 0, col = 0 }),
+            end_ = position
+        }))
+        suffix = F.get_text(buf, Range.new({
+            start = next_position,
+            end_ = Position.new({ row = -1, col = -1 })
+        }))
+    else
         -- 对于大文档，在positon前后取 HALF_MAX 长度的文本作为 prefix 和 suffix
         -- 当前 position 的字符数
         local current_chars_off = F.offset_at(buf, position)
         Log.debug('current_chars = {}', current_chars_off)
         -- 前半部分的字符数
         local start_chars_off = math.max(0, math.floor(current_chars_off - HALF_MAX + 1))
-        local start_pos = F.position_at(buf, start_chars_off)
+        local start_pos = F.position_at(buf, start_chars_off) or Position.new({ row = 0, col = 0 })
         Log.debug('start_pos = {}', start_pos)
         Log.debug('start_chars = {}', start_chars_off)
         -- 后半部分的字符数
         local end_chars_off = math.min(charscount, math.floor(current_chars_off + HALF_MAX))
-        local end_pos = F.position_at(buf, end_chars_off)
+        local end_pos = F.position_at(buf, end_chars_off) or Position.new({ row = -1, col = -1 })
         Log.debug('end_pos = {}', end_pos)
         Log.debug('end_chars = {}', end_chars_off)
-        -- Current new relative position
-        range = Range.new({
+        prefix = F.get_text(buf, Range.new({
             start = start_pos,
+            end_ = position
+        }))
+        suffix = F.get_text(buf, Range.new({
+            start = next_position,
             end_ = end_pos
-        })
-        cursor = current_chars_off - start_chars_off + 1
-        Log.debug('range = {}', range)
+        }))
     end
 
-    Log.debug('cursor = {}', cursor)
-    -- 假定在 position处没有 FIM Marker正好被分割？
-    local original = assert(F.get_text(buf, range))
-    Log.debug('original = {}', original)
-    local prefix = clean_fim_markers(original:sub(1, cursor))
-    Log.debug('prefix = {}', prefix)
-    local suffix = clean_fim_markers(original:sub(cursor + 1))
-    Log.debug('suffix = {}', suffix)
-    local text = prefix .. suffix
+    prefix = clean_fim_markers(prefix)
+    suffix = clean_fim_markers(suffix)
 
+    local text = prefix .. suffix
     local ciphertext = MD5.compute(text):wait()
     if not ciphertext or ciphertext:is_rejected() then
         return
