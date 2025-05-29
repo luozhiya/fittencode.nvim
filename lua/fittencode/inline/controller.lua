@@ -310,9 +310,13 @@ end
 function Controller:trigger_inline_suggestion_by_shortcut()
     self:trigger_inline_suggestion({
         force = true,
-    }):catch(function()
+    }):forward(function(_)
+        if not _ then
+            return Promise.reject()
+        end
+    end):catch((function()
         self:__show_no_more_suggestion(i18n.translate('  (Currently no completion options available)'), 2000)
-    end)
+    end))
 end
 
 function Controller:trigger_inline_suggestion_auto(options)
