@@ -174,20 +174,18 @@ function M.wordcount(buf)
     return wc
 end
 
--- Return the zero-based characters offset of the position in the buffer
+-- 计算从文档开始到 Position 处的字符偏移量 (UTF-32)
 ---@param buf integer?
 ---@param position FittenCode.Position
----@return FittenCode.CharactersOffset?
+---@return FittenCode.CharactersOffset
 function M.offset_at(buf, position)
     assert(buf)
-    local offset
+    local offset = 0
     vim.api.nvim_buf_call(buf, function()
         local lines = assert(M.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = position })))
+        Log.debug('lines = {}, position = {}', lines, position)
         vim.tbl_map(function(line)
             local byte_counts = Unicode.utf8_position_index(line).byte_counts
-            if not offset then
-                offset = 0
-            end
             offset = offset + #byte_counts
         end, lines)
         offset = offset + #lines - 1 -- 最后一行不计入
@@ -195,7 +193,6 @@ function M.offset_at(buf, position)
     return offset
 end
 
--- Return the position at the given zero-based characters offset in the buffer
 -- 返回的 position.col 是指向 UTF-8 序列的尾字节
 ---@param buf integer?
 ---@param offset number Character offset in the buffer.
@@ -213,6 +210,10 @@ function M.position_at(buf, offset)
                 index = index + 1
             else
                 local col = Unicode.utf_to_byteindex(line, 'utf-32', offset)
+                Log.debug('line = {}, offset = {}, col = {}', line, offset, col)
+                if col ~= 0 then
+                    col = col - 1
+                end
                 col = M.round_col_end(line, col)
                 pos = Position.new({
                     row = index,

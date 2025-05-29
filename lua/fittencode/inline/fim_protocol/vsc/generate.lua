@@ -8,7 +8,7 @@ local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 
-local MAX_CHARS = 220000 -- ~200KB 220000
+local MAX_CHARS = 22 -- ~200KB 220000 22
 local HALF_MAX = MAX_CHARS / 2
 local FIM_PATTERN = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
@@ -127,46 +127,50 @@ end
 
 ]]
 local function build_base_prompt(buf, position, options)
-    local rel_pos = position:clone()
+    local cursor = F.offset_at(buf, position)
     local range = Range.new({
         start = Position.new({ row = 0, col = 0 }),
         end_ = Position.new({ row = -1, col = -1 })
     })
 
     -- TODO: VERY SLOW!!!
+    --[[
+        AB
+        A   HALF_MAX
+        B   HALF_MAX
+    ]]
     local charscount = F.wordcount(buf).chars
     if charscount > MAX_CHARS then
         -- 对于大文档，在positon前后取 HALF_MAX 长度的文本作为 prefix 和 suffix
         -- 当前 position 的字符数
-        local current_chars = F.offset_at(buf, position)
-        Log.debug('current_chars = {}', current_chars)
+        local current_chars_off = F.offset_at(buf, position)
+        Log.debug('current_chars = {}', current_chars_off)
         -- 前半部分的字符数
-        local start_chars = math.max(0, math.floor(current_chars - HALF_MAX))
-        local start_pos = F.position_at(buf, start_chars)
+        local start_chars_off = math.max(0, math.floor(current_chars_off - HALF_MAX + 1))
+        local start_pos = F.position_at(buf, start_chars_off)
         Log.debug('start_pos = {}', start_pos)
-        Log.debug('start_chars = {}', start_chars)
+        Log.debug('start_chars = {}', start_chars_off)
         -- 后半部分的字符数
-        local end_chars = math.min(charscount, math.floor(current_chars + HALF_MAX))
-        local end_pos = F.position_at(buf, end_chars)
+        local end_chars_off = math.min(charscount, math.floor(current_chars_off + HALF_MAX))
+        local end_pos = F.position_at(buf, end_chars_off)
         Log.debug('end_pos = {}', end_pos)
-        Log.debug('end_chars = {}', end_chars)
+        Log.debug('end_chars = {}', end_chars_off)
         -- Current new relative position
         range = Range.new({
             start = start_pos,
             end_ = end_pos
         })
-        rel_pos = assert(F.position_at(buf, current_chars - start_chars))
+        cursor = current_chars_off - start_chars_off + 1
         Log.debug('range = {}', range)
-        Log.debug('rel_pos = {}', rel_pos)
     end
 
+    Log.debug('cursor = {}', cursor)
     -- 假定在 position处没有 FIM Marker正好被分割？
     local original = assert(F.get_text(buf, range))
     Log.debug('original = {}', original)
-    local sample_pos = rel_pos:translate(0, 1)
-    local prefix = clean_fim_markers(original:sub(1, sample_pos.col))
+    local prefix = clean_fim_markers(original:sub(1, cursor))
     Log.debug('prefix = {}', prefix)
-    local suffix = clean_fim_markers(original:sub(sample_pos.col + 1))
+    local suffix = clean_fim_markers(original:sub(cursor + 1))
     Log.debug('suffix = {}', suffix)
     local text = prefix .. suffix
 

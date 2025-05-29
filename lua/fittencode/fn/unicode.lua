@@ -25,6 +25,7 @@ Unicode 码点与 UTF-8 字节数的对应关系：
 ]]
 
 local bit = require('bit')
+local Log = require('fittencode.log')
 
 local M = {}
 
@@ -559,6 +560,16 @@ function M.utf8_position_index(s)
 end
 
 -- str_byteindex
+--[[
+
+给定 UTF-8 字符串 s，目标编码 encoding，以及在目标编码中 Index 位置
+算出在 UTF-8 编码中该 Index 对应的字节位置
+若 Index 为 0，则返回 0
+若 Index 超出字符串长度，则返回字符串长度
+Index 1-based
+返回的 bytes 1-based
+
+]]
 ---@param s string utf-8 bytes
 ---@param encoding "utf-8"|"utf-16"|"utf-32"
 ---@param index integer
@@ -572,7 +583,6 @@ function M.utf_to_byteindex(s, encoding, index)
     local char_count = 0
 
     if encoding == 'utf-32' then
-        -- UTF-32 is straightforward - each index corresponds to one codepoint
         while byte_index <= #s and char_count < index do
             local b = string.byte(s, byte_index)
             if b < 0x80 then
@@ -586,7 +596,7 @@ function M.utf_to_byteindex(s, encoding, index)
             end
             char_count = char_count + 1
         end
-        return math.min(byte_index, #s + 1)
+        return math.min(byte_index - 1, #s)
     elseif encoding == 'utf-16' then
         -- UTF-16 needs to handle surrogate pairs (2 code units per codepoint for > 0xFFFF)
         while byte_index <= #s and char_count < index do
@@ -637,7 +647,7 @@ function M.utf_to_byteindex(s, encoding, index)
 
             byte_index = byte_index + seq_len
         end
-        return math.min(byte_index, #s + 1)
+        return math.min(byte_index, #s)
     elseif encoding == 'utf-8' then
         -- For UTF-8, just round up to the end of the current sequence
         while byte_index <= #s do
@@ -655,12 +665,12 @@ function M.utf_to_byteindex(s, encoding, index)
             end
 
             if byte_index + seq_len - 1 >= index then
-                return math.min(byte_index + seq_len - 1, #s + 1)
+                return math.min(byte_index + seq_len - 1, #s)
             end
 
             byte_index = byte_index + seq_len
         end
-        return #s + 1
+        return #s
     else
         error('Unsupported encoding: ' .. encoding)
     end

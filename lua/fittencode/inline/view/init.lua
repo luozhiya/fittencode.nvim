@@ -27,7 +27,7 @@ function View:__initialize(options)
 end
 
 function View:render_stage(pos, lines)
-    Log.debug('View:render_stage, pos = {}, lines = {}', pos, lines)
+    -- Log.debug('View:render_stage, pos = {}, lines = {}', pos, lines)
 
     local virt_lines = {}
     for _, line in ipairs(lines) do
@@ -62,7 +62,7 @@ function View:clear()
 end
 
 function View:delete_text(start_pos, end_pos)
-    Log.debug('View:delete_text, start_pos = {}, end_pos = {}', start_pos, end_pos)
+    -- Log.debug('View:delete_text, start_pos = {}, end_pos = {}', start_pos, end_pos)
     -- Indexing is zero-based. Row indices are end-inclusive, and column indices are end-exclusive.
     if start_pos:is_equal(end_pos) then
         return
@@ -100,7 +100,7 @@ function View:append_text_at_pos(buffer, row, col, lines)
 end
 
 function View:insert_text(pos, lines)
-    Log.debug('View:insert_text, pos = {}, lines = {}', pos, lines)
+    -- Log.debug('View:insert_text, pos = {}, lines = {}', pos, lines)
     if vim.tbl_isempty(lines) then
         return
     end
@@ -169,7 +169,7 @@ end
 function View:update(state)
     local win = vim.api.nvim_get_current_win()
 
-    Log.debug('update view, state = {}', state)
+    -- Log.debug('update view, state = {}', state)
 
     local function __set_text(lines)
         local old_commit = vim.deepcopy(self.commit)
