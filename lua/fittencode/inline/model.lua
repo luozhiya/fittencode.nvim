@@ -123,13 +123,35 @@ function Model:generate_placeholder_ranges(buf, position, computed_completions)
                 col = position.col + col_delta - 1,
             }),
         })))
-        Log.debug('Replace text = {}', replaced_text)
         assert(#replaced_text < #generated_text)
         -- 2. 对比 T0 与 generated_text 的文本差异，获取 placeholder 范围
         local start, end_ = generated_text:find(replaced_text)
-        Log.debug('Start = {}, End = {}', start, end_)
-        -- 从 start 到 #generated_text - end_ 之间的字符都可以认为是 stage
-        placeholder_ranges[#placeholder_ranges + 1] = { start = start, end_ = end_ }
+        if start then
+            placeholder_ranges[#placeholder_ranges + 1] = { start = start, end_ = end_ }
+        else
+            local ranges = {}
+            local index = 1
+            for i = 1, #replaced_text do
+                local c = replaced_text:sub(i, i)
+                local s, e = generated_text:find(c, index)
+                if s then
+                    ranges[#ranges + 1] = { start = s, end_ = e }
+                    index = e + 1
+                end
+            end
+            if #ranges == #replaced_text then
+                local merged_ranges = {}
+                for i = 1, #ranges do
+                    local r = ranges[i]
+                    if #merged_ranges == 0 or r.start > merged_ranges[#merged_ranges].end_ + 1 then
+                        merged_ranges[#merged_ranges + 1] = r
+                    else
+                        merged_ranges[#merged_ranges].end_ = r.end_
+                    end
+                end
+                vim.list_extend(placeholder_ranges, merged_ranges)
+            end
+        end
         ::continue::
     end
     return placeholder_ranges
