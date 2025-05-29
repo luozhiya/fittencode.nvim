@@ -201,13 +201,11 @@ function M.utf8_to_utf16(input, endian, format)
     format = format or FORMAT.BYTE
 
     local cps = M.utf8_to_codepoints(input)
-    print(vim.inspect(cps))
 
     local units = {}
     for _, cp in ipairs(cps) do
         if cp >= 0x10000 then
             local pair = M.get_surrogate_pairs(cp)
-            print(vim.inspect(pair))
             local high, low = unpack(pair)
             table.insert(units, high)
             table.insert(units, low)

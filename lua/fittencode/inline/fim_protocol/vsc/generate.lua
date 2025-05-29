@@ -8,7 +8,7 @@ local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 
-local MAX_CHARS = 220000 -- ~200KB
+local MAX_CHARS = 220000 -- ~200KB 220000
 local HALF_MAX = MAX_CHARS / 2
 local FIM_PATTERN = '<((fim_((prefix)|(suffix)|(middle)))|(|[a-z]*|))>'
 
@@ -162,8 +162,12 @@ local function build_base_prompt(buf, position, options)
 
     -- 假定在 position处没有 FIM Marker正好被分割？
     local original = assert(F.get_text(buf, range))
-    local prefix = clean_fim_markers(original:sub(1, rel_pos.col))
-    local suffix = clean_fim_markers(original:sub(rel_pos.col + 1))
+    Log.debug('original = {}', original)
+    local sample_pos = rel_pos:translate(0, 1)
+    local prefix = clean_fim_markers(original:sub(1, sample_pos.col))
+    Log.debug('prefix = {}', prefix)
+    local suffix = clean_fim_markers(original:sub(sample_pos.col + 1))
+    Log.debug('suffix = {}', suffix)
     local text = prefix .. suffix
 
     local ciphertext = MD5.compute(text):wait()
