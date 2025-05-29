@@ -1,3 +1,21 @@
+local pattern = "<(fim_prefix|fim_suffix|fim_middle|%|%l*%|)>"
+
+local text = [[
+function test() {
+    <fim_prefix>
+    const x = <|variable|>;
+    <fim_middle>
+    return result;<fim_suffix>
+}
+]]
+
+-- Find all tokens
+for token in text:gmatch(pattern) do
+    print("Found token:", token)
+end
+
+----------------------------------------
+---
 local str = "some <fim_prefix> text <|abc|> and <fim_middle> <fim_suffix> <|xyz|> done"
 
 -- Replace <fim_prefix>, <fim_suffix>, <fim_middle>

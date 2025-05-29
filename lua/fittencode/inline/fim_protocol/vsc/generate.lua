@@ -19,6 +19,8 @@ local M = {
     }
 }
 
+-- `var CM = /<((fim_((prefix)|(suffix)|(middle)))|(\|[a-z]*\|))>/g`
+-- Lua patterns do not support alternation | or group matching,
 local function clean_fim_markers(str)
     str = str or ''
     str = str:gsub('<fim_prefix>', '')
