@@ -370,7 +370,12 @@ function CompletionModel:get_cursor_char()
 end
 
 function CompletionModel:get_next_char()
-    return self.source:sub(self.cursor + 1, self.cursor + 1)
+    local next_pos = self.cursor + 1
+    for i = 1, #self.chars do
+        if self.chars[i].start == next_pos then
+            return self.chars[i].content
+        end
+    end
 end
 
 return CompletionModel
