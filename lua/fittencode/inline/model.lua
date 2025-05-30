@@ -38,13 +38,21 @@ function Model:_initialize(options)
     self.response = options.response or {}
     self.selected_completion_index = nil
 
+    local current_line = assert(F.get_text(self.buf, Range.new({
+        start = self.position,
+        end_ = Position.new({
+            row = self.position.row,
+            col = -1,
+        }),
+    })))
+
     -- 1. 转换 delta
     local computed = {}
     for _, completion in ipairs(self.response.completions) do
         computed[#computed + 1] = {
             generated_text = completion.generated_text,
             row_delta = completion.line_delta,
-            col_delta = Unicode.utf_to_byteindex(completion.generated_text, 'utf-16', completion.character_delta),
+            col_delta = Unicode.utf_to_byteindex(current_line, 'utf-16', completion.character_delta),
         }
     end
     self.computed_completions = computed
