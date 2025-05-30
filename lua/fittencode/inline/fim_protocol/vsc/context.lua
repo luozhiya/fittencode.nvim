@@ -15,14 +15,8 @@ function M.retrieve_context_fragments(buf, position, threshold)
     local start_pos = F.position_at(buf, start_chars_off) or Position.new({ row = 0, col = 0 })
     local end_chars_off = math.min(F.wordcount(buf).chars, math.floor(current_chars_off + threshold))
     local end_pos = F.position_at(buf, end_chars_off) or Position.new({ row = -1, col = -1 })
-    local prefix = F.get_text(buf, Range.new({
-        start = start_pos,
-        end_ = position
-    }))
-    local suffix = F.get_text(buf, Range.new({
-        start = next_position,
-        end_ = end_pos
-    }))
+    local prefix = F.get_text(buf, Range.new({ start = start_pos, end_ = position }))
+    local suffix = F.get_text(buf, Range.new({ start = next_position, end_ = end_pos }))
     return {
         prefix = prefix,
         suffix = suffix
