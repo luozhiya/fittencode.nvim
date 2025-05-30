@@ -70,35 +70,6 @@ function View:delete_text(start_pos, end_pos)
     vim.api.nvim_buf_set_text(self.buf, start_pos.row, start_pos.col, end_pos.row, end_pos.col, {})
 end
 
--- 从 Chat 来看新版 Neovim 已经不需要这样处理了
----@param row integer
----@param col integer
----@param lines string[]
-function View:append_text_at_pos(buffer, row, col, lines)
-    local count = vim.tbl_count(lines)
-    for i = 1, count, 1 do
-        local line = lines[i]
-        local len = string.len(line)
-        if i == 1 then
-            if len ~= 0 then
-                vim.api.nvim_buf_set_text(buffer, row, col, row, col, { line })
-            end
-        else
-            local max = vim.api.nvim_buf_line_count(buffer)
-            local try_row = row + i - 1
-            if try_row >= max then
-                vim.api.nvim_buf_set_lines(buffer, max, max, false, { line })
-            else
-                if string.len(vim.api.nvim_buf_get_lines(buffer, try_row, try_row + 1, false)[1]) ~= 0 then
-                    vim.api.nvim_buf_set_lines(buffer, try_row, try_row, false, { line })
-                else
-                    vim.api.nvim_buf_set_text(buffer, try_row, 0, try_row, 0, { line })
-                end
-            end
-        end
-    end
-end
-
 function View:insert_text(pos, lines)
     -- Log.debug('View:insert_text, pos = {}, lines = {}', pos, lines)
     if vim.tbl_isempty(lines) then
