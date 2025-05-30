@@ -151,7 +151,7 @@ local function build_base_prompt(buf, position, options)
             end_ = Position.new({ row = -1, col = -1 })
         }))
     else
-        local fragments = Context.retrieve_context_fragments(buf, position, HALF_MAX, 0, charscount)
+        local fragments = Context.retrieve_context_fragments(buf, position, HALF_MAX)
         prefix = fragments.prefix
         suffix = fragments.suffix
     end
