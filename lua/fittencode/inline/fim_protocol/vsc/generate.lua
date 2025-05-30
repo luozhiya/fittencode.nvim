@@ -89,7 +89,6 @@ local function compute_text_diff_metadata(current_text, current_cipher, filename
         pmd5 = M.last.ciphertext,
         diff = diffu8
     }
-    Log.debug('diff_meta = {}', diff_meta)
 
     M.last.text = current_text
     M.last.ciphertext = current_cipher
