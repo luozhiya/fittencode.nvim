@@ -3,6 +3,7 @@ local Log = require('fittencode.log')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local Promise = require('fittencode.fn.promise')
+local F = require('fittencode.fn.buf')
 
 local M = {}
 
@@ -10,7 +11,10 @@ local END_OF_TEXT_TOKEN = '<|endoftext|>' -- 文本结束标记
 
 function M.generate(buf, position, options)
     local prefix = Fn.get_text(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = position }))
-    local suffix = Fn.get_text(buf, Range.new({ start = position, end_ = Position.new({ row = -1, col = -1 }) }))
+    local current_line = assert(F.line_at(buf, position.row))
+    local round_curr_col = F.round_col_end(current_line.text, position.col)
+    local next_position = Position.new({ row = position.row, col = round_curr_col + 1 })
+    local suffix = Fn.get_text(buf, Range.new({ start = next_position, end_ = Position.new({ row = -1, col = -1 }) }))
     local inputs = '!FCPREFIX!' .. prefix .. '!FCSUFFIX!' .. suffix .. '!FCMIDDLE!'
     local escaped_inputs = string.gsub(inputs, '"', '\\"')
     local prompt = {
