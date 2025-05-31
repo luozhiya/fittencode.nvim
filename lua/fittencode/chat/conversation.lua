@@ -316,12 +316,12 @@ local function start_normal_chat(self)
 
     res:async():forward(function(response)
         self:handle_completion(completion)
-        self.update_status({ id = self.id, phase = PHASE.COMPLETED })
+        self.update_status({ id = self.id, phase = PHASE.COMPLETED, response = response })
     end, function(err)
         err.err_chunks = err_chunks
         Log.debug('Recovered from error: {}', err)
         self:recovered_from_error(err)
-        self.update_status({ id = self.id, phase = PHASE.ERROR })
+        self.update_status({ id = self.id, phase = PHASE.ERROR, error = err })
     end):finally(function()
         -- TODO
     end)

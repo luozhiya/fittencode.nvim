@@ -137,6 +137,7 @@ local function parse_timing(chunk)
             end
         end
 
+        ---@type FittenCode.HTTP.Timing
         computed_timing = {
             dns = data.timing.namelookup * 1000,
             tcp = (data.timing.connect - data.timing.namelookup) * 1000,

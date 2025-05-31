@@ -89,6 +89,7 @@ end
 ---@field created_at number
 ---@field phases table<table<string, FittenCode.Chat.PhaseTiming>>
 ---@field total_duration number
+---@field http_timing? FittenCode.HTTP.Timing
 
 ---@class FittenCode.Chat.TimingObserver : FittenCode.Observer
 ---@field conversations table<string, FittenCode.Chat.ConversationTiming>
@@ -170,6 +171,12 @@ function TimingObserver:end_phase_all_force(conversation_id)
     end
 end
 
+function TimingObserver:record_curl_timing(conversation_id, timing)
+    local conv = self.conversations[conversation_id]
+    assert(conv)
+    conv.http_timing = timing()
+end
+
 function TimingObserver:update(controller, event, data)
     local conversation_id = data and data.id
     local phase = data and data.phase
@@ -198,15 +205,19 @@ function TimingObserver:update(controller, event, data)
             end
         elseif phase == CONVERSATION_PHASE.COMPLETED or phase == CONVERSATION_PHASE.ERROR then
             self:end_phase_all_force(conversation_id)
+            if phase == CONVERSATION_PHASE.COMPLETED then
+                self:record_curl_timing(conversation_id, data.response.timing)
+            end
             self:debug()
         end
     end
 end
 
 function TimingObserver:debug()
-    local is_show_message = false
+    local is_show_message = true
     local output = {}
-    output[#output + 1] = '\nConversation Metrics:'
+    output[#output + 1] = '\nConversation Metrics'
+    output[#output + 1] = ('-'):rep(20)
 
     for id, conv in pairs(self.conversations) do
         output[#output + 1] = string.format('ID: %s', id)
@@ -230,6 +241,12 @@ function TimingObserver:debug()
                 output[#output + 1] = string.format('Message %d Metrics:', _)
                 for _, phase in pairs(phase_group) do
                     output[#output + 1] = string.format('  %-20s: %.2f ms', phase.phase_name, phase.duration)
+                end
+                -- output[#output + 1] = string.format('  HTTP Timing: dns=%.2fms, tcp=%.2fms, ssl=%.2fms, ttfb=%.2fms, total=%.2fms', conv.http_timing.dns, conv.http_timing.tcp, conv.http_timing.ssl, conv.http_timing.ttfb, conv.http_timing.total)
+                output[#output + 1] = string.format('  HTTP Timing:')
+                local order = { 'dns', 'tcp', 'ssl', 'ttfb', 'total' }
+                for _, k in ipairs(order) do
+                    output[#output + 1] = string.format('    %-18s: %.2f ms', k, conv.http_timing[k])
                 end
             end
         end
