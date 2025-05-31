@@ -4,6 +4,18 @@ local END_OF_TEXT_TOKEN = '<|endoftext|>'
 local DEFAULT_CONTEXT_THRESHOLD = 100
 local FIM_MIDDLE_TOKEN = '<fim_middle>'
 
+---@class FittenCode.Inline.FimProtocol.VSC.CompletionItem
+---@field generated_text string
+---@field character_delta number
+---@field line_delta number
+
+---@class FittenCode.Inline.FimProtocol.VSC.ParseResult
+---@field status 'error'|'success'|'no_completion'
+---@field error string
+---@field request_id string
+---@field completions table<number, FittenCode.Inline.FimProtocol.VSC.CompletionItem>
+---@field context string
+
 local function build_completion_item(raw_response)
     local clean_text = vim.fn.substitute(
         raw_response.generated_text or '',
@@ -24,20 +36,37 @@ local function build_completion_item(raw_response)
     } }
 end
 
+---@return FittenCode.Inline.FimProtocol.VSC.ParseResult
 local function parse(raw_response, options)
-    if not raw_response then return end
+    if not raw_response then
+        return {
+            status = 'error',
+        }
+    end
+
+    if raw_response.error then
+        return {
+            status = 'error',
+            error = raw_response.error
+        }
+    end
 
     local completions = build_completion_item(raw_response)
     if not completions then
-        return
+        return {
+            status = 'no_completion',
+        }
     end
 
     local fragments = Context.retrieve_context_fragments(options.buf, options.position, DEFAULT_CONTEXT_THRESHOLD)
 
     return {
-        request_id = raw_response.server_request_id or '',
-        completions = completions,
-        context = table.concat({ fragments.prefix, FIM_MIDDLE_TOKEN, fragments.suffix })
+        status = 'success',
+        data = {
+            request_id = raw_response.server_request_id or '',
+            completions = completions,
+            context = table.concat({ fragments.prefix, FIM_MIDDLE_TOKEN, fragments.suffix })
+        }
     }
 end
 

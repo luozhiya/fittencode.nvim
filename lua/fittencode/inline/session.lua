@@ -217,7 +217,12 @@ end
 function Session:async_compress_prompt(prompt)
     local _, data = pcall(vim.fn.json_encode, prompt)
     if not _ then
-        return Promise.reject('Failed to encode prompt to JSON')
+        return Promise.reject({
+            message = 'Failed to encode prompt to JSON',
+            metadata = {
+                prompt = prompt,
+            }
+        })
     end
     assert(data)
     return Zip.compress({ source = data }):forward(function(_)
@@ -243,23 +248,27 @@ function Session:send_completions()
             Log.debug('Got completion version: {}', completion_version)
             Log.debug('Compressed prompt: {}', compressed_prompt_binary)
             if not compressed_prompt_binary or not completion_version then
-                return Promise.reject()
+                return Promise.reject({
+                    message = 'Failed to generate prompt or get completion version',
+                })
             end
             return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
         end):forward(function(completion)
             if self:is_terminated() then
-                return Promise.reject()
+                return Promise.reject({
+                    message = 'Session is terminated',
+                })
             end
-            if not completion then
+            if completion.status == 'no_completion' then
                 Log.debug('No more suggestions')
                 self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
                 return Promise.resolve()
             end
             Log.debug('Got completion: {}', completion)
-            self:set_model(completion)
+            self:set_model(completion.data)
             self:set_interactive()
             self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
-            return Promise.resolve(completion)
+            return Promise.resolve(completion.data)
         end):catch(function(_)
             return Promise.reject(_)
         end)
@@ -267,7 +276,7 @@ function Session:send_completions()
     return __send_completions():catch(function(_)
         self:sync_completion_event(COMPLETION_EVENT.ERROR)
         Log.error('Failed to send completions: {}', _)
-        return Promise.reject()
+        return Promise.reject(_)
     end)
 end
 
@@ -277,7 +286,9 @@ function Session:get_completion_version()
     self:sync_completion_event(COMPLETION_EVENT.GETTING_COMPLETION_VERSION)
     local request = Client.make_request(Protocol.Methods.get_completion_version)
     if not request then
-        return Promise.reject()
+        return Promise.reject({
+            message = 'Failed to make get_completion_version request',
+        })
     end
     self:__add_request(request)
 
@@ -285,13 +296,17 @@ function Session:get_completion_version()
         ---@type FittenCode.Protocol.Methods.GetCompletionVersion.Response
         local response = _.json()
         if not response then
-            Log.error('Failed to get completion version: {}', _)
-            return Promise.reject()
+            return Promise.reject({
+                message = 'Failed to decode completion version response',
+                metadata = {
+                    response = _,
+                }
+            })
         else
             return response
         end
-    end):catch(function()
-        return Promise.reject()
+    end):catch(function(_)
+        return Promise.reject(_)
     end)
 end
 
@@ -326,28 +341,35 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
         body = compressed_prompt_binary,
     })
     if not request then
-        Log.error('Failed to make generate_one_stage_auth request')
-        return Promise.reject()
+        return Promise.reject({
+            message = 'Failed to make generate_one_stage_auth request',
+        })
     end
     self:__add_request(request)
 
     return request:async():forward(function(_)
-        -- Log.debug('Got generate_one_stage_auth raw response: {}', _)
         local response = _.json()
         if not response then
-            Log.error('Failed to decode completion raw response: {}', _)
-            return Promise.reject()
+            return Promise.reject({
+                message = 'Failed to decode completion raw response',
+                metadata = {
+                    response = _,
+                }
+            })
         end
-        -- Log.debug('Decoded generate_one_stage_auth raw response: {}', response)
         local zerepos = self.position:translate(0, -1)
-        return Fim.parse(response, {
+        local parsed_response = Fim.parse(response, {
             buf = self.buf,
             position = zerepos,
         })
+        if parsed_response.status == 'error' then
+            return Promise.reject({
+                message = parsed_response.error or 'Parsed completion response error',
+            })
+        end
+        return parsed_response
     end):catch(function(_)
-        Log.error('Failed to generate_one_stage_auth: {}', _)
-        return Promise.reject()
-    end):finally(function()
+        return Promise.reject(_)
     end)
 end
 

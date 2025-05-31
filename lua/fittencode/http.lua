@@ -368,7 +368,6 @@ function M.fetch(url, options)
 
         if code == 0 then
             local data_content = table.concat(stream._buffer)
-            Log.debug('CURL response data_content: {}', stream._buffer)
 
             ---@class FittenCode.HTTP.Request.Stream.EndEvent
             local response = {
