@@ -97,7 +97,6 @@ local function compute_text_diff_metadata(current_text, current_cipher, filename
 end
 
 local function build_metadata(options)
-    Log.debug('build_metadata options = {}', options)
     local base_meta = {
         cpos = Unicode.byte_to_utfindex(options.prefix, 'utf-16'),
         bcpos = #options.prefix,
