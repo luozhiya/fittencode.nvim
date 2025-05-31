@@ -315,8 +315,6 @@ local function start_normal_chat(self)
     end)
 
     res:async():forward(function(response)
-        Log.debug('Request chat completed, completions: {}', completion)
-        Log.debug('Message usage: {}', self.messages_usage)
         self:handle_completion(completion, response)
         self.update_status({ id = self.id, phase = PHASE.COMPLETED })
     end, function(err)
