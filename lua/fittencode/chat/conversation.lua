@@ -373,19 +373,8 @@ end
 
 ---@param completion table<string>
 function Conversation:handle_partial_completion(completion)
-    local handler = { type = 'message' }
-    local type = handler.type
     local content = table.concat(completion, '')
-
-    if type == 'update-temporary-editor' then
-        Log.error('Not implemented for update-temporary-editor')
-    elseif type == 'active-editor-diff' then
-        Log.error('Not implemented for active-editor-diff')
-    elseif type == 'message' then
-        self:update_partial_bot_message({ content = content })
-    else
-        Log.error('Unsupported property: ' .. type)
-    end
+    self:update_partial_bot_message({ content = content })
 end
 
 ---@param msg table
