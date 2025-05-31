@@ -86,6 +86,7 @@ local CURL_ERROR_CODES = {
 
 local function create_stream()
     return {
+        _buffer = {},
         _status = nil,
         _callbacks = {},
         on = function(self, event, cb)
@@ -235,7 +236,7 @@ local function parse_http_messages(stdout_data)
     return http_messages, content
 end
 
-local function parse_stdout(stdout_buffer)
+local function try_parse_stdout(stdout_buffer)
     -- 处理 HTTP 响应头 (包括有无 Proxy response)
     local stdout_data = table.concat(stdout_buffer)
     return parse_http_messages(stdout_data)
@@ -297,18 +298,36 @@ function M.fetch(url, options)
     table.insert(args, url)
 
     local stderr_buffer = {}
-    local stdout_buffer = {}
+    local pre_stdout_buffer = {}
+    local part_data_chunk
+    local headers_processed = false -- 是否处理过 headers 部分
+    local http_messages = {}
 
     local process = Process.new(curl_command, args, {
         stdin = stdin_data
     })
 
     process:on('stdout', function(chunk)
+        -- Log.debug('curl stdout chunk: {}', chunk)
         if handle.aborted then
             return
         end
-        stream:_emit('stdout', { chunk = chunk })
-        table.insert(stdout_buffer, chunk)
+        if not headers_processed then
+            table.insert(pre_stdout_buffer, chunk)
+            local messages, content = try_parse_stdout(pre_stdout_buffer)
+            if messages then
+                http_messages = messages
+                headers_processed = true
+                part_data_chunk = content
+            end
+        else
+            if part_data_chunk then
+                chunk = part_data_chunk .. chunk
+                part_data_chunk = nil
+            end
+            stream._buffer[#stream._buffer + 1] = chunk
+            stream:_emit('data', chunk)
+        end
     end)
 
     process:on('stderr', function(chunk)
@@ -326,7 +345,6 @@ function M.fetch(url, options)
             return
         end
         local timing, stderr_data = parse_stderr(stderr_buffer)
-        local http_messages, content = parse_stdout(stdout_buffer)
         local status = {}
         for _, m in ipairs(http_messages) do
             if m.status_line.status_code then
@@ -345,19 +363,22 @@ function M.fetch(url, options)
             return true
         end
 
-        -- Log.debug('CURL exit: code = {}, signal = {}', code, signal)
-        -- Log.debug('CURL HTTP messages: {}', http_messages)
+        Log.debug('CURL exit: code = {}, signal = {}', code, signal)
+        Log.debug('CURL HTTP messages: {}', http_messages)
 
         if code == 0 then
+            local data_content = table.concat(stream._buffer)
+            Log.debug('CURL response data_content: {}', data_content)
+
             ---@class FittenCode.HTTP.Request.Stream.EndEvent
             local response = {
                 status = status,
                 http_messages = http_messages,
                 ok = __is_all_ok(status),
                 timing = timing,
-                text = function() return content end,
+                text = function() return data_content end,
                 json = function()
-                    local _, json = pcall(vim.json.decode, content)
+                    local _, json = pcall(vim.json.decode, data_content)
                     if _ then return json end
                 end
             }

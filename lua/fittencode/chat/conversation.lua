@@ -27,6 +27,7 @@ function Conversation:_initialize(options)
     self.init_variables = options.init_variables
     self.template_id = options.template_id
     self.messages = {}
+    self.messages_usage = {}
     self.update_view = Fn.schedule_call_wrap_fn(options.update_view)
     self.update_status = Fn.schedule_call_wrap_fn(options.update_status)
     self.resolve_variables = Fn.schedule_call_wrap_fn(options.resolve_variables)
@@ -189,11 +190,8 @@ function Conversation:add_user_message(content, bot_action)
     self.update_view()
 end
 
-local function validate_chunk(chunk)
-    local delta = chunk and chunk.delta
-    if not delta then
-        return false
-    end
+local function validate_delta(delta)
+    assert(type(delta) == 'string')
     -- "\0\0\0\0\0\0\0\0\n\n"
     -- "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\n\n"
     for i = 1, #delta do
@@ -282,9 +280,22 @@ local function start_normal_chat(self)
         for _, line in ipairs(v) do
             ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
             local _, chunk = pcall(vim.fn.json_decode, line)
-            if _ and validate_chunk(chunk) then
-                completion[#completion + 1] = chunk.delta
-                self:handle_partial_completion(completion)
+            if _ and chunk then
+                local delta = chunk.delta
+                local usage = chunk.usage
+                local tracedata = chunk.tracedata
+                if delta then
+                    if validate_delta(delta) then
+                        completion[#completion + 1] = chunk.delta
+                        self:handle_partial_completion(completion)
+                    end
+                end
+                if usage then
+                    self.messages_usage[#self.messages_usage + 1] = {
+                        index = #self.messages,
+                        usage = usage
+                    }
+                end
             else
                 -- 忽略非法的 chunk
                 err_chunks[#err_chunks + 1] = line
@@ -295,6 +306,7 @@ local function start_normal_chat(self)
 
     res:async():forward(function(response)
         Log.debug('Request chat completed, completions: {}', completion)
+        Log.debug('Message usage: {}', self.messages_usage)
         self:handle_completion(completion, response)
         self.update_status({ id = self.id, phase = PHASE.COMPLETED })
     end, function(err)

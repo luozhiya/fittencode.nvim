@@ -179,9 +179,15 @@
 ---@class FittenCode.Protocol.Methods.ChatAuth.Body.MetaDatas
 ---@field project_id string
 
+---@class FittenCode.Protocol.Methods.ChatAuth.Response.ChunkUsage
+---@field input_tokens? string
+---@field output_tokens? string
+---@field status? string
+
 ---@class FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
 ---@field delta? string
 ---@field tracedata? string
+---@field usage? FittenCode.Protocol.Methods.ChatAuth.Response.ChunkUsage
 
 ---@alias FittenCode.Protocol.Methods.ChatAuth.Response table<FittenCode.Protocol.Methods.ChatAuth.Response.Chunk>
 
