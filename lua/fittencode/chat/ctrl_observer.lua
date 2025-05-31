@@ -246,7 +246,7 @@ function TimingObserver:debug()
                 output[#output + 1] = string.format('  HTTP Timing:')
                 local order = { 'dns', 'tcp', 'ssl', 'ttfb', 'total' }
                 for _, k in ipairs(order) do
-                    output[#output + 1] = string.format('    %-18s: %.2f ms', k, conv.http_timing[k])
+                    output[#output + 1] = string.format('    %-18s: %.2f ms', string.upper(k), conv.http_timing[k])
                 end
             end
         end
