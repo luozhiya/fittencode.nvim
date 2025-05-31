@@ -22,6 +22,7 @@ end
 
 ---@return FittenCode.Chat.CreatedConversation
 function ConversationType:create_conversation(options)
+    local should_immediately_answer = self.template.initialMessage ~= nil
     return {
         type = 'success',
         conversation = Conversation.new({
@@ -33,8 +34,9 @@ function ConversationType:create_conversation(options)
             update_view = options.update_view,
             update_status = options.update_status,
             resolve_variables = options.resolve_variables,
+            should_immediately_answer = should_immediately_answer
         }),
-        should_immediately_answer = self.template.initialMessage ~= nil
+        should_immediately_answer = should_immediately_answer
     }
 end
 

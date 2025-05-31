@@ -27,8 +27,6 @@ function Conversation:_initialize(options)
     self.init_variables = options.init_variables
     self.template_id = options.template_id
     self.messages = {}
-    self.messages_tag = {}
-    self.messages_usage = {}
     self.update_view = Fn.schedule_call_wrap_fn(options.update_view)
     self.update_status = Fn.schedule_call_wrap_fn(options.update_status)
     self.resolve_variables = Fn.schedule_call_wrap_fn(options.resolve_variables)
@@ -41,6 +39,7 @@ function Conversation:_initialize(options)
     }
     self.request_handle = nil
     self.update_status({ id = self.id, phase = PHASE.INIT })
+    self.should_immediately_answer = options.should_immediately_answer or false
 end
 
 function Conversation:get_select_text()
@@ -273,6 +272,7 @@ local function start_normal_chat(self)
     end
 
     local err_chunks = {}
+    local message_metadata = {}
 
     -- Start streaming
     res.stream:on('data', function(data)
@@ -292,19 +292,11 @@ local function start_normal_chat(self)
                         self:handle_partial_completion(completion)
                     end
                 end
-                if tracedata or usage then
-                    local tag = self.messages_tag[#self.messages]
-                    local message_usage = self.messages_usage[tag] or {}
-                    if not message_usage.tag then
-                        message_usage.tag = tag
-                    end
-                    if tracedata then
-                        message_usage.tracedata = tracedata
-                    end
-                    if usage then
-                        message_usage.usage = usage
-                    end
-                    self.messages_usage[tag] = message_usage
+                if tracedata then
+                    message_metadata.tracedata = tracedata
+                end
+                if usage then
+                    message_metadata.usage = usage
                 end
             else
                 -- 忽略非法的 chunk
@@ -316,7 +308,7 @@ local function start_normal_chat(self)
 
     res:async():forward(function(response)
         self:handle_completion(completion)
-        self.update_status({ id = self.id, phase = PHASE.COMPLETED, response = response })
+        self.update_status({ id = self.id, phase = PHASE.COMPLETED, response = response, message_metadata = message_metadata })
     end, function(err)
         err.err_chunks = err_chunks
         Log.debug('Recovered from error: {}', err)
@@ -348,7 +340,6 @@ end
 
 function Conversation:__add_message(message)
     self.messages[#self.messages + 1] = message
-    self.messages_tag[#self.messages] = Fn.generate_short_id()
 end
 
 -- 当 Fitten 回复时，更新状态

@@ -14,6 +14,7 @@ local CtrlObserver = require('fittencode.chat.ctrl_observer')
 local Status = CtrlObserver.Status
 local ProgressIndicatorObserver = CtrlObserver.ProgressIndicatorObserver
 local TimingObserver = CtrlObserver.TimingObserver
+local TokenObserver = CtrlObserver.TokenObserver
 
 local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
 local CONVERSATION_PHASE = Definitions.CONVERSATION_PHASE
@@ -45,6 +46,8 @@ function Controller:_initialize(options)
     self:add_observer(self.progress_observer)
     self.timing_observer = TimingObserver.new()
     self:add_observer(self.timing_observer)
+    self.token_observer = TokenObserver.new()
+    self:add_observer(self.token_observer)
 end
 
 function Controller:add_observer(observer, callback)

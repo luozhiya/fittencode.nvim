@@ -15,7 +15,7 @@
 ---@field augroup table
 ---@field basic_chat_template_id string
 ---@field conversation_types_provider FittenCode.Chat.ConversationTypeProvider
----@field status fittencode.Chat.Status
+---@field status FittenCode.Chat.Status
 ---@field observers table
 ---@field get_conversation_type function
 ---@field generate_conversation_id function

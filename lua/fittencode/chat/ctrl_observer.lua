@@ -261,8 +261,65 @@ function TimingObserver:get_conversation_timing(conversation_id)
     return self.conversations[conversation_id]
 end
 
+-- 监测 Token 变化
+---@class FittenCode.Chat.TokenObserver : FittenCode.Observer
+---@field conversations table<string, any>
+local TokenObserver = setmetatable({}, { __index = Observer })
+TokenObserver.__index = TokenObserver
+
+function TokenObserver.new(id)
+    ---@type FittenCode.Chat.TokenObserver
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local self = Observer.new(id or 'token_observer')
+    setmetatable(self, TokenObserver)
+    self.conversations = {}
+    return self
+end
+
+function TokenObserver:update(controller, event, data)
+    local conversation_id = data and data.id
+    local phase = data and data.phase
+
+    if not conversation_id then return end
+
+    if event == CONTROLLER_EVENT.CONVERSATION_UPDATED and phase then
+        if phase == CONVERSATION_PHASE.COMPLETED then
+            local conv = self.conversations[conversation_id] or {
+                prompt_tokens = {},
+                completion_tokens = {}
+            }
+            local usage = data.message_metadata.usage
+            conv.prompt_tokens[#conv.prompt_tokens + 1] = usage.input_tokens
+            conv.completion_tokens[#conv.completion_tokens + 1] = usage.output_tokens
+            self.conversations[conversation_id] = conv
+            self:debug()
+        end
+    end
+end
+
+function TokenObserver:debug()
+    local output = {}
+    output[#output + 1] = '\nToken Statistics'
+    output[#output + 1] = ('-'):rep(20)
+    for id, conv in pairs(self.conversations) do
+        output[#output + 1] = string.format('ID: %s', id)
+        local prompt_tokens = 0
+        local completion_tokens = 0
+        for _, tokens in ipairs(conv.prompt_tokens) do
+            prompt_tokens = prompt_tokens + tokens
+        end
+        for _, tokens in ipairs(conv.completion_tokens) do
+            completion_tokens = completion_tokens + tokens
+        end
+        output[#output + 1] = string.format('  Prompt Tokens: %d', prompt_tokens)
+        output[#output + 1] = string.format('  Completion Tokens: %d', completion_tokens)
+    end
+    Log.debug(table.concat(output, '\n'))
+end
+
 return {
     Status = Status,
     ProgressIndicatorObserver = ProgressIndicatorObserver,
     TimingObserver = TimingObserver,
+    TokenObserver = TokenObserver
 }
