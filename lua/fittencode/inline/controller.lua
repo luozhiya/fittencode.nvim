@@ -278,6 +278,10 @@ function Controller:get_current_session()
     return self.sessions[self.selected_session_id]
 end
 
+function Controller:get_current_session_id()
+    return self.selected_session_id
+end
+
 function Controller:is_enabled(buf)
     return Config.inline_completion.enable and F.is_filebuf(buf) == true and not self:is_ft_disabled(buf)
 end

@@ -262,6 +262,11 @@ function Session:send_completions()
                     message = 'Session is terminated',
                 })
             end
+            if F.version(self.buf) ~= self.version then
+                return Promise.reject({
+                    message = 'Generated completion is outdated',
+                })
+            end
             Fim.update_version(self.filename, self.version)
             if completion.status == 'no_completion' then
                 Log.debug('No more suggestions')
@@ -365,10 +370,11 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
         local parsed_response = Fim.parse(response, {
             buf = self.buf,
             position = zerepos,
+            version = self.version,
         })
         if parsed_response.status == 'error' then
             return Promise.reject({
-                message = parsed_response.error or 'Parsed completion response error',
+                message = parsed_response.message or 'Parsed completion response error',
             })
         end
         return parsed_response

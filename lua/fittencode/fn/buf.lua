@@ -75,6 +75,7 @@ function M.line_at(buf, row)
     assert(buf)
     local line_count = M.line_count(buf)
     if row < 0 or row >= line_count then
+        Log.error('Invalid row = {}, line_count = {}', row, line_count)
         return
     end
     local text

@@ -1,4 +1,5 @@
 local Context = require('fittencode.inline.fim_protocol.vsc.context')
+local F = require('fittencode.fn.buf')
 
 local END_OF_TEXT_TOKEN = '<|endoftext|>'
 local DEFAULT_CONTEXT_THRESHOLD = 100
@@ -11,7 +12,7 @@ local FIM_MIDDLE_TOKEN = '<fim_middle>'
 
 ---@class FittenCode.Inline.FimProtocol.VSC.ParseResult
 ---@field status 'error'|'success'|'no_completion'
----@field error string
+---@field message string
 ---@field request_id string
 ---@field completions table<number, FittenCode.Inline.FimProtocol.VSC.CompletionItem>
 ---@field context string
@@ -47,7 +48,14 @@ local function parse(raw_response, options)
     if raw_response.error then
         return {
             status = 'error',
-            error = raw_response.error
+            message = raw_response.error
+        }
+    end
+
+    if F.version(options.buf) ~= options.version then
+        return {
+            status = 'error',
+            message = 'Buffer version has changed'
         }
     end
 

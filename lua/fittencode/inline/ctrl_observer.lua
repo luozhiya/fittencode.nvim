@@ -45,7 +45,7 @@ function Status:update(controller, event, data)
 end
 
 ---@class FittenCode.Inline.ProgressIndicatorObserver : FittenCode.Observer
----@field start_time number?
+---@field start_time table<string, number>?
 ---@field pi FittenCode.View.ProgressIndicator
 local ProgressIndicatorObserver = setmetatable({}, { __index = Observer })
 ProgressIndicatorObserver.__index = ProgressIndicatorObserver
@@ -61,7 +61,8 @@ function ProgressIndicatorObserver.new(options)
     })
     setmetatable(self, ProgressIndicatorObserver)
     self.pi = options.pi
-    self.start_time = nil
+    self.start_time = {}
+    self.id = nil
     return self
 end
 
@@ -70,7 +71,15 @@ end
 ---@param data any
 function ProgressIndicatorObserver:update(controller, event, data)
     if event == CONTROLLER_EVENT.SESSION_ADDED then
-        self.start_time = vim.uv.hrtime()
+        self.start_time[data.id] = vim.uv.hrtime()
+    end
+    if controller:get_current_session_id() == self.id then
+        if data and data.id ~= self.id then
+            return
+        end
+    else
+        self.id = controller:get_current_session_id()
+        self.pi:stop()
     end
     local busy = {
         COMPLETION_EVENT.START,
@@ -84,14 +93,9 @@ function ProgressIndicatorObserver:update(controller, event, data)
             is_busy = true
         end
     end
-    local current_session = controller:get_current_session()
-    if not current_session then
-        self.pi:stop()
-        return
-    end
     if is_busy then
-        assert(self.start_time)
-        self.pi:start(self.start_time)
+        assert(self.start_time[data.id])
+        self.pi:start(self.start_time[data.id])
     else
         self.pi:stop()
     end
