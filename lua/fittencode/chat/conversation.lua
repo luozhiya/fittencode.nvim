@@ -274,9 +274,10 @@ local function start_normal_chat(self)
     local err_chunks = {}
 
     -- Start streaming
-    res.stream:on('data', function(stdout)
+    res.stream:on('data', function(data)
+        local data_chunk = data.chunk
         self.update_status({ id = self.id, phase = PHASE.STREAMING })
-        local v = vim.split(stdout, '\n', { trimempty = true })
+        local v = vim.split(data_chunk, '\n', { trimempty = true })
         for _, line in ipairs(v) do
             ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
             local _, chunk = pcall(vim.fn.json_decode, line)
@@ -290,11 +291,15 @@ local function start_normal_chat(self)
                         self:handle_partial_completion(completion)
                     end
                 end
-                if usage then
-                    self.messages_usage[#self.messages_usage + 1] = {
-                        index = #self.messages,
-                        usage = usage
-                    }
+                if tracedata or usage then
+                    local message_usage = self.messages_usage[#self.messages] or {}
+                    if tracedata then
+                        message_usage.tracedata = tracedata
+                    end
+                    if usage then
+                        message_usage.usage = usage
+                    end
+                    self.messages_usage[#self.messages] = message_usage
                 end
             else
                 -- 忽略非法的 chunk

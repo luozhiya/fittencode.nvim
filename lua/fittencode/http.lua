@@ -317,6 +317,9 @@ function M.fetch(url, options)
             local messages, content = try_parse_stdout(pre_stdout_buffer)
             if messages then
                 http_messages = messages
+                stream:_emit('headers', {
+                    http_messages = vim.deepcopy(http_messages)
+                })
                 headers_processed = true
                 part_data_chunk = content
             end
@@ -326,7 +329,7 @@ function M.fetch(url, options)
                 part_data_chunk = nil
             end
             stream._buffer[#stream._buffer + 1] = chunk
-            stream:_emit('data', chunk)
+            stream:_emit('data', { chunk = chunk })
         end
     end)
 
@@ -363,12 +366,12 @@ function M.fetch(url, options)
             return true
         end
 
-        Log.debug('CURL exit: code = {}, signal = {}', code, signal)
-        Log.debug('CURL HTTP messages: {}', http_messages)
+        -- Log.debug('CURL exit: code = {}, signal = {}', code, signal)
+        -- Log.debug('CURL HTTP messages: {}', http_messages)
 
         if code == 0 then
             local data_content = table.concat(stream._buffer)
-            Log.debug('CURL response data_content: {}', data_content)
+            -- Log.debug('CURL response data_content: {}', data_content)
 
             ---@class FittenCode.HTTP.Request.Stream.EndEvent
             local response = {
