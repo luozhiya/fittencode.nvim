@@ -27,6 +27,7 @@ function Conversation:_initialize(options)
     self.init_variables = options.init_variables
     self.template_id = options.template_id
     self.messages = {}
+    self.messages_tag = {}
     self.messages_usage = {}
     self.update_view = Fn.schedule_call_wrap_fn(options.update_view)
     self.update_status = Fn.schedule_call_wrap_fn(options.update_status)
@@ -179,10 +180,10 @@ end
 ---@param bot_action string?
 function Conversation:add_user_message(content, bot_action)
     Log.debug('Add user message: {}', content)
-    self.messages[#self.messages + 1] = {
+    self:__add_message({
         author = 'user',
         content = content,
-    }
+    })
     self.state = {
         type = VIEW_TYPE.WAITING_FOR_BOT_ANSWER,
         bot_action = bot_action,
@@ -292,14 +293,18 @@ local function start_normal_chat(self)
                     end
                 end
                 if tracedata or usage then
-                    local message_usage = self.messages_usage[#self.messages] or {}
+                    local tag = self.messages_tag[#self.messages]
+                    local message_usage = self.messages_usage[tag] or {}
+                    if not message_usage.tag then
+                        message_usage.tag = tag
+                    end
                     if tracedata then
                         message_usage.tracedata = tracedata
                     end
                     if usage then
                         message_usage.usage = usage
                     end
-                    self.messages_usage[#self.messages] = message_usage
+                    self.messages_usage[tag] = message_usage
                 end
             else
                 -- 忽略非法的 chunk
@@ -354,6 +359,11 @@ function Conversation:handle_completion(completion, response, env)
     end
 end
 
+function Conversation:__add_message(message)
+    self.messages[#self.messages + 1] = message
+    self.messages_tag[#self.messages] = Fn.generate_short_id()
+end
+
 -- 当 Fitten 回复时，更新状态
 -- * 或者发生错误时，通过 bot_message 输出错误信息
 ---@param msg { content: string, response_placeholder?: string }
@@ -362,11 +372,11 @@ function Conversation:add_bot_message(msg)
         self.abort_before_answer = false
         return
     end
-    self.messages[#self.messages + 1] = {
+    self:__add_message({
         author = 'bot',
         content = msg.content,
         reference = self.reference,
-    }
+    })
     self.state = {
         type = VIEW_TYPE.USER_CAN_REPLY,
         response_placeholder = msg.response_placeholder

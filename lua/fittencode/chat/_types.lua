@@ -103,6 +103,7 @@
 ---@field request_handle FittenCode.HTTP.Response?
 ---@field update_view function?
 ---@field update_status function?
+---@field resolve_variables function?
 
 ---@class FittenCode.Chat.Conversation.State
 ---@field type 'user_can_reply' | 'waiting_for_bot_answer' | 'bot_answer_streaming'
