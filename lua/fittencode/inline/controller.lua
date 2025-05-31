@@ -239,11 +239,13 @@ function Controller:trigger_inline_suggestion(options)
     self.selected_session_id = assert(Fn.uuid_v1())
     local session = Session.new({
         buf = buf,
+        filename = F.filename(buf),
         position = position,
         id = self.selected_session_id,
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
         on_completion_event = function(data) self:__emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
         on_session_event = function(data) self:on_session_event(data) end,
+        version = F.version(buf)
     })
     self.sessions[session.id] = session
 

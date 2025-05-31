@@ -48,6 +48,8 @@ function Session:_initialize(options)
     self.id = options.id
     self.requests = {}
     self.keymaps = {}
+    self.filename = options.filename
+    self.version = options.version
     self.trigger_inline_suggestion = Fn.schedule_call_wrap_fn(options.trigger_inline_suggestion)
     self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey')
     self.on_completion_event = function()
@@ -210,7 +212,8 @@ function Session:generate_prompt()
     self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
     local zerepos = self.position:translate(0, -1)
     return Fim.generate(self.buf, zerepos, {
-        filename = F.filename(self.buf)
+        filename = F.filename(self.buf),
+        version = self.version,
     })
 end
 
@@ -259,6 +262,7 @@ function Session:send_completions()
                     message = 'Session is terminated',
                 })
             end
+            Fim.update_version(self.filename, self.version)
             if completion.status == 'no_completion' then
                 Log.debug('No more suggestions')
                 self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)

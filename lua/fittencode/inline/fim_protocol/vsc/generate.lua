@@ -16,7 +16,8 @@ local M = {
     last = {
         filename = '',
         text = '',
-        ciphertext = ''
+        ciphertext = '',
+        version = -2,
     }
 }
 
@@ -36,12 +37,19 @@ end
 FittenCode VSCode 采用 UTF-16 的编码计算
 
 ]]
-local function compute_text_diff_metadata(current_text, current_cipher, filename)
-    if filename ~= M.last.filename then
+-- local function compute_text_diff_metadata(current_text, current_cipher, filename)
+local function compute_text_diff_metadata(options)
+    local current_text = options.text
+    local current_cipher = options.ciphertext
+    local filename = options.filename
+    local version = options.version
+
+    if filename ~= M.last.filename or (version ~= M.last.version + 1) then
         M.last = {
             filename = filename,
             text = current_text,
-            ciphertext = current_cipher
+            ciphertext = current_cipher,
+            version = -2,
         }
         return {
             pmd5 = '',
@@ -112,7 +120,12 @@ local function build_metadata(options)
         pc_prompt = '',
         pc_prompt_type = '0'
     }
-    local diff_meta = compute_text_diff_metadata(options.text, options.ciphertext, options.filename)
+    local diff_meta = compute_text_diff_metadata({
+        text = options.text,
+        ciphertext = options.ciphertext,
+        filename = options.filename,
+        version = options.version
+    })
     return vim.tbl_deep_extend('force', base_meta, diff_meta)
 end
 
@@ -158,6 +171,7 @@ local function build_base_prompt(buf, position, options)
         prefix = prefix,
         suffix = suffix,
         filename = options.filename,
+        version = options.version
     })
     return {
         inputs = '',
@@ -169,7 +183,8 @@ end
 ---@param position FittenCode.Position
 function M.generate(buf, position, options)
     local prompt = build_base_prompt(buf, position, {
-        filename = options.filename
+        filename = options.filename,
+        version = options.version
     })
     if not prompt then
         return Promise.reject()
@@ -177,4 +192,8 @@ function M.generate(buf, position, options)
     return Promise.resolve(prompt)
 end
 
-return M.generate
+function M.update_version(filename, version)
+    M.last.version = version
+end
+
+return M
