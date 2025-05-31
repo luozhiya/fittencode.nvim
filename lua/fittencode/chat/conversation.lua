@@ -315,7 +315,7 @@ local function start_normal_chat(self)
     end)
 
     res:async():forward(function(response)
-        self:handle_completion(completion, response)
+        self:handle_completion(completion)
         self.update_status({ id = self.id, phase = PHASE.COMPLETED })
     end, function(err)
         err.err_chunks = err_chunks
@@ -339,22 +339,11 @@ function Conversation:execute_chat()
 end
 
 ---@param completion table
----@param env table?
-function Conversation:handle_completion(completion, response, env)
+function Conversation:handle_completion(completion)
+    assert(completion)
     completion = completion or {}
-    local handler = (env and env.completion_handler) or { type = 'message' }
-    local type = handler.type
     local content = table.concat(completion, '')
-
-    if type == 'update-temporary-editor' then
-        Log.error('Not implemented for update-temporary-editor')
-    elseif type == 'active-editor-diff' then
-        Log.error('Not implemented for active-editor-diff')
-    elseif type == 'message' then
-        self:add_bot_message({ content = content })
-    else
-        Log.error('Unsupported property: ' .. type)
-    end
+    self:add_bot_message({ content = content })
 end
 
 function Conversation:__add_message(message)
