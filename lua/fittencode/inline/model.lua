@@ -38,7 +38,7 @@ function Model:_initialize(options)
     self.response = options.response or {}
     self.selected_completion_index = nil
 
-    local current_line = assert(F.get_text(self.buf, Range.new({
+    local line_remaining = assert(F.get_text(self.buf, Range.new({
         start = self.position,
         end_ = Position.new({
             row = self.position.row,
@@ -52,7 +52,7 @@ function Model:_initialize(options)
         computed[#computed + 1] = {
             generated_text = completion.generated_text,
             row_delta = completion.line_delta,
-            col_delta = Unicode.utf_to_byteindex(current_line, 'utf-16', completion.character_delta),
+            col_delta = Unicode.utf_to_byteindex(line_remaining, 'utf-16', completion.character_delta),
         }
     end
     self.computed_completions = computed
@@ -95,7 +95,6 @@ end
   ex_msg: "1+20)*3",
 }
 ]]
--- col_delta 代表当前 cursor 往后 col_delta 个字符需要替换为 generated_text
 -- TODO
 -- * 暂不支持 row_delta
 -- * 只支持 generated_text 比原来的文本长的情况
