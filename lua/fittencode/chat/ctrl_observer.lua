@@ -128,32 +128,46 @@ function TimingObserver:start_phase(conversation_id, phase_name, new)
         conv.phases[#conv.phases + 1] = {}
     end
 
-    local phases = conv.phases[#conv.phases]
-    if not phases[phase_name] then
-        phases[phase_name] = {}
+    local phase_group = conv.phases[#conv.phases]
+    if not phase_group[phase_name] then
+        phase_group[phase_name] = {}
     end
-    phases[phase_name].phase_name = phase_name
-    phases[phase_name].start_time = vim.uv.hrtime()
+    phase_group[phase_name].phase_name = phase_name
+    phase_group[phase_name].start_time = vim.uv.hrtime()
 end
 
 function TimingObserver:has_phase(conversation_id, phase_name)
     local conv = self.conversations[conversation_id]
     assert(conv)
-    local phases = conv.phases[#conv.phases]
-    return phases and phases[phase_name]
+    local phase_group = conv.phases[#conv.phases]
+    return phase_group and phase_group[phase_name]
 end
 
 function TimingObserver:end_phase(conversation_id, phase_name)
     local conv = self.conversations[conversation_id]
     assert(conv)
 
-    local phases = conv.phases[#conv.phases]
-    assert(phases)
-    assert(phases[phase_name])
-    assert(phases[phase_name].start_time)
+    local phase_group = conv.phases[#conv.phases]
+    if not phase_group or not phase_group[phase_name] or not phase_group[phase_name].start_time then
+        return
+    end
 
-    phases[phase_name].end_time = vim.uv.hrtime()
-    phases[phase_name].duration = (phases[phase_name].end_time - phases[phase_name].start_time) / 1e6
+    phase_group[phase_name].end_time = vim.uv.hrtime()
+    phase_group[phase_name].duration = (phase_group[phase_name].end_time - phase_group[phase_name].start_time) / 1e6
+end
+
+function TimingObserver:end_phase_all_force(conversation_id)
+    local conv = self.conversations[conversation_id]
+    assert(conv)
+
+    for _, phase_group in ipairs(conv.phases) do
+        for _, phase in pairs(phase_group) do
+            if phase.start_time and not phase.end_time then
+                phase.end_time = vim.uv.hrtime()
+                phase.duration = (phase.end_time - phase.start_time) / 1e6
+            end
+        end
+    end
 end
 
 function TimingObserver:update(controller, event, data)
@@ -183,7 +197,7 @@ function TimingObserver:update(controller, event, data)
                 self:start_phase(conversation_id, phase)
             end
         elseif phase == CONVERSATION_PHASE.COMPLETED or phase == CONVERSATION_PHASE.ERROR then
-            self:end_phase(conversation_id, CONVERSATION_PHASE.STREAMING)
+            self:end_phase_all_force(conversation_id)
             self:debug()
         end
     end
