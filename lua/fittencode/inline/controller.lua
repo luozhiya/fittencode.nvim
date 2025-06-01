@@ -55,6 +55,7 @@ function Controller:__initialize(options)
             pi = self.pi
         })
         self:add_observer(self.progress_observer)
+        self.debounce_trigger_inline_suggestion = Fn.debounce(function(...) self:trigger_inline_suggestion(...) end, 60)
     end
 
     do
@@ -229,6 +230,7 @@ end
 -- * reject 没有补全或者出错了
 ---@return FittenCode.Promise
 function Controller:trigger_inline_suggestion(options)
+    Log.debug('trigger_inline_suggestion')
     options = options or {}
     local buf, position = self:_preflight_check(options)
     if not buf or not position then
@@ -329,7 +331,7 @@ function Controller:trigger_inline_suggestion_auto(options)
     if not Config.inline_completion.auto_triggering_completion then
         return
     end
-    self:trigger_inline_suggestion(options)
+    self.debounce_trigger_inline_suggestion(options)
 end
 
 -- 这个比 VSCode 的情况更复杂，suffixes 支持多个（非当前 buf filetype 也可以）

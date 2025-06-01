@@ -43,8 +43,11 @@ function M.debounce(func, delay, on_return)
     local timer = nil
     if not delay or tonumber(delay) <= 0 then
         return function(...)
-            local v = func(...)
-            M.schedule_call(on_return, v)
+            local args = { ... }
+            vim.schedule(function()
+                local v = func(unpack(args))
+                M.schedule_call(on_return, v)
+            end)
         end
     end
     return function(...)
@@ -58,8 +61,10 @@ function M.debounce(func, delay, on_return)
         end
         timer:start(delay, 0, function()
             timer:close()
-            local v = func(unpack(args))
-            M.schedule_call(on_return, v)
+            vim.schedule(function()
+                local v = func(unpack(args))
+                M.schedule_call(on_return, v)
+            end)
         end)
     end
 end
