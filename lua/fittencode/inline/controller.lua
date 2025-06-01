@@ -233,7 +233,9 @@ function Controller:trigger_inline_suggestion(options)
     options = options or {}
     local buf, position = self:_preflight_check(options)
     if not buf or not position then
-        return Promise.reject()
+        return Promise.reject({
+            message = 'Preflight check failed'
+        })
     end
     self:terminate_sessions()
 
@@ -259,7 +261,7 @@ function Controller:on_session_event(data)
         self:__emit(CONTROLLER_EVENT.SESSION_ADDED, { id = data.id })
     elseif data.session_event == SESSION_EVENT.TERMINATED then
         self:__emit(CONTROLLER_EVENT.SESSION_DELETED, { id = data.id })
-        -- self.sessions[data.id] = nil
+        self.sessions[data.id] = nil
         if self.selected_session_id == data.id then
             self.selected_session_id = nil
             self:__emit(CONTROLLER_EVENT.INLINE_IDLE, { id = data.id })

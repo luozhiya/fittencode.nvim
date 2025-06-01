@@ -271,7 +271,7 @@ function Session:send_completions()
             if completion.status == 'no_completion' then
                 Log.debug('No more suggestions')
                 self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
-                return Promise.resolve()
+                return Promise.resolve(nil)
             end
             Log.debug('Got completion: {}', completion)
             self:set_model(completion.data)
