@@ -7,10 +7,13 @@ local Config = require('fittencode.config')
 local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
-local Context = require('fittencode.inline.fim_protocol.vsc.context')
 
 local MAX_CHARS = 220000 -- ~200KB 220000 22
 local HALF_MAX = MAX_CHARS / 2
+
+local END_OF_TEXT_TOKEN = '<|endoftext|>'
+local DEFAULT_CONTEXT_THRESHOLD = 100
+local FIM_MIDDLE_TOKEN = '<fim_middle>'
 
 local M = {
     last = {
@@ -20,6 +23,29 @@ local M = {
         version = -2,
     }
 }
+
+local function retrieve_context_fragments(buf, position, threshold)
+    local current_line = assert(F.line_at(buf, position.row))
+    local round_curr_col = F.round_col_end(current_line.text, position.col)
+    local next_position = Position.new({ row = position.row, col = round_curr_col + 1 })
+    local current_chars_off = F.offset_at(buf, position)
+    local start_chars_off = math.max(0, math.floor(current_chars_off - threshold + 1))
+    local start_pos = F.position_at(buf, start_chars_off) or Position.new({ row = 0, col = 0 })
+    local end_chars_off = math.min(F.wordcount(buf).chars, math.floor(current_chars_off + threshold))
+    local end_pos = F.position_at(buf, end_chars_off) or Position.new({ row = -1, col = -1 })
+    local prefix = F.get_text(buf, Range.new({
+        start = start_pos,
+        end_ = position
+    }))
+    local suffix = F.get_text(buf, Range.new({
+        start = next_position,
+        end_ = end_pos
+    }))
+    return {
+        prefix = prefix,
+        suffix = suffix
+    }
+end
 
 -- `var CM = /<((fim_((prefix)|(suffix)|(middle)))|(\|[a-z]*\|))>/g`
 -- Lua patterns do not support alternation | or group matching,
@@ -152,7 +178,7 @@ local function build_base_prompt(buf, position, options)
             end_ = Position.new({ row = -1, col = -1 })
         }))
     else
-        local fragments = Context.retrieve_context_fragments(buf, position, HALF_MAX)
+        local fragments = retrieve_context_fragments(buf, position, HALF_MAX)
         prefix = fragments.prefix
         suffix = fragments.suffix
     end
@@ -201,6 +227,79 @@ function M.update_version(filename, version)
     if M.last.filename == filename then
         M.last.version = version
     end
+end
+
+---@class FittenCode.Inline.FimProtocol.VSC.CompletionItem
+---@field generated_text string
+---@field character_delta number
+---@field line_delta number
+
+---@class FittenCode.Inline.FimProtocol.VSC.ParseResult
+---@field status 'error'|'success'|'no_completion'
+---@field message string
+---@field request_id string
+---@field completions table<number, FittenCode.Inline.FimProtocol.VSC.CompletionItem>
+---@field context string
+
+local function build_completion_item(raw_response)
+    local clean_text = vim.fn.substitute(
+        raw_response.generated_text or '',
+        END_OF_TEXT_TOKEN,
+        '',
+        'g'
+    )
+    clean_text = clean_text:gsub('\r\n', '\n')
+    clean_text = clean_text:gsub('\r', '\n')
+    local generated_text = clean_text .. (raw_response.ex_msg or '')
+    if generated_text == '' then
+        return
+    end
+    return { {
+        generated_text = generated_text,
+        character_delta = raw_response.delta_char or 0,
+        line_delta = raw_response.delta_line or 0
+    } }
+end
+
+---@return FittenCode.Inline.FimProtocol.VSC.ParseResult
+function M.parse(raw_response, options)
+    if not raw_response then
+        return {
+            status = 'error',
+        }
+    end
+
+    if raw_response.error then
+        return {
+            status = 'error',
+            message = raw_response.error
+        }
+    end
+
+    if options.version ~= M.last.version + 1 then
+        return {
+            status = 'error',
+            message = 'Buffer version has changed'
+        }
+    end
+
+    local completions = build_completion_item(raw_response)
+    if not completions then
+        return {
+            status = 'no_completion',
+        }
+    end
+
+    local fragments = retrieve_context_fragments(options.buf, options.position, DEFAULT_CONTEXT_THRESHOLD)
+
+    return {
+        status = 'success',
+        data = {
+            request_id = raw_response.server_request_id or '',
+            completions = completions,
+            context = table.concat({ fragments.prefix, FIM_MIDDLE_TOKEN, fragments.suffix })
+        }
+    }
 end
 
 return M
