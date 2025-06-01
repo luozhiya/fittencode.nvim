@@ -140,7 +140,7 @@ end
 function View:update(state)
     local win = vim.api.nvim_get_current_win()
 
-    -- Log.debug('update view, state = {}', state)
+    Log.debug('update view, state = {}', state)
 
     local function __set_text(lines)
         local old_commit = vim.deepcopy(self.commit)
@@ -154,7 +154,9 @@ function View:update(state)
             for j, lstate in ipairs(line_state) do
                 local last_line = (i == #lines and j == #line_state)
                 pre_packed[#pre_packed + 1] = lstate.text
-                if (line_state[j + 1] and line_state[j + 1].type == line_state[j].type) or (lines[i + 1] and lines[i + 1][1].type == line_state[j].type) then
+                local is_same_type_inline = function() return line_state[j + 1] and line_state[j + 1].type == line_state[j].type end
+                local is_same_type_line = function() return lines[i + 1] and lines[i + 1][1].type == line_state[j].type end
+                if (j ~= #line_state and is_same_type_inline()) or (i ~= #lines and is_same_type_line()) then
                     goto continue
                 end
                 local packed = {}
