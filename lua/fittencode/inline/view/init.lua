@@ -140,7 +140,7 @@ end
 function View:update(state)
     local win = vim.api.nvim_get_current_win()
 
-    Log.debug('update view, state = {}', state)
+    -- Log.debug('update view, state = {}', state)
 
     local function __set_text(lines)
         local old_commit = vim.deepcopy(self.commit)
