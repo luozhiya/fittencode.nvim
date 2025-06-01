@@ -139,6 +139,25 @@ local function ignoreevent_wrap(fx)
     return ret
 end
 
+local function move_to_center_vertical(virt_height)
+    if virt_height == 0 then
+        return
+    end
+    local position = assert(F.position(vim.api.nvim_get_current_win()))
+    local row = position.row
+    local relative_row = row - vim.fn.line('w0')
+    local height = vim.api.nvim_win_get_height(0)
+    local center = math.ceil(height / 2)
+    height = height - vim.o.scrolloff
+    if relative_row + virt_height > height and math.abs(relative_row + 1 - center) > center / 2 and row > center then
+        vim.cmd([[norm! zz]])
+        -- [0, lnum, col, off, curswant]
+        local curswant = vim.fn.getcurpos()[5]
+        -- 1-based row
+        vim.fn.cursor({ row + 1, curswant })
+    end
+end
+
 function View:update(state)
     local win = vim.api.nvim_get_current_win()
 
@@ -228,6 +247,8 @@ function View:update(state)
         self:__view_wrap(win, __update)
         -- 4. update position
         self:update_win_cursor(win, self.commit)
+
+        move_to_center_vertical(#state.lines)
     end)
 end
 

@@ -208,11 +208,6 @@ end
 ---@param buf number
 ---@param position FittenCode.Position
 function M.generate(buf, position, options)
-    if F.version(buf) ~= options.version then
-        return Promise.reject({
-            message = 'Version mismatch',
-        })
-    end
     local prompt = build_base_prompt(buf, position, {
         filename = options.filename,
         version = options.version
@@ -276,7 +271,7 @@ function M.parse(raw_response, options)
         }
     end
 
-    if options.version ~= M.last.version + 1 and M.last.version ~= -2 then
+    if options.version ~= F.version(options.buf) then
         return {
             status = 'error',
             message = 'Buffer version has changed'

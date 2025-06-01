@@ -100,6 +100,9 @@ function Session:is_interactive()
 end
 
 function Session:update_view()
+    if self:is_terminated() then
+        return
+    end
     self.view:update(ViewState.get_state_from_model(self.model:snapshot()))
 end
 
@@ -261,11 +264,6 @@ function Session:send_completions()
             if self:is_terminated() then
                 return Promise.reject({
                     message = 'Session is terminated',
-                })
-            end
-            if F.version(self.buf) ~= self.version then
-                return Promise.reject({
-                    message = 'Generated completion is outdated',
                 })
             end
             Fim.update_version(self.filename, self.version)
