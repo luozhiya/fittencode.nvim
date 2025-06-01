@@ -20,7 +20,6 @@ local M = {
         filename = '',
         text = '',
         ciphertext = '',
-        version = -2,
     }
 }
 
@@ -68,14 +67,12 @@ local function compute_text_diff_metadata(options)
     local current_text = options.text
     local current_cipher = options.ciphertext
     local filename = options.filename
-    local version = options.version
 
-    if filename ~= M.last.filename or (version ~= M.last.version + 1) then
+    if filename ~= M.last.filename then
         M.last = {
             filename = filename,
             text = current_text,
             ciphertext = current_cipher,
-            version = -2,
         }
         return {
             pmd5 = '',
@@ -150,7 +147,6 @@ local function build_metadata(options)
         text = options.text,
         ciphertext = options.ciphertext,
         filename = options.filename,
-        version = options.version
     })
     return vim.tbl_deep_extend('force', base_meta, diff_meta)
 end
@@ -197,7 +193,6 @@ local function build_base_prompt(buf, position, options)
         prefix = prefix,
         suffix = suffix,
         filename = options.filename,
-        version = options.version
     })
     return {
         inputs = '',
@@ -210,18 +205,11 @@ end
 function M.generate(buf, position, options)
     local prompt = build_base_prompt(buf, position, {
         filename = options.filename,
-        version = options.version
     })
     if not prompt then
         return Promise.reject()
     end
     return Promise.resolve(prompt)
-end
-
-function M.update_version(filename, version)
-    if M.last.filename == filename then
-        M.last.version = version
-    end
 end
 
 ---@class FittenCode.Inline.FimProtocol.VSC.CompletionItem

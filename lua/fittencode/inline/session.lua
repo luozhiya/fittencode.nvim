@@ -233,7 +233,6 @@ function Session:generate_prompt()
     return self:__check_version():forward(function()
         return Fim.generate(self.buf, zerepos, {
             filename = F.filename(self.buf),
-            version = self.version,
         })
     end)
 end
@@ -286,8 +285,6 @@ function Session:send_completions()
             local check = self:__check_version()
             if check:is_rejected() then
                 return check
-            else
-                Fim.update_version(self.filename, self.version)
             end
             if completion.status == 'no_completion' then
                 Log.debug('No more suggestions')
