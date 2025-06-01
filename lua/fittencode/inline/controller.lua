@@ -195,8 +195,8 @@ end
 local function is_within_the_line(position)
     local line = vim.api.nvim_get_current_line()
     local col = position.col
-    -- [0, #line-1]
-    if col == 0 or col == #line - 1 then
+    -- [0, #line]
+    if col == 0 or col == #line then
         return false
     end
     return true

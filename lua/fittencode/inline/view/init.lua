@@ -177,7 +177,14 @@ function View:update(state)
                 pre_packed[#pre_packed + 1] = lstate.text
                 local is_same_type_inline = function() return line_state[j + 1] and line_state[j + 1].type == line_state[j].type end
                 local is_same_type_line = function() return lines[i + 1] and lines[i + 1][1].type == line_state[j].type end
-                if (j ~= #line_state and is_same_type_inline()) or (i ~= #lines and is_same_type_line()) then
+                local _, v = pcall(function()
+                    return (j ~= #line_state and is_same_type_inline()) or (i ~= #lines and is_same_type_line());
+                end)
+                if not _ then
+                    Log.debug('eval error, lines = {}, i = {}, line_state = {}, j = {}, lstate = {}', lines, i, line_state, j, lstate)
+                    assert(false)
+                end
+                if _ and v then
                     goto continue
                 end
                 local packed = {}

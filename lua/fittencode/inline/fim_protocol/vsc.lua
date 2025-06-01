@@ -271,13 +271,6 @@ function M.parse(raw_response, options)
         }
     end
 
-    if options.version ~= F.version(options.buf) then
-        return {
-            status = 'error',
-            message = 'Buffer version has changed'
-        }
-    end
-
     local completions = build_completion_item(raw_response)
     if not completions then
         return {

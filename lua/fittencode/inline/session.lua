@@ -212,13 +212,30 @@ function Session:__add_request(handle)
     self.requests[#self.requests + 1] = handle
 end
 
+function Session:__check_version()
+    local document_version = F.version(self.buf)
+    if document_version == self.version then
+        return Promise.resolve(true)
+    else
+        return Promise.reject({
+            message = 'Session version is outdated',
+            metadata = {
+                session_version = self.version,
+                document_version = document_version,
+            }
+        })
+    end
+end
+
 function Session:generate_prompt()
     self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
     local zerepos = self.position:translate(0, -1)
-    return Fim.generate(self.buf, zerepos, {
-        filename = F.filename(self.buf),
-        version = self.version,
-    })
+    return self:__check_version():forward(function()
+        return Fim.generate(self.buf, zerepos, {
+            filename = F.filename(self.buf),
+            version = self.version,
+        })
+    end)
 end
 
 function Session:async_compress_prompt(prompt)
@@ -266,7 +283,10 @@ function Session:send_completions()
                     message = 'Session is terminated',
                 })
             end
-            Fim.update_version(self.filename, self.version)
+            local check = self:__check_version()
+            if check:is_rejected() then
+                return check
+            end
             if completion.status == 'no_completion' then
                 Log.debug('No more suggestions')
                 self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
@@ -366,10 +386,13 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
             })
         end
         local zerepos = self.position:translate(0, -1)
+        local check = self:__check_version()
+        if check:is_rejected() then
+            return check
+        end
         local parsed_response = Fim.parse(response, {
             buf = self.buf,
             position = zerepos,
-            version = self.version,
         })
         if parsed_response.status == 'error' then
             return Promise.reject({
