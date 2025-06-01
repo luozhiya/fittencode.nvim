@@ -72,6 +72,7 @@ function Controller:__initialize(options)
             group = vim.api.nvim_create_augroup('FittenCode.Inline.TriggerInlineSuggestion', { clear = true }),
             pattern = '*',
             callback = function(args)
+                Log.debug('trigger_inline_suggestion_auto autocmd = {}', args.event)
                 self:trigger_inline_suggestion_auto({ event = args })
             end,
         })
@@ -79,6 +80,7 @@ function Controller:__initialize(options)
             group = vim.api.nvim_create_augroup('FittenCode.Inline.EditCompletionCancel', { clear = true }),
             pattern = '*',
             callback = function(args)
+                Log.debug('edit_completion_cancel autocmd = {}', args.event)
                 self:edit_completion_cancel({ event = args })
             end,
         })
@@ -182,6 +184,7 @@ function Controller:is_ft_disabled(buf)
 end
 
 function Controller:terminate_sessions()
+    Log.debug('terminate_sessions, count sessions = {}', #self.sessions)
     for k, v in pairs(self.sessions) do
         v:terminate()
     end

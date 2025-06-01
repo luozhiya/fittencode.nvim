@@ -276,7 +276,7 @@ function M.parse(raw_response, options)
         }
     end
 
-    if options.version ~= M.last.version + 1 then
+    if options.version ~= M.last.version + 1 and M.last.version ~= -2 then
         return {
             status = 'error',
             message = 'Buffer version has changed'

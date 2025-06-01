@@ -1,4 +1,5 @@
 local F = require('fittencode.fn.buf')
+local Fn = require('fittencode.fn.core')
 local Log = require('fittencode.log')
 local Position = require('fittencode.fn.position')
 
@@ -123,12 +124,13 @@ end
 ---@return any
 local function ignoreevent_wrap(fx)
     local eventignore = vim.o.eventignore
+    if eventignore == 'all' then
+        return Fn.check_call(fx)
+    end
+
     vim.o.eventignore = 'all'
 
-    local ret
-    if fx then
-        ret = fx()
-    end
+    local ret = Fn.check_call(fx)
 
     vim.defer_fn(function()
         vim.o.eventignore = eventignore
