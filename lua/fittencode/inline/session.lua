@@ -32,6 +32,7 @@ local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
 ---@field keymaps table<number, any>
 ---@field view FittenCode.Inline.View
 ---@field model FittenCode.Inline.Model
+---@field version string
 local Session = {}
 Session.__index = Session
 
@@ -287,7 +288,7 @@ function Session:send_completions()
             if check:is_rejected() then
                 return check
             else
-                Fim.update_version(self.filename, self.version)
+                Fim.update_last_version(self.filename, self.version)
             end
             if completion.status == 'no_completion' then
                 Log.debug('No more suggestions')

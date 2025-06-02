@@ -8,7 +8,7 @@ local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 
-local MAX_CHARS = 220000 -- ~200KB 220000 22
+local MAX_CHARS = 220000 -- ~200KB
 local HALF_MAX = MAX_CHARS / 2
 
 local END_OF_TEXT_TOKEN = '<|endoftext|>'
@@ -63,13 +63,7 @@ end
 FittenCode VSCode 采用 UTF-16 的编码计算
 
 ]]
--- local function compute_text_diff_metadata(current_text, current_cipher, filename)
-local function compute_text_diff_metadata(options)
-    local current_text = options.text
-    local current_cipher = options.ciphertext
-    local filename = options.filename
-    local version = options.version
-
+local function compute_diff_metadata(current_text, current_cipher, filename, version)
     if filename ~= M.last.filename or (version ~= M.last.version + 1) then
         M.last = {
             filename = filename,
@@ -130,31 +124,6 @@ local function compute_text_diff_metadata(options)
     return diff_meta
 end
 
-local function build_metadata(options)
-    local base_meta = {
-        cpos = Unicode.byte_to_utfindex(options.prefix, 'utf-16'),
-        bcpos = #options.prefix,
-        plen = 0,
-        slen = 0,
-        bplen = 0,
-        bslen = 0,
-        pmd5 = '',
-        nmd5 = options.ciphertext,
-        diff = options.text,
-        filename = options.filename,
-        pc_available = true,
-        pc_prompt = '',
-        pc_prompt_type = '0'
-    }
-    local diff_meta = compute_text_diff_metadata({
-        text = options.text,
-        ciphertext = options.ciphertext,
-        filename = options.filename,
-        version = options.version
-    })
-    return vim.tbl_deep_extend('force', base_meta, diff_meta)
-end
-
 --[[
 
 -- TODO：存在 FIM Marker 的话会影响 position 的计算？
@@ -191,14 +160,26 @@ local function build_base_prompt(buf, position, options)
     if not ciphertext or ciphertext:is_rejected() then
         return
     end
-    local meta_datas = build_metadata({
-        text = text,
-        ciphertext = ciphertext.value,
-        prefix = prefix,
-        suffix = suffix,
+
+    local base_meta = {
+        cpos = Unicode.byte_to_utfindex(prefix, 'utf-16'),
+        bcpos = #prefix,
+        plen = 0,
+        slen = 0,
+        bplen = 0,
+        bslen = 0,
+        pmd5 = '',
+        nmd5 = ciphertext,
+        diff = text,
         filename = options.filename,
-        version = options.version
-    })
+        pc_available = true,
+        pc_prompt = '',
+        pc_prompt_type = '0'
+    }
+
+    local diff_meta = compute_diff_metadata(text, ciphertext, options.filename, options.version)
+    local meta_datas = vim.tbl_deep_extend('force', base_meta, diff_meta)
+
     return {
         inputs = '',
         meta_datas = meta_datas
@@ -208,19 +189,18 @@ end
 ---@param buf number
 ---@param position FittenCode.Position
 function M.generate(buf, position, options)
-    local prompt = build_base_prompt(buf, position, {
-        filename = options.filename,
-        version = options.version
-    })
+    local prompt = build_base_prompt(buf, position, options)
     if not prompt then
         return Promise.reject()
     end
     return Promise.resolve(prompt)
 end
 
-function M.update_version(filename, version)
+function M.update_last_version(filename, version)
     if M.last.filename == filename then
         M.last.version = version
+    else
+        M.last.version = -2
     end
 end
 
