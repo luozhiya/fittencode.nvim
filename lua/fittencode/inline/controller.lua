@@ -55,7 +55,8 @@ function Controller:__initialize(options)
             pi = self.pi
         })
         self:add_observer(self.progress_observer)
-        self.debounce_trigger_inline_suggestion = Fn.debounce(function(...) self:trigger_inline_suggestion(...) end, 60)
+        -- self.debounce_trigger_inline_suggestion = Fn.debounce(function(...) self:trigger_inline_suggestion(...) end, 60)
+        self.debounce_trigger_inline_suggestion = function(...) self:trigger_inline_suggestion(...) end
     end
 
     do
@@ -242,7 +243,7 @@ function Controller:trigger_inline_suggestion(options)
     end
     self:terminate_sessions()
 
-    self.selected_session_id = assert(Fn.uuid_v1())
+    self.selected_session_id = assert(Fn.generate_short_id(13))
     local session = Session.new({
         buf = buf,
         filename = F.filename(buf),

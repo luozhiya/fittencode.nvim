@@ -19,6 +19,7 @@ local Protocol = require('fittencode.client.protocol')
 local Zip = require('fittencode.fn.gzip')
 local Fim = require('fittencode.inline.fim_protocol.vsc')
 local Definitions = require('fittencode.inline.definitions')
+local Format = require('fittencode.fn.format')
 
 local SESSION_EVENT = Definitions.SESSION_EVENT
 local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
@@ -61,6 +62,11 @@ function Session:_initialize(options)
     end
     self:sync_session_event(SESSION_EVENT.CREATED)
     self:sync_completion_event(COMPLETION_EVENT.START)
+end
+
+local function debug_log(self, msg, ...)
+    local meta = Format.nothrow_format('Session id = {}, version = {} --> ', self.id, self.version)
+    Log.__async_log(3, vim.log.levels.DEBUG, meta .. Format.nothrow_format(msg, ...))
 end
 
 function Session:set_model(parsed_response)
@@ -170,7 +176,7 @@ function Session:abort_and_clear_requests()
 end
 
 function Session:terminate()
-    Log.debug('Session terminated, id: {}, event: {}', self.id, self.session_event)
+    debug_log(self, 'Session terminated, event: {}', self.session_event)
     if self.session_event == SESSION_EVENT.TERMINATED then
         return
     end
@@ -263,15 +269,15 @@ function Session:send_completions()
     local function __send_completions()
         return Promise.all({
             self:generate_prompt():forward(function(prompt)
-                Log.debug('Generated prompt: {}', prompt)
+                debug_log(self, 'Generated prompt: {}', prompt)
                 return self:async_compress_prompt(prompt)
             end),
             self:get_completion_version()
         }):forward(function(_)
             local compressed_prompt_binary = _[1]
             local completion_version = _[2]
-            Log.debug('Got completion version: {}', completion_version)
-            Log.debug('Compressed prompt: {}', compressed_prompt_binary)
+            debug_log(self, 'Got completion version: {}', completion_version)
+            debug_log(self, 'Compressed prompt: {}', compressed_prompt_binary)
             if not compressed_prompt_binary or not completion_version then
                 return Promise.reject({
                     message = 'Failed to generate prompt or get completion version',
@@ -291,11 +297,11 @@ function Session:send_completions()
                 Fim.update_last_version(self.filename, self.version)
             end
             if completion.status == 'no_completion' then
-                Log.debug('No more suggestions')
+                debug_log(self, 'No more suggestions')
                 self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
                 return Promise.resolve(nil)
             end
-            Log.debug('Got completion: {}', completion)
+            debug_log(self, 'Got completion: {}', completion)
             self:set_model(completion.data)
             self:set_interactive()
             self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
@@ -306,7 +312,7 @@ function Session:send_completions()
     end
     return __send_completions():catch(function(_)
         self:sync_completion_event(COMPLETION_EVENT.ERROR)
-        Log.error('Failed to send completions: {}', _)
+        debug_log(self, 'Failed to send completions: {}', _)
         return Promise.reject(_)
     end)
 end

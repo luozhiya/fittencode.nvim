@@ -20,7 +20,7 @@ local M = {
         filename = '',
         text = '',
         ciphertext = '',
-        version = -2,
+        version = 2147483647,
     }
 }
 
@@ -64,12 +64,12 @@ FittenCode VSCode 采用 UTF-16 的编码计算
 
 ]]
 local function compute_diff_metadata(current_text, current_cipher, filename, version)
-    if filename ~= M.last.filename or (version ~= M.last.version + 1) then
+    if filename ~= M.last.filename or version <= M.last.version then
         M.last = {
             filename = filename,
             text = current_text,
             ciphertext = current_cipher,
-            version = -2,
+            version = 2147483647,
         }
         return {
             pmd5 = '',
@@ -160,6 +160,7 @@ local function build_base_prompt(buf, position, options)
     if not ciphertext or ciphertext:is_rejected() then
         return
     end
+    ciphertext = ciphertext.value
 
     local base_meta = {
         cpos = Unicode.byte_to_utfindex(prefix, 'utf-16'),
@@ -197,10 +198,10 @@ function M.generate(buf, position, options)
 end
 
 function M.update_last_version(filename, version)
-    if M.last.filename == filename then
+    if M.last.filename == filename and version then
         M.last.version = version
     else
-        M.last.version = -2
+        M.last.version = 2147483647
     end
 end
 

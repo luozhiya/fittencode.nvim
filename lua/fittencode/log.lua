@@ -106,12 +106,13 @@ local function write_to_log(content)
     end
 end
 
-local function async_log(level, message)
+function M.__async_log(stack, level, message)
+    stack = stack or 3
     if level < Config.log.level or Config.log.level == LOG_LEVELS.OFF then
         return
     end
 
-    local info = debug.getinfo(3, 'Snl')
+    local info = debug.getinfo(stack, 'Snl')
     local file_name = info.source:sub(2) -- 去掉 '@' 符号
     local prefix = 'lua/fittencode/'
     local start_pos = file_name:find(prefix, 1, true)
@@ -150,13 +151,13 @@ for _, level_name in ipairs(LOG_LEVEL_NAMES) do
     local method_name = level_name:lower()
 
     M[method_name] = function(msg, ...)
-        async_log(level, Format.nothrow_format(msg, ...))
+        M.__async_log(3, level, Format.nothrow_format(msg, ...))
     end
 
     M['notify_' .. method_name] = function(msg, ...)
         local formatted = Format.nothrow_format(msg, ...)
         vim.notify(formatted, level, { title = 'FittenCode' })
-        async_log(level, formatted)
+        M.__async_log(3, level, formatted)
     end
 end
 

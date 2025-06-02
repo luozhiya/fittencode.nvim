@@ -240,8 +240,9 @@ function M.filereadable(path)
     return res == 1
 end
 
-function M.generate_short_id()
-    return M.random(36):sub(2, 10)
+function M.generate_short_id(length)
+    length = length or 8
+    return M.random(36):sub(2, 2 + length)
 end
 
 return M
