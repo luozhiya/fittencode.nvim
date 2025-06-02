@@ -237,12 +237,10 @@ end
 function Session:generate_prompt()
     self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
     local zerepos = self.position:translate(0, -1)
-    return self:__check_version():forward(function()
-        return Fim.generate(self.buf, zerepos, {
-            filename = F.filename(self.buf),
-            version = self.version,
-        })
-    end)
+    return Fim.generate(self.buf, zerepos, {
+        filename = F.filename(self.buf),
+        version = self.version,
+    })
 end
 
 function Session:async_compress_prompt(prompt)
@@ -268,9 +266,10 @@ end
 function Session:send_completions()
     local function __send_completions()
         return Promise.all({
-            self:generate_prompt():forward(function(prompt)
-                debug_log(self, 'Generated prompt: {}', prompt)
-                return self:async_compress_prompt(prompt)
+            self:generate_prompt():forward(function(res)
+                debug_log(self, 'Generated prompt: {}', res)
+                self.cachedata = res.cachedata
+                return self:async_compress_prompt(res.prompt)
             end),
             self:get_completion_version()
         }):forward(function(_)
@@ -294,7 +293,8 @@ function Session:send_completions()
             if check:is_rejected() then
                 return check
             else
-                Fim.update_last_version(self.filename, self.version)
+                Fim.update_last_version(self.filename, self.version, self.cachedata)
+                Log.debug('Update last version: {}', self.version)
             end
             if completion.status == 'no_completion' then
                 debug_log(self, 'No more suggestions')

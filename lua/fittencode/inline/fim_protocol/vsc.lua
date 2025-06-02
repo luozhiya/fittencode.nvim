@@ -63,14 +63,9 @@ end
 FittenCode VSCode 采用 UTF-16 的编码计算
 
 ]]
-local function compute_diff_metadata(current_text, current_cipher, filename, version)
+local function compute_diff_metadata(current_text, filename, version)
     if filename ~= M.last.filename or version <= M.last.version then
-        M.last = {
-            filename = filename,
-            text = current_text,
-            ciphertext = current_cipher,
-            version = 2147483647,
-        }
+        Log.debug('Skip computing diff metadata for unchanged file, last version = {}, current version = {}', M.last.version, version)
         return {
             pmd5 = '',
             diff = current_text
@@ -117,9 +112,6 @@ local function compute_diff_metadata(current_text, current_cipher, filename, ver
         pmd5 = M.last.ciphertext,
         diff = diffu8
     }
-
-    M.last.text = current_text
-    M.last.ciphertext = current_cipher
 
     return diff_meta
 end
@@ -178,31 +170,37 @@ local function build_base_prompt(buf, position, options)
         pc_prompt_type = '0'
     }
 
-    local diff_meta = compute_diff_metadata(text, ciphertext, options.filename, options.version)
+    local diff_meta = compute_diff_metadata(text, options.filename, options.version)
     local meta_datas = vim.tbl_deep_extend('force', base_meta, diff_meta)
 
     return {
-        inputs = '',
-        meta_datas = meta_datas
+        prompt = {
+            inputs = '',
+            meta_datas = meta_datas
+        },
+        cachedata = {
+            text = text,
+            ciphertext = ciphertext,
+        }
     }
 end
 
 ---@param buf number
 ---@param position FittenCode.Position
 function M.generate(buf, position, options)
-    local prompt = build_base_prompt(buf, position, options)
-    if not prompt then
+    local res = build_base_prompt(buf, position, options)
+    if not res then
         return Promise.reject()
     end
-    return Promise.resolve(prompt)
+    return Promise.resolve(res)
 end
 
-function M.update_last_version(filename, version)
-    if M.last.filename == filename and version then
-        M.last.version = version
-    else
-        M.last.version = 2147483647
-    end
+function M.update_last_version(filename, version, cachedata)
+    Log.debug('Update last version, filename = {}, version = {}, cachedata = {}', filename, version, cachedata)
+    M.last.filename = filename
+    M.last.text = cachedata.text
+    M.last.ciphertext = cachedata.ciphertext
+    M.last.version = version
 end
 
 ---@class FittenCode.Inline.FimProtocol.VSC.CompletionItem
