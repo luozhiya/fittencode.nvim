@@ -3,6 +3,9 @@
 Inline Controller
 - 控制 Session 的产生和销毁，期间具体的补全操作由 Session 完成
 - IC 运行在 Insert 模式中，需要注意 cursor 的不同
+- 经过测试，服务器在 diff 判断时，只允许 pmd5 被一个新的请求引用，重复的则会报错 “diff data error”
+- 为了减轻服务器压力，同时只允许一个请求在运行，新的请求必须等待当前请求结束
+- 如果当前请求超时或者其他错误，则不使用 diff 模式生成 Prompt
 
 ]]
 
