@@ -61,16 +61,15 @@ function Session:_initialize(options)
         Fn.schedule_call(options.on_session_event, { id = self.id, session_event = self.session_event, })
     end
     self:sync_session_event(SESSION_EVENT.CREATED)
-    self:sync_completion_event(COMPLETION_EVENT.START)
 end
 
 local function debug_log(self, msg, ...)
-    local meta = Format.nothrow_format('Session id = {}, version = {} --> ', self.id, self.version)
+    local meta = Format.nothrow_format('Session id = {}, version = {}, session_event = {}, completion_event = {} --> ', self.id, self.version, self.session_event, self.completion_event)
     Log.__async_log(3, vim.log.levels.DEBUG, meta .. Format.nothrow_format(msg, ...))
 end
 
 function Session:set_model(parsed_response)
-    if self.session_event == SESSION_EVENT.CREATED then
+    if self.session_event == SESSION_EVENT.REQUESTING then
         self.model = Model.new({
             buf = self.buf,
             position = self.position,
@@ -219,22 +218,11 @@ function Session:__add_request(handle)
     self.requests[#self.requests + 1] = handle
 end
 
-function Session:__check_version()
-    local document_version = F.version(self.buf)
-    if document_version == self.version then
-        return Promise.resolved(true)
-    else
-        return Promise.rejected({
-            message = 'Session version is outdated',
-            metadata = {
-                session_version = self.version,
-                document_version = document_version,
-            }
-        })
-    end
-end
-
 function Session:generate_prompt()
+    local check = self:__preflight_check()
+    if check:is_rejected() then
+        return check
+    end
     self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
     local zerepos = self.position:translate(0, -1)
     return Fim.generate(self.buf, zerepos, {
@@ -259,11 +247,41 @@ function Session:async_compress_prompt(prompt)
     end)
 end
 
+function Session:__preflight_check()
+    if self:is_terminated() then
+        return Promise.rejected({
+            message = 'Session is terminated',
+        })
+    end
+    local function __check_version()
+        local document_version = F.version(self.buf)
+        if document_version == self.version then
+            return Promise.resolved(true)
+        else
+            return Promise.rejected({
+                message = 'Session version is outdated',
+                metadata = {
+                    session_version = self.version,
+                    document_version = document_version,
+                }
+            })
+        end
+    end
+    local check = __check_version()
+    if check:is_rejected() then
+        return check
+    end
+    return Promise.resolved(true)
+end
+
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
 -- * resolve 包含 suggestions_ready
 -- * reject 包含 error / no_more_suggestions
 ---@return FittenCode.Promise
 function Session:send_completions()
+    self:sync_session_event(SESSION_EVENT.REQUESTING)
+    self:sync_completion_event(COMPLETION_EVENT.START)
+
     local function __send_completions()
         return Promise.all({
             self:generate_prompt():forward(function(res)
@@ -284,17 +302,12 @@ function Session:send_completions()
             end
             return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
         end):forward(function(completion)
-            if self:is_terminated() then
-                return Promise.rejected({
-                    message = 'Session is terminated',
-                })
-            end
-            local check = self:__check_version()
+            local check = self:__preflight_check()
             if check:is_rejected() then
                 return check
             else
                 Fim.update_last_version(self.filename, self.version, self.cachedata)
-                Log.debug('Update last version: {}', self.version)
+                debug_log(self, 'Updated FIM last version')
             end
             if completion.status == 'no_completion' then
                 debug_log(self, 'No more suggestions')
@@ -320,6 +333,10 @@ end
 -- 获取补全版本号
 ---@return FittenCode.Promise
 function Session:get_completion_version()
+    local check = self:__preflight_check()
+    if check:is_rejected() then
+        return check
+    end
     self:sync_completion_event(COMPLETION_EVENT.GETTING_COMPLETION_VERSION)
     local request = Client.make_request(Protocol.Methods.get_completion_version)
     if not request then
@@ -364,6 +381,10 @@ function Session:__with_tmpfile(data, callback, ...)
 end
 
 function Session:generate_one_stage_auth(completion_version, compressed_prompt_binary)
+    local check = self:__preflight_check()
+    if check:is_rejected() then
+        return check
+    end
     self:sync_completion_event(COMPLETION_EVENT.GENERATE_ONE_STAGE)
     local vu = {
         ['0'] = '',
@@ -395,10 +416,6 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
             })
         end
         local zerepos = self.position:translate(0, -1)
-        local check = self:__check_version()
-        if check:is_rejected() then
-            return check
-        end
         local parsed_response = Fim.parse(response, {
             buf = self.buf,
             position = zerepos,

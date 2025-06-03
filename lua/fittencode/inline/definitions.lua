@@ -27,6 +27,7 @@ local COMPLETION_EVENT = {
 -- 仅描述 Session 的生命周期（创建、初始化、交互、终止），不涉及补全细节。
 local SESSION_EVENT = {
     CREATED = 'created',         -- 调用 Session.new() 后立即进入，仅完成实例化，未初始化任何资源。
+    REQUESTING = 'requesting',   -- 正在请求补全服务，等待响应。
     MODEL_READY = 'model_ready', -- 完成 Model 初始化
     INTERACTIVE = 'interactive', -- 会话正在处理补全或用户交互（对应补全流程中的活跃状态）。
     TERMINATED = 'terminated',   -- 会话永久结束，资源已释放（如网络请求取消、用户关闭补全）。
