@@ -222,9 +222,9 @@ end
 function Session:__check_version()
     local document_version = F.version(self.buf)
     if document_version == self.version then
-        return Promise.resolve(true)
+        return Promise.resolved(true)
     else
-        return Promise.reject({
+        return Promise.rejected({
             message = 'Session version is outdated',
             metadata = {
                 session_version = self.version,
@@ -246,7 +246,7 @@ end
 function Session:async_compress_prompt(prompt)
     local _, data = pcall(vim.fn.json_encode, prompt)
     if not _ then
-        return Promise.reject({
+        return Promise.rejected({
             message = 'Failed to encode prompt to JSON',
             metadata = {
                 prompt = prompt,
@@ -278,14 +278,14 @@ function Session:send_completions()
             debug_log(self, 'Got completion version: {}', completion_version)
             debug_log(self, 'Compressed prompt: {}', compressed_prompt_binary)
             if not compressed_prompt_binary or not completion_version then
-                return Promise.reject({
+                return Promise.rejected({
                     message = 'Failed to generate prompt or get completion version',
                 })
             end
             return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
         end):forward(function(completion)
             if self:is_terminated() then
-                return Promise.reject({
+                return Promise.rejected({
                     message = 'Session is terminated',
                 })
             end
@@ -299,21 +299,21 @@ function Session:send_completions()
             if completion.status == 'no_completion' then
                 debug_log(self, 'No more suggestions')
                 self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
-                return Promise.resolve(nil)
+                return Promise.resolved(nil)
             end
             debug_log(self, 'Got completion: {}', completion)
             self:set_model(completion.data)
             self:set_interactive()
             self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
-            return Promise.resolve(completion.data)
+            return Promise.resolved(completion.data)
         end):catch(function(_)
-            return Promise.reject(_)
+            return Promise.rejected(_)
         end)
     end
     return __send_completions():catch(function(_)
         self:sync_completion_event(COMPLETION_EVENT.ERROR)
         debug_log(self, 'Failed to send completions: {}', _)
-        return Promise.reject(_)
+        return Promise.rejected(_)
     end)
 end
 
@@ -323,7 +323,7 @@ function Session:get_completion_version()
     self:sync_completion_event(COMPLETION_EVENT.GETTING_COMPLETION_VERSION)
     local request = Client.make_request(Protocol.Methods.get_completion_version)
     if not request then
-        return Promise.reject({
+        return Promise.rejected({
             message = 'Failed to make get_completion_version request',
         })
     end
@@ -333,7 +333,7 @@ function Session:get_completion_version()
         ---@type FittenCode.Protocol.Methods.GetCompletionVersion.Response
         local response = _.json()
         if not response then
-            return Promise.reject({
+            return Promise.rejected({
                 message = 'Failed to decode completion version response',
                 metadata = {
                     response = _,
@@ -343,7 +343,7 @@ function Session:get_completion_version()
             return response
         end
     end):catch(function(_)
-        return Promise.reject(_)
+        return Promise.rejected(_)
     end)
 end
 
@@ -378,7 +378,7 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
         body = compressed_prompt_binary,
     })
     if not request then
-        return Promise.reject({
+        return Promise.rejected({
             message = 'Failed to make generate_one_stage_auth request',
         })
     end
@@ -387,7 +387,7 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
     return request:async():forward(function(_)
         local response = _.json()
         if not response then
-            return Promise.reject({
+            return Promise.rejected({
                 message = 'Failed to decode completion raw response',
                 metadata = {
                     response = _,
@@ -404,13 +404,13 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
             position = zerepos,
         })
         if parsed_response.status == 'error' then
-            return Promise.reject({
+            return Promise.rejected({
                 message = parsed_response.message or 'Parsed completion response error',
             })
         end
         return parsed_response
     end):catch(function(_)
-        return Promise.reject(_)
+        return Promise.rejected(_)
     end)
 end
 

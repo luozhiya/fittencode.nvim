@@ -57,7 +57,7 @@ function ConversationTypesProvider:async_load_conversation_types()
         end, 10)
     end):forward(function(perf)
         Log.info('ConversationTypesProvider loaded total {:d} conversation types in {}', #(vim.tbl_keys(self.conversation_types)), perf())
-        return Promise.resolve()
+        return Promise.resolved()
     end)
 end
 

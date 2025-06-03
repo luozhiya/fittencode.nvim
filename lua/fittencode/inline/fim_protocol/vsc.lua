@@ -192,9 +192,9 @@ end
 function M.generate(buf, position, options)
     local res = build_base_prompt(buf, position, options)
     if not res then
-        return Promise.reject()
+        return Promise.rejected()
     end
-    return Promise.resolve(res)
+    return Promise.resolved(res)
 end
 
 function M.update_last_version(filename, version, cachedata)

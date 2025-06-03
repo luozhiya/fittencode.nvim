@@ -9,8 +9,8 @@
 ----------------------------s
 
 local promise = Promise.new() -- 创建未决Promise
-promise:manually_resolve("成功")       -- 手动解决
-promise:manually_reject("失败")        -- 手动拒绝
+promise:resolve("成功")       -- 手动解决
+promise:reject("失败")        -- 手动拒绝
 
 Promise.new(function(resolve, reject)
     reject('test')
@@ -24,7 +24,7 @@ local p = Promise.new(function(resolve, reject)
     reject('test')
 end):catch(function(reason)
     print(reason)
-    return Promise.reject('catch')
+    return Promise.rejected('catch')
 end):finally(function()
     print('finally')
 end)
@@ -81,6 +81,9 @@ Promise.__index = Promise
 ---@return FittenCode.Promise
 function Promise.new(executor, is_async)
     is_async = is_async == nil and true or is_async
+
+    ---@type FittenCode.Promise
+    ---@diagnostic disable-next-line: missing-fields
     local self = {
         state = PromiseState.PENDING,
         value = nil,
@@ -95,11 +98,11 @@ function Promise.new(executor, is_async)
         assert(type(executor) == 'function', 'Promise executor must be a function')
 
         local function resolve(value)
-            self:manually_resolve(value)
+            self:resolve(value)
         end
 
         local function reject(reason)
-            self:manually_reject(reason)
+            self:reject(reason)
         end
 
         if is_async then
@@ -188,9 +191,9 @@ function Promise.is_promise(obj)
     return type(obj) == 'table' and getmetatable(obj) == Promise
 end
 
--- Manually resolve the Promise with a value.
+-- Resolve the Promise with a value.
 ---@param value any
-function Promise:manually_resolve(value)
+function Promise:resolve(value)
     if self.state == PromiseState.PENDING then
         self.state = PromiseState.FULFILLED
         self.value = value
@@ -202,9 +205,9 @@ function Promise:manually_resolve(value)
     end
 end
 
--- Manually reject the Promise with a reason.
+-- Reject the Promise with a reason.
 ---@param reason any
-function Promise:manually_reject(reason)
+function Promise:reject(reason)
     if self.state == PromiseState.PENDING then
         self.state = PromiseState.REJECTED
         self.reason = reason
@@ -317,7 +320,7 @@ end
 -- * The Promise.reject() method returns a new Promise object that is rejected with the given reason.
 ---@param reason any
 ---@return FittenCode.Promise
-function Promise.reject(reason)
+function Promise.rejected(reason)
     return Promise.new(function(_, reject)
         reject(reason) -- 同步触发拒绝
     end, false)
@@ -327,7 +330,7 @@ end
 -- * The Promise.resolve() method returns a new Promise object that is resolved with the given value.
 ---@param value any
 ---@return FittenCode.Promise
-function Promise.resolve(value)
+function Promise.resolved(value)
     -- 如果参数是 Promise 实例则直接返回
     if Promise.is_promise(value) then
         return value
@@ -349,7 +352,7 @@ end
 function Promise.all(promises)
     -- 如果不是 table 或者没有长度（空表），则直接返回已解决的 Promise
     if type(promises) ~= 'table' or #promises == 0 then
-        return Promise.resolve({})
+        return Promise.resolved({})
     end
 
     return Promise.new(function(resolve, reject)
@@ -360,7 +363,7 @@ function Promise.all(promises)
         for i, promise in ipairs(promises) do
             -- 确保每个元素都是 Promise
             if not Promise.is_promise(promise) then
-                promise = Promise.resolve(promise)
+                promise = Promise.resolved(promise)
             end
 
             promise:forward(
@@ -393,9 +396,9 @@ function Promise:wait(timeout, interval)
     interval = interval or 10
 
     if self:is_fulfilled() then
-        return Promise.resolve(self.value)
+        return Promise.resolved(self.value)
     elseif self:is_rejected() then
-        return Promise.reject(self.reason)
+        return Promise.rejected(self.reason)
     end
 
     local waited = vim.wait(timeout, function()

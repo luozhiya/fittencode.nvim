@@ -132,7 +132,7 @@ function M.login(username, password)
             if re and re.msg and re.msg ~= '' then
                 error_msg = re.msg
             end
-            return Promise.reject({
+            return Promise.rejected({
                 type = 'AUTH_RESPONSE_ERROR',
                 message = error_msg
             })

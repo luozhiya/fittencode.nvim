@@ -55,7 +55,7 @@ end
 ---@return FittenCode.Promise, FittenCode.HTTP.Response?
 function M.send_segments(text)
     if F.onlyascii(text) then
-        return Promise.resolve()
+        return Promise.resolved()
     end
 
     local request = Client.make_request(Protocol.Methods.chat_auth, {
@@ -63,7 +63,7 @@ function M.send_segments(text)
     })
     if not request then
         Log.error('Failed to send request')
-        return Promise.reject()
+        return Promise.rejected()
     end
 
     return request:async():forward(function(response)
@@ -72,7 +72,7 @@ function M.send_segments(text)
             return segments
         else
             Log.error('Failed to parse: {}', response)
-            return Promise.reject()
+            return Promise.rejected()
         end
     end), request
 end

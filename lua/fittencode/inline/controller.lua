@@ -240,7 +240,7 @@ function Controller:trigger_inline_suggestion(options)
     options = options or {}
     local buf, position = self:_preflight_check(options)
     if not buf or not position then
-        return Promise.reject({
+        return Promise.rejected({
             message = 'Preflight check failed'
         })
     end
@@ -328,7 +328,7 @@ function Controller:trigger_inline_suggestion_by_shortcut()
         force = true,
     }):forward(function(_)
         if not _ then
-            return Promise.reject()
+            return Promise.rejected()
         end
     end):catch((function()
         self:__show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000)

@@ -23,7 +23,7 @@ function M.generate(buf, position, options)
             filename = options.filename,
         },
     }
-    return Promise.resolve(prompt)
+    return Promise.resolved(prompt)
 end
 
 function M.parse(raw)
