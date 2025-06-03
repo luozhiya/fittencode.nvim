@@ -182,7 +182,7 @@ function View:update(state)
                 end)
                 if not _ then
                     Log.debug('eval error, lines = {}, i = {}, line_state = {}, j = {}, lstate = {}', lines, i, line_state, j, lstate)
-                    assert(false)
+                    -- assert(false)
                 end
                 if _ and v then
                     goto continue
