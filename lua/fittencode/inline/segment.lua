@@ -32,10 +32,12 @@ Please do not use markdown when replying.
 请完全使用中文回答。
 <|end|>
 <|user|>
-请对下面的几段原文分别进行语义分词（Incorporate Semantic），按如下3个要求来执行：
-1. 严禁对原文字符做任何修改，包括标点符号。分词结果concat合并起来要和原文完全相等，不要多加换行符
-2. 输出json格式的分词向量，一级标题作为key，json为一个完整对象
-3. 空格与换行符等特殊字符要保留，不要去掉，也算作一个词，如果是连续的特殊符号，要看上下文确定是否合并成一个词。
+请对下面的几段原文分别进行语义分词（Incorporate Semantic），按如下几个要求来执行：
+- 严禁对原文字符做任何修改，包括标点符号。分词结果concat合并起来要和原文完全相等
+- 不要修改 "```" 范围内的换行符
+- 注意保持原文的中英文符号，原文中的 '？' 不要用 '?' 代替
+- 输出json格式的分词向量，一级标题作为key，json为一个完整对象
+- 空格与换行符等特殊字符要保留，不要去掉，也算作一个词，如果是连续的特殊符号，要看上下文确定是否合并成一个词。
 
 示例如下，示例中用 "原文begin" 和 "原文end" 分隔原文，用 "输出begin" 和 "输出end" 分隔输出。
 
@@ -58,13 +60,24 @@ Please do not use markdown when replying.
 嗯
 ```
 
+# 4
+
+```
+
+
+苹果
+
+苹果
+```
+
 原文end
 
 输出begin
 {
     "1" : ["我", "吃", "苹果"],
     "2" : [],
-    "3" : ["明天", "  ",  "会", "下雨"， "\n", "嗯"]
+    "3" : ["明天", "  ",  "会", "下雨"， "\n", "嗯"],
+    "4" : ["\n", "\n", "苹果", "\n", "\n", "苹果"]
 }
 输出end
 
@@ -138,11 +151,6 @@ end
 -- 高级分词
 ---@return FittenCode.Promise, FittenCode.HTTP.Response?
 function M.send_segments(text)
-    if F.is_ascii_only(text) then
-        Log.debug('Text is ASCII only, skip segment')
-        return Promise.resolved()
-    end
-
     local request = Client.make_request(Protocol.Methods.chat_auth, {
         body = assert(vim.fn.json_encode(generate(text))),
     })

@@ -86,6 +86,7 @@ function ProgressIndicatorObserver:update(controller, event, data)
         COMPLETION_EVENT.GENERATE_ONE_STAGE,
         COMPLETION_EVENT.GENERATING_PROMPT,
         COMPLETION_EVENT.GETTING_COMPLETION_VERSION,
+        COMPLETION_EVENT.SEMANTIC_SEGMENT
     }
     local is_busy = false
     if event == CONTROLLER_EVENT.SESSION_UPDATED then

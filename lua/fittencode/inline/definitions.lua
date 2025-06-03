@@ -20,6 +20,7 @@ local COMPLETION_EVENT = {
     GETTING_COMPLETION_VERSION = 'getting_completion_version', -- 正在获取补全服务版本。
     GENERATE_ONE_STAGE         = 'generate_one_stage',         -- 向补全服务发送请求（如 HTTP 请求），等待响应。
     SUGGESTIONS_READY          = 'suggestions_ready',          -- 成功获取补全建议，可渲染到 UI。
+    SEMANTIC_SEGMENT           = 'semantic_segment',           -- 正在进行语义分割（如中文分词），可选的
     NO_MORE_SUGGESTIONS        = 'no_more_suggestions',        -- 补全服务返回无结果。
     ERROR                      = 'error',                      -- 补全流程失败（如网络错误、参数无效）。
 }

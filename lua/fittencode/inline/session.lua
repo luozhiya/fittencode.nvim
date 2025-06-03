@@ -69,6 +69,27 @@ local function debug_log(self, msg, ...)
     Log.__async_log(3, vim.log.levels.DEBUG, meta .. Format.nothrow_format(msg, ...))
 end
 
+function Session:__segments()
+    local text = self.model:get_text()
+    if F.is_ascii_only(text) then
+        Log.debug('Text is ASCII only, skip segment')
+        return Promise.resolved()
+    end
+    local promise, request = Segment.send_segments(text)
+    if not request then
+        return Promise.rejected({
+            message = 'Failed to send segments request',
+        })
+    end
+    self:sync_completion_event(COMPLETION_EVENT.SEMANTIC_SEGMENT)
+    self:__add_request(request)
+    return promise:forward(function(segments)
+        self.model:update({
+            segments = segments
+        })
+    end)
+end
+
 function Session:set_model(parsed_response)
     if self.session_event == SESSION_EVENT.REQUESTING then
         self.model = Model.new({
@@ -77,15 +98,8 @@ function Session:set_model(parsed_response)
             response = parsed_response,
         })
         self:sync_session_event(SESSION_EVENT.MODEL_READY)
-        local promise, request = Segment.send_segments(self.model:get_text())
-        if not request then
-            return
-        end
-        self:__add_request(request)
-        promise:forward(function(segments)
-            self.model:update({
-                segments = segments
-            })
+        self:__segments():finally(function()
+            self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
         end)
     end
 end
@@ -328,7 +342,6 @@ function Session:send_completions()
             debug_log(self, 'Got completion: {}', completion)
             self:set_model(completion.data)
             self:set_interactive()
-            self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
             return Promise.resolved(completion.data)
         end):catch(function(_)
             return Promise.rejected(_)
