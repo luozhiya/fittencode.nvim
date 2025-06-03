@@ -21,6 +21,7 @@ local M = {
         text = '',
         ciphertext = '',
         version = 2147483647,
+        once = false,
     }
 }
 
@@ -64,13 +65,14 @@ FittenCode VSCode 采用 UTF-16 的编码计算
 
 ]]
 local function compute_diff_metadata(current_text, filename, version)
-    if filename ~= M.last.filename or version <= M.last.version then
+    if filename ~= M.last.filename or version <= M.last.version or not M.last.once then
         Log.debug('Skip computing diff metadata for unchanged file, last version = {}, current version = {}', M.last.version, version)
         return {
             pmd5 = '',
             diff = current_text
         }
     end
+    M.last.once = false
 
     ---@type table<number>
     ---@diagnostic disable-next-line: assign-type-mismatch
@@ -201,6 +203,7 @@ function M.update_last_version(filename, version, cachedata)
     M.last.text = cachedata.text
     M.last.ciphertext = cachedata.ciphertext
     M.last.version = version
+    M.last.once = true
 end
 
 ---@class FittenCode.Inline.FimProtocol.VSC.CompletionItem

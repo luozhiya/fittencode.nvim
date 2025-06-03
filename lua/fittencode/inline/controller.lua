@@ -58,8 +58,8 @@ function Controller:__initialize(options)
             pi = self.pi
         })
         self:add_observer(self.progress_observer)
-        -- self.debounce_trigger_inline_suggestion = Fn.debounce(function(...) self:trigger_inline_suggestion(...) end, 60)
-        self.debounce_trigger_inline_suggestion = function(...) self:trigger_inline_suggestion(...) end
+        self.debounce_trigger_inline_suggestion = Fn.debounce(function(...) self:trigger_inline_suggestion(...) end, 60)
+        -- self.debounce_trigger_inline_suggestion = function(...) self:trigger_inline_suggestion(...) end
     end
 
     do

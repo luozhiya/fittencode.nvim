@@ -79,7 +79,8 @@ Promise.__index = Promise
 -- 允许不传 executor 创建 Promise 实例（用于手动控制）
 ---@param executor? fun(resolve: function, reject: function): any
 ---@return FittenCode.Promise
-function Promise.new(executor)
+function Promise.new(executor, is_async)
+    is_async = is_async == nil and true or is_async
     local self = {
         state = PromiseState.PENDING,
         value = nil,
@@ -101,12 +102,19 @@ function Promise.new(executor)
             self:manually_reject(reason)
         end
 
-        vim.schedule(function()
+        if is_async then
+            vim.schedule(function()
+                local ok, err = pcall(executor, resolve, reject)
+                if not ok then
+                    reject(err)
+                end
+            end)
+        else
             local ok, err = pcall(executor, resolve, reject)
             if not ok then
                 reject(err)
             end
-        end)
+        end
     end
 
     return self
@@ -312,7 +320,7 @@ end
 function Promise.reject(reason)
     return Promise.new(function(_, reject)
         reject(reason) -- 同步触发拒绝
-    end)
+    end, false)
 end
 
 -- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/resolve
@@ -328,7 +336,7 @@ function Promise.resolve(value)
     -- 创建立即解决的 Promise
     return Promise.new(function(resolve)
         resolve(value) -- 同步触发解决
-    end)
+    end, false)
 end
 
 -- Promise.all(), https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all
