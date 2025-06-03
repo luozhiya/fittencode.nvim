@@ -20,6 +20,7 @@ local Zip = require('fittencode.fn.gzip')
 local Fim = require('fittencode.inline.fim_protocol.vsc')
 local Definitions = require('fittencode.inline.definitions')
 local Format = require('fittencode.fn.format')
+local Segment = require('fittencode.inline.segment')
 
 local SESSION_EVENT = Definitions.SESSION_EVENT
 local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
@@ -76,6 +77,16 @@ function Session:set_model(parsed_response)
             response = parsed_response,
         })
         self:sync_session_event(SESSION_EVENT.MODEL_READY)
+        local promise, request = Segment.send_segments(self.model:get_text())
+        if not request then
+            return
+        end
+        self:__add_request(request)
+        promise:forward(function(segments)
+            self.model:update({
+                segments = segments
+            })
+        end)
     end
 end
 

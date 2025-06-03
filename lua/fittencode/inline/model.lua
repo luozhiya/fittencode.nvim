@@ -189,13 +189,15 @@ end
 
 function Model:update_segments(segments)
     segments = segments or {}
-    if #segments ~= #self.completion_models then
-        Log.error('Invalid segments length')
+    if #vim.tbl_keys(segments) ~= #self.completion_models then
+        Log.error('Invalid segments length, #segments = {}, #completion_models = {}', #vim.tbl_keys(segments), #self.completion_models)
         return
     end
-    for i, seg in ipairs(segments) do
-        local compl_model = self.completion_models[i]
+    for idx, seg in pairs(segments) do
+        ---@type FittenCode.Inline.CompletionModel
+        local compl_model = self.completion_models[tonumber(idx)]
         local words = Segment.segments_to_words(compl_model:snapshot(), seg)
+        Log.debug('Segment words = {}', words)
         compl_model:update_words(words)
     end
 end
@@ -219,6 +221,14 @@ end
 
 function Model:get_col_delta()
     return assert(self.computed_completions[self.selected_completion_index]).col_delta
+end
+
+function Model:get_text()
+    local text = {}
+    for _, completion in ipairs(self.computed_completions) do
+        text[#text + 1] = completion.generated_text
+    end
+    return text
 end
 
 return Model
