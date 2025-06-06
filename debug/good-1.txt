@@ -1,0 +1,72 @@
+[2025-06-04T18:34:38.929931000+08:00 inline/session.lua:313 DEBUG] Session id = XbI2sFLuy23apd, version = 4, session_event = requesting, completion_event = getting_completion_version --> Generated prompt: {
+  cachedata = {
+    ciphertext = "8493109007855dacf377846e872cad80",
+    text = "写下你的故事吧！\n\n《夏天》\n\n啊，夏天，真的好热啊。\n\n我在家里躺着，看着窗外的阳光，心里想着，这真是太好了。\n\n冰箱里有很多冰棒，我把它们都放进了冰箱冷藏室。\n\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。\n\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。\n"
+  },
+  prompt = {
+    inputs = "",
+    meta_datas = {
+      bcpos = 400,
+      bplen = 0,
+      bslen = 0,
+      cpos = 142,
+      diff = "写下你的故事吧！\n\n《夏天》\n\n啊，夏天，真的好热啊。\n\n我在家里躺着，看着窗外的阳光，心里想着，这真是太好了。\n\n冰箱里有很多冰棒，我把它们都放进了冰箱冷藏室。\n\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。\n\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。\n",
+      filename = "E:\\DataCenter\\onWorking\\fittencode.nvim-next\\gushi.md",
+      nmd5 = "8493109007855dacf377846e872cad80",
+      pc_available = true,
+      pc_prompt = "",
+      pc_prompt_type = "0",
+      plen = 0,
+      pmd5 = "",
+      slen = 0
+    }
+  }
+}
+[2025-06-04T18:35:06.316988000+08:00 inline/session.lua:313 DEBUG] Session id = mAwvmkuv5yC72R, version = 55, session_event = requesting, completion_event = getting_completion_version --> Generated prompt: {
+  cachedata = {
+    ciphertext = "a4ed03d6d8f05a43c7eb922cf05e03c1",
+    text = "写下你的故事吧！\n\n《夏天》\n\n啊，夏天，真的好热啊。\n\n我在家里躺着，看着窗外的阳光，心里想着，这真是太好了。\n\n冰箱里有很多冰棒，我把它们都放进了冰箱冷藏室。\n\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。\n\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。"
+  },
+  prompt = {
+    inputs = "",
+    meta_datas = {
+      bcpos = 484,
+      bplen = 400,
+      bslen = 0,
+      cpos = 170,
+      diff = "我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。",
+      filename = "E:\\DataCenter\\onWorking\\fittencode.nvim-next\\gushi.md",
+      nmd5 = "a4ed03d6d8f05a43c7eb922cf05e03c1",
+      pc_available = true,
+      pc_prompt = "",
+      pc_prompt_type = "0",
+      plen = 142,
+      pmd5 = "8493109007855dacf377846e872cad80",
+      slen = 0
+    }
+  }
+}
+[2025-06-04T18:35:12.660838000+08:00 inline/session.lua:313 DEBUG] Session id = d0HutcRYB3rrBE, version = 90, session_event = requesting, completion_event = getting_completion_version --> Generated prompt: {
+  cachedata = {
+    ciphertext = "125915eebdb77f7ae9779f47d724bd2c",
+    text = "写下你的故事吧！\n\n《夏天》\n\n啊，夏天，真的好热啊。\n\n我在家里躺着，看着窗外的阳光，心里想着，这真是太好了。\n\n冰箱里有很多冰棒，我把它们都放进了冰箱冷藏室。\n\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。\n\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。\n\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。"
+  },
+  prompt = {
+    inputs = "",
+    meta_datas = {
+      bcpos = 570,
+      bplen = 484,
+      bslen = 0,
+      cpos = 200,
+      diff = "\n\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。",
+      filename = "E:\\DataCenter\\onWorking\\fittencode.nvim-next\\gushi.md",
+      nmd5 = "125915eebdb77f7ae9779f47d724bd2c",
+      pc_available = true,
+      pc_prompt = "",
+      pc_prompt_type = "0",
+      plen = 170,
+      pmd5 = "a4ed03d6d8f05a43c7eb922cf05e03c1",
+      slen = 0
+    }
+  }
+}
