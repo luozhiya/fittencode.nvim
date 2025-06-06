@@ -196,12 +196,13 @@ function Model:update_segments(segments)
     for idx, seg in pairs(segments) do
         ---@type FittenCode.Inline.CompletionModel
         local compl_model = self.completion_models[tonumber(idx)]
-        local _, words = pcall(Segment.segments_to_words, compl_model:snapshot(), seg)
+        local snapshot = compl_model:snapshot()
+        local _, words = pcall(Segment.segments_to_words, snapshot, seg)
         if not _ then
-            Log.error('Invalid segments format, idx = {}, seg = {}', idx, seg)
+            Log.error('Invalid segments format, idx = {}, seg = {}, original words = {}', idx, seg, snapshot.words)
             return
         end
-        Log.debug('Segment words = {}', words)
+        -- Log.debug('Segment words = {}', words)
         compl_model:update_words(words)
     end
 end
