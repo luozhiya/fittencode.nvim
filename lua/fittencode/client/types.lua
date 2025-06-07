@@ -39,9 +39,10 @@
 
 ---@class FittenCode.Client
 ---@field get_api_key_manager fun(): FittenCode.APIKeyManager
----@field make_request fun(protocol: FittenCode.Protocol.Element, options?: FittenCode.Client.Request): FittenCode.HTTP.Request?
+---@field make_request fun(protocol: FittenCode.Protocol.Element, options?: FittenCode.Client.RequestOptions): FittenCode.HTTP.Request?
+---@field make_request_auth fun(protocol: FittenCode.Protocol.Element, options?: FittenCode.Client.RequestOptions): FittenCode.HTTP.Request?
 
----@class FittenCode.Client.Request
----@field body? string
----@field timeout? number
----@field variables? table<string, any>
+---@class FittenCode.Client.RequestOptions
+---@field variables table<string, any>?
+---@field body string?
+---@field timeout number?

@@ -164,8 +164,31 @@
 -- RefreshRefreshToken
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.RefreshRefreshToken.Body
----@field refresh_token string
+---@alias FittenCode.Protocol.Methods.RefreshRefreshToken.Body string
+
+--[[
+    access_token = "Not expired",
+    access_token_expires = "P1D",
+    refresh_token = "Not expired",
+    refresh_token_expires = "P30D"
+]]
+---@class FittenCode.Protocol.Methods.RefreshRefreshToken.Response
+---@field access_token "Not expired" | string
+---@field access_token_expires string
+---@field refresh_token "Not expired" | string
+---@field refresh_token_expires string
+
+------------------------------------------------
+-- RefreshAccessToken
+------------------------------------------------
+
+--[[
+    access_token = "",
+    access_token_expires = "P1D"
+]]
+---@class FittenCode.Protocol.Methods.RefreshAccessToken.Response
+---@field access_token "Not expired" | string
+---@field access_token_expires string
 
 ------------------------------------------------
 -- ChatAuth

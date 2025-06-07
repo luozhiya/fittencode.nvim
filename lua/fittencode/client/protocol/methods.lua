@@ -142,6 +142,7 @@ local Methods = {
     -- * `headers = { 'Content-Type' = 'application/json' }`
     -- * `body = @FittenCode.Protocol.Methods.RefreshRefreshToken.Body`
     -- * `query = {}`
+    -- * `response = @FittenCode.Protocol.Methods.RefreshRefreshToken.Response`
     refresh_refresh_token = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
@@ -152,6 +153,7 @@ local Methods = {
     -- * `body = {}`
     -- * `headers = { 'Authorization' = 'Bearer {{access_token}}', 'Content-Type' = 'application/json' }`
     -- * `query = {}`
+    -- * `response = @FittenCode.Protocol.Methods.RefreshAccessToken.Response`
     refresh_access_token = {
         method = 'POST',
         headers = {

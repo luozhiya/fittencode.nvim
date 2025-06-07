@@ -173,6 +173,7 @@ end
 
 -- 请求协议接口
 ---@param protocol FittenCode.Protocol.Element
+---@param options FittenCode.Client.RequestOptions
 ---@return FittenCode.HTTP.Request?
 function M.make_request(protocol, options)
     options = options or {}
@@ -199,14 +200,18 @@ function M.make_request(protocol, options)
         return openlink(evaluated.url)
     end
 
-    return HTTP.fetch(evaluated.url, {
+    ---@type FittenCode.HTTP.RequestOptions
+    local reqopt = {
         method = protocol.method,
         headers = evaluated.headers,
         body = options.body,
         timeout = options.timeout,
-    })
+    }
+
+    return HTTP.fetch(evaluated.url, reqopt)
 end
 
+---@param refresh_token string
 ---@return FittenCode.Promise
 local function refresh_access_token(refresh_token)
     local protocol = Protocal.Methods.refresh_access_token
@@ -216,48 +221,55 @@ local function refresh_access_token(refresh_token)
     if not req then
         return Promise.rejected()
     end
-    return req:async():forward(function(response)
-        Log.debug('Refresh access token response: {}', response)
-        return response:json()
+    return req:async():forward(function(response) ---@param response FittenCode.HTTP.Request.Stream.EndEvent
+        ---@type FittenCode.Protocol.Methods.RefreshAccessToken.Response?
+        local data = response:json()
+        if not data or not data.access_token or not data.access_token_expires then
+            return Promise.rejected()
+        end
+        return data
     end)
 end
 
+---@param last_refresh_token string
 ---@return FittenCode.Promise
 local function refresh_refresh_token(last_refresh_token)
     local protocol = Protocal.Methods.refresh_refresh_token
     local req = M.make_request(protocol, {
+        ---@type FittenCode.Protocol.Methods.RefreshRefreshToken.Body
         body = vim.json.encode(last_refresh_token)
     })
     if not req then
         return Promise.rejected()
     end
-    return req:async():forward(function(response)
-        Log.debug('Refresh refresh token response: {}', response)
-        return response:json()
+    return req:async():forward(function(response) ---@param response FittenCode.HTTP.Request.Stream.EndEvent
+        ---@type FittenCode.Protocol.Methods.RefreshRefreshToken.Response?
+        local data = response:json()
+        if not data or not data.refresh_token or not data.refresh_token_expires then
+            return Promise.rejected()
+        end
+        return data
     end)
 end
 
 ---@return FittenCode.Promise
 local function handle_unauthorized(protocol, option, req)
-    Log.debug('Unauthorized request: {}', protocol)
     if api_key_manager:has_fitten_refresh_token() then
-        return refresh_refresh_token(api_key_manager:get_fitten_refresh_token()):forward(function(_)
-            Log.debug('Refresh refresh token: {}', _)
+        return refresh_refresh_token(assert(api_key_manager:get_fitten_refresh_token())):forward(function(_)
             if _.refresh_token ~= 'Not expired' then
                 api_key_manager:update_fitten_refresh_token(_.refresh_token)
             end
-            return refresh_access_token(api_key_manager:get_fitten_refresh_token())
+            return refresh_access_token(assert(api_key_manager:get_fitten_refresh_token()))
         end):forward(function(_)
-            Log.debug('Refresh access token: {}', _)
-            api_key_manager:update_fitten_access_token(_.access_token)
-            option.variables = { access_token = _.access_token }
+            if _.access_token ~= 'Not expired' then
+                api_key_manager:update_fitten_access_token(_.access_token)
+            end
+            option.variables = vim.tbl_deep_extend('force', option.variables, { access_token = api_key_manager:get_fitten_refresh_token() })
             local new_req = M.make_request(protocol, option)
             if not new_req then
                 return Promise.rejected()
             end
             new_req.stream._callbacks = vim.deepcopy(req.stream._callbacks)
-            Log.debug('Original stream: {}', req.stream)
-            Log.debug('New stream: {}', new_req.stream)
             return new_req:async()
         end)
     else
@@ -265,6 +277,9 @@ local function handle_unauthorized(protocol, option, req)
     end
 end
 
+---@param protocol FittenCode.Protocol.Element
+---@param options FittenCode.Client.RequestOptions
+---@return FittenCode.HTTP.Request?
 function M.make_request_auth(protocol, options)
     local req = M.make_request(protocol, options)
     if not req then
