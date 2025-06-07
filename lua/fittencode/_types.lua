@@ -60,17 +60,6 @@
 ---@field ttfb number     @首字节时间（毫秒）
 ---@field total number    @总耗时（毫秒）
 
--- 错误类型定义
----@class FittenCode.HTTP.Error
----@field CURL_ERROR_CODES table<integer, string> @CURL 错误码映射表
-
----@alias FittenCode.HTTP.Error.Type
----| '"HTTP_CURL_ERROR"'    # CURL 底层错误
----| '"HTTP_REQUEST_ERROR"'    # HTTP 4xx/5xx 错误
----| '"HTTP_USER_ABORT"'    # 用户主动取消
----| '"PARSE_ERROR"'   # 数据解析错误
----| '"NETWORK_ERROR"' # 网络连接错误
-
 ---@class FittenCode.Inline.Prompt
 ---@field inputs string
 ---@field meta_datas FittenCode.Inline.Prompt.MetaDatas

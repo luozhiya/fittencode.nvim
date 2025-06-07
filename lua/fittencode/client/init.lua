@@ -289,8 +289,8 @@ function M.make_request_auth(protocol, options)
     req.async = function(self)
         return req:_async():forward(function(response)
             return response
-        end):catch(function(err)
-            if err.metadata and err.metadata.status and vim.tbl_contains(err.metadata.status, 401) then
+        end):catch(function(err) ---@param err FittenCode.Error
+            if err.metadata and err.metadata.status and err.metadata.status[#err.metadata.status] == 401 then
                 return handle_unauthorized(protocol, options, req)
             end
         end)
