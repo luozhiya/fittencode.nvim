@@ -225,7 +225,7 @@ function M.segments_to_words(model, segments)
 end
 
 -- 高级分词
----@return FittenCode.Promise, FittenCode.HTTP.Response?
+---@return FittenCode.Promise, FittenCode.HTTP.Request?
 function M.send_segments(text)
     local request = Client.make_request_auth(Protocol.Methods.chat_auth, {
         body = assert(vim.fn.json_encode(generate(text))),

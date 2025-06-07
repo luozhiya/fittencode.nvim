@@ -173,7 +173,7 @@ end
 
 -- 请求协议接口
 ---@param protocol FittenCode.Protocol.Element
----@return FittenCode.HTTP.Response?
+---@return FittenCode.HTTP.Request?
 function M.make_request(protocol, options)
     options = options or {}
     local variables = vim.tbl_deep_extend('force', preset_variables(), options.variables or {})

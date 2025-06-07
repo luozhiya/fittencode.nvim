@@ -39,7 +39,7 @@
 
 ---@class FittenCode.Client
 ---@field get_api_key_manager fun(): FittenCode.APIKeyManager
----@field make_request fun(protocol: FittenCode.Protocol.Element, options?: FittenCode.Client.Request): FittenCode.HTTP.Response?
+---@field make_request fun(protocol: FittenCode.Protocol.Element, options?: FittenCode.Client.Request): FittenCode.HTTP.Request?
 
 ---@class FittenCode.Client.Request
 ---@field body? string

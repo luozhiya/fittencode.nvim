@@ -30,7 +30,7 @@ local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
 ---@field position FittenCode.Position
 ---@field commit_position FittenCode.Position
 ---@field id string
----@field requests table<number, FittenCode.HTTP.Response>
+---@field requests table<number, FittenCode.HTTP.Request>
 ---@field keymaps table<number, any>
 ---@field view FittenCode.Inline.View
 ---@field model FittenCode.Inline.Model
