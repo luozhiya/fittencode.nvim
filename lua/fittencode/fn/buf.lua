@@ -175,7 +175,7 @@ function M.wordcount(buf)
     return wc
 end
 
--- 计算从文档开始到 Position 处的字符偏移量 (UTF-32)
+-- 计算从文档开始到 Position 处的字符偏移量 (UTF-8)
 ---@param buf integer?
 ---@param position FittenCode.Position
 ---@return FittenCode.CharactersOffset
@@ -210,13 +210,10 @@ function M.position_at(buf, offset)
                 index = index + 1
             else
                 local col = Unicode.utf_to_byteindex(line, 'utf-32', offset)
-                if col ~= 0 then
-                    col = col - 1
-                end
                 col = M.round_col_end(line, col)
                 pos = Position.new({
                     row = index,
-                    col = col,
+                    col = col - 1,
                 })
             end
             offset = offset - #byte_counts
@@ -249,32 +246,37 @@ function M.position(win)
     })
 end
 
+-- 给定一个 UTF-8 序列，返回指向它的首字节的位置， 从 1 开始
 ---@param line string
 ---@param col number
 function M.round_col_start(line, col)
     if col == 0 then
-        return col
+        return 1
     end
-    local byte_counts = Unicode.utf8_position_index(line).byte_counts
-    for i = 1, #byte_counts - 1 do
-        if col > byte_counts[i] and col < byte_counts[i + 1] then
-            col = byte_counts[i]
+
+    local pos = Unicode.utf8_position_index(line).start_indices
+    for i = 1, #pos do
+        if col >= pos[i] and (i == #pos or (i ~= #pos and col < pos[i + 1])) then
+            col = pos[i]
             break
         end
     end
     return col
 end
 
+-- 给定一个 UTF-8 序列，返回指向它的尾字节的位置， 从 1 开始
 ---@param line string
 ---@param col number
 function M.round_col_end(line, col)
     if col == -1 then
-        return col
+        return #line
     end
-    local utf = Unicode.utf8_position_index(line).byte_counts
-    for i = 1, #utf - 1 do
-        if col > utf[i] and col < utf[i + 1] then
-            col = utf[i + 1] - 1
+    local pos = Unicode.utf8_position_index(line).start_indices
+    for i = 1, #pos do
+        if i == #pos then
+            col = #line
+        elseif col >= pos[i] and col < pos[i + 1] then
+            col = pos[i + 1] - 1
             break
         end
     end
@@ -292,8 +294,8 @@ function M.round_start(buf, position)
         if position:rel_lastline() then
             row = assert(M.line_count(buf)) - 1
         end
-        local line = vim.fn.getline(row + 1)
-        roundpos.col = M.round_col_start(line, roundpos.col)
+        local line = vim.fn.getline(row + 1) .. '\n'
+        roundpos.col = M.round_col_start(line, roundpos.col + 1) - 1
     end)
     return roundpos
 end
@@ -309,8 +311,8 @@ function M.round_end(buf, position)
         if position:rel_lastline() then
             row = assert(M.line_count(buf)) - 1
         end
-        local line = vim.fn.getline(row + 1)
-        roundpos.col = M.round_col_end(line, roundpos.col)
+        local line = vim.fn.getline(row + 1) .. '\n'
+        roundpos.col = M.round_col_end(line, roundpos.col + 1) - 1
     end)
     return roundpos
 end
@@ -346,6 +348,7 @@ function M.get_lines(buf, range)
         if not roundrange.end_:rel_eol() then
             end_col = end_col + 1
         end
+        Log.debug('get_lines: range = {}, roundrange = {}, end_col = {}', range, roundrange, end_col)
         lines = vim.api.nvim_buf_get_text(buf, roundrange.start.row, roundrange.start.col, roundrange.end_.row, end_col, {})
     end)
     return lines
@@ -389,30 +392,6 @@ function M.within_the_line(buf, position)
         return false
     end
     return line.range.end_.col > position.col
-end
-
-local function compare_bytes(x, y)
-    local len = math.min(#x, #y)
-    local a = 0
-    while a < len and x:byte(a + 1) == y:byte(a + 1) do
-        a = a + 1
-    end
-
-    local b = 0
-    while b < len and x:byte(-b - 1) == y:byte(-b - 1) do
-        b = b + 1
-    end
-
-    return a, (b == len and 0 or b)
-end
-
--- 对比两个UTF8字符串，以第二个字符串为基准，返回两个字符串左右两侧相等的字符个数（以字节为单位）
-function M.compare_bytes_order(prev, curr)
-    local leq, req = compare_bytes(prev, curr)
-    leq = M.round_col_end(curr, leq)
-    local rv = #curr - req
-    rv = M.round_col_end(curr, rv)
-    return leq, #curr - rv
 end
 
 function M.normalize_range(buf, range)

@@ -8,11 +8,11 @@ local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 
-local MAX_CHARS = 220000 -- ~200KB
+local MAX_CHARS = 10 -- ~200KB 220000
 local HALF_MAX = MAX_CHARS / 2
 
 local END_OF_TEXT_TOKEN = '<|endoftext|>'
-local DEFAULT_CONTEXT_THRESHOLD = 100
+local DEFAULT_CONTEXT_THRESHOLD = 10
 local FIM_MIDDLE_TOKEN = '<fim_middle>'
 
 local M = {
@@ -27,12 +27,14 @@ local M = {
 
 local function retrieve_context_fragments(buf, position, threshold)
     local current_line = assert(F.line_at(buf, position.row))
-    local round_curr_col = F.round_col_end(current_line.text, position.col)
+    local round_curr_col = F.round_col_end(current_line.text, position.col + 1) - 1
     local next_position = Position.new({ row = position.row, col = round_curr_col + 1 })
+    Log.debug('Retrieve context fragments, current position = {}, next position = {}', position, next_position)
+
     local current_chars_off = F.offset_at(buf, position)
-    local start_chars_off = math.max(0, math.floor(current_chars_off - threshold + 1))
+    local start_chars_off = math.max(0, math.floor(current_chars_off - threshold - 1))
     local start_pos = F.position_at(buf, start_chars_off) or Position.new({ row = 0, col = 0 })
-    local end_chars_off = math.min(F.wordcount(buf).chars, math.floor(current_chars_off + threshold))
+    local end_chars_off = math.min(F.wordcount(buf).chars, math.floor(current_chars_off + threshold - 1))
     local end_pos = F.position_at(buf, end_chars_off) or Position.new({ row = -1, col = -1 })
     local prefix = F.get_text(buf, Range.new({
         start = start_pos,
@@ -42,6 +44,7 @@ local function retrieve_context_fragments(buf, position, threshold)
         start = next_position,
         end_ = end_pos
     }))
+    Log.debug('Retrieve context fragments, prefix = {}, suffix = {}', prefix, suffix)
     return {
         prefix = prefix,
         suffix = suffix
@@ -130,7 +133,7 @@ local function build_base_prompt(buf, position, options)
 
     if charscount <= MAX_CHARS then
         local current_line = assert(F.line_at(buf, position.row))
-        local round_curr_col = F.round_col_end(current_line.text, position.col)
+        local round_curr_col = F.round_col_end(current_line.text, position.col + 1) - 1
         local next_position = Position.new({ row = position.row, col = round_curr_col + 1 })
         prefix = F.get_text(buf, Range.new({
             start = Position.new({ row = 0, col = 0 }),

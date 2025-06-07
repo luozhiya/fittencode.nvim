@@ -596,7 +596,7 @@ function M.utf_to_byteindex(s, encoding, index)
             end
             char_count = char_count + 1
         end
-        return math.min(byte_index - 1, #s)
+        return math.min(byte_index, #s)
     elseif encoding == 'utf-16' then
         -- UTF-16 needs to handle surrogate pairs (2 code units per codepoint for > 0xFFFF)
         while byte_index <= #s and char_count < index do
