@@ -242,11 +242,12 @@ function TimingObserver:debug()
                 for _, phase in pairs(phase_group) do
                     output[#output + 1] = string.format('  %-20s: %.2f ms', phase.phase_name, phase.duration)
                 end
-                -- output[#output + 1] = string.format('  HTTP Timing: dns=%.2fms, tcp=%.2fms, ssl=%.2fms, ttfb=%.2fms, total=%.2fms', conv.http_timing.dns, conv.http_timing.tcp, conv.http_timing.ssl, conv.http_timing.ttfb, conv.http_timing.total)
-                output[#output + 1] = string.format('  HTTP Timing:')
-                local order = { 'dns', 'tcp', 'ssl', 'ttfb', 'total' }
-                for _, k in ipairs(order) do
-                    output[#output + 1] = string.format('    %-18s: %.2f ms', string.upper(k), conv.http_timing[k])
+                if conv.http_timing then
+                    output[#output + 1] = string.format('  HTTP Timing:')
+                    local order = { 'dns', 'tcp', 'ssl', 'ttfb', 'total' }
+                    for _, k in ipairs(order) do
+                        output[#output + 1] = string.format('    %-18s: %.2f ms', string.upper(k), conv.http_timing[k])
+                    end
                 end
             end
         end
@@ -288,9 +289,11 @@ function TokenObserver:update(controller, event, data)
                 prompt_tokens = {},
                 completion_tokens = {}
             }
-            local usage = data.message_metadata.usage
-            conv.prompt_tokens[#conv.prompt_tokens + 1] = usage.input_tokens
-            conv.completion_tokens[#conv.completion_tokens + 1] = usage.output_tokens
+            if data.message_metadata and data.message_metadata.usage then
+                local usage = data.message_metadata.usage
+                conv.prompt_tokens[#conv.prompt_tokens + 1] = usage.input_tokens
+                conv.completion_tokens[#conv.completion_tokens + 1] = usage.output_tokens
+            end
             self.conversations[conversation_id] = conv
             self:debug()
         end

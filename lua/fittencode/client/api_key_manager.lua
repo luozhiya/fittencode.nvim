@@ -119,7 +119,6 @@ local function _check_token(self, token_type, throw)
                         self:clear()
                         Log.notify_info('Logout successfully, please re-login.')
                         vim.schedule(function()
-                            -- 普通登录还是第三方登录，如何选择？这是一个问题
                             vim.cmd('FittenCode login')
                         end)
                     end
@@ -147,6 +146,20 @@ end
 ---@return boolean
 function APIKeyManager:has_fitten_user_id(throw)
     return _check_token(self, 'user_id', throw)
+end
+
+function APIKeyManager:update_fitten_refresh_token(refresh_token)
+    if self.keyring then
+        self.keyring.refresh_token = refresh_token
+        self.storage:store(self.key, vim.fn.json_encode(self.keyring))
+    end
+end
+
+function APIKeyManager:update_fitten_access_token(access_token)
+    if self.keyring then
+        self.keyring.access_token = access_token
+        self.storage:store(self.key, vim.fn.json_encode(self.keyring))
+    end
 end
 
 return APIKeyManager

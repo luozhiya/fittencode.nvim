@@ -227,7 +227,7 @@ end
 -- 高级分词
 ---@return FittenCode.Promise, FittenCode.HTTP.Response?
 function M.send_segments(text)
-    local request = Client.make_request(Protocol.Methods.chat_auth, {
+    local request = Client.make_request_auth(Protocol.Methods.chat_auth, {
         body = assert(vim.fn.json_encode(generate(text))),
     })
     if not request then

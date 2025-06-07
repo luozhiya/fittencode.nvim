@@ -264,7 +264,7 @@ local function start_normal_chat(self)
     }
     Log.debug('Evaluated HTTP body: {}', body)
 
-    local res = Client.make_request(protocol, {
+    local res = Client.make_request_auth(protocol, {
         body = assert(vim.fn.json_encode(body)),
     })
     if not res then

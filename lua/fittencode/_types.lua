@@ -13,13 +13,14 @@
 
 ---@class FittenCode.HTTP.Response
 ---@field stream FittenCode.HTTP.Request.Stream @响应流对象
----@field abort fun() @中止请求方法
----@field async fun(): FittenCode.Promise? @启动请求并返回关联的 Promise 对象
+---@field abort fun(self: FittenCode.HTTP.Response) @中止请求方法
+---@field async fun(self: FittenCode.HTTP.Response): FittenCode.Promise @启动请求并返回关联的 Promise 对象
+---@field _async any
 
 ---@class FittenCode.HTTP.Request.Stream
 ---@field on fun(self: FittenCode.HTTP.Request.Stream, event: FittenCode.HTTP.Request.Stream.Event, callback: function): FittenCode.HTTP.Request.Stream
 ---@field _emit fun(self: FittenCode.HTTP.Request.Stream, event: FittenCode.HTTP.Request.Stream.Event, ...: any)
----@field _buffer string @响应内容缓冲区
+---@field _buffer table<string> @响应内容缓冲区
 ---@field _status? integer @HTTP 状态码
 ---@field _headers? table<string, string> @响应头
 ---@field _callbacks table<FittenCode.HTTP.Request.Stream.Event, function> @事件回调表

@@ -8,6 +8,8 @@ local OPL = require('fittencode.opl')
 local i18n = require('fittencode.i18n')
 local URLSearchParams = require('fittencode.fn.url_search_params')
 local Config = require('fittencode.config')
+local Promise = require('fittencode.fn.promise')
+local Protocal = require('fittencode.client.protocol')
 
 ---@class FittenCode.Client
 local M = {}
@@ -203,6 +205,82 @@ function M.make_request(protocol, options)
         body = options.body,
         timeout = options.timeout,
     })
+end
+
+---@return FittenCode.Promise
+local function refresh_access_token(refresh_token)
+    local protocol = Protocal.Methods.refresh_access_token
+    local req = M.make_request(protocol, {
+        variables = { access_token = refresh_token }
+    })
+    if not req then
+        return Promise.rejected()
+    end
+    return req:async():forward(function(response)
+        Log.debug('Refresh access token response: {}', response)
+        return response:json()
+    end)
+end
+
+---@return FittenCode.Promise
+local function refresh_refresh_token(last_refresh_token)
+    local protocol = Protocal.Methods.refresh_refresh_token
+    local req = M.make_request(protocol, {
+        body = vim.json.encode(last_refresh_token)
+    })
+    if not req then
+        return Promise.rejected()
+    end
+    return req:async():forward(function(response)
+        Log.debug('Refresh refresh token response: {}', response)
+        return response:json()
+    end)
+end
+
+---@return FittenCode.Promise
+local function handle_unauthorized(protocol, option, req)
+    Log.debug('Unauthorized request: {}', protocol)
+    if api_key_manager:has_fitten_refresh_token() then
+        return refresh_refresh_token(api_key_manager:get_fitten_refresh_token()):forward(function(_)
+            Log.debug('Refresh refresh token: {}', _)
+            if _.refresh_token ~= 'Not expired' then
+                api_key_manager:update_fitten_refresh_token(_.refresh_token)
+            end
+            return refresh_access_token(api_key_manager:get_fitten_refresh_token())
+        end):forward(function(_)
+            Log.debug('Refresh access token: {}', _)
+            api_key_manager:update_fitten_access_token(_.access_token)
+            option.variables = { access_token = _.access_token }
+            local new_req = M.make_request(protocol, option)
+            if not new_req then
+                return Promise.rejected()
+            end
+            new_req.stream._callbacks = vim.deepcopy(req.stream._callbacks)
+            Log.debug('Original stream: {}', req.stream)
+            Log.debug('New stream: {}', new_req.stream)
+            return new_req:async()
+        end)
+    else
+        return Promise.rejected()
+    end
+end
+
+function M.make_request_auth(protocol, options)
+    local req = M.make_request(protocol, options)
+    if not req then
+        return
+    end
+    req._async = req.async
+    req.async = function(self)
+        return req:_async():forward(function(response)
+            return response
+        end):catch(function(err)
+            if vim.tbl_contains(err.metadata.status, 401) then
+                return handle_unauthorized(protocol, options, req)
+            end
+        end)
+    end
+    return req
 end
 
 function M.request(protocol, options)

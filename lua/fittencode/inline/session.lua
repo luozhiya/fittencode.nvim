@@ -416,7 +416,7 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
         ['2'] = '2_2',
         ['3'] = '2_3',
     }
-    local request = Client.make_request(Protocol.Methods.generate_one_stage_auth, {
+    local request = Client.make_request_auth(Protocol.Methods.generate_one_stage_auth, {
         variables = {
             completion_version = vu[completion_version],
         },

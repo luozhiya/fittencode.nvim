@@ -145,7 +145,7 @@ local Methods = {
     refresh_refresh_token = {
         method = 'POST',
         headers = { ['Content-Type'] = 'application/json' },
-        url = '/codeuser/auth/refresh_refresh_toke'
+        url = '/codeuser/auth/refresh_refresh_token'
     },
     -- 刷新 access_token
     -- * `method = POST`
