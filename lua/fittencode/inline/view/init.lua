@@ -152,9 +152,9 @@ local function move_to_center_vertical(virt_height)
     if relative_row + virt_height > height and math.abs(relative_row + 1 - center) > center / 2 and row > center then
         vim.cmd([[norm! zz]])
         -- [0, lnum, col, off, curswant]
-        local curswant = vim.fn.getcurpos()[5]
+        -- local curswant = vim.fn.getcurpos()[5]
         -- 1-based row
-        vim.fn.cursor({ row + 1, curswant })
+        vim.fn.cursor({ row + 1, position.col + 1 })
     end
 end
 

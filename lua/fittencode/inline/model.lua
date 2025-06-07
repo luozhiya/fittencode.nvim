@@ -121,7 +121,7 @@ function Model:generate_placeholder_ranges(buf, position, computed_completions)
                 col = position.col + col_delta - 1,
             }),
         })))
-        assert(#replaced_text < #generated_text)
+        assert(#replaced_text <= #generated_text)
         -- 2. 对比 T0 与 generated_text 的文本差异，获取 placeholder 范围
         local start, end_ = generated_text:find(replaced_text)
         if start then
@@ -199,7 +199,11 @@ function Model:update_segments(segments)
         local snapshot = compl_model:snapshot()
         local _, words = pcall(Segment.segments_to_words, snapshot, seg)
         if not _ then
-            Log.error('Invalid segments format, idx = {}, seg = {}, original words = {}', idx, seg, snapshot.words)
+            local original = {}
+            for _, word in ipairs(snapshot.words) do
+                original[#original + 1] = word.content
+            end
+            Log.error('Invalid segments format, idx = {}, seg = {}, original words = {}', idx, seg, original)
             return
         end
         -- Log.debug('Segment words = {}', words)
