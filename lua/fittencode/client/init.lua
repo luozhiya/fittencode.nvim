@@ -290,7 +290,7 @@ function M.make_request_auth(protocol, options)
         return req:_async():forward(function(response)
             return response
         end):catch(function(err)
-            if vim.tbl_contains(err.metadata.status, 401) then
+            if err.metadata and err.metadata.status and vim.tbl_contains(err.metadata.status, 401) then
                 return handle_unauthorized(protocol, options, req)
             end
         end)
