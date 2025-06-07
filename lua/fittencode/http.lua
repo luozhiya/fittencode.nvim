@@ -369,7 +369,7 @@ function M.fetch(url, options)
         if code == 0 then
             local data_content = table.concat(stream._buffer)
 
-            ---@class FittenCode.HTTP.RequestOptions.Stream.EndEvent
+            ---@class FittenCode.HTTP.Request.Stream.EndEvent
             local response = {
                 status = status,
                 http_messages = http_messages,
@@ -388,7 +388,7 @@ function M.fetch(url, options)
             if err_lines[#err_lines] == '' then
                 table.remove(err_lines)
             end
-            ---@type FittenCode.HTTP.RequestOptions.Stream.ErrorEvent
+            ---@type FittenCode.HTTP.Request.Stream.ErrorEvent
             local _ = {
                 type = 'HTTP_CURL_ERROR',
                 message = err_lines,
