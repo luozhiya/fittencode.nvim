@@ -1,0 +1,11 @@
+return {
+	_all = {
+		coverage = false,
+        lpath = "lua/?.lua;lua/?/init.lua",
+		lua = './tests/bin/nvim'
+	},
+	functional = {
+		ROOT = {'./tests/functional/'},
+		pattern = '',  -- No fancy name patterns for test files
+	}
+}
