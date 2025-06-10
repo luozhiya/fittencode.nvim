@@ -34,7 +34,7 @@ local SESSION_TASK_EVENT = Definitions.SESSION_TASK_EVENT
 ---@field requests table<number, FittenCode.HTTP.Request>
 ---@field keymaps table<number, any>
 ---@field view FittenCode.Inline.View
----@field model FittenCode.Inline.Model
+---@field model FittenCode.Inline.IncrementalCompletionModel
 ---@field version string
 local Session = {}
 Session.__index = Session
