@@ -15,7 +15,7 @@ local Position = require('fittencode.fn.position')
 local Segment = require('fittencode.inline.segment')
 local Unicode = require('fittencode.fn.unicode')
 
----@class FittenCode.Inline.IncrementalCompletionModel
+---@class FittenCode.Inline.IncrementalCompletion.Model
 ---@field buf number
 ---@field position FittenCode.Position
 ---@field response any
