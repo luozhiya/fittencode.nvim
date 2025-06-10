@@ -49,7 +49,7 @@ function Session:_initialize(options)
     self.buf = options.buf
     self.position = options.position
     self.commit_position = options.position
-    self.mode = options.mode
+    self.engine = options.engine
     self.id = options.id
     self.requests = {}
     self.keymaps = {}

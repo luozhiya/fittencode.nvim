@@ -240,7 +240,7 @@ end
 function Controller:trigger_inline_suggestion(options)
     Log.debug('trigger_inline_suggestion')
     options = options or {}
-    options.mode = options.mode or 'incremental_completion'
+    options.engine = options.engine or 'incremental_completion'
     options.force = options.force or false
 
     local buf, position = self:_preflight_check(options)
@@ -256,7 +256,7 @@ function Controller:trigger_inline_suggestion(options)
         buf = buf,
         filename = F.filename(buf),
         position = position,
-        mode = options.mode,
+        engine = options.engine,
         id = self.selected_session_id,
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
         on_session_update_event = function(data) self:__emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
@@ -332,7 +332,7 @@ end
 function Controller:trigger_inline_suggestion_by_shortcut()
     self:trigger_inline_suggestion({
         force = true,
-        mode = 'incremental_completion'
+        engine = 'incremental_completion'
     }):forward(function(_)
         if not _ then
             return Promise.rejected()
@@ -345,7 +345,7 @@ end
 function Controller:trigger_edit_completion_by_shortcut()
     self:trigger_inline_suggestion({
         force = true,
-        mode = 'edit_completion',
+        engine = 'edit_completion',
     }):forward(function(_)
         if not _ then
             return Promise.rejected()

@@ -23,4 +23,13 @@
 
 ---@class FittenCode.Inline.TriggerInlineSuggestionOptions
 ---@field force boolean
----@field mode 'incremental_completion' | 'edit_completion'
+---@field engine 'incremental_completion' | 'edit_completion'
+
+--[[
+
+EngineCapabilities = {
+    
+}
+
+]]
+---@class FittenCode.Inline.EngineCapabilities
