@@ -11,9 +11,11 @@ function EditCompletionModel:__initialize(options)
     ---@type FittenCode.Inline.EngineCapabilities
     self.engine_capabilities = {
         completion = {
+            accept_next_char = false,
             accept_next_line = false,
             accept_next_word = false,
-            accept_hunk = true,
+            accept_all = true,
+            accept_hunk = false,
             revoke = true,
             lazy_completion = false,
         },
