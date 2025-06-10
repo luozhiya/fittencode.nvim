@@ -348,7 +348,7 @@ function M.get_lines(buf, range)
         if not roundrange.end_:rel_eol() then
             end_col = end_col + 1
         end
-        Log.debug('get_lines: range = {}, roundrange = {}, end_col = {}', range, roundrange, end_col)
+        -- Log.debug('get_lines: range = {}, roundrange = {}, end_col = {}', range, roundrange, end_col)
         lines = vim.api.nvim_buf_get_text(buf, roundrange.start.row, roundrange.start.col, roundrange.end_.row, end_col, {})
     end)
     return lines

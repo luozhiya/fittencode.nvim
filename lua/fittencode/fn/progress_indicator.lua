@@ -131,9 +131,9 @@ end
 
 function ProgressIndicator:toggle()
     if self.progress_timer then
-        self.ProgressIndicator.stop()
+        self:stop()
     else
-        self.ProgressIndicator.start()
+        self:start()
     end
 end
 

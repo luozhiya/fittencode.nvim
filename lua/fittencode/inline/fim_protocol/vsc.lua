@@ -8,11 +8,11 @@ local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 
-local MAX_CHARS = 10 -- ~200KB 220000
+local MAX_CHARS = 220000 -- ~200KB 220000
 local HALF_MAX = MAX_CHARS / 2
 
 local END_OF_TEXT_TOKEN = '<|endoftext|>'
-local DEFAULT_CONTEXT_THRESHOLD = 10
+local DEFAULT_CONTEXT_THRESHOLD = 100
 local FIM_MIDDLE_TOKEN = '<fim_middle>'
 
 local M = {

@@ -24,6 +24,7 @@ local Segment = require('fittencode.inline.segment')
 
 local SESSION_EVENT = Definitions.SESSION_EVENT
 local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
+local SESSION_TASK_EVENT = Definitions.SESSION_TASK_EVENT
 
 ---@class FittenCode.Inline.Session
 ---@field buf number
@@ -56,10 +57,13 @@ function Session:_initialize(options)
     self.trigger_inline_suggestion = Fn.schedule_call_wrap_fn(options.trigger_inline_suggestion)
     self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey')
     self.on_completion_event = function()
-        Fn.schedule_call(options.on_completion_event, { id = self.id, completion_status = self.completion_event, })
+        Fn.schedule_call(options.on_session_update_event, { id = self.id, completion_event = self.completion_event, })
     end
     self.on_session_event = function()
         Fn.schedule_call(options.on_session_event, { id = self.id, session_event = self.session_event, })
+    end
+    self.on_session_task_event = function()
+        Fn.schedule_call(options.on_session_update_event, { id = self.id, session_task_event = self.session_task_event, })
     end
     self:sync_session_event(SESSION_EVENT.CREATED)
 end
@@ -81,7 +85,6 @@ function Session:__segments()
             message = 'Failed to send segments request',
         })
     end
-    self:sync_completion_event(COMPLETION_EVENT.SEMANTIC_SEGMENT)
     self:__add_request(request)
     return promise:forward(function(segments)
         self.model:update({
@@ -98,8 +101,10 @@ function Session:set_model(parsed_response)
             response = parsed_response,
         })
         self:sync_session_event(SESSION_EVENT.MODEL_READY)
+        self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
+        self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_PRE)
         self:__segments():finally(function()
-            self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
+            self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_POST)
         end)
     end
 end
@@ -237,6 +242,11 @@ end
 function Session:sync_completion_event(event)
     self.completion_event = event
     self.on_completion_event()
+end
+
+function Session:sync_session_task_event(event)
+    self.session_task_event = event
+    self.on_session_task_event()
 end
 
 function Session:__add_request(handle)

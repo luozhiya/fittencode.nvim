@@ -253,7 +253,7 @@ function Controller:trigger_inline_suggestion(options)
         position = position,
         id = self.selected_session_id,
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
-        on_completion_event = function(data) self:__emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
+        on_session_update_event = function(data) self:__emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
         on_session_event = function(data) self:on_session_event(data) end,
         version = F.version(buf)
     })

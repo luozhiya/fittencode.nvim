@@ -13,16 +13,21 @@ local INLINE_EVENT = {
     RUNNING = 'running',
 }
 
--- COMPLETION_STATUS 仅描述补全流程的进度（如请求中、建议就绪），属于会话交互阶段的子逻辑。
+-- COMPLETION_STATUS 仅描述一次标准补全流程的进度（如请求中、建议就绪），属于会话交互阶段的子逻辑。
 local COMPLETION_EVENT = {
     START                      = 'start',                      -- 创建了 Session，COMPLETION
     GENERATING_PROMPT          = 'generating_prompt',          -- 正在构建补全请求的提示词（如代码片段、自然语言问题）。
     GETTING_COMPLETION_VERSION = 'getting_completion_version', -- 正在获取补全服务版本。
     GENERATE_ONE_STAGE         = 'generate_one_stage',         -- 向补全服务发送请求（如 HTTP 请求），等待响应。
     SUGGESTIONS_READY          = 'suggestions_ready',          -- 成功获取补全建议，可渲染到 UI。
-    SEMANTIC_SEGMENT           = 'semantic_segment',           -- 正在进行语义分割（如中文分词），可选的
     NO_MORE_SUGGESTIONS        = 'no_more_suggestions',        -- 补全服务返回无结果。
     ERROR                      = 'error',                      -- 补全流程失败（如网络错误、参数无效）。
+}
+
+-- 在标准 Completion 之外，Session 还会执行一些额外的任务，如语义分割（如中文分词）。
+local SESSION_TASK_EVENT = {
+    SEMANTIC_SEGMENT_PRE  = 'semantic_segment_pre',  -- 开始语义分割（如中文分词）
+    SEMANTIC_SEGMENT_POST = 'semantic_segment_post', -- 完成语义分割
 }
 
 -- 仅描述 Session 的生命周期（创建、初始化、交互、终止），不涉及补全细节。
@@ -38,5 +43,6 @@ return {
     CONTROLLER_EVENT = CONTROLLER_EVENT,
     INLINE_EVENT = INLINE_EVENT,
     COMPLETION_EVENT = COMPLETION_EVENT,
+    SESSION_TASK_EVENT = SESSION_TASK_EVENT,
     SESSION_EVENT = SESSION_EVENT,
 }
