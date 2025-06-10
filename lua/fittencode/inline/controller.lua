@@ -65,6 +65,7 @@ function Controller:__initialize(options)
     do
         self.keymaps = {
             { 'Alt-\\', function() self:trigger_inline_suggestion_by_shortcut() end },
+            { 'Alt-O',  function() self:trigger_edit_completion_by_shortcut() end },
         }
         for _, v in ipairs(self.keymaps) do
             vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
@@ -234,10 +235,14 @@ end
 -- 触发补全
 -- * resolve 成功时返回补全列表
 -- * reject 没有补全或者出错了
+---@param options? FittenCode.Inline.TriggerInlineSuggestionOptions
 ---@return FittenCode.Promise
 function Controller:trigger_inline_suggestion(options)
     Log.debug('trigger_inline_suggestion')
     options = options or {}
+    options.mode = options.mode or 'incremental_completion'
+    options.force = options.force or false
+
     local buf, position = self:_preflight_check(options)
     if not buf or not position then
         return Promise.rejected({
@@ -251,6 +256,7 @@ function Controller:trigger_inline_suggestion(options)
         buf = buf,
         filename = F.filename(buf),
         position = position,
+        mode = options.mode,
         id = self.selected_session_id,
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
         on_session_update_event = function(data) self:__emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
@@ -326,6 +332,20 @@ end
 function Controller:trigger_inline_suggestion_by_shortcut()
     self:trigger_inline_suggestion({
         force = true,
+        mode = 'incremental_completion'
+    }):forward(function(_)
+        if not _ then
+            return Promise.rejected()
+        end
+    end):catch((function()
+        self:__show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000)
+    end))
+end
+
+function Controller:trigger_edit_completion_by_shortcut()
+    self:trigger_inline_suggestion({
+        force = true,
+        mode = 'edit_completion',
     }):forward(function(_)
         if not _ then
             return Promise.rejected()
@@ -340,6 +360,19 @@ function Controller:trigger_inline_suggestion_auto(options)
         return
     end
     self.debounce_trigger_inline_suggestion(options)
+end
+
+-- 什么情况下触发 edit_completion ?
+-- * 当 inline_suggestion 请求返回 No More Suggestion 时，触发 edit_completion?
+function Controller:trigger_edit_completion_auto()
+    local open = Config.use_auto_edit_completion.open
+    local v = { 'open', 'on', 'off' }
+    if not vim.tbl_contains(v, open) then
+        open = 'auto'
+    end
+    if open == 'auto' or open == 'off' then
+        return
+    end
 end
 
 -- 这个比 VSCode 的情况更复杂，suffixes 支持多个（非当前 buf filetype 也可以）

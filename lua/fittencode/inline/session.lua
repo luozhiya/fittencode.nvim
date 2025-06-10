@@ -7,7 +7,7 @@
 
 ]]
 
-local Model = require('fittencode.inline.model')
+local Model = require('fittencode.inline.incremental_completion_mode')
 local View = require('fittencode.inline.view')
 local ViewState = require('fittencode.inline.view.state')
 local Promise = require('fittencode.fn.promise')
@@ -49,6 +49,7 @@ function Session:_initialize(options)
     self.buf = options.buf
     self.position = options.position
     self.commit_position = options.position
+    self.mode = options.mode
     self.id = options.id
     self.requests = {}
     self.keymaps = {}
