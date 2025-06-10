@@ -8,8 +8,8 @@
 ]]
 
 local Model = require('fittencode.inline.model.incremental_completion.model')
-local View = require('fittencode.inline.view')
-local ViewState = require('fittencode.inline.view.state')
+local View = require('fittencode.inline.view.incremental_completion')
+local ViewState = require('fittencode.inline.view.incremental_completion.state')
 local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')
