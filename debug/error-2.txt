@@ -1,0 +1,37 @@
+  prompt = {
+    inputs = "",
+    meta_datas = {
+      bcpos = 400,
+      bplen = 0,
+      bslen = 0,
+      cpos = 142,
+      diff = "写下你的故事吧！\n\n《夏天》\n\n啊，夏天，真的好热啊。\n\n我在家里躺着，看着窗外的阳光，心里想着，这真是太好了。\n\n冰箱里有很多冰棒，我把它们都放进了冰箱冷藏室。\n\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。\n\n我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。\n",
+      filename = "E:\\DataCenter\\onWorking\\fittencode.nvim-next\\debug\\gushi.md",
+      nmd5 = "8493109007855dacf377846e872cad80",
+      pc_available = true,
+      pc_prompt = "",
+      pc_prompt_type = "0",
+      plen = 0,
+      pmd5 = "",
+      slen = 0
+    }
+  }
+
+  prompt = {
+    inputs = "",
+    meta_datas = {
+      bcpos = 484,
+      bplen = 400,
+      bslen = 0,
+      cpos = 170,
+      diff = "我喜欢冰棒，因为它们很容易冻住，而且还可以用来做冰淇淋。",
+      filename = "E:\\DataCenter\\onWorking\\fittencode.nvim-next\\debug\\gushi.md",
+      nmd5 = "a4ed03d6d8f05a43c7eb922cf05e03c1",
+      pc_available = true,
+      pc_prompt = "",
+      pc_prompt_type = "0",
+      plen = 142,
+      pmd5 = "8493109007855dacf377846e872cad80",
+      slen = 0
+    }
+  }

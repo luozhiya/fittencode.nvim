@@ -8,25 +8,7 @@ local OPL = require('fittencode.opl')
 
 local M = {}
 
----@param text? string|string[]
-local function generate(text)
-    if not text then
-        return
-    end
-
-    ---@type string[]
-    ---@diagnostic disable-next-line: assign-type-mismatch
-    text = (type(text) == 'string') and { text } or text
-
-    local messages = {}
-    for idx, t in ipairs(text) do
-        assert(t and t ~= '', 'content should not be empty')
-        messages[idx] = {
-            content = string.format('# %d\n\n```\n%s\n```\n\n', idx, t)
-        }
-    end
-
-    local template = [[<|system|>
+local template = [[<|system|>
 Please reply directly to the code without any explanation.
 Please do not use markdown when replying.
 请完全使用中文回答。
@@ -43,7 +25,9 @@ Please do not use markdown when replying.
 好的，我会严格按照要求来执行的
 
 <|user|>
-正确示例如下，注意学习示例中换行符的处理，示例中用 "原文begin" 和 "原文end" 分隔原文，用 "输出begin" 和 "输出end" 分隔输出。
+
+- 正确示例如下，示例中用 "原文begin" 和 "原文end" 分隔原文，用 "输出begin" 和 "输出end" 分隔输出
+- 学习示例中换行符的处理，严格按照要求处理
 
 原文begin
 # 1
@@ -97,7 +81,7 @@ Please do not use markdown when replying.
 输出end
 
 <|assistant|>
-已学习正确的写法
+已学习正确的写法，将会严格执行
 
 <|user|>
 错误换行符处理示例如下：
@@ -144,6 +128,8 @@ Please do not use markdown when replying.
 
 <|assistant|>
 已学习如何规避错误的换行符处理
+
+上面处理的错误在于：
 - "1" 少了一个换行符
 - "2" 末尾多了两个换行符
 - "3" 间隔空行少了一个换行符
@@ -165,6 +151,25 @@ Please do not use markdown when replying.
 
 <|end|>
 <|assistant|>]]
+
+---@param text? string|string[]
+local function generate(text)
+    if not text then
+        return
+    end
+
+    ---@type string[]
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    text = (type(text) == 'string') and { text } or text
+
+    local messages = {}
+    for idx, t in ipairs(text) do
+        assert(t and t ~= '', 'content should not be empty')
+        messages[idx] = {
+            content = string.format('# %d\n\n```\n%s\n```\n\n', idx, t)
+        }
+    end
+
     local env = {
         messages = messages,
     }
