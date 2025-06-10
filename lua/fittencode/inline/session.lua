@@ -7,7 +7,7 @@
 
 ]]
 
-local Model = require('fittencode.inline.incremental_completion_mode')
+local Model = require('fittencode.inline.incremental_completion_model')
 local View = require('fittencode.inline.view')
 local ViewState = require('fittencode.inline.view.state')
 local Promise = require('fittencode.fn.promise')
