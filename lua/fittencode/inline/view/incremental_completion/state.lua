@@ -1,4 +1,4 @@
----@class FittenCode.Inline.State
+---@class FittenCode.Inline.IncrementalCompletionViewState
 ---@field lines table<number, table<number, table>>
 local State = {}
 State.__index = State

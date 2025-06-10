@@ -3,7 +3,7 @@ local Fn = require('fittencode.fn.core')
 local Log = require('fittencode.log')
 local Position = require('fittencode.fn.position')
 
----@class FittenCode.Inline.View
+---@class FittenCode.Inline.IncrementalCompletionView
 ---@field buf integer
 ---@field origin_pos FittenCode.Position
 ---@field completion_ns integer
