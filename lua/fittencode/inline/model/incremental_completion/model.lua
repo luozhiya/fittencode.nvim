@@ -6,7 +6,7 @@ Model 的设计思路：
 
 ]]
 
-local CompletionModel = require('fittencode.inline.completion_model')
+local CompletionModel = require('fittencode.inline.model.incremental_completion.completion_model')
 local Log = require('fittencode.log')
 local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')
