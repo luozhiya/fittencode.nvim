@@ -96,19 +96,17 @@ function ProgressIndicatorObserver:update(controller, event, data)
             busy = 'completion'
         elseif data.session_task_event == SESSION_TASK_EVENT.SEMANTIC_SEGMENT_PRE then
             self.start_time[data.id].task = vim.uv.hrtime()
+            self.pi:record_stage(true)
             busy = 'task'
         end
     end
     if busy then
         assert(self.start_time[data.id][busy])
-        if self.pre_busy ~= busy then
-            self.pi:stop()
-        end
         self.pi:start(self.start_time[data.id][busy])
     else
+        self.pi:record_stage(false)
         self.pi:stop()
     end
-    self.pre_busy = busy
 end
 
 return {

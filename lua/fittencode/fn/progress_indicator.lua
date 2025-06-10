@@ -27,10 +27,11 @@ end
 function ProgressIndicator:__initialize(options)
     options = options or {}
     self.frames = options.style or STYLES.spin
-    self.update_interval = 150        -- 毫秒
+    self.update_interval = 150                  -- 毫秒
     self.highlight_group = 'Comment'
-    self.time_format = ' [%.2fs]'     -- 显示为秒，保留一位小数 -- ' [%.0fms]'    -- 时间显示格式
-    self.time_highlight = 'Statement' -- 时间文本高亮组
+    self.time_format = ' [%.2fs]'               -- 显示为秒，保留一位小数 -- ' [%.0fms]'    -- 时间显示格式
+    self.time_format_stage = ' [%.2fs + %.2fs]' -- 显示为秒，保留一位小数 -- ' [%.0fms]'    -- 时间显示格式
+    self.time_highlight = 'Statement'           -- 时间文本高亮组
     self.progress_timer = nil
     self.current_frame = 1
     self.progress_win = nil
@@ -47,21 +48,23 @@ function ProgressIndicator:update_progress()
 
     local elapsed = vim.loop.hrtime() - self.progress_start_time
     local elapsed_ms = elapsed / 1e9 -- 转换为毫秒
+    self.last_elapsed_ms = elapsed_ms
 
     local time_str = string.format(self.time_format, elapsed_ms)
+    if self.stage then
+        time_str = string.format(self.time_format_stage, self.stage, elapsed_ms)
+    end
     local content = self.frames[self.current_frame] .. time_str
 
     vim.api.nvim_buf_set_lines(self.progress_buf, 0, -1, false, { content })
 
-    -- 设置时间部分的高亮
     if self.progress_win and vim.api.nvim_win_is_valid(self.progress_win) then
-        local time_start = #self.frames[self.current_frame] + 1
         vim.hl.range(
             self.progress_buf,
             self.ns,
             self.time_highlight,
             { 0, 0 },
-            { 0, time_start }
+            { 0, #self.frames[self.current_frame] + 1 }
         )
     end
 
@@ -84,7 +87,7 @@ function ProgressIndicator:start(start_time)
     for _, frame in ipairs(self.frames) do
         max_frame_width = math.max(max_frame_width, #frame)
     end
-    local time_width = #string.format(self.time_format, 10000)
+    local time_width = #string.format(self.time_format, 10000) * 2
     local win_width = max_frame_width + time_width
 
     self.progress_win = vim.api.nvim_open_win(self.progress_buf, false, {
@@ -127,6 +130,14 @@ function ProgressIndicator:stop()
     self.progress_buf = nil
     self.progress_start_time = nil
     self.current_frame = 1
+end
+
+function ProgressIndicator:record_stage(v)
+    if v then
+        self.stage = self.last_elapsed_ms
+    else
+        self.stage = nil
+    end
 end
 
 function ProgressIndicator:toggle()
