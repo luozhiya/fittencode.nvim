@@ -499,6 +499,7 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
         local parse_result = Fim.parse(response, {
             buf = self.buf,
             position = zerepos,
+            engine = self.engine
         })
         if parse_result.status == 'error' then
             return Promise.rejected({

@@ -243,8 +243,7 @@ local function build_inccmp_items(response, buf, position)
         line_delta = response.delta_line or 0
     } }
 
-    local snext = position:clone()
-    snext.col = snext.col + 1
+    local snext = position:translate(0, 1)
     local line_remaining = assert(F.get_text(buf, Range.new({
         start = snext,
         end_ = Position.new({
@@ -252,11 +251,15 @@ local function build_inccmp_items(response, buf, position)
             col = -1,
         }),
     })))
+    Log.debug('line_remaining = {}', line_remaining)
 
     local computed = {}
     for _, completion in ipairs(completions) do
         local col_delta = Unicode.utf_to_byteindex(line_remaining, 'utf-16', completion.character_delta)
-        if line_remaining:sub(snext.col + 1, snext.col + col_delta) == completion.generated_text then
+        local sub = line_remaining:sub(snext.col + 1, snext.col + col_delta)
+        Log.debug('sub = {}', sub)
+        Log.debug('completion.generated_text = {}', completion.generated_text)
+        if sub == completion.generated_text then
             goto continue
         end
         computed[#computed + 1] = {
@@ -295,7 +298,7 @@ function M.parse(response, options)
     local completions
     if options.engine == 'inccmp' then
         ---@diagnostic disable-next-line: param-type-mismatch
-        completions = build_inccmp_items(response)
+        completions = build_inccmp_items(response, options.buf, options.position)
     else
         ---@diagnostic disable-next-line: param-type-mismatch
         completions = build_editcmp_items(response)
