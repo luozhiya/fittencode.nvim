@@ -12,3 +12,18 @@
 }
 
 ]]
+
+---@class FittenCode.Inline.EditCompletion.View
+local View = {}
+View.__index = View
+
+function View.new(options)
+    local self = setmetatable({}, View)
+    self:__initialize(options)
+    return self
+end
+
+function View:__initialize(options)
+end
+
+return View
