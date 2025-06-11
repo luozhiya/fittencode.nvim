@@ -23,11 +23,11 @@
 
 ---@class FittenCode.Inline.TriggerInlineSuggestionOptions
 ---@field force boolean
----@field engine 'inccmp' | 'editcmp'
+---@field mode 'inccmp' | 'editcmp'
 
 --[[
 
-EngineCapabilities = {
+ModeCapabilities = {
     accept_next_char = false,
     accept_next_line = false,
     accept_next_word = false,
@@ -39,7 +39,7 @@ EngineCapabilities = {
 }
 
 ]]
----@class FittenCode.Inline.EngineCapabilities
+---@class FittenCode.Inline.ModeCapabilities
 ---@field accept_next_char boolean
 ---@field accept_next_line boolean
 ---@field accept_next_word boolean
@@ -58,7 +58,7 @@ EngineCapabilities = {
 ---@field is_complete function
 ---@field revoke function
 ---@field is_match_next_char function
----@field engine_capabilities FittenCode.Inline.EngineCapabilities
+---@field mode_capabilities FittenCode.Inline.ModeCapabilities
 
 ---@class FittenCode.Inline.IView
 ---@field clear function

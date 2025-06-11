@@ -296,7 +296,7 @@ function M.parse(response, options)
     end
 
     local completions
-    if options.engine == 'inccmp' then
+    if options.mode == 'inccmp' then
         ---@diagnostic disable-next-line: param-type-mismatch
         completions = build_inccmp_items(response, options.buf, options.position)
     else

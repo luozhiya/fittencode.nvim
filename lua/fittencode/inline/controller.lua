@@ -4,6 +4,10 @@ Inline Controller
 - 控制 Session 的产生和销毁，期间具体的补全操作由 Session 完成
 - IC 运行在 Insert 模式中，需要注意 cursor 的不同
 
+Inline
+- IncrementalCompletion
+- EditCompletion
+
 ]]
 
 local Client = require('fittencode.client')
@@ -166,12 +170,12 @@ function Controller:edit_completion_cancel(options)
     options = options or {}
     local current = self:get_active_session()
     if options.vimev and options.vimev.event == 'CursorMovedI' and current then
-        if current.engine == 'inccmp' then
+        if current.mode == 'inccmp' then
             local match = current:is_match_commit_position(F.position(vim.api.nvim_get_current_win()))
             if vim.tbl_contains(self.filter_events, options.vimev.event) or match then
                 return
             end
-        elseif current.engine == 'editcmp' then
+        elseif current.mode == 'editcmp' then
             return
         end
     end
@@ -208,7 +212,7 @@ end
 
 function Controller:_preflight_check(options)
     local buf = vim.api.nvim_get_current_buf()
-    if vim.api.nvim_get_mode().mode ~= 'i' or self:is_ft_disabled(buf) or not F.is_filebuf(buf) then
+    if vim.api.nvim_get_mode().mode ~= 'i' or not self:is_enabled(buf) then
         return
     end
     local api_key_manager = Client.get_api_key_manager()
@@ -239,7 +243,7 @@ end
 function Controller:trigger_inline_suggestion(options)
     Log.debug('trigger_inline_suggestion')
     options = options or {}
-    options.engine = options.engine or 'inccmp'
+    options.mode = options.mode or 'inccmp'
     options.force = options.force or false
 
     local buf, position = self:_preflight_check(options)
@@ -255,7 +259,7 @@ function Controller:trigger_inline_suggestion(options)
         buf = buf,
         filename = F.filename(buf),
         position = position,
-        engine = options.engine,
+        mode = options.mode,
         id = self.selected_session_id,
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
         on_session_update_event = function(data) self:__emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
@@ -331,7 +335,7 @@ end
 function Controller:trigger_inline_suggestion_by_shortcut()
     self:trigger_inline_suggestion({
         force = true,
-        engine = 'inccmp'
+        mode = 'inccmp'
     }):forward(function(_)
         if not _ then
             return Promise.rejected()
@@ -344,7 +348,7 @@ end
 function Controller:trigger_edit_completion_by_shortcut()
     self:trigger_inline_suggestion({
         force = true,
-        engine = 'editcmp',
+        mode = 'editcmp',
     }):forward(function(_)
         if not _ then
             return Promise.rejected()

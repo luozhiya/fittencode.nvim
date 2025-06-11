@@ -51,7 +51,7 @@ function Session:_initialize(options)
     self.buf = options.buf
     self.position = options.position
     self.commit_position = options.position
-    self.engine = options.engine
+    self.mode = options.mode
     self.id = options.id
     self.requests = {}
     self.keymaps = {}
@@ -99,7 +99,7 @@ end
 ---@return FittenCode.Inline.IModel
 function Session:__new_model(completions)
     local Class
-    if self.engine == 'inccmp' then
+    if self.mode == 'inccmp' then
         Class = IncModel
     else
         Class = EditModel
@@ -118,7 +118,7 @@ function Session:set_model(completions)
         self:sync_session_event(SESSION_EVENT.MODEL_READY)
         self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
 
-        if self.model.engine_capabilities.segment_words then
+        if self.model.mode_capabilities.segment_words then
             self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_PRE)
             self:__segments():finally(function()
                 self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_POST)
@@ -136,7 +136,7 @@ end
 
 ---@return FittenCode.Inline.IView
 function Session:__new_view()
-    if self.engine == 'inccmp' then
+    if self.mode == 'inccmp' then
         ---@diagnostic disable-next-line: return-type-mismatch
         return IncView.new({
             buf = self.buf,
@@ -190,7 +190,7 @@ function Session:revoke()
 end
 
 function Session:set_keymaps()
-    if self.engine == 'inccmp' then
+    if self.mode == 'inccmp' then
         self.keymaps = {
             { '<Tab>',     function() self:accept('all') end },
             { '<C-Down>',  function() self:accept('line') end },
@@ -198,7 +198,7 @@ function Session:set_keymaps()
             { '<C-Up>',    function() self:revoke() end },
             { '<C-Left>',  function() self:revoke() end },
         }
-    elseif self.engine == 'editcmp' then
+    elseif self.mode == 'editcmp' then
         self.keymaps = {
             { '<Tab>',    function() self:accept('all') end },
             { '<C-Down>', function() self:accept('hunk') end },
@@ -218,7 +218,7 @@ function Session:restore_keymaps()
 end
 
 function Session:set_onkey()
-    if self.engine == 'inccmp' then
+    if self.mode == 'inccmp' then
         vim.on_key(function(key)
             local buf = vim.api.nvim_get_current_buf()
             if vim.api.nvim_get_mode().mode == 'i' and buf == self.buf and self:is_interactive() then
@@ -235,7 +235,7 @@ function Session:set_onkey()
 end
 
 function Session:restore_onkey()
-    if self.engine == 'inccmp' then
+    if self.mode == 'inccmp' then
         vim.on_key(nil, self.filter_onkey_ns)
         vim.api.nvim_buf_clear_namespace(self.buf, self.filter_onkey_ns, 0, -1)
     end
@@ -499,7 +499,7 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
         local parse_result = Fim.parse(response, {
             buf = self.buf,
             position = zerepos,
-            engine = self.engine
+            mode = self.mode
         })
         if parse_result.status == 'error' then
             return Promise.rejected({

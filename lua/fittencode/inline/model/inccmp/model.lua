@@ -33,8 +33,8 @@ function Model.new(options)
 end
 
 function Model:_initialize(options)
-    ---@type FittenCode.Inline.EngineCapabilities
-    self.engine_capabilities = {
+    ---@type FittenCode.Inline.ModeCapabilities
+    self.mode_capabilities = {
         accept_next_char = true,
         accept_next_line = true,
         accept_next_word = true,
