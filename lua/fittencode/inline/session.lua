@@ -7,9 +7,9 @@
 
 ]]
 
-local IncrementalCompletionModel = require('fittencode.inline.model.inccmp.model')
-local IncrementalCompletionView = require('fittencode.inline.view.inccmp')
-local IncrementalCompletionViewState = require('fittencode.inline.view.inccmp.state')
+local IncModel = require('fittencode.inline.model.inccmp.model')
+local IncView = require('fittencode.inline.view.inccmp')
+local IncViewState = require('fittencode.inline.view.inccmp.state')
 local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')
@@ -96,7 +96,7 @@ end
 
 function Session:set_model(completions)
     if self.session_event == SESSION_EVENT.REQUESTING then
-        self.model = IncrementalCompletionModel.new({
+        self.model = IncModel.new({
             buf = self.buf,
             position = self.position,
             completions = completions,
@@ -119,7 +119,7 @@ end
 
 function Session:set_interactive()
     if self.session_event == SESSION_EVENT.MODEL_READY then
-        self.view = IncrementalCompletionView.new({
+        self.view = IncView.new({
             buf = self.buf,
             position = self.position,
             col_delta = self.model:get_col_delta(),
@@ -140,7 +140,7 @@ function Session:update_view()
     if self:is_terminated() then
         return
     end
-    self.view:update(IncrementalCompletionViewState.get_state_from_model(self.model:snapshot()))
+    self.view:update(IncViewState.get_state_from_model(self.model:snapshot()))
 end
 
 function Session:accept(range)
