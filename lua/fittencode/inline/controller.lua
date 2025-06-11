@@ -167,13 +167,15 @@ end
 
 function Controller:edit_completion_cancel(options)
     options = options or {}
-    if options.event and options.event.event == 'CursorMovedI' then
-        local current = self:get_active_session()
-        if current and not options.force then
+    local current = self:get_active_session()
+    if options.event and options.event.event == 'CursorMovedI' and current then
+        if current.engine == 'inccmp' then
             local match = current:is_match_commit_position(F.position(vim.api.nvim_get_current_win()))
             if vim.tbl_contains(self.filter_events, options.event.event) or match then
                 return
             end
+        elseif current.engine == 'editcmp' then
+            return
         end
     end
     self:terminate_sessions()
