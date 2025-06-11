@@ -221,42 +221,44 @@ end
 ---@field completions table<number, FittenCode.Inline.FimProtocol.VSC.CompletionItem>
 ---@field context string
 
-local function build_completion_item(raw_response)
+---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
+local function build_completion_item(response)
     local clean_text = vim.fn.substitute(
-        raw_response.generated_text or '',
+        response.generated_text or '',
         END_OF_TEXT_TOKEN,
         '',
         'g'
     )
     clean_text = clean_text:gsub('\r\n', '\n')
     clean_text = clean_text:gsub('\r', '\n')
-    local generated_text = clean_text .. (raw_response.ex_msg or '')
+    local generated_text = clean_text .. (response.ex_msg or '')
     if generated_text == '' then
         return
     end
     return { {
         generated_text = generated_text,
-        character_delta = raw_response.delta_char or 0,
-        line_delta = raw_response.delta_line or 0
+        character_delta = response.delta_char or 0,
+        line_delta = response.delta_line or 0
     } }
 end
 
+---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
 ---@return FittenCode.Inline.FimProtocol.VSC.ParseResult
-function M.parse(raw_response, options)
-    if not raw_response then
+function M.parse(response, options)
+    if not response then
         return {
             status = 'error',
         }
     end
 
-    if raw_response.error then
+    if response.error then
         return {
             status = 'error',
-            message = raw_response.error
+            message = response.error
         }
     end
 
-    local completions = build_completion_item(raw_response)
+    local completions = build_completion_item(response)
     if not completions then
         return {
             status = 'no_completion',
@@ -268,7 +270,7 @@ function M.parse(raw_response, options)
     return {
         status = 'success',
         data = {
-            request_id = raw_response.server_request_id or '',
+            request_id = response.server_request_id or '',
             completions = completions,
             context = table.concat({ fragments.prefix, FIM_MIDDLE_TOKEN, fragments.suffix })
         }

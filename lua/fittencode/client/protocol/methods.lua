@@ -342,9 +342,9 @@ local Methods = {
     -- 生成一阶段补全代码，有多个版本
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json', 'Content-Encoding' = 'gzip' }`
-    -- * `body = @FittenCode.Protocol.Methods.GenerateOneStage.Body`
+    -- * `body = @FittenCode.Protocol.Methods.GenerateOneStageAuth.Body`
     -- * `query = ?{platform_info}`
-    -- * `response = @FittenCode.Protocol.Methods.GenerateOneStage.Response`
+    -- * `response = @FittenCode.Protocol.Methods.GenerateOneStageAuth.Response`
     -- * `completion_version = { '', '2_1', '2_2', '2_3' }`
     generate_one_stage_auth = {
         method = 'POST',

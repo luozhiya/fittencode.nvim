@@ -441,10 +441,11 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
     self:__add_request(request)
 
     return request:async():forward(function(_)
+        ---@type FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
         local response = _.json()
         if not response then
             return Promise.rejected({
-                message = 'Failed to decode completion raw response',
+                message = 'Failed to decode completion response',
                 metadata = {
                     response = _,
                 }

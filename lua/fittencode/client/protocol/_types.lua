@@ -455,6 +455,32 @@
 ---@field save_file_and_directory_names FittenCode.Protocol.Element
 ---@field add_files_and_directories FittenCode.Protocol.Element
 
+------------------------------------------------
+-- GenerateOneStageAuth
+------------------------------------------------
+
+---@alias FittenCode.Protocol.Methods.GenerateOneStageAuth.Body string
+
+---@class FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion
+---@field delete_offsets table<table<number>>
+---@field generated_text string
+---@field insert_offsets table<table<number>>
+---@field ori_end_line number
+---@field ori_start_line number
+---@field res_end_line number
+---@field res_start_line number
+---@field server_request_id string
+
+---@class FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion
+---@field generated_text string
+---@field ex_msg string
+---@field delta_char number
+---@field delta_line number
+---@field server_request_id string
+
+---@class FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
+---@field error string
+
 ---@class FittenCode.Protocol.URLs
 ---@field register FittenCode.Protocol.Element
 ---@field register_cvt FittenCode.Protocol.Element
