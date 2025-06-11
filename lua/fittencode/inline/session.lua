@@ -235,8 +235,10 @@ function Session:set_onkey()
 end
 
 function Session:restore_onkey()
-    vim.on_key(nil, self.filter_onkey_ns)
-    vim.api.nvim_buf_clear_namespace(self.buf, self.filter_onkey_ns, 0, -1)
+    if self.engine == 'inccmp' then
+        vim.on_key(nil, self.filter_onkey_ns)
+        vim.api.nvim_buf_clear_namespace(self.buf, self.filter_onkey_ns, 0, -1)
+    end
 end
 
 function Session:abort_and_clear_requests()
