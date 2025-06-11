@@ -78,7 +78,7 @@ function Controller:__initialize(options)
             pattern = '*',
             callback = function(args)
                 Log.debug('trigger_inline_suggestion_auto autocmd = {}', args.event)
-                self:trigger_inline_suggestion_auto({ event = args })
+                self:trigger_inline_suggestion_auto({ vimev = args })
             end,
         })
         vim.api.nvim_create_autocmd({ 'CursorMovedI', 'InsertLeave', 'BufLeave' }, {
@@ -86,7 +86,7 @@ function Controller:__initialize(options)
             pattern = '*',
             callback = function(args)
                 Log.debug('edit_completion_cancel autocmd = {}', args.event)
-                self:edit_completion_cancel({ event = args })
+                self:edit_completion_cancel({ vimev = args })
             end,
         })
         vim.api.nvim_create_autocmd({ 'BufEnter' }, {
@@ -168,10 +168,10 @@ end
 function Controller:edit_completion_cancel(options)
     options = options or {}
     local current = self:get_active_session()
-    if options.event and options.event.event == 'CursorMovedI' and current then
+    if options.vimev and options.vimev.event == 'CursorMovedI' and current then
         if current.engine == 'inccmp' then
             local match = current:is_match_commit_position(F.position(vim.api.nvim_get_current_win()))
-            if vim.tbl_contains(self.filter_events, options.event.event) or match then
+            if vim.tbl_contains(self.filter_events, options.vimev.event) or match then
                 return
             end
         elseif current.engine == 'editcmp' then
@@ -218,7 +218,7 @@ function Controller:_preflight_check(options)
     if not api_key_manager:has_fitten_access_token() then
         return
     end
-    if options.event and vim.tbl_contains(self.filter_events, options.event.event) then
+    if options.vimev and vim.tbl_contains(self.filter_events, options.vimev.event) then
         return
     end
     local position = F.position(vim.api.nvim_get_current_win())
