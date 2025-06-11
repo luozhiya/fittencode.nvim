@@ -117,10 +117,13 @@ function Session:set_model(completions)
         self.model = self:__new_model(completions)
         self:sync_session_event(SESSION_EVENT.MODEL_READY)
         self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
-        self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_PRE)
-        self:__segments():finally(function()
-            self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_POST)
-        end)
+
+        if self.model.engine_capabilities.segment_words then
+            self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_PRE)
+            self:__segments():finally(function()
+                self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_POST)
+            end)
+        end
     end
 end
 
@@ -154,7 +157,7 @@ function Session:set_interactive()
         self.view = self:__new_view()
         self.view:register_message_receiver(function(...) self:receive_view_message(...) end)
         self:set_keymaps()
-        self:set_onkey()
+        self:set_lazy_completion()
         self:update_view()
         self:sync_session_event(SESSION_EVENT.INTERACTIVE)
     end
@@ -187,13 +190,21 @@ function Session:revoke()
 end
 
 function Session:set_keymaps()
-    self.keymaps = {
-        { '<Tab>',     function() self:accept('all') end },
-        { '<C-Down>',  function() self:accept('line') end },
-        { '<C-Right>', function() self:accept('word') end },
-        { '<C-Up>',    function() self:revoke() end },
-        { '<C-Left>',  function() self:revoke() end },
-    }
+    if self.engine == 'inccmp' then
+        self.keymaps = {
+            { '<Tab>',     function() self:accept('all') end },
+            { '<C-Down>',  function() self:accept('line') end },
+            { '<C-Right>', function() self:accept('word') end },
+            { '<C-Up>',    function() self:revoke() end },
+            { '<C-Left>',  function() self:revoke() end },
+        }
+    elseif self.engine == 'editcmp' then
+        self.keymaps = {
+            { '<Tab>',    function() self:accept('all') end },
+            { '<C-Down>', function() self:accept('hunk') end },
+            { '<C-Up>',   function() self:revoke() end },
+        }
+    end
     for _, map in ipairs(self.keymaps) do
         vim.keymap.set('i', map[1], map[2], { noremap = true, silent = true })
     end
@@ -206,7 +217,7 @@ function Session:restore_keymaps()
     self.keymaps = {}
 end
 
-function Session:set_onkey()
+function Session:set_lazy_completion()
     vim.on_key(function(key)
         local buf = vim.api.nvim_get_current_buf()
         if vim.api.nvim_get_mode().mode == 'i' and buf == self.buf and self:is_interactive() then

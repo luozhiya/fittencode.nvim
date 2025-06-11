@@ -28,11 +28,26 @@
 --[[
 
 EngineCapabilities = {
-
+    accept_next_char = false,
+    accept_next_line = false,
+    accept_next_word = false,
+    accept_all = true,
+    accept_hunk = false,
+    revoke = true,
+    lazy_completion = false,
+    segment_words = false
 }
 
 ]]
 ---@class FittenCode.Inline.EngineCapabilities
+---@field accept_next_char boolean
+---@field accept_next_line boolean
+---@field accept_next_word boolean
+---@field accept_all boolean
+---@field accept_hunk boolean
+---@field revoke boolean
+---@field lazy_completion boolean
+---@field segment_words boolean
 
 ---@class FittenCode.Inline.IModel
 ---@field update function
@@ -43,6 +58,7 @@ EngineCapabilities = {
 ---@field is_complete function
 ---@field revoke function
 ---@field is_match_next_char function
+---@field engine_capabilities FittenCode.Inline.EngineCapabilities
 
 ---@class FittenCode.Inline.IView
 ---@field clear function
