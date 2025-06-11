@@ -94,12 +94,12 @@ function Session:__segments()
     end)
 end
 
-function Session:set_model(parsed_response)
+function Session:set_model(completions)
     if self.session_event == SESSION_EVENT.REQUESTING then
         self.model = IncrementalCompletionModel.new({
             buf = self.buf,
             position = self.position,
-            completions = parsed_response,
+            completions = completions,
         })
         self:sync_session_event(SESSION_EVENT.MODEL_READY)
         self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
@@ -337,7 +337,7 @@ function Session:send_completions()
                 })
             end
             return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
-        end):forward(function(completion)
+        end):forward(function(parse_result)
             local check = self:__preflight_check()
             if check:is_rejected() then
                 return check
@@ -345,15 +345,15 @@ function Session:send_completions()
                 Fim.update_last_version(self.filename, self.version, self.cachedata)
                 debug_log(self, 'Updated FIM last version')
             end
-            if completion.status == 'no_completion' then
+            if parse_result.status == 'no_completion' then
                 debug_log(self, 'No more suggestions')
                 self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
                 return Promise.resolved(nil)
             end
-            debug_log(self, 'Got completion: {}', completion)
-            self:set_model(completion.data)
+            debug_log(self, 'Got completion: {}', parse_result)
+            self:set_model(parse_result.data)
             self:set_interactive()
-            return Promise.resolved(completion.data)
+            return Promise.resolved(parse_result.data)
         end):catch(function(_)
             return Promise.rejected(_)
         end)
@@ -452,16 +452,16 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
             })
         end
         local zerepos = self.position:translate(0, -1)
-        local parsed_response = Fim.parse(response, {
+        local parse_result = Fim.parse(response, {
             buf = self.buf,
             position = zerepos,
         })
-        if parsed_response.status == 'error' then
+        if parse_result.status == 'error' then
             return Promise.rejected({
-                message = parsed_response.message or 'Parsed completion response error',
+                message = parse_result.message or 'Parsed completion response error',
             })
         end
-        return parsed_response
+        return parse_result
     end):catch(function(_)
         return Promise.rejected(_)
     end)
