@@ -209,16 +209,11 @@ function M.update_last_version(filename, version, cachedata)
     M.last.once = true
 end
 
----@class FittenCode.Inline.FimProtocol.VSC.CompletionItem
----@field generated_text string
----@field character_delta number
----@field line_delta number
-
 ---@class FittenCode.Inline.FimProtocol.VSC.ParseResult
 ---@field status 'error'|'success'|'no_completion'
 ---@field message string
 ---@field request_id string
----@field completions table<number, FittenCode.Inline.FimProtocol.VSC.CompletionItem>
+---@field completions table
 ---@field context string
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion
@@ -275,6 +270,9 @@ end
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion
 local function build_editcmp_items(response)
+    if not response.delete_offsets or #response.delete_offsets == 0 or not response.insert_offsets or #response.insert_offsets == 0 then
+        return
+    end
 end
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
@@ -282,13 +280,7 @@ end
 function M.parse(response, options)
     assert(options)
 
-    if not response then
-        return {
-            status = 'error',
-        }
-    end
-
-    if response.error then
+    if not response or response.error then
         return {
             status = 'error',
             message = response.error
