@@ -157,7 +157,7 @@ function Session:set_interactive()
         self.view = self:__new_view()
         self.view:register_message_receiver(function(...) self:receive_view_message(...) end)
         self:set_keymaps()
-        self:set_lazy_completion()
+        self:set_onkey()
         self:update_view()
         self:sync_session_event(SESSION_EVENT.INTERACTIVE)
     end
@@ -217,22 +217,21 @@ function Session:restore_keymaps()
     self.keymaps = {}
 end
 
-function Session:set_lazy_completion()
+function Session:set_onkey()
     if self.engine == 'inccmp' then
-    vim.on_key(function(key)
-        local buf = vim.api.nvim_get_current_buf()
-        if vim.api.nvim_get_mode().mode == 'i' and buf == self.buf and self:is_interactive() then
-            if vim.fn.keytrans(key) == '<CR>' then
-                key = '\n'
+        vim.on_key(function(key)
+            local buf = vim.api.nvim_get_current_buf()
+            if vim.api.nvim_get_mode().mode == 'i' and buf == self.buf and self:is_interactive() then
+                if vim.fn.keytrans(key) == '<CR>' then
+                    key = '\n'
+                end
+                if self:lazy_completion(key) then
+                    -- >= 0.11.0 忽视输入，用户输入的字符由底层处理
+                    return ''
+                end
             end
-            if self:lazy_completion(key) then
-                -- >= 0.11.0 忽视输入，用户输入的字符由底层处理
-                return ''
-            end
-        end
-    end, self.filter_onkey_ns)
-elseif self.engine == 'editcmp' then
-end
+        end, self.filter_onkey_ns)
+    end
 end
 
 function Session:restore_onkey()
@@ -256,6 +255,7 @@ function Session:terminate()
         self:abort_and_clear_requests()
         self.view:clear()
         self:restore_keymaps()
+        self:restore_onkey()
     end
     self:sync_session_event(SESSION_EVENT.TERMINATED)
 end
