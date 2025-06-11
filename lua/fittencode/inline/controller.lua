@@ -240,7 +240,7 @@ end
 function Controller:trigger_inline_suggestion(options)
     Log.debug('trigger_inline_suggestion')
     options = options or {}
-    options.engine = options.engine or 'incremental_completion'
+    options.engine = options.engine or 'inccmp'
     options.force = options.force or false
 
     local buf, position = self:_preflight_check(options)
@@ -332,7 +332,7 @@ end
 function Controller:trigger_inline_suggestion_by_shortcut()
     self:trigger_inline_suggestion({
         force = true,
-        engine = 'incremental_completion'
+        engine = 'inccmp'
     }):forward(function(_)
         if not _ then
             return Promise.rejected()
@@ -345,7 +345,7 @@ end
 function Controller:trigger_edit_completion_by_shortcut()
     self:trigger_inline_suggestion({
         force = true,
-        engine = 'edit_completion',
+        engine = 'editcmp',
     }):forward(function(_)
         if not _ then
             return Promise.rejected()

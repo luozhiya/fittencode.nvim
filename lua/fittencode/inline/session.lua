@@ -7,9 +7,9 @@
 
 ]]
 
-local IncrementalCompletionModel = require('fittencode.inline.model.incremental_completion.model')
-local IncrementalCompletionView = require('fittencode.inline.view.incremental_completion')
-local IncrementalCompletionViewState = require('fittencode.inline.view.incremental_completion.state')
+local IncrementalCompletionModel = require('fittencode.inline.model.inccmp.model')
+local IncrementalCompletionView = require('fittencode.inline.view.inccmp')
+local IncrementalCompletionViewState = require('fittencode.inline.view.inccmp.state')
 local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')

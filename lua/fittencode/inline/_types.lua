@@ -23,7 +23,7 @@
 
 ---@class FittenCode.Inline.TriggerInlineSuggestionOptions
 ---@field force boolean
----@field engine 'incremental_completion' | 'edit_completion'
+---@field engine 'inccmp' | 'editcmp'
 
 --[[
 
