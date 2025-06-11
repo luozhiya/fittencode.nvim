@@ -109,7 +109,35 @@ function ProgressIndicatorObserver:update(controller, event, data)
     end
 end
 
+---@class FittenCode.Inline.StatisticObserver : FittenCode.Observer
+local StatisticObserver = {}
+StatisticObserver.__index = StatisticObserver
+
+function StatisticObserver.new()
+end
+
+---@param controller FittenCode.Inline.Controller
+---@param event string
+---@param data any
+function StatisticObserver:update(controller, event, data)
+end
+
+---@class FittenCode.Inline.TimingObserver : FittenCode.Observer
+local TimingObserver = {}
+TimingObserver.__index = TimingObserver
+
+function TimingObserver.new()
+end
+
+---@param controller FittenCode.Inline.Controller
+---@param event string
+---@param data any
+function TimingObserver:update(controller, event, data)
+end
+
 return {
     Status = Status,
-    ProgressIndicatorObserver = ProgressIndicatorObserver
+    ProgressIndicatorObserver = ProgressIndicatorObserver,
+    StatisticObserver = StatisticObserver,
+    TimingObserver = TimingObserver,
 }
