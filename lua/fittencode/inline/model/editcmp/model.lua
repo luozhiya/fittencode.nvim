@@ -1,14 +1,14 @@
 ---@class FittenCode.Inline.EditCompletion.Model
-local EditCompletionModel = {}
-EditCompletionModel.__index = EditCompletionModel
+local Model = {}
+Model.__index = Model
 
-function EditCompletionModel.new(options)
-    local self = setmetatable({}, EditCompletionModel)
+function Model.new(options)
+    local self = setmetatable({}, Model)
     self:__initialize(options)
     return self
 end
 
-function EditCompletionModel:__initialize(options)
+function Model:__initialize(options)
     ---@type FittenCode.Inline.EngineCapabilities
     self.engine_capabilities = {
         accept_next_char = false,
@@ -22,4 +22,4 @@ function EditCompletionModel:__initialize(options)
     }
 end
 
-return EditCompletionModel
+return Model

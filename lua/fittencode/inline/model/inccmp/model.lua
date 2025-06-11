@@ -23,16 +23,16 @@ local Unicode = require('fittencode.fn.unicode')
 ---@field completions table<table<string, any>>
 ---@field placeholder_ranges table<table<number>>
 ---@field completion_models table<FittenCode.Inline.CompletionModel>
-local IncrementalCompletionModel = {}
-IncrementalCompletionModel.__index = IncrementalCompletionModel
+local Model = {}
+Model.__index = Model
 
-function IncrementalCompletionModel.new(options)
-    local self = setmetatable({}, IncrementalCompletionModel)
+function Model.new(options)
+    local self = setmetatable({}, Model)
     self:_initialize(options)
     return self
 end
 
-function IncrementalCompletionModel:_initialize(options)
+function Model:_initialize(options)
     ---@type FittenCode.Inline.EngineCapabilities
     self.engine_capabilities = {
         accept_next_char = true,
@@ -94,7 +94,7 @@ end
 -- * 只支持 generated_text 比原来的文本长的情况
 ---@param buf number
 ---@param position FittenCode.Position
-function IncrementalCompletionModel:generate_placeholder_ranges(buf, position, computed_completions)
+function Model:generate_placeholder_ranges(buf, position, computed_completions)
     local placeholder_ranges = {}
     for _, completion in ipairs(computed_completions) do
         ---@type string
@@ -150,11 +150,11 @@ function IncrementalCompletionModel:generate_placeholder_ranges(buf, position, c
 end
 
 ---@return FittenCode.Inline.CompletionModel
-function IncrementalCompletionModel:selected_completion()
+function Model:selected_completion()
     return assert(self.completion_models[assert(self.selected_completion_index)], 'No completion model selected')
 end
 
-function IncrementalCompletionModel:get_generated_texts()
+function Model:get_generated_texts()
     local text = {}
     for _, completion in ipairs(self.completions) do
         text[#text + 1] = completion.generated_text
@@ -162,26 +162,26 @@ function IncrementalCompletionModel:get_generated_texts()
     return text
 end
 
-function IncrementalCompletionModel:accept(scope)
+function Model:accept(scope)
     assert(self:selected_completion()):accept(scope)
 end
 
-function IncrementalCompletionModel:revoke()
+function Model:revoke()
     assert(self:selected_completion()):revoke()
 end
 
-function IncrementalCompletionModel:is_complete()
+function Model:is_complete()
     return self:selected_completion():is_complete()
 end
 
-function IncrementalCompletionModel:update(state)
+function Model:update(state)
     state = state or {}
     if state.segments then
         self:update_segments(state.segments)
     end
 end
 
-function IncrementalCompletionModel:update_segments(segments)
+function Model:update_segments(segments)
     segments = segments or {}
     if #vim.tbl_keys(segments) ~= #self.completion_models then
         Log.error('Invalid segments length, #segments = {}, #completion_models = {}', #vim.tbl_keys(segments), #self.completion_models)
@@ -207,26 +207,26 @@ end
 
 -- 一旦开始 comletion 则不允许再选择其他的 completion
 -- TODO:?
-function IncrementalCompletionModel:set_selected_completion(index)
+function Model:set_selected_completion(index)
     if self.selected_completion_index ~= nil then
         return
     end
     self.selected_completion_index = index
 end
 
-function IncrementalCompletionModel:snapshot()
+function Model:snapshot()
     return self:selected_completion():snapshot()
 end
 
-function IncrementalCompletionModel:is_match_next_char(key)
+function Model:is_match_next_char(key)
     return key == assert(self:selected_completion()):get_next_char()
 end
 
-function IncrementalCompletionModel:get_col_delta()
+function Model:get_col_delta()
     return assert(self.completions[self.selected_completion_index]).col_delta
 end
 
-function IncrementalCompletionModel:get_text()
+function Model:get_text()
     local text = {}
     for _, completion in ipairs(self.completions) do
         text[#text + 1] = completion.generated_text
@@ -234,4 +234,4 @@ function IncrementalCompletionModel:get_text()
     return text
 end
 
-return IncrementalCompletionModel
+return Model

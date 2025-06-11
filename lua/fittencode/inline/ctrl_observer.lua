@@ -7,7 +7,7 @@ local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
 local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
 local SESSION_TASK_EVENT = Definitions.SESSION_TASK_EVENT
 
----@class FittenCode.Inline.Status
+---@class FittenCode.Inline.Status : FittenCode.Observer
 ---@field inline string
 ---@field completion string
 local Status = {}
