@@ -1,3 +1,4 @@
+---@class FittenCode.Inline.EditCompletion.Model
 local EditCompletionModel = {}
 EditCompletionModel.__index = EditCompletionModel
 

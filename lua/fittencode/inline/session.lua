@@ -10,6 +10,8 @@
 local IncModel = require('fittencode.inline.model.inccmp.model')
 local IncView = require('fittencode.inline.view.inccmp')
 local IncViewState = require('fittencode.inline.view.inccmp.state')
+local EditModel = require('fittencode.inline.model.editcmp.model')
+local EditView = require('fittencode.inline.view.editcmp')
 local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')
@@ -94,13 +96,25 @@ function Session:__segments()
     end)
 end
 
+---@return FittenCode.Inline.IModel
+function Session:__new_model(completions)
+    local Class
+    if self.engine == 'inccmp' then
+        Class = IncModel
+    else
+        Class = EditModel
+    end
+    ---@diagnostic disable-next-line: return-type-mismatch
+    return Class.new({
+        buf = self.buf,
+        position = self.position,
+        completions = completions,
+    })
+end
+
 function Session:set_model(completions)
     if self.session_event == SESSION_EVENT.REQUESTING then
-        self.model = IncModel.new({
-            buf = self.buf,
-            position = self.position,
-            completions = completions,
-        })
+        self.model = self:__new_model(completions)
         self:sync_session_event(SESSION_EVENT.MODEL_READY)
         self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
         self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_PRE)
@@ -117,13 +131,27 @@ function Session:receive_view_message(msg)
     end
 end
 
-function Session:set_interactive()
-    if self.session_event == SESSION_EVENT.MODEL_READY then
-        self.view = IncView.new({
+---@return FittenCode.Inline.IView
+function Session:__new_view()
+    if self.engine == 'inccmp' then
+        ---@diagnostic disable-next-line: return-type-mismatch
+        return IncView.new({
             buf = self.buf,
             position = self.position,
             col_delta = self.model:get_col_delta(),
         })
+    else
+        ---@diagnostic disable-next-line: return-type-mismatch
+        return EditView.new({
+            buf = self.buf,
+            position = self.position,
+        })
+    end
+end
+
+function Session:set_interactive()
+    if self.session_event == SESSION_EVENT.MODEL_READY then
+        self.view = self:__new_view()
         self.view:register_message_receiver(function(...) self:receive_view_message(...) end)
         self:set_keymaps()
         self:set_onkey()

@@ -35,5 +35,17 @@ EngineCapabilities = {
 ---@class FittenCode.Inline.EngineCapabilities
 
 ---@class FittenCode.Inline.IModel
+---@field update function
+---@field get_text function
+---@field get_col_delta function
+---@field snapshot function
+---@field accept function
+---@field is_complete function
+---@field revoke function
+---@field is_match_next_char function
 
 ---@class FittenCode.Inline.IView
+---@field clear function
+---@field update_cursor_with_col_delta function
+---@field update function
+---@field register_message_receiver function
