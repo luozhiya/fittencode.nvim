@@ -395,7 +395,7 @@ function Session:send_completions()
                 return Promise.resolved(nil)
             end
             debug_log(self, 'Got completion: {}', parse_result)
-            self:set_model(parse_result.data)
+            self:set_model(parse_result.data.completions)
             self:set_interactive()
             return Promise.resolved(parse_result.data)
         end):catch(function(_)
