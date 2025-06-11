@@ -7,9 +7,9 @@
 
 ]]
 
-local Model = require('fittencode.inline.model.incremental_completion.model')
-local View = require('fittencode.inline.view.incremental_completion')
-local ViewState = require('fittencode.inline.view.incremental_completion.state')
+local IncrementalCompletionModel = require('fittencode.inline.model.incremental_completion.model')
+local IncrementalCompletionView = require('fittencode.inline.view.incremental_completion')
+local IncrementalCompletionViewState = require('fittencode.inline.view.incremental_completion.state')
 local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')
@@ -33,8 +33,8 @@ local SESSION_TASK_EVENT = Definitions.SESSION_TASK_EVENT
 ---@field id string
 ---@field requests table<number, FittenCode.HTTP.Request>
 ---@field keymaps table<number, any>
----@field view FittenCode.Inline.IncrementalCompletion.View
----@field model FittenCode.Inline.IncrementalCompletion.Model
+---@field view FittenCode.Inline.IView
+---@field model FittenCode.Inline.IModel
 ---@field version string
 local Session = {}
 Session.__index = Session
@@ -96,7 +96,7 @@ end
 
 function Session:set_model(parsed_response)
     if self.session_event == SESSION_EVENT.REQUESTING then
-        self.model = Model.new({
+        self.model = IncrementalCompletionModel.new({
             buf = self.buf,
             position = self.position,
             response = parsed_response,
@@ -119,7 +119,7 @@ end
 
 function Session:set_interactive()
     if self.session_event == SESSION_EVENT.MODEL_READY then
-        self.view = View.new({
+        self.view = IncrementalCompletionView.new({
             buf = self.buf,
             position = self.position,
             col_delta = self.model:get_col_delta(),
@@ -140,7 +140,7 @@ function Session:update_view()
     if self:is_terminated() then
         return
     end
-    self.view:update(ViewState.get_state_from_model(self.model:snapshot()))
+    self.view:update(IncrementalCompletionViewState.get_state_from_model(self.model:snapshot()))
 end
 
 function Session:accept(range)

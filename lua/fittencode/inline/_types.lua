@@ -33,3 +33,7 @@ EngineCapabilities = {
 
 ]]
 ---@class FittenCode.Inline.EngineCapabilities
+
+---@class FittenCode.Inline.IModel
+
+---@class FittenCode.Inline.IView
