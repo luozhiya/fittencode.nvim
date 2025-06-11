@@ -175,9 +175,9 @@ function M.wordcount(buf)
     return wc
 end
 
--- 计算从文档开始到 Position 处的字符偏移量 (UTF-8)
+-- 计算从文档开始到 Position 处的字符偏移量 (UTF-32)
 ---@param buf integer?
----@param position FittenCode.Position
+---@param position FittenCode.Position UTF-8 序列
 ---@return FittenCode.CharactersOffset
 function M.offset_at_u32(buf, position)
     assert(buf)
@@ -195,7 +195,7 @@ end
 
 -- 返回的 position.col 是指向 UTF-8 序列的尾字节
 ---@param buf integer?
----@param offset number Character offset in the buffer.
+---@param offset number 按 UTF-32 序列计算的偏移量
 ---@return FittenCode.Position?
 function M.position_at_u32(buf, offset)
     assert(buf)
@@ -217,6 +217,53 @@ function M.position_at_u32(buf, offset)
                 })
             end
             offset = offset - #byte_counts
+        end
+    end)
+    return pos
+end
+
+-- 计算从文档开始到 Position 处的字符偏移量 (UTF-16) 有可能将代理对拆开？
+---@param buf integer?
+---@param position FittenCode.Position
+---@return FittenCode.CharactersOffset
+function M.offset_at(buf, position)
+    assert(buf)
+    local offset = 0
+    vim.api.nvim_buf_call(buf, function()
+        local lines = assert(M.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = position })))
+        vim.tbl_map(function(line)
+            local u16 = Unicode.byte_to_utfindex(line, 'utf-16', #line)
+            offset = offset + u16
+        end, lines)
+        offset = offset + #lines - 1 -- 最后一行不计入
+    end)
+    return offset
+end
+
+-- 返回的 position.col 是指向 UTF-8 序列的尾字节
+---@param buf integer?
+---@param offset FittenCode.CharactersOffset 按 UTF-16 序列计算的偏移量
+---@return FittenCode.Position
+function M.position_at(buf, offset)
+    assert(buf)
+    local pos
+    vim.api.nvim_buf_call(buf, function()
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        local index = 0
+        while offset > 0 do
+            local line = lines[index + 1] .. '\n'
+            local u16 = Unicode.byte_to_utfindex(line, 'utf-16', #line)
+            if offset > u16 then
+                index = index + 1
+            else
+                local col = Unicode.utf_to_byteindex(line, 'utf-16', offset)
+                col = M.round_col_end(line, col)
+                pos = Position.new({
+                    row = index,
+                    col = col - 1,
+                })
+            end
+            offset = offset - u16
         end
     end)
     return pos

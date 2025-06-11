@@ -689,7 +689,7 @@ function M.byte_to_utfindex(s, encoding, index)
 
     -- Validate index range
     if index < 1 then return 0 end
-    if index > #s + 1 then index = #s + 1 end
+    if index > #s + 1 then index = #s end
 
     local byte_index = 1
     local utf_index = 0
