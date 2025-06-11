@@ -218,6 +218,7 @@ function Session:restore_keymaps()
 end
 
 function Session:set_lazy_completion()
+    if self.engine == 'inccmp' then
     vim.on_key(function(key)
         local buf = vim.api.nvim_get_current_buf()
         if vim.api.nvim_get_mode().mode == 'i' and buf == self.buf and self:is_interactive() then
@@ -230,6 +231,8 @@ function Session:set_lazy_completion()
             end
         end
     end, self.filter_onkey_ns)
+elseif self.engine == 'editcmp' then
+end
 end
 
 function Session:restore_onkey()
