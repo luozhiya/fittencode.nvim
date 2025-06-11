@@ -20,7 +20,7 @@ local Unicode = require('fittencode.fn.unicode')
 ---@field position FittenCode.Position
 ---@field response any
 ---@field selected_completion_index? number
----@field computed_completions table<table<string, any>>
+---@field completions table<table<string, any>>
 ---@field placeholder_ranges table<table<number>>
 ---@field completion_models table<FittenCode.Inline.CompletionModel>
 local IncrementalCompletionModel = {}
@@ -35,34 +35,17 @@ end
 function IncrementalCompletionModel:_initialize(options)
     self.buf = options.buf
     self.position = options.position
-    self.response = options.response or {}
     self.selected_completion_index = nil
 
-    local line_remaining = assert(F.get_text(self.buf, Range.new({
-        start = self.position,
-        end_ = Position.new({
-            row = self.position.row,
-            col = -1,
-        }),
-    })))
-
-    -- 1. 转换 delta
-    local computed = {}
-    for _, completion in ipairs(self.response.completions) do
-        computed[#computed + 1] = {
-            generated_text = completion.generated_text,
-            row_delta = completion.line_delta,
-            col_delta = Unicode.utf_to_byteindex(line_remaining, 'utf-16', completion.character_delta),
-        }
-    end
-    self.computed_completions = computed
+    -- 1. completion 列表
+    self.completions = vim.deepcopy(options.completions)
 
     -- 2. 解析 placeholder 范围
-    self.placeholder_ranges = self:generate_placeholder_ranges(self.buf, self.position, self.computed_completions)
+    self.placeholder_ranges = self:generate_placeholder_ranges(self.buf, self.position, self.completions)
 
     -- 3. 创建 CompletionModel 实例
     self.completion_models = {}
-    for _, completion in ipairs(self.computed_completions) do
+    for _, completion in ipairs(self.completions) do
         self.completion_models[#self.completion_models + 1] = CompletionModel.new(
             completion.generated_text,
             self.placeholder_ranges
@@ -162,7 +145,7 @@ end
 
 function IncrementalCompletionModel:get_generated_texts()
     local text = {}
-    for _, completion in ipairs(self.computed_completions) do
+    for _, completion in ipairs(self.completions) do
         text[#text + 1] = completion.generated_text
     end
     return text
@@ -229,12 +212,12 @@ function IncrementalCompletionModel:is_match_next_char(key)
 end
 
 function IncrementalCompletionModel:get_col_delta()
-    return assert(self.computed_completions[self.selected_completion_index]).col_delta
+    return assert(self.completions[self.selected_completion_index]).col_delta
 end
 
 function IncrementalCompletionModel:get_text()
     local text = {}
-    for _, completion in ipairs(self.computed_completions) do
+    for _, completion in ipairs(self.completions) do
         text[#text + 1] = completion.generated_text
     end
     return text

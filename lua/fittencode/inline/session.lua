@@ -99,7 +99,7 @@ function Session:set_model(parsed_response)
         self.model = IncrementalCompletionModel.new({
             buf = self.buf,
             position = self.position,
-            response = parsed_response,
+            completions = parsed_response,
         })
         self:sync_session_event(SESSION_EVENT.MODEL_READY)
         self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)

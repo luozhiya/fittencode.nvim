@@ -222,7 +222,7 @@ end
 ---@field context string
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion
-local function build_inccmp_items(response)
+local function build_inccmp_items(response, buf, position)
     local clean_text = vim.fn.substitute(
         response.generated_text or '',
         END_OF_TEXT_TOKEN,
@@ -235,11 +235,39 @@ local function build_inccmp_items(response)
     if generated_text == '' then
         return
     end
-    return { {
+
+    -- 1
+    local completions = { {
         generated_text = generated_text,
         character_delta = response.delta_char or 0,
         line_delta = response.delta_line or 0
     } }
+
+    local snext = position:clone()
+    snext.col = snext.col + 1
+    local line_remaining = assert(F.get_text(buf, Range.new({
+        start = snext,
+        end_ = Position.new({
+            row = snext.row,
+            col = -1,
+        }),
+    })))
+
+    local computed = {}
+    for _, completion in ipairs(completions) do
+        local col_delta = Unicode.utf_to_byteindex(line_remaining, 'utf-16', completion.character_delta)
+        if line_remaining:sub(snext.col + 1, snext.col + col_delta) == completion.generated_text then
+            goto continue
+        end
+        computed[#computed + 1] = {
+            generated_text = completion.generated_text,
+            row_delta = completion.line_delta,
+            col_delta = col_delta,
+        }
+        ::continue::
+    end
+
+    return computed
 end
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion
