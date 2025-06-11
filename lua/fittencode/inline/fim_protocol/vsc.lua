@@ -300,7 +300,7 @@ function M.parse(response, options)
         ---@diagnostic disable-next-line: param-type-mismatch
         completions = build_editcmp_items(response)
     end
-    if not completions then
+    if not completions or #completions == 0 then
         return {
             status = 'no_completion',
         }
