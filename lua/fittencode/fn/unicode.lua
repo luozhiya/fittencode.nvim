@@ -806,11 +806,4 @@ function M.byte_to_utfindex(s, encoding, index)
     end
 end
 
---[[
-
-local str = '👩🏽';
-print(vim.inspect(M.utf8_to_utf16(str, ENDIAN.LE, FORMAT.UNIT)))
-
-]]
-
 return M

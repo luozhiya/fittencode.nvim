@@ -179,7 +179,7 @@ end
 ---@param buf integer?
 ---@param position FittenCode.Position
 ---@return FittenCode.CharactersOffset
-function M.offset_at(buf, position)
+function M.offset_at_u32(buf, position)
     assert(buf)
     local offset = 0
     vim.api.nvim_buf_call(buf, function()
@@ -197,7 +197,7 @@ end
 ---@param buf integer?
 ---@param offset number Character offset in the buffer.
 ---@return FittenCode.Position?
-function M.position_at(buf, offset)
+function M.position_at_u32(buf, offset)
     assert(buf)
     local pos
     vim.api.nvim_buf_call(buf, function()

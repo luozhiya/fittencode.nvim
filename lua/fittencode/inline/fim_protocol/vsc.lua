@@ -31,11 +31,11 @@ local function retrieve_context_fragments(buf, position, threshold)
     local next_position = Position.new({ row = position.row, col = round_curr_col + 1 })
     Log.debug('Retrieve context fragments, current position = {}, next position = {}', position, next_position)
 
-    local current_chars_off = F.offset_at(buf, position)
+    local current_chars_off = F.offset_at_u32(buf, position)
     local start_chars_off = math.max(0, math.floor(current_chars_off - threshold - 1))
-    local start_pos = F.position_at(buf, start_chars_off) or Position.new({ row = 0, col = 0 })
+    local start_pos = F.position_at_u32(buf, start_chars_off) or Position.new({ row = 0, col = 0 })
     local end_chars_off = math.min(F.wordcount(buf).chars, math.floor(current_chars_off + threshold - 1))
-    local end_pos = F.position_at(buf, end_chars_off) or Position.new({ row = -1, col = -1 })
+    local end_pos = F.position_at_u32(buf, end_chars_off) or Position.new({ row = -1, col = -1 })
     local prefix = F.get_text(buf, Range.new({
         start = start_pos,
         end_ = position
