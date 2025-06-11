@@ -221,8 +221,8 @@ end
 ---@field completions table<number, FittenCode.Inline.FimProtocol.VSC.CompletionItem>
 ---@field context string
 
----@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
-local function build_completion_item(response)
+---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion
+local function build_inccmp_items(response)
     local clean_text = vim.fn.substitute(
         response.generated_text or '',
         END_OF_TEXT_TOKEN,
@@ -242,9 +242,15 @@ local function build_completion_item(response)
     } }
 end
 
+---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion
+local function build_editcmp_items(response)
+end
+
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
 ---@return FittenCode.Inline.FimProtocol.VSC.ParseResult
 function M.parse(response, options)
+    assert(options)
+
     if not response then
         return {
             status = 'error',
@@ -258,7 +264,14 @@ function M.parse(response, options)
         }
     end
 
-    local completions = build_completion_item(response)
+    local completions
+    if options.engine == 'incremental_completion' then
+        ---@diagnostic disable-next-line: param-type-mismatch
+        completions = build_inccmp_items(response)
+    else
+        ---@diagnostic disable-next-line: param-type-mismatch
+        completions = build_editcmp_items(response)
+    end
     if not completions then
         return {
             status = 'no_completion',
