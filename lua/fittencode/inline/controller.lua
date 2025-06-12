@@ -65,11 +65,11 @@ function Controller:__initialize(options)
 
     do
         self.keymaps = {
-            { 'Alt-\\', function() self:trigger_inline_suggestion_by_shortcut() end },
-            { 'Alt-O',  function() self:trigger_edit_completion_by_shortcut() end },
+            { '<A-\\>', function() self:trigger_inline_suggestion_by_shortcut() end },
+            { '<A-o>',  function() self:trigger_edit_completion_by_shortcut() end },
         }
         for _, v in ipairs(self.keymaps) do
-            vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
+            vim.keymap.set('i', v[1], v[2], { silent = true })
         end
     end
 

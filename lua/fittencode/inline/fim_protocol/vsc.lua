@@ -67,7 +67,7 @@ end
 FittenCode VSCode 采用 UTF-16 的编码计算
 
 ]]
-local function compute_diff_metadata(current_text, filename, version)
+local function build_diff_metadata(current_text, filename, version)
     if filename ~= M.last.filename or version <= M.last.version or not M.last.once then
         Log.debug('Skip computing diff metadata for unchanged file, last version = {}, current version = {}', M.last.version, version)
         return {
@@ -159,7 +159,7 @@ local function build_base_prompt(buf, position, options)
     end
     ciphertext = ciphertext.value
 
-    local base_meta = {
+    local base = {
         cpos = Unicode.byte_to_utfindex(prefix, 'utf-16'),
         bcpos = #prefix,
         plen = 0,
@@ -175,29 +175,41 @@ local function build_base_prompt(buf, position, options)
         pc_prompt_type = '0'
     }
 
-    local diff_meta = compute_diff_metadata(text, options.filename, options.version)
-    local meta_datas = vim.tbl_deep_extend('force', base_meta, diff_meta)
+    return base, text, ciphertext
+end
 
+local function build_edit_metadata(mode)
     return {
-        prompt = {
-            inputs = '',
-            meta_datas = meta_datas
-        },
-        cachedata = {
-            text = text,
-            ciphertext = ciphertext,
-        }
+        edit_mode = mode == 'editcmp' and 'true' or nil,
+        edit_mode_history = '',
+        -- Edit mode trigger type
+        -- 默认为 0，表示手动触发
+        -- 0 手动快捷键触发
+        -- 1 当 inccmp 没有产生补全，或者产生的补全与现有内容一致重复时触发
+        -- 2 当一个 editcmp accept 之后连续触发
+        edit_mode_trigger_type = '0'
     }
 end
 
 ---@param buf number
 ---@param position FittenCode.Position
 function M.generate(buf, position, options)
-    local res = build_base_prompt(buf, position, options)
-    if not res then
+    local base, text, ciphertext = build_base_prompt(buf, position, options)
+    if not base then
         return Promise.rejected()
     end
-    return Promise.resolved(res)
+    local diff = build_diff_metadata(text, options.filename, options.version)
+    local edit = build_edit_metadata(options.mode)
+    return Promise.resolved({
+        prompt = {
+            inputs = '',
+            meta_datas = vim.tbl_deep_extend('force', base, diff, edit)
+        },
+        cachedata = {
+            text = text,
+            ciphertext = ciphertext,
+        }
+    })
 end
 
 function M.update_last_version(filename, version, cachedata)
@@ -273,12 +285,14 @@ local function build_editcmp_items(response)
     if not response.delete_offsets or #response.delete_offsets == 0 or not response.insert_offsets or #response.insert_offsets == 0 then
         return
     end
+    Log.debug('build_editcmp_items, response = {}', response)
 end
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
 ---@return FittenCode.Inline.FimProtocol.VSC.ParseResult
 function M.parse(response, options)
     assert(options)
+    Log.debug('Parse response, response = {}, options = {}', response, options)
 
     if not response or response.error then
         return {

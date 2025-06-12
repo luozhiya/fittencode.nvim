@@ -308,6 +308,7 @@ function Session:generate_prompt()
     return Fim.generate(self.buf, zerepos, {
         filename = F.filename(self.buf),
         version = self.version,
+        mode = self.mode,
     })
 end
 
