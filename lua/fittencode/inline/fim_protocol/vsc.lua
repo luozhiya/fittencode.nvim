@@ -282,7 +282,10 @@ end
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion
 local function build_editcmp_items(response)
-    if not response.delete_offsets or #response.delete_offsets == 0 or not response.insert_offsets or #response.insert_offsets == 0 then
+    if not response.delete_offsets or not response.insert_offsets then
+        return
+    end
+    if #response.delete_offsets == 0 and #response.insert_offsets == 0 then
         return
     end
     Log.debug('build_editcmp_items, response = {}', response)

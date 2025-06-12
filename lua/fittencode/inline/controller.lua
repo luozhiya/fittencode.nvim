@@ -69,7 +69,7 @@ function Controller:__initialize(options)
             { '<A-o>',  function() self:trigger_edit_completion_by_shortcut() end },
         }
         for _, v in ipairs(self.keymaps) do
-            vim.keymap.set('i', v[1], v[2], { silent = true })
+            vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
         end
     end
 
