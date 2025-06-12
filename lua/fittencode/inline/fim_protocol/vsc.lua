@@ -295,7 +295,6 @@ end
 ---@return FittenCode.Inline.FimProtocol.VSC.ParseResult
 function M.parse(response, options)
     assert(options)
-    Log.debug('Parse response, response = {}, options = {}', response, options)
 
     if not response or response.error then
         return {
