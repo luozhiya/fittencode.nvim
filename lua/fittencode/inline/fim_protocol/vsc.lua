@@ -8,11 +8,11 @@ local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 
-local MAX_CHARS = 220000 -- ~200KB 220000
+local MAX_CHARS = 10 -- ~200KB 220000
 local HALF_MAX = MAX_CHARS / 2
 
 local END_OF_TEXT_TOKEN = '<|endoftext|>'
-local DEFAULT_CONTEXT_THRESHOLD = 100
+local DEFAULT_CONTEXT_THRESHOLD = 10
 local FIM_MIDDLE_TOKEN = '<fim_middle>'
 
 local M = {
@@ -35,7 +35,9 @@ local function retrieve_context_fragments(buf, position, threshold)
     local start_chars_off = math.max(0, math.floor(current_chars_off - threshold - 1))
     local start_pos = F.position_at_u32(buf, start_chars_off) or Position.new({ row = 0, col = 0 })
     local end_chars_off = math.min(F.wordcount(buf).chars, math.floor(current_chars_off + threshold - 1))
+    Log.debug('Retrieve context fragments, start chars offset = {}, end chars offset = {}', start_chars_off, end_chars_off)
     local end_pos = F.position_at_u32(buf, end_chars_off) or Position.new({ row = -1, col = -1 })
+    Log.debug('Retrieve context fragments, start position = {}, end position = {}', start_pos, end_pos)
     local prefix = F.get_text(buf, Range.new({
         start = start_pos,
         end_ = position
@@ -281,6 +283,7 @@ local function build_inccmp_items(response, buf, position)
 end
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion
+---@param position FittenCode.Position
 local function build_editcmp_items(response, buf, position)
     if not response.delete_offsets or not response.insert_offsets then
         return
@@ -298,7 +301,8 @@ local function build_editcmp_items(response, buf, position)
     local delete_offsets = response.delete_offsets
     local insert_offsets = response.insert_offsets
 
-    local base_offset = F.offset_at(buf, position)
+    local base_pos = position:with(nil, 0)
+    local base_offset = F.offset_at(buf, base_pos)
     local delete_ranges = {}
     for _, offset in ipairs(delete_offsets) do
         delete_ranges[#delete_ranges + 1] = Range.new({

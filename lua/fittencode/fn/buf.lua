@@ -217,12 +217,14 @@ function M.position_at_u32(buf, offset)
         if #lines == 0 then
             return
         end
+        Log.debug('position_at_u32, lines = {}, offset = {}', lines, offset)
         local index = 0
         while offset > 0 do
             local line = lines[index + 1]
+            Log.debug('position_at_u32, line = {}, index = {}, offset = {}', line, index, offset)
             if not line then
                 pos = Position.new({
-                    row = index,
+                    row = index - 1,
                     col = -1
                 })
                 break
@@ -275,7 +277,7 @@ function M.position_at_lines(lines, offset)
         local line = lines[index + 1]
         if not line then
             pos = Position.new({
-                row = index,
+                row = index - 1,
                 col = -1
             })
             break
@@ -457,6 +459,7 @@ function M.get_lines(buf, range, strict)
         if not roundrange.end_:rel_eol() then
             end_col = end_col + 1
         end
+        Log.debug('get_lines: range = {}, strict = {}, roundrange = {}, end_col = {}', range, strict, roundrange, end_col)
         local _, result = pcall(vim.api.nvim_buf_get_text, buf, roundrange.start.row, roundrange.start.col, roundrange.end_.row, end_col, {})
         if not _ then
             return
