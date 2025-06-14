@@ -144,14 +144,6 @@ function Model:selected_completion()
     return assert(self.completion_models[assert(self.selected_completion_index)], 'No completion model selected')
 end
 
-function Model:get_generated_texts()
-    local text = {}
-    for _, completion in ipairs(self.completions) do
-        text[#text + 1] = completion.generated_text
-    end
-    return text
-end
-
 function Model:accept(scope)
     assert(self:selected_completion()):accept(scope)
 end
