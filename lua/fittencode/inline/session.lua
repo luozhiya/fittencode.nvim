@@ -8,10 +8,10 @@
 ]]
 
 local IncModel = require('fittencode.inline.model.inccmp.model')
-local IncView = require('fittencode.inline.view.inccmp')
+local IncView = require('fittencode.inline.view.inccmp.view')
 local IncViewState = require('fittencode.inline.view.inccmp.state')
 local EditModel = require('fittencode.inline.model.editcmp.model')
-local EditView = require('fittencode.inline.view.editcmp')
+local EditView = require('fittencode.inline.view.editcmp.view')
 local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')

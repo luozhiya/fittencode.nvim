@@ -281,7 +281,7 @@ local function build_inccmp_items(response, buf, position)
 end
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion
-local function build_editcmp_items(response)
+local function build_editcmp_items(response, buf, position)
     if not response.delete_offsets or not response.insert_offsets then
         return
     end
@@ -289,6 +289,80 @@ local function build_editcmp_items(response)
         return
     end
     Log.debug('build_editcmp_items, response = {}', response)
+
+    local generated_text = response.generated_text
+    local ori_start_line = response.ori_start_line
+    local ori_end_line = response.ori_end_line
+    local res_start_line = response.res_start_line
+    local res_end_line = response.res_end_line
+    local delete_offsets = response.delete_offsets
+    local insert_offsets = response.insert_offsets
+
+    local base_offset = F.offset_at(buf, position)
+    local delete_ranges = {}
+    for _, offset in ipairs(delete_offsets) do
+        delete_ranges[#delete_ranges + 1] = Range.new({
+            start = F.position_at(buf, base_offset + offset[1]),
+            end_ = F.position_at(buf, base_offset + offset[2])
+        })
+    end
+
+    local delete_lines = {}
+    if ori_start_line <= ori_end_line then
+        delete_lines = {
+            start = position.row + ori_start_line,
+            end_ = position.row + ori_end_line
+        }
+    end
+    -- if ori_start_line <= ori_end_line then
+    --     delete_ranges[#delete_ranges + 1] = Range.new({
+    --         start = F.line_at(buf, position.row + ori_start_line).range.start,
+    --         end_ = F.line_at(buf, position.row + ori_end_line).range.end_
+    --     })
+    -- end
+
+    generated_text = generated_text:gsub('\r\n', '\n')
+    generated_text = generated_text:gsub('\r', '\n')
+
+    local all_lines = vim.split(generated_text, '\n')
+    local display_lines = vim.list_slice(all_lines, res_start_line, res_end_line)
+    local display_text = table.concat(display_lines, '\n')
+
+    local insert_ranges = {}
+    for _, offset in ipairs(insert_offsets) do
+        insert_ranges[#insert_ranges + 1] = Range.new({
+            start = Unicode.utf_to_byteindex(display_text, 'utf-16', offset[1]),
+            end_ = Unicode.utf_to_byteindex(display_text, 'utf-16', offset[2])
+        })
+    end
+
+    local replace_range = {}
+    local replace_lines = display_lines
+
+    if ori_start_line > ori_end_line then
+        local end_pos = F.line_at(buf, position.row + ori_end_line).range.end_
+        replace_range = Range.new({
+            start = end_pos,
+            end_ = end_pos
+        })
+    else
+        local start_pos = F.line_at(buf, position.row + ori_start_line).range.start
+        local end_pos = F.line_at(buf, position.row + ori_end_line).range.end_
+        replace_range = Range.new({
+            start = start_pos,
+            end_ = end_pos
+        })
+    end
+
+    return {
+        {
+            replace_range = replace_range,
+            replace_lines = replace_lines,
+            insert_ranges = insert_ranges,
+            delete_ranges = delete_ranges,
+            delete_lines = delete_lines,
+        }
+    }
 end
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
@@ -309,7 +383,7 @@ function M.parse(response, options)
         completions = build_inccmp_items(response, options.buf, options.position)
     else
         ---@diagnostic disable-next-line: param-type-mismatch
-        completions = build_editcmp_items(response)
+        completions = build_editcmp_items(response, options.buf, options.position)
     end
     if not completions or #completions == 0 then
         return {
