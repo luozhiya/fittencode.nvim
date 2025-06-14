@@ -1,227 +1,261 @@
 --[[
 
-Model 的设计思路：
-- 一个 Session 对应一个 Model
-- Model 一次有很多个 CompletionModel 代表很多个补全选项，目前只支持一个
+基于 source string，Index 采用 Lua 字符串 1 开始的索引
 
-]]
+-----------------------------------
+-- 分词转换方法 segments_to_words
+-----------------------------------
 
-local CompletionModel = require('fittencode.inline.model.inccmp.completion_model')
-local Log = require('fittencode.log')
-local Fn = require('fittencode.fn.core')
-local F = require('fittencode.fn.buf')
-local Range = require('fittencode.fn.range')
-local Position = require('fittencode.fn.position')
-local Segment = require('fittencode.inline.segment')
+local custom_segments = {'我', '吃', '苹果'}
+local model = CompletionModel.new(s, placeholder_ranges)
+local words = segments_to_words(custom_segments)
+model:update_words(words)
+
+--]]
+
 local Unicode = require('fittencode.fn.unicode')
+local Log = require('fittencode.log')
+local Parse = require('fittencode.inline.model.inccmp.parse')
+local Placeholder = require('fittencode.inline.model.inccmp.placeholder')
+local Segment = require('fittencode.inline.segment')
 
 ---@class FittenCode.Inline.IncrementalCompletion.Model
----@field buf number
----@field position FittenCode.Position
----@field response any
----@field selected_completion_index? number
----@field completions table<table<string, any>>
----@field completion_models table<FittenCode.Inline.IncrementalCompletion.CompletionModel>
+---@field source string
+---@field cursor integer
+---@field commit_history table<table<table<integer>>>
+---@field placeholder_ranges table<table<integer>>
+---@field commit_ranges table<table<integer>>
+---@field stage_ranges table<table<integer>>
+---@field chars table<table<integer>>
+---@field words table<table<integer>>
+---@field lines table<table<integer>>
 local Model = {}
 Model.__index = Model
 
-function Model.new(options)
+function Model.new(buf, position, completion)
     local self = setmetatable({}, Model)
-    self:_initialize(options)
+
+    local placeholder_ranges = Placeholder.generate_placeholder_ranges(buf, position, completion)
+
+    self.source = completion.source
+    self.cursor = 0 -- 初始位置在文本开始前
+    self.commit_history = {}
+
+    -- 新增 placeholder 范围验证
+    local merged_ph = Parse.merge_ranges(placeholder_ranges or {})
+
+    Log.debug('CompletionModel initializing')
+    Log.debug('Placeholder ranges = {}', placeholder_ranges)
+    Log.debug('Placeholder merge_ranges = {}', merged_ph)
+
+    for _, r in ipairs(merged_ph) do
+        if r.start < 1 or r.end_ > #self.source then
+            error('Placeholder ranges out of bounds')
+        end
+        -- 检查是否出现在两端，如下例所示，还是允许的
+        -- 1*1+2
+        --   ^
+        -- 1*(1+2)
+        -- if r.start == 1 or r.end_ == #source then
+        --     error('Placeholder cannot be at text boundaries')
+        -- end
+        -- 检查范围有效性
+        if r.start > r.end_ then
+            error('Invalid placeholder range: start > end')
+        end
+    end
+    self.placeholder_ranges = merged_ph
+
+    -- 解析基础结构
+    self.chars = Parse.parse_chars(self.source)
+    self.words = Parse.parse_words(self.source, self.chars)
+    self.lines = Parse.parse_lines(self.source)
+
+    -- 初始化范围
+    self.commit_ranges = {}
+    self:update_stage_ranges()
+
+    Log.debug('Commit ranges = {}', self.commit_ranges)
+    Log.debug('Stage ranges = {}', self.stage_ranges)
+
     return self
 end
 
-function Model:_initialize(options)
-    ---@type FittenCode.Inline.ModeCapabilities
-    self.mode_capabilities = {
-        accept_next_char = true,
-        accept_next_line = true,
-        accept_next_word = true,
-        accept_all = true,
-        accept_hunk = false,
-        revoke = true,
-        lazy_completion = true,
-        segment_words = true
-    }
-    self.buf = options.buf
-    self.position = options.position
-    self.selected_completion_index = nil
+function Model:update_stage_ranges()
+    -- 总范围减去commit和placeholder
+    local total = { { start = 1, end_ = #self.source } }
+    local exclude = Parse.merge_ranges(vim.list_extend(
+        vim.deepcopy(self.commit_ranges),
+        vim.deepcopy(self.placeholder_ranges)
+    ))
 
-    self.completions = vim.deepcopy(options.completions)
-
-    self.completion_models = {}
-    for _, completion in ipairs(self.completions) do
-        local placeholder_ranges = self:generate_placeholder_ranges(self.buf, self.position, completion)
-        self.completion_models[#self.completion_models + 1] = CompletionModel.new(
-            completion.generated_text,
-            placeholder_ranges
-        )
-    end
-
-    -- 如果要支持多 completion 则需要修改这里，弹出一个对话框让用户选择
-    self:set_selected_completion(1)
-end
-
---[[
-(1+2*3
-^
-{
-  generated_text: "",
-  server_request_id: "1741071346.8782244.206369",
-  delta_char: 5,
-  delta_line: 0,
-  ex_msg: "1+2)*3",
-}
-
-(1+20*3
-^
-{
-  generated_text: "",
-  server_request_id: "1741071431.8292916.568576",
-  delta_char: 6,
-  delta_line: 0,
-  ex_msg: "1+20)*3",
-}
-]]
--- TODO
--- * 暂不支持 row_delta
--- * 只支持 generated_text 比原来的文本长的情况
----@param buf number
----@param position FittenCode.Position
-function Model:generate_placeholder_ranges(buf, position, completion)
-    local placeholder_ranges = {}
-    ---@type string
-    local generated_text = completion.generated_text
-    local col_delta = completion.col_delta
-    if col_delta == 0 then
-        return placeholder_ranges
-    end
-    -- 1. 获取 postion + col_delta 个字符 T0
-    local replaced_text = assert(F.get_text(buf, Range.new({
-        start = Position.new({
-            row = position.row,
-            col = position.col,
-        }),
-        end_ = Position.new({
-            row = position.row,
-            col = position.col + col_delta - 1,
-        }),
-    })))
-    assert(#replaced_text <= #generated_text)
-    -- 2. 对比 T0 与 generated_text 的文本差异，获取 placeholder 范围
-    local start, end_ = generated_text:find(replaced_text)
-    if start then
-        placeholder_ranges[#placeholder_ranges + 1] = { start = start, end_ = end_ }
-    else
-        local ranges = {}
-        local index = 1
-        for i = 1, #replaced_text do
-            local c = replaced_text:sub(i, i)
-            local s, e = generated_text:find(c, index)
-            if s then
-                ranges[#ranges + 1] = { start = s, end_ = e }
-                index = e + 1
-            end
-        end
-        if #ranges == #replaced_text then
-            local merged_ranges = {}
-            for i = 1, #ranges do
-                local r = ranges[i]
-                if #merged_ranges == 0 or r.start > merged_ranges[#merged_ranges].end_ + 1 then
-                    merged_ranges[#merged_ranges + 1] = r
+    local stage = {}
+    for _, t in ipairs(total) do
+        local remains = { t }
+        for _, ex in ipairs(exclude) do
+            local new_remains = {}
+            for _, r in ipairs(remains) do
+                if r.end_ < ex.start or r.start > ex.end_ then
+                    table.insert(new_remains, r)
                 else
-                    merged_ranges[#merged_ranges].end_ = r.end_
+                    if r.start < ex.start then
+                        table.insert(new_remains, { start = r.start, end_ = ex.start - 1 })
+                    end
+                    if r.end_ > ex.end_ then
+                        table.insert(new_remains, { start = ex.end_ + 1, end_ = r.end_ })
+                    end
                 end
             end
-            vim.list_extend(placeholder_ranges, merged_ranges)
+            remains = new_remains
+        end
+        stage = vim.list_extend(stage, remains)
+    end
+    self.stage_ranges = Parse.merge_ranges(stage)
+end
+
+function Model:find_valid_region(scope)
+    local candidates = {}
+    local list = ({ char = self.chars, word = self.words, line = self.lines })[scope]
+
+    -- 生成候选区域时包含跨过 cursor 的完整区域
+    for _, item in ipairs(list) do
+        if item.end_ > self.cursor then
+            table.insert(candidates, item)
         end
     end
-    return placeholder_ranges
-end
 
----@return FittenCode.Inline.IncrementalCompletion.CompletionModel
-function Model:selected_completion()
-    return assert(self.completion_models[assert(self.selected_completion_index)], 'No completion model selected')
-end
+    for _, cand in ipairs(candidates) do
+        -- 创建可修改的副本
+        local region = vim.deepcopy(cand)
 
-function Model:get_generated_texts()
-    local text = {}
-    for _, completion in ipairs(self.completions) do
-        text[#text + 1] = completion.generated_text
+        -- 阶段一：与 placeholder 的交集处理
+        for _, ph in ipairs(self.placeholder_ranges) do
+            if region.end_ >= ph.start and region.start <= ph.end_ then
+                -- 调整结束位置到 placeholder 起始位置前
+                region.end_ = math.min(region.end_, ph.start - 1)
+                -- 如果调整后无效则跳过
+                if region.end_ < region.start then break end
+            end
+        end
+
+        -- 阶段二：验证是否在 stage 范围内
+        local valid = false
+        for _, sr in ipairs(self.stage_ranges) do
+            if region.end_ <= sr.end_ then
+                valid = true
+                break
+            end
+        end
+        if not valid then
+            goto continue
+        end
+
+        -- 阶段三：最终有效性检查
+        if region.end_ > self.cursor then
+            return {
+                start = region.start,
+                end_ = region.end_,
+                original_end = cand.end_ -- 保留原始结束位置用于调试
+            }
+        end
+
+        ::continue::
     end
-    return text
 end
 
 function Model:accept(scope)
-    assert(self:selected_completion()):accept(scope)
+    if scope == 'all' then
+        local new_commit = vim.deepcopy(self.stage_ranges)
+        table.insert(self.commit_history, new_commit)
+        self.commit_ranges = Parse.merge_ranges(vim.list_extend(self.commit_ranges, new_commit))
+        self.cursor = #self.source
+        self:update_stage_ranges()
+        return
+    end
+
+    local region = self:find_valid_region(scope)
+    if not region then
+        return
+    end
+    table.insert(self.commit_history, vim.deepcopy({ region }))
+
+    self.commit_ranges = Parse.merge_ranges(vim.list_extend(self.commit_ranges, { region }))
+    self.cursor = region.end_
+    self:update_stage_ranges()
 end
 
 function Model:revoke()
-    assert(self:selected_completion()):revoke()
+    if #self.commit_history == 0 then return end
+
+    -- 移除最后一次commit
+    local last_commit = table.remove(self.commit_history)
+    self.commit_ranges = {}
+    for _, c in ipairs(self.commit_history) do
+        self.commit_ranges = Parse.merge_ranges(vim.list_extend(self.commit_ranges, vim.deepcopy(c)))
+    end
+
+    -- 恢复cursor
+    if #self.commit_history > 0 then
+        local last = self.commit_history[#self.commit_history]
+        self.cursor = last[#last].end_
+    else
+        self.cursor = 0
+    end
+
+    self:update_stage_ranges()
 end
 
 function Model:is_complete()
-    return self:selected_completion():is_complete()
+    -- 通过检查 stage_ranges 是否为空来判断是否全部完成
+    return #self.stage_ranges == 0
 end
 
-function Model:update(state)
-    state = state or {}
-    if state.segments then
-        self:update_segments(state.segments)
-    end
-end
-
-function Model:update_segments(segments)
-    segments = segments or {}
-    if #vim.tbl_keys(segments) ~= #self.completion_models then
-        Log.error('Invalid segments length, #segments = {}, #completion_models = {}', #vim.tbl_keys(segments), #self.completion_models)
-        return
-    end
-    for idx, seg in pairs(segments) do
-        ---@type FittenCode.Inline.IncrementalCompletion.CompletionModel
-        local compl_model = self.completion_models[tonumber(idx)]
-        local snapshot = compl_model:snapshot()
-        local _, words = pcall(Segment.segments_to_words, snapshot, seg)
-        if not _ then
-            local original = {}
-            for _, word in ipairs(snapshot.words) do
-                original[#original + 1] = word.content
-            end
-            Log.error('Invalid segments format, idx = {}, seg = {}, original words = {}', idx, seg, original)
-            return
-        end
-        -- Log.debug('Segment words = {}', words)
-        compl_model:update_words(words)
-    end
-end
-
--- 一旦开始 comletion 则不允许再选择其他的 completion
--- TODO:?
-function Model:set_selected_completion(index)
-    if self.selected_completion_index ~= nil then
-        return
-    end
-    self.selected_completion_index = index
+function Model:update_words(words)
+    self.words = words
 end
 
 function Model:snapshot()
-    return self:selected_completion():snapshot()
-end
-
-function Model:is_match_next_char(key)
-    return key == assert(self:selected_completion()):get_next_char()
-end
-
-function Model:get_col_delta()
-    return assert(self.completions[self.selected_completion_index]).col_delta
-end
-
-function Model:get_text()
-    local text = {}
-    for _, completion in ipairs(self.completions) do
-        text[#text + 1] = completion.generated_text
+    local result = {}
+    local fields_for_snapshot = { 'source', 'chars', 'words', 'lines', 'commit_ranges', 'placeholder_ranges', 'stage_ranges' }
+    for _, field in ipairs(fields_for_snapshot) do
+        local value = self[field]
+        if type(value) == 'table' then
+            result[field] = vim.deepcopy(value)
+        else
+            result[field] = value
+        end
     end
-    return text
+    return result
+end
+
+function Model:get_cursor_char()
+    return self.source:sub(self.cursor, self.cursor)
+end
+
+function Model:get_next_char()
+    local next_pos = self.cursor + 1
+    for i = 1, #self.chars do
+        if self.chars[i].start == next_pos then
+            return self.chars[i].content
+        end
+    end
+end
+
+function Model:update(state)
+    return self:update_segments(state.segment)
+end
+
+function Model:update_segments(segment)
+    local snapshot = self:snapshot()
+    local _, words = pcall(Segment.segments_to_words, snapshot, segment)
+    if not _ then
+        local original = {}
+        for _, word in ipairs(snapshot.words) do
+            original[#original + 1] = word.content
+        end
+        return
+    end
+    self:update_words(words)
 end
 
 return Model
