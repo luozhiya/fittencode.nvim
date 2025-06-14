@@ -2,6 +2,7 @@
 format:
     # CodeFormat is https://github.com/CppCXY/EmmyLuaCodeStyle
 	CodeFormat format -c .editorconfig -w lua/
+	CodeFormat format -c .editorconfig -w tests/
 
 functional-test:
 	@eval $$(luarocks path --lua-version 5.1 --bin) && busted --run functional
