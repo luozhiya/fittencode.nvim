@@ -88,6 +88,14 @@ describe('fn.buf', function()
         assert(chars)
         assert(chars[1] == 'hello')
 
+        chars = F.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = Position.new({ row = 1, col = 20 }) }))
+        print(vim.inspect(chars))
+        assert(chars)
+
+        -- chars = F.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = Position.new({ row = 10, col = 7 }) }))
+        -- print(vim.inspect(chars))
+        -- assert(chars)
+
         vim.api.nvim_buf_delete(buf, {})
     end)
 end)

@@ -176,6 +176,12 @@ function M.wordcount(buf)
 end
 
 -- 计算从文档开始到 Position 处的字符偏移量 (UTF-32)
+-- 和 VSCode 不一样
+-- - 这里计算的是 UTF-32/UTF-8 序列的偏移量，而不是 UTF-16 的偏移量
+-- - 当传入 position 为 0,0 时，会返回 1
+-- - 返回 0 意味着 buffer 为空
+-- - 当 position 超过文档长度时，计算全文
+-- - 行与行之间的换行符不计入
 ---@param buf integer?
 ---@param position FittenCode.Position UTF-8 序列
 ---@return FittenCode.CharactersOffset
@@ -183,17 +189,23 @@ function M.offset_at_u32(buf, position)
     assert(buf)
     local offset = 0
     vim.api.nvim_buf_call(buf, function()
-        local lines = assert(M.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = position })))
+        local lines = M.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = position }))
+        if not lines then
+            lines = M.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = Position.new({ row = -1, col = -1 }) }))
+            return
+        end
         vim.tbl_map(function(line)
             local byte_counts = Unicode.utf8_position_index(line).byte_counts
             offset = offset + #byte_counts
         end, lines)
-        offset = offset + #lines - 1 -- 最后一行不计入
     end)
     return offset
 end
 
 -- 返回的 position.col 是指向 UTF-8 序列的尾字节
+-- - 返回 nil 说明 offset 为 0 或者空 buffer
+-- - 当 offset 超过文档长度时，返回最后一个位置
+-- - 行与行之间的换行符不计入
 ---@param buf integer?
 ---@param offset number 按 UTF-32 序列计算的偏移量
 ---@return FittenCode.Position?
@@ -202,9 +214,19 @@ function M.position_at_u32(buf, offset)
     local pos
     vim.api.nvim_buf_call(buf, function()
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        if #lines == 0 then
+            return
+        end
         local index = 0
         while offset > 0 do
-            local line = lines[index + 1] .. '\n'
+            local line = lines[index + 1]
+            if not line then
+                pos = Position.new({
+                    row = index,
+                    col = -1
+                })
+                break
+            end
             local byte_counts = Unicode.utf8_position_index(line).byte_counts
             if offset > #byte_counts then
                 index = index + 1
@@ -430,7 +452,11 @@ function M.get_lines(buf, range, strict)
         if not roundrange.end_:rel_eol() then
             end_col = end_col + 1
         end
-        lines = vim.api.nvim_buf_get_text(buf, roundrange.start.row, roundrange.start.col, roundrange.end_.row, end_col, {})
+        local _, result = pcall(vim.api.nvim_buf_get_text, buf, roundrange.start.row, roundrange.start.col, roundrange.end_.row, end_col, {})
+        if not _ then
+            return
+        end
+        lines = result
     end)
     return lines
 end
