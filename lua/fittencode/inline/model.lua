@@ -63,16 +63,16 @@ function Model:revoke()
 end
 
 function Model:is_complete()
-    return self:selected_completion():is_complete()
+    return assert(self:selected_completion()):is_complete()
 end
 
 function Model:update(state)
-    if #vim.tbl_keys(state) ~= #self.completion_models then
-        return
-    end
-    for _, s in pairs(state) do
-        self.completion_models[_]:update(s)
-    end
+    -- if #vim.tbl_keys(state) ~= #self.completion_models then
+    --     return
+    -- end
+    -- for _, s in pairs(state) do
+    --     self.completion_models[_]:update(s)
+    -- end
 end
 
 -- 一旦开始 comletion 则不允许再选择其他的 completion
@@ -85,7 +85,7 @@ function Model:set_selected_completion(index)
 end
 
 function Model:snapshot()
-    return self:selected_completion():snapshot()
+    return assert(self:selected_completion()):snapshot()
 end
 
 function Model:is_match_next_char(key)
@@ -93,13 +93,13 @@ function Model:is_match_next_char(key)
 end
 
 function Model:get_col_delta()
-    return assert(self.completions[self.selected_completion_index]).col_delta
+    return assert(self:selected_completion()):get_col_delta()
 end
 
 function Model:get_text()
     local text = {}
-    for _, completion in ipairs(self.completions) do
-        text[#text + 1] = completion.generated_text
+    for _, completion in ipairs(self.completion_models) do
+        text[#text + 1] = completion:get_text()
     end
     return text
 end

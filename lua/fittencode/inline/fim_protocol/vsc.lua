@@ -302,16 +302,16 @@ local function build_editcmp_items(response, buf, position)
     local delete_ranges = {}
     for _, offset in ipairs(delete_offsets) do
         delete_ranges[#delete_ranges + 1] = Range.new({
-            start = F.position_at(buf, base_offset + offset[1]),
-            end_ = F.position_at(buf, base_offset + offset[2])
+            start = F.position_at(buf, base_offset + offset[1] + 1),
+            end_ = F.position_at(buf, base_offset + offset[2] + 1)
         })
     end
 
     local delete_lines = {}
     if ori_start_line <= ori_end_line then
         delete_lines = {
-            start = position.row + ori_start_line,
-            end_ = position.row + ori_end_line
+            start = position.row + ori_start_line + 1,
+            end_ = position.row + ori_end_line + 1
         }
     end
     -- if ori_start_line <= ori_end_line then
@@ -325,14 +325,19 @@ local function build_editcmp_items(response, buf, position)
     generated_text = generated_text:gsub('\r', '\n')
 
     local all_lines = vim.split(generated_text, '\n')
-    local display_lines = vim.list_slice(all_lines, res_start_line, res_end_line)
-    local display_text = table.concat(display_lines, '\n')
+    local display_lines = vim.list_slice(all_lines, res_start_line + 1, res_end_line + 1)
+
+    if #display_lines == 0 then
+        return
+    end
 
     local insert_ranges = {}
     for _, offset in ipairs(insert_offsets) do
+        local start_pos = F.position_at_lines(display_lines, offset[1] + 1)
+        local end_pos = F.position_at_lines(display_lines, offset[2] + 1 - 1)
         insert_ranges[#insert_ranges + 1] = Range.new({
-            start = Unicode.utf_to_byteindex(display_text, 'utf-16', offset[1]),
-            end_ = Unicode.utf_to_byteindex(display_text, 'utf-16', offset[2])
+            start = start_pos,
+            end_ = end_pos
         })
     end
 

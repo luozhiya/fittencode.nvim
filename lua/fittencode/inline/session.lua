@@ -8,9 +8,10 @@
 ]]
 
 local Model = require('fittencode.inline.model')
-local IncView = require('fittencode.inline.view.inccmp.view')
+local IncView = require('fittencode.inline.view.inccmp')
 local IncViewState = require('fittencode.inline.view.inccmp.state')
-local EditView = require('fittencode.inline.view.editcmp.view')
+local EditView = require('fittencode.inline.view.editcmp')
+local EditViewState = require('fittencode.inline.view.editcmp.state')
 local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')
@@ -34,7 +35,7 @@ local SESSION_TASK_EVENT = Definitions.SESSION_TASK_EVENT
 ---@field id string
 ---@field requests table<number, FittenCode.HTTP.Request>
 ---@field keymaps table<number, any>
----@field view FittenCode.Inline.IView
+---@field view FittenCode.Inline.View
 ---@field model FittenCode.Inline.Model
 ---@field version string
 local Session = {}
@@ -51,6 +52,7 @@ function Session:_initialize(options)
     self.position = options.position
     self.commit_position = options.position
     self.mode = options.mode
+    self.State = self.mode == 'inccmp' and IncViewState or EditViewState
     self.id = options.id
     self.requests = {}
     self.keymaps = {}
@@ -89,9 +91,9 @@ function Session:__segments()
     end
     self:__add_request(request)
     return promise:forward(function(segments)
-        self.model:update({
-            segments = segments
-        })
+        -- self.model:update({
+        --     segments = segments
+        -- })
     end)
 end
 
@@ -106,7 +108,7 @@ function Session:set_model(completions)
         self:sync_session_event(SESSION_EVENT.MODEL_READY)
         self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
 
-        if self.model.mode_capabilities.segment_words then
+        if self.mode == 'inccmp' then
             self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_PRE)
             self:__segments():finally(function()
                 self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_POST)
@@ -122,7 +124,7 @@ function Session:receive_view_message(msg)
     end
 end
 
----@return FittenCode.Inline.IView
+---@return FittenCode.Inline.View
 function Session:__new_view()
     if self.mode == 'inccmp' then
         ---@diagnostic disable-next-line: return-type-mismatch
@@ -159,16 +161,16 @@ function Session:update_view()
     if self:is_terminated() then
         return
     end
-    self.view:update(IncViewState.get_state_from_model(self.model:snapshot()))
+    self.view:update(self.State.get_state_from_model(self.model:snapshot()))
 end
 
 function Session:accept(range)
     self.model:accept(range)
     self:update_view()
     if self.model:is_complete() then
-        self.view:update_cursor_with_col_delta()
         self:terminate()
-        vim.defer_fn(function() self.trigger_inline_suggestion({ force = true }) end, 10)
+        self.view:on_complete()
+        vim.defer_fn(function() self.trigger_inline_suggestion({ force = true, mode = self.mode }) end, 10)
     end
 end
 

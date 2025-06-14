@@ -20,7 +20,6 @@ local Placeholder = require('fittencode.inline.model.inccmp.placeholder')
 local Segment = require('fittencode.inline.segment')
 
 ---@class FittenCode.Inline.IncrementalCompletion.Model
----@field mode_capabilities FittenCode.Inline.ModeCapabilities
 ---@field source string
 ---@field cursor integer
 ---@field commit_history table<table<table<integer>>>
@@ -30,35 +29,24 @@ local Segment = require('fittencode.inline.segment')
 ---@field chars table<table<integer>>
 ---@field words table<table<integer>>
 ---@field lines table<table<integer>>
+---@field completion table
 local Model = {}
 Model.__index = Model
 
 function Model.new(buf, position, completion)
     local self = setmetatable({}, Model)
-    Log.debug('completion = {}', completion)
+    Log.debug('CompletionModel initializing')
 
-    ---@type FittenCode.Inline.ModeCapabilities
-    self.mode_capabilities = {
-        accept_next_char = true,
-        accept_next_line = true,
-        accept_next_word = true,
-        accept_all = true,
-        accept_hunk = false,
-        revoke = true,
-        lazy_completion = true,
-        segment_words = true
-    }
-
+    self.completion = completion
     local placeholder_ranges = Placeholder.generate_placeholder_ranges(buf, position, completion)
 
-    self.source = completion.source
+    self.source = completion.generated_text
     self.cursor = 0 -- 初始位置在文本开始前
     self.commit_history = {}
 
     -- 新增 placeholder 范围验证
     local merged_ph = Parse.merge_ranges(placeholder_ranges or {})
 
-    Log.debug('CompletionModel initializing')
     Log.debug('Placeholder ranges = {}', placeholder_ranges)
     Log.debug('Placeholder merge_ranges = {}', merged_ph)
 
@@ -242,10 +230,6 @@ function Model:snapshot()
     return result
 end
 
-function Model:get_cursor_char()
-    return self.source:sub(self.cursor, self.cursor)
-end
-
 function Model:get_next_char()
     local next_pos = self.cursor + 1
     for i = 1, #self.chars do
@@ -270,6 +254,14 @@ function Model:update_segments(segment)
         return
     end
     self:update_words(words)
+end
+
+function Model:get_text()
+    return self.completion.generated_text
+end
+
+function Model:get_col_delta()
+    return self.completion.col_delta
 end
 
 return Model

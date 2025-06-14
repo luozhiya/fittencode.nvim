@@ -280,6 +280,10 @@ function View:update_cursor_with_col_delta()
     end)
 end
 
+function View:on_complete()
+    self:update_cursor_with_col_delta()
+end
+
 function View:register_message_receiver(receive_view_message)
     self.receive_view_message = receive_view_message
 end

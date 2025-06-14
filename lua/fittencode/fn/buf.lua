@@ -241,30 +241,47 @@ function M.offset_at(buf, position)
 end
 
 -- 返回的 position.col 是指向 UTF-8 序列的尾字节
+---@param offset FittenCode.CharactersOffset 按 UTF-16 序列计算的偏移量 1
+---@return FittenCode.Position
+function M.position_at_lines(lines, offset)
+    local pos
+    local index = 0
+    while offset > 0 do
+        local line = lines[index + 1]
+        if not line then
+            pos = Position.new({
+                row = index,
+                col = -1
+            })
+            break
+        end
+        line = line .. '\n'
+        local u16 = Unicode.byte_to_utfindex(line, 'utf-16', #line)
+        if offset > u16 then
+            index = index + 1
+        else
+            local col = Unicode.utf_to_byteindex(line, 'utf-16', offset)
+            col = M.round_col_end(line, col)
+            pos = Position.new({
+                row = index,
+                col = col - 1,
+            })
+        end
+        offset = offset - u16
+    end
+    return pos
+end
+
+-- 返回的 position.col 是指向 UTF-8 序列的尾字节
 ---@param buf integer?
----@param offset FittenCode.CharactersOffset 按 UTF-16 序列计算的偏移量
+---@param offset FittenCode.CharactersOffset 按 UTF-16 序列计算的偏移量 1
 ---@return FittenCode.Position
 function M.position_at(buf, offset)
     assert(buf)
     local pos
     vim.api.nvim_buf_call(buf, function()
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-        local index = 0
-        while offset > 0 do
-            local line = lines[index + 1] .. '\n'
-            local u16 = Unicode.byte_to_utfindex(line, 'utf-16', #line)
-            if offset > u16 then
-                index = index + 1
-            else
-                local col = Unicode.utf_to_byteindex(line, 'utf-16', offset)
-                col = M.round_col_end(line, col)
-                pos = Position.new({
-                    row = index,
-                    col = col - 1,
-                })
-            end
-            offset = offset - u16
-        end
+        pos = M.position_at_lines(lines, offset)
     end)
     return pos
 end
@@ -330,10 +347,20 @@ function M.round_col_end(line, col)
     return col
 end
 
+function M.is_col_end(line, col)
+    return col == M.round_col_end(line, col)
+end
+
+function M.is_over_col_end(line, col)
+    return col > M.round_col_end(line, col)
+end
+
 -- 调整 postion 使得 col 指向 UTF-8 序列的首字节
 ---@param buf number
 ---@param position FittenCode.Position
-function M.round_start(buf, position)
+---@param strict boolean? 是否允许超过行尾
+function M.round_start(buf, position, strict)
+    strict = strict or false
     assert(buf)
     local roundpos = position:clone()
     vim.api.nvim_buf_call(buf, function()
@@ -341,7 +368,11 @@ function M.round_start(buf, position)
         if position:rel_lastline() then
             row = assert(M.line_count(buf)) - 1
         end
-        local line = vim.fn.getline(row + 1) .. '\n'
+        local line = vim.fn.getline(row + 1)
+        -- 有时 start 超过了 col 数，是为了获取该行的换行符
+        if not strict and M.is_over_col_end(line, roundpos.col + 1) then
+            line = line .. '\n'
+        end
         roundpos.col = M.round_col_start(line, roundpos.col + 1) - 1
     end)
     return roundpos
@@ -358,7 +389,7 @@ function M.round_end(buf, position)
         if position:rel_lastline() then
             row = assert(M.line_count(buf)) - 1
         end
-        local line = vim.fn.getline(row + 1) .. '\n'
+        local line = vim.fn.getline(row + 1)
         roundpos.col = M.round_col_end(line, roundpos.col + 1) - 1
     end)
     return roundpos
@@ -366,26 +397,30 @@ end
 
 ---@param buf integer?
 ---@param range FittenCode.Range
+---@param strict boolean? range.start 是否允许超过行尾
 ---@return FittenCode.Range
-function M.round_region(buf, range)
+function M.round_region(buf, range, strict)
     assert(buf)
+    strict = strict or false
     local roundrange = range:clone()
     vim.api.nvim_buf_call(buf, function()
-        roundrange.start = M.round_start(buf, range.start)
+        roundrange.start = M.round_start(buf, range.start, strict)
         roundrange.end_ = M.round_end(buf, range.end_)
     end)
     return roundrange
 end
 
--- 给定 Buffer 和 Range，返回 Range 对应的文本内容
+-- 给定 Buffer 和 Range，返回 Range 对应的文本内容，指定的 Range 包含起点和终点
 ---@param buf integer?
 ---@param range FittenCode.Range 包含起点和终点
+---@param strict boolean? range.start 是否允许超过行尾
 ---@return string[]?
-function M.get_lines(buf, range)
+function M.get_lines(buf, range, strict)
     assert(buf)
+    strict = strict or false
     local lines
     vim.api.nvim_buf_call(buf, function()
-        local roundrange = M.round_region(buf, range)
+        local roundrange = M.round_region(buf, range, strict)
         -- Indexing is zero-based.
         -- start_row inclusive
         -- start_col inclusive
@@ -395,7 +430,6 @@ function M.get_lines(buf, range)
         if not roundrange.end_:rel_eol() then
             end_col = end_col + 1
         end
-        -- Log.debug('get_lines: range = {}, roundrange = {}, end_col = {}', range, roundrange, end_col)
         lines = vim.api.nvim_buf_get_text(buf, roundrange.start.row, roundrange.start.col, roundrange.end_.row, end_col, {})
     end)
     return lines
@@ -403,10 +437,11 @@ end
 
 ---@param buf number?
 ---@param range FittenCode.Range
+---@param strict boolean? range.start 是否允许超过行尾
 ---@return string
-function M.get_text(buf, range)
+function M.get_text(buf, range, strict)
     assert(buf)
-    return table.concat(assert(M.get_lines(buf, range)), '\n')
+    return table.concat(assert(M.get_lines(buf, range, strict)), '\n')
 end
 
 -- Check if the given text contains only ASCII characters.
