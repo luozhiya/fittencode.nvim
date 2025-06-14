@@ -7,10 +7,9 @@
 
 ]]
 
-local IncModel = require('fittencode.inline.model.inccmp.model')
+local Model = require('fittencode.inline.model')
 local IncView = require('fittencode.inline.view.inccmp.view')
 local IncViewState = require('fittencode.inline.view.inccmp.state')
-local EditModel = require('fittencode.inline.model.editcmp.model')
 local EditView = require('fittencode.inline.view.editcmp.view')
 local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn.core')
@@ -36,7 +35,7 @@ local SESSION_TASK_EVENT = Definitions.SESSION_TASK_EVENT
 ---@field requests table<number, FittenCode.HTTP.Request>
 ---@field keymaps table<number, any>
 ---@field view FittenCode.Inline.IView
----@field model FittenCode.Inline.IModel
+---@field model FittenCode.Inline.Model
 ---@field version string
 local Session = {}
 Session.__index = Session
@@ -96,25 +95,14 @@ function Session:__segments()
     end)
 end
 
----@return FittenCode.Inline.IModel
-function Session:__new_model(completions)
-    local Class
-    if self.mode == 'inccmp' then
-        Class = IncModel
-    else
-        Class = EditModel
-    end
-    ---@diagnostic disable-next-line: return-type-mismatch
-    return Class.new({
-        buf = self.buf,
-        position = self.position,
-        completions = completions,
-    })
-end
-
 function Session:set_model(completions)
     if self.session_event == SESSION_EVENT.REQUESTING then
-        self.model = self:__new_model(completions)
+        self.model = Model.new({
+            buf = self.buf,
+            position = self.position,
+            completions = completions,
+            mode = self.mode,
+        })
         self:sync_session_event(SESSION_EVENT.MODEL_READY)
         self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
 

@@ -20,6 +20,7 @@ local Placeholder = require('fittencode.inline.model.inccmp.placeholder')
 local Segment = require('fittencode.inline.segment')
 
 ---@class FittenCode.Inline.IncrementalCompletion.Model
+---@field mode_capabilities FittenCode.Inline.ModeCapabilities
 ---@field source string
 ---@field cursor integer
 ---@field commit_history table<table<table<integer>>>
@@ -34,6 +35,18 @@ Model.__index = Model
 
 function Model.new(buf, position, completion)
     local self = setmetatable({}, Model)
+
+    ---@type FittenCode.Inline.ModeCapabilities
+    self.mode_capabilities = {
+        accept_next_char = true,
+        accept_next_line = true,
+        accept_next_word = true,
+        accept_all = true,
+        accept_hunk = false,
+        revoke = true,
+        lazy_completion = true,
+        segment_words = true
+    }
 
     local placeholder_ranges = Placeholder.generate_placeholder_ranges(buf, position, completion)
 

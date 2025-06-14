@@ -32,17 +32,6 @@ function Model.new(options)
 end
 
 function Model:_initialize(options)
-    ---@type FittenCode.Inline.ModeCapabilities
-    self.mode_capabilities = {
-        accept_next_char = true,
-        accept_next_line = true,
-        accept_next_word = true,
-        accept_all = true,
-        accept_hunk = false,
-        revoke = true,
-        lazy_completion = true,
-        segment_words = true
-    }
     self.buf = options.buf
     self.position = options.position
     self.selected_completion_index = nil
