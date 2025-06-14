@@ -17,7 +17,7 @@ local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 local Parse = require('fittencode.inline.model.inccmp.parse')
 
----@class FittenCode.Inline.CompletionModel
+---@class FittenCode.Inline.IncrementalCompletion.CompletionModel
 ---@field source string
 ---@field cursor integer
 ---@field commit_history table<table<table<integer>>>

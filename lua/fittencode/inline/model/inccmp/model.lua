@@ -22,7 +22,7 @@ local Unicode = require('fittencode.fn.unicode')
 ---@field selected_completion_index? number
 ---@field completions table<table<string, any>>
 ---@field placeholder_ranges table<table<number>>
----@field completion_models table<FittenCode.Inline.CompletionModel>
+---@field completion_models table<FittenCode.Inline.IncrementalCompletion.CompletionModel>
 local Model = {}
 Model.__index = Model
 
@@ -149,7 +149,7 @@ function Model:generate_placeholder_ranges(buf, position, computed_completions)
     return placeholder_ranges
 end
 
----@return FittenCode.Inline.CompletionModel
+---@return FittenCode.Inline.IncrementalCompletion.CompletionModel
 function Model:selected_completion()
     return assert(self.completion_models[assert(self.selected_completion_index)], 'No completion model selected')
 end
@@ -188,7 +188,7 @@ function Model:update_segments(segments)
         return
     end
     for idx, seg in pairs(segments) do
-        ---@type FittenCode.Inline.CompletionModel
+        ---@type FittenCode.Inline.IncrementalCompletion.CompletionModel
         local compl_model = self.completion_models[tonumber(idx)]
         local snapshot = compl_model:snapshot()
         local _, words = pcall(Segment.segments_to_words, snapshot, seg)
