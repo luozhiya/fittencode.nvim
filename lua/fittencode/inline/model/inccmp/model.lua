@@ -35,6 +35,7 @@ Model.__index = Model
 
 function Model.new(buf, position, completion)
     local self = setmetatable({}, Model)
+    Log.debug('completion = {}', completion)
 
     ---@type FittenCode.Inline.ModeCapabilities
     self.mode_capabilities = {
