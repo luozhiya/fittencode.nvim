@@ -252,12 +252,15 @@ function M.offset_at(buf, position)
     assert(buf)
     local offset = 0
     vim.api.nvim_buf_call(buf, function()
-        local lines = assert(M.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = position })))
+        local lines = M.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = position }))
+        if not lines then
+            lines = M.get_lines(buf, Range.new({ start = Position.new({ row = 0, col = 0 }), end_ = Position.new({ row = -1, col = -1 }) }))
+            return
+        end
         vim.tbl_map(function(line)
             local u16 = Unicode.byte_to_utfindex(line, 'utf-16', #line)
             offset = offset + u16
         end, lines)
-        offset = offset + #lines - 1 -- 最后一行不计入
     end)
     return offset
 end
@@ -277,7 +280,6 @@ function M.position_at_lines(lines, offset)
             })
             break
         end
-        line = line .. '\n'
         local u16 = Unicode.byte_to_utfindex(line, 'utf-16', #line)
         if offset > u16 then
             index = index + 1
@@ -303,6 +305,9 @@ function M.position_at(buf, offset)
     local pos
     vim.api.nvim_buf_call(buf, function()
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        if #lines == 0 then
+            return
+        end
         pos = M.position_at_lines(lines, offset)
     end)
     return pos

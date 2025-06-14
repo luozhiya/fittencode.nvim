@@ -677,6 +677,8 @@ function M.utf_to_byteindex(s, encoding, index)
 end
 
 -- str_utfindex
+-- 给定 UTF-8 字符串 s，目标编码 encoding，以及在 UTF-8 编码中字节位置
+-- 返回在指定编码中该字节位置对应的索引 1-based
 ---@param s string
 ---@param encoding "utf-8"|"utf-16"|"utf-32"
 ---@param index? integer
