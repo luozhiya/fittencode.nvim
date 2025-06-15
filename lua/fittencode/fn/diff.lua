@@ -16,11 +16,11 @@ local M = {}
 
 -- 将字符串分割为UTF-8字符数组并记录字节范围
 local function to_utf8_array(str)
+    if not str then return {}, {} end
     local chars = {}
     local ranges = {}
     local len = #str
     local i = 1
-    local char_index = 1
 
     while i <= len do
         local start_byte = i
@@ -41,16 +41,57 @@ local function to_utf8_array(str)
         table.insert(ranges, { start = start_byte, end_ = start_byte + seq_len - 1 })
 
         i = i + seq_len
-        char_index = char_index + 1
     end
 
     return chars, ranges
 end
 
+-- 计算两个字符串的最长公共子序列长度（LCS）
+local function lcs_length(s1, s2)
+    local chars1 = to_utf8_array(s1)
+    local chars2 = to_utf8_array(s2)
+
+    local m, n = #chars1, #chars2
+    local dp = {}
+    for i = 0, m do
+        dp[i] = {}
+        for j = 0, n do
+            dp[i][j] = 0
+        end
+    end
+
+    for i = 1, m do
+        for j = 1, n do
+            if chars1[i] == chars2[j] then
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else
+                dp[i][j] = math.max(dp[i - 1][j], dp[i][j - 1])
+            end
+        end
+    end
+
+    return dp[m][n]
+end
+
 -- 生成字符级别的差异信息，包含字节范围
 local function generate_char_diff(old_line, new_line)
-    local old_chars, old_ranges = to_utf8_array(old_line)
-    local new_chars, new_ranges = to_utf8_array(new_line)
+    if old_line == new_line then
+        -- 如果两行完全相同，直接返回公共字符序列
+        local chars, ranges = to_utf8_array(old_line)
+        local diff = {}
+        for i, char in ipairs(chars) do
+            table.insert(diff, {
+                type = 'common',
+                char = char,
+                old_range = ranges[i],
+                new_range = ranges[i]
+            })
+        end
+        return diff
+    end
+
+    local old_chars, old_ranges = to_utf8_array(old_line or '')
+    local new_chars, new_ranges = to_utf8_array(new_line or '')
 
     -- 初始化DP矩阵用于LCS计算
     local dp = {}
@@ -147,80 +188,115 @@ function M.diff_lines(old_lines, new_lines)
         end
     end
 
-    -- 计算行号范围
-    local old_lnum, new_lnum = 1, 1
-    for _, diff_line in ipairs(line_diff) do
-        if diff_line.type ~= 'add' then
-            diff_line.old_lnum = old_lnum
-            old_lnum = old_lnum + 1
-        end
-        if diff_line.type ~= 'remove' then
-            diff_line.new_lnum = new_lnum
-            new_lnum = new_lnum + 1
-        end
-    end
-
     -- 创建单个hunk包含所有差异
     local hunks = { {
         lines = line_diff
     } }
 
-    -- 修复字符级差异计算逻辑
-    -- 创建一个映射表：新行号 -> 行差异项
-    local new_line_map = {}
+    -- 智能匹配算法：寻找最相似的行进行配对
+    local remove_lines = {}
+    local add_lines = {}
+
+    -- 收集所有删除行和添加行
     for _, line in ipairs(line_diff) do
-        if line.new_lnum then
-            new_line_map[line.new_lnum] = line
+        if line.type == 'remove' then
+            table.insert(remove_lines, line)
+        elseif line.type == 'add' then
+            table.insert(add_lines, line)
         end
     end
 
-    local function is_all_remove_char(char_diff)
-        for _, d in ipairs(char_diff) do
-            if d.type ~= 'remove' then
-                return false
-            end
+    -- 计算相似度矩阵
+    local similarity = {}
+    for i, r_line in ipairs(remove_lines) do
+        similarity[i] = {}
+        for j, a_line in ipairs(add_lines) do
+            -- 计算相似度（使用LCS长度）
+            similarity[i][j] = lcs_length(r_line.line, a_line.line)
         end
-        return true
     end
 
-    -- 为每行计算字符级差异
-    for _, hunk in ipairs(hunks) do
-        for _, line in ipairs(hunk.lines) do
-            if line.type == 'remove' then
-                -- 查找对应新版本的行（如果有）
-                local corresponding_line = nil
-                if line.old_lnum then
-                    corresponding_line = new_line_map[line.old_lnum]
-                end
+    -- 匹配最佳对
+    local matched_pairs = {}
+    local used_remove = {}
+    local used_add = {}
 
-                if corresponding_line and corresponding_line.type == 'add' then
-                    local char_diff = generate_char_diff(line.line, corresponding_line.line)
-                    if not is_all_remove_char(char_diff) then
-                        line.char_diff = char_diff
-                    else
-                        line.char_diff = generate_char_diff(line.line, '')
-                    end
-                else
-                    line.char_diff = generate_char_diff(line.line, '')
-                end
-            elseif line.type == 'add' then
-                -- 查找对应旧版本的行（如果有）
-                local corresponding_line = nil
-                if line.new_lnum then
-                    -- 在旧版本中查找相同行号的内容
-                    for _, l in ipairs(hunk.lines) do
-                        if l.type == 'remove' and l.old_lnum == line.new_lnum then
-                            corresponding_line = l
-                            break
+    -- 优先匹配最相似的pair
+    for _ = 1, math.min(#remove_lines, #add_lines) do
+        local max_sim = -1
+        local best_r, best_a
+
+        -- 寻找最相似的对
+        for i, r_line in ipairs(remove_lines) do
+            if not used_remove[i] then
+                for j, a_line in ipairs(add_lines) do
+                    if not used_add[j] then
+                        if similarity[i][j] > max_sim then
+                            max_sim = similarity[i][j]
+                            best_r = i
+                            best_a = j
                         end
                     end
                 end
+            end
+        end
 
-                if corresponding_line then
-                    line.char_diff = corresponding_line.char_diff
-                else
-                    line.char_diff = generate_char_diff('', line.line)
+        -- 如果找到相似对，则标记为已使用
+        if best_r and best_a then
+            used_remove[best_r] = true
+            used_add[best_a] = true
+            table.insert(matched_pairs, {
+                remove = remove_lines[best_r],
+                add = add_lines[best_a],
+                similarity = max_sim
+            })
+        end
+    end
+
+    -- 为匹配的行对计算字符级差异
+    for _, pair in ipairs(matched_pairs) do
+        -- 只有当相似度大于0时才计算差异
+        if pair.similarity > 0 then
+            local char_diff = generate_char_diff(pair.remove.line, pair.add.line)
+            pair.remove.char_diff = char_diff
+            pair.add.char_diff = char_diff
+        end
+    end
+
+    -- 处理未匹配的删除行
+    for i, r_line in ipairs(remove_lines) do
+        if not used_remove[i] then
+            -- 检查是否有部分匹配的添加行
+            local has_common = false
+            for _, a_line in ipairs(add_lines) do
+                if not used_add[i] and lcs_length(r_line.line, a_line.line) > 0 then
+                    has_common = true
+                    break
                 end
+            end
+
+            -- 如果没有匹配的添加行，则标记为完全删除
+            if not has_common then
+                r_line.char_diff = generate_char_diff(r_line.line, '')
+            end
+        end
+    end
+
+    -- 处理未匹配的添加行
+    for j, a_line in ipairs(add_lines) do
+        if not used_add[j] then
+            -- 检查是否有部分匹配的删除行
+            local has_common = false
+            for _, r_line in ipairs(remove_lines) do
+                if not used_remove[j] and lcs_length(r_line.line, a_line.line) > 0 then
+                    has_common = true
+                    break
+                end
+            end
+
+            -- 如果没有匹配的删除行，则标记为完全添加
+            if not has_common then
+                a_line.char_diff = generate_char_diff('', a_line.line)
             end
         end
     end
@@ -231,29 +307,34 @@ end
 function M.unified(hunks)
     local infos = {}
     for h, hunk in ipairs(hunks) do
-        print(string.format('Hunk %d (old: %d-%d, new: %d-%d)',
-            h, hunk.old_start, hunk.old_end, hunk.new_start, hunk.new_end))
-
-        for l, line in ipairs(hunk.lines) do
+        for _, line in ipairs(hunk.lines) do
             local prefix = line.type == 'common' and ' '
                 or line.type == 'remove' and '-'
                 or line.type == 'add' and '+'
-                or line.type == 'change' and '~'
+                or ' '
 
-            local info = string.format('%s %d/%d | %s',
-                prefix, hunk.old_start + l - 1, hunk.new_start + l - 1, line.line)
+            local info = string.format('%s | %s', prefix, line.line)
 
             if line.char_diff then
                 info = info .. '\n    Char Diff:'
+                local has_common = false
                 for _, d in ipairs(line.char_diff) do
                     if d.type == 'common' then
                         info = info .. string.format(' [%s]', d.char)
+                        has_common = true
                     elseif d.type == 'remove' then
-                        info = info .. string.format(' -%s(old:%d-%d)',
-                            d.char, d.old_range.start, d.old_range.end_)
+                        info = info .. string.format(' -%s', d.char)
                     elseif d.type == 'add' then
-                        info = info .. string.format(' +%s(new:%d-%d)',
-                            d.char, d.new_range.start, d.new_range.end_)
+                        info = info .. string.format(' +%s', d.char)
+                    end
+                end
+
+                -- 如果没有公共字符，则标记为全行删除/添加
+                if not has_common then
+                    if line.type == 'remove' then
+                        info = info .. ' (full line removal)'
+                    elseif line.type == 'add' then
+                        info = info .. ' (full line addition)'
                     end
                 end
             end
@@ -284,11 +365,15 @@ local old_text = {
     '1',
     '2',
     'Line 3: To be deleted',
+    'QQ',
+    'QQ',
+    'QQ'
 }
 
 local new_text = {
     '这是一行修改后的中文文本', -- 修改
     'Line 3: New line inserted', -- 新增
+    'QQ'
 }
 
 local ll = M.diff_lines(old_text, new_text)
