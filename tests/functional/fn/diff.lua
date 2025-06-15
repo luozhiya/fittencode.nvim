@@ -18,12 +18,8 @@ describe('fn.diff', function()
             'Another line with 中文', -- 未修改
             'Final line with changes' -- 修改
         }
-
-        -- 计算差异
-        local hunks = Diff.diff(old_text, new_text)
-
-        -- 显示差异结果
-        Diff.show_diff(hunks)
+        local hunks = Diff.diff_lines(old_text, new_text)
+        print(vim.inspect(hunks))
     end)
 
     it('vim.diff', function()

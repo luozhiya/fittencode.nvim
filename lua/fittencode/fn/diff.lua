@@ -147,135 +147,78 @@ function M.diff_lines(old_lines, new_lines)
         end
     end
 
-    -- 合并相邻差异为hunks
-    local hunks = {}
-    local current_hunk = nil
-    local context_size = 3 -- 上下文行数
-
-    local function finalize_current_hunk()
-        if current_hunk then
-            -- 修剪首尾的公共行
-            while #current_hunk.lines > 0 and current_hunk.lines[1].type == 'common' do
-                table.remove(current_hunk.lines, 1)
-                current_hunk.old_start = current_hunk.old_start + 1
-                current_hunk.new_start = current_hunk.new_start + 1
-            end
-            while #current_hunk.lines > 0 and current_hunk.lines[#current_hunk.lines].type == 'common' do
-                table.remove(current_hunk.lines)
-            end
-
-            -- 添加上下文
-            if #current_hunk.lines > 0 then
-                -- 添加上文
-                local ctx_before = {}
-                for n = 1, context_size do
-                    local idx = current_hunk.old_start - n
-                    if idx >= 1 and idx <= #old_lines then
-                        table.insert(ctx_before, 1, { type = 'common', line = old_lines[idx] })
-                    else
-                        break
-                    end
-                end
-                current_hunk.old_start = current_hunk.old_start - #ctx_before
-                current_hunk.new_start = current_hunk.new_start - #ctx_before
-                for _, line in ipairs(ctx_before) do
-                    table.insert(current_hunk.lines, 1, line)
-                end
-
-                -- 添加下文
-                local ctx_after = {}
-                for n = 1, context_size do
-                    local idx = current_hunk.old_end + n
-                    if idx >= 1 and idx <= #old_lines then
-                        table.insert(ctx_after, { type = 'common', line = old_lines[idx] })
-                    else
-                        break
-                    end
-                end
-                current_hunk.old_end = current_hunk.old_end + #ctx_after
-                current_hunk.new_end = current_hunk.new_end + #ctx_after
-                for _, line in ipairs(ctx_after) do
-                    table.insert(current_hunk.lines, line)
-                end
-
-                table.insert(hunks, current_hunk)
-            end
-            current_hunk = nil
-        end
-    end
-
-    -- 当前行号跟踪
+    -- 计算行号范围
     local old_lnum, new_lnum = 1, 1
     for _, diff_line in ipairs(line_diff) do
-        if diff_line.type == 'common' then
-            if current_hunk then
-                current_hunk.old_end = old_lnum
-                current_hunk.new_end = new_lnum
-                table.insert(current_hunk.lines, diff_line)
-            end
-        else
-            if not current_hunk then
-                current_hunk = {
-                    old_start = old_lnum,
-                    new_start = new_lnum,
-                    old_end = old_lnum,
-                    new_end = new_lnum,
-                    lines = {}
-                }
-            end
-            table.insert(current_hunk.lines, diff_line)
-        end
-
-        -- 更新行号
         if diff_line.type ~= 'add' then
+            diff_line.old_lnum = old_lnum
             old_lnum = old_lnum + 1
         end
         if diff_line.type ~= 'remove' then
+            diff_line.new_lnum = new_lnum
             new_lnum = new_lnum + 1
         end
+    end
 
-        -- 当前hunk结束条件：连续上下文行超过阈值
-        if diff_line.type == 'common' then
-            if current_hunk then
-                local consecutive_common = 0
-                for i = #current_hunk.lines, 1, -1 do
-                    if current_hunk.lines[i].type == 'common' then
-                        consecutive_common = consecutive_common + 1
-                    else
-                        break
-                    end
-                end
+    -- 创建单个hunk包含所有差异
+    local hunks = { {
+        lines = line_diff
+    } }
 
-                if consecutive_common > context_size * 2 then
-                    finalize_current_hunk()
-                end
-            end
+    -- 修复字符级差异计算逻辑
+    -- 创建一个映射表：新行号 -> 行差异项
+    local new_line_map = {}
+    for _, line in ipairs(line_diff) do
+        if line.new_lnum then
+            new_line_map[line.new_lnum] = line
         end
     end
-    finalize_current_hunk()
 
-    -- 为hunk内的修改行添加字符级差异
+    local function is_all_remove_char(char_diff)
+        for _, d in ipairs(char_diff) do
+            if d.type ~= 'remove' then
+                return false
+            end
+        end
+        return true
+    end
+
+    -- 为每行计算字符级差异
     for _, hunk in ipairs(hunks) do
         for _, line in ipairs(hunk.lines) do
-            if line.type == 'remove' and line.char_diff == nil then
-                -- 查找对应的添加行
-                local next_idx = _ + 1
-                local add_line = next_idx <= #hunk.lines and hunk.lines[next_idx]
+            if line.type == 'remove' then
+                -- 查找对应新版本的行（如果有）
+                local corresponding_line = nil
+                if line.old_lnum then
+                    corresponding_line = new_line_map[line.old_lnum]
+                end
 
-                if add_line and add_line.type == 'add' then
-                    line.type = 'change'
-                    add_line.type = 'change'
-                    line.char_diff = generate_char_diff(line.line, add_line.line)
-                    add_line.char_diff = line.char_diff -- 共享相同的字符差异信息
+                if corresponding_line and corresponding_line.type == 'add' then
+                    local char_diff = generate_char_diff(line.line, corresponding_line.line)
+                    if not is_all_remove_char(char_diff) then
+                        line.char_diff = char_diff
+                    else
+                        line.char_diff = generate_char_diff(line.line, '')
+                    end
                 else
                     line.char_diff = generate_char_diff(line.line, '')
                 end
-            elseif line.type == 'add' and line.char_diff == nil then
-                -- 查找对应的删除行
-                local prev_idx = _ - 1
-                local remove_line = prev_idx >= 1 and hunk.lines[prev_idx]
+            elseif line.type == 'add' then
+                -- 查找对应旧版本的行（如果有）
+                local corresponding_line = nil
+                if line.new_lnum then
+                    -- 在旧版本中查找相同行号的内容
+                    for _, l in ipairs(hunk.lines) do
+                        if l.type == 'remove' and l.old_lnum == line.new_lnum then
+                            corresponding_line = l
+                            break
+                        end
+                    end
+                end
 
-                if not remove_line or remove_line.type ~= 'remove' then
+                if corresponding_line then
+                    line.char_diff = corresponding_line.char_diff
+                else
                     line.char_diff = generate_char_diff('', line.line)
                 end
             end
@@ -319,5 +262,45 @@ function M.unified(hunks)
     end
     return infos
 end
+
+-- local old_text = {
+--     'Hello world!',
+--     '这是一行中文文本',
+--     'Line 3: To be deleted',
+--     'Another line with 中文',
+--     'Final line'
+-- }
+
+-- local new_text = {
+--     'Hello world!', -- 未修改
+--     '这是一行修改后的中文文本', -- 修改
+--     'New line inserted', -- 新增
+--     'Another line with 中文', -- 未修改
+--     'Final line with changes' -- 修改
+-- }
+
+local old_text = {
+    '这是一行中文文本',
+    '1',
+    '2',
+    'Line 3: To be deleted',
+}
+
+local new_text = {
+    '这是一行修改后的中文文本', -- 修改
+    'Line 3: New line inserted', -- 新增
+}
+
+local ll = M.diff_lines(old_text, new_text)
+
+-- print(vim.inspect())
+
+-- local ll = vim.diff(table.concat(old_text, '\n'), table.concat(new_text, '\n'), { result_type = 'indices' })
+-- local l0 = vim.list_slice(old_text, 2, 2+2-1)
+-- local l1 = vim.list_slice(new_text, 2, 2+2-1)
+
+-- print(vim.inspect(M.diff_lines(l0, l1)))
+-- -- local ll = M.diff_lines(old_text, new_text)
+-- print(vim.inspect(vim.diff(table.concat(old_text, '\n'), table.concat(new_text, '\n'), { result_type = 'indices' })))
 
 return M
