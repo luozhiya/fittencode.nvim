@@ -18,7 +18,7 @@ describe('fn.diff', function()
             'Another line with 中文', -- 未修改
             'Final line with changes' -- 修改
         }
-        local hunks = Diff.diff_lines(old_text, new_text)
+        local hunks = Diff.diff_lines_single_hunk(old_text, new_text)
         print(vim.inspect(hunks))
     end)
 

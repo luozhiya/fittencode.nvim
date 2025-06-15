@@ -1,15 +1,5 @@
 --[[
 
-local old_text = {
-    'ooo',
-    '123中文请0'
-}
-
-local new_text = {
-    'ooo',
-    '2额文0'
-}
-
 ]]
 
 local M = {}
@@ -149,8 +139,88 @@ local function generate_char_diff(old_line, new_line)
     return diff
 end
 
--- 主差异分析函数，直接接受行数组
-function M.diff_lines(old_lines, new_lines)
+-- 将行差异拆分为多个hunk
+local function diff_split_hunks(line_diff)
+    local hunks = {}
+    local current_hunk = { lines = {} }
+    local old_counter, new_counter = 1, 1
+
+    -- 为每行分配行号
+    for _, line in ipairs(line_diff) do
+        if line.type ~= 'add' then
+            line.old_lnum = old_counter
+            old_counter = old_counter + 1
+        end
+        if line.type ~= 'remove' then
+            line.new_lnum = new_counter
+            new_counter = new_counter + 1
+        end
+    end
+
+    local common_hunks = {}
+    local common_lines = { lines = {} }
+    local function merge_common_lines()
+        if #common_lines.lines > 0 then
+            table.insert(common_hunks, common_lines)
+            common_lines = { lines = {} }
+        end
+    end
+    for i, line in ipairs(line_diff) do
+        if line.type == 'common' then
+            -- 公共行作为hunk的分隔符
+            if #current_hunk.lines > 0 then
+                table.insert(hunks, current_hunk)
+                current_hunk = { lines = {} }
+            end
+            table.insert(common_lines.lines, line)
+        else
+            merge_common_lines()
+            table.insert(current_hunk.lines, line)
+        end
+    end
+
+    merge_common_lines()
+
+    -- 添加最后一个hunk
+    if #current_hunk.lines > 0 then
+        table.insert(hunks, current_hunk)
+        current_hunk = { lines = {} }
+    end
+
+    local function hunk_line_range(hunk)
+        local min_old, max_old = math.huge, -math.huge
+        local min_new, max_new = math.huge, -math.huge
+
+        for _, line in ipairs(hunk.lines) do
+            if line.old_lnum then
+                min_old = math.min(min_old, line.old_lnum)
+                max_old = math.max(max_old, line.old_lnum)
+            end
+            if line.new_lnum then
+                min_new = math.min(min_new, line.new_lnum)
+                max_new = math.max(max_new, line.new_lnum)
+            end
+        end
+
+        hunk.old_start = min_old ~= math.huge and min_old or nil
+        hunk.old_end = max_old ~= -math.huge and max_old or nil
+        hunk.new_start = min_new ~= math.huge and min_new or nil
+        hunk.new_end = max_new ~= -math.huge and max_new or nil
+    end
+
+    -- 为每个hunk计算行号范围
+    for _, hunk in ipairs(hunks) do
+        hunk_line_range(hunk)
+    end
+    for _, hunk in ipairs(common_hunks) do
+        hunk_line_range(hunk)
+    end
+
+    return hunks, common_hunks
+end
+
+-- 计算行差异数组
+local function compute_line_diff(old_lines, new_lines)
     -- 初始化行差异矩阵
     local dp = {}
     for i = 0, #old_lines do
@@ -188,17 +258,17 @@ function M.diff_lines(old_lines, new_lines)
         end
     end
 
-    -- 创建单个hunk包含所有差异
-    local hunks = { {
-        lines = line_diff
-    } }
+    return line_diff
+end
 
+-- 主差异分析函数，直接接受行数组
+function M.diff_lines_single_hunk(hunk)
     -- 智能匹配算法：寻找最相似的行进行配对
     local remove_lines = {}
     local add_lines = {}
 
     -- 收集所有删除行和添加行
-    for _, line in ipairs(line_diff) do
+    for _, line in ipairs(hunk.lines) do
         if line.type == 'remove' then
             table.insert(remove_lines, line)
         elseif line.type == 'add' then
@@ -301,6 +371,51 @@ function M.diff_lines(old_lines, new_lines)
         end
     end
 
+    return hunk
+end
+
+function M.diff_lines(old_lines, new_lines, single_hunk)
+    -- 计算行差异
+    local line_diff = compute_line_diff(old_lines, new_lines)
+
+    -- 拆分为多个hunk
+    local hunks
+    if single_hunk then
+        hunks = { { lines = line_diff } }
+    else
+        hunks = diff_split_hunks(line_diff)
+    end
+
+    -- 为每个hunk单独计算字符级差异
+    for _, hunk in ipairs(hunks) do
+        M.diff_lines_single_hunk(hunk)
+    end
+
+    return hunks
+end
+
+function M.diff_lines2(old_lines, new_lines)
+    ---@type integer[][]
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local indices = vim.diff(table.concat(old_lines, '\n'), table.concat(new_lines, '\n'), { linematch = true, result_type = 'indices' })
+    print(vim.inspect(indices))
+    local hunks = {}
+    for _, hunk_range in ipairs(indices) do
+        local old_start, old_len, new_start, new_len = unpack(hunk_range)
+
+        local old_slice = old_len == 0 and {}
+            or vim.list_slice(old_lines, old_start, old_start + old_len - 1)
+        local new_slice = new_len == 0 and {}
+            or vim.list_slice(new_lines, new_start, new_start + new_len - 1)
+
+        local hunk = M.diff_lines(old_slice, new_slice, true)
+        hunk.old_start = old_len ~= 0 and old_start or nil
+        hunk.old_end = old_len ~= 0 and (old_start + old_len - 1) or nil
+        hunk.new_start = new_len ~= 0 and new_start or nil
+        hunk.new_end = new_len ~= 0 and (new_start + new_len - 1) or nil
+
+        table.insert(hunks, hunk)
+    end
     return hunks
 end
 
@@ -367,18 +482,20 @@ local old_text = {
     'Line 3: To be deleted',
     'QQ',
     'QQ',
-    'QQ'
+    'QQ',
+    'Open'
 }
 
 local new_text = {
     '这是一行修改后的中文文本', -- 修改
     'Line 3: New line inserted', -- 新增
-    'QQ'
+    'QQ',
+    'Close'
 }
 
-local ll = M.diff_lines(old_text, new_text)
+local ll = M.diff_lines2(old_text, new_text)
 
--- print(vim.inspect())
+print(vim.inspect(ll))
 
 -- local ll = vim.diff(table.concat(old_text, '\n'), table.concat(new_text, '\n'), { result_type = 'indices' })
 -- local l0 = vim.list_slice(old_text, 2, 2+2-1)
