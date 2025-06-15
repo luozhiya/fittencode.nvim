@@ -1,14 +1,19 @@
 local M = {}
 
--- 将字符串分割为UTF-8字符数组
+-- 将字符串分割为UTF-8字符数组并记录字节范围
 local function to_utf8_array(str)
     local chars = {}
+    local ranges = {}
     local len = #str
     local i = 1
+    local char_index = 1
+
     while i <= len do
+        local start_byte = i
         local c = string.sub(str, i, i)
         local byte = string.byte(c)
         local seq_len = 1
+
         if byte >= 0xF0 then
             seq_len = 4
         elseif byte >= 0xE0 then
@@ -16,16 +21,22 @@ local function to_utf8_array(str)
         elseif byte >= 0xC0 then
             seq_len = 2
         end
-        table.insert(chars, string.sub(str, i, i + seq_len - 1))
+
+        local char = string.sub(str, i, i + seq_len - 1)
+        table.insert(chars, char)
+        table.insert(ranges, { start = start_byte, end_ = start_byte + seq_len - 1 })
+
         i = i + seq_len
+        char_index = char_index + 1
     end
-    return chars
+
+    return chars, ranges
 end
 
--- 生成字符级别的差异信息
+-- 生成字符级别的差异信息，包含字节范围
 local function generate_char_diff(old_line, new_line)
-    local old_chars = to_utf8_array(old_line)
-    local new_chars = to_utf8_array(new_line)
+    local old_chars, old_ranges = to_utf8_array(old_line)
+    local new_chars, new_ranges = to_utf8_array(new_line)
 
     -- 初始化DP矩阵用于LCS计算
     local dp = {}
@@ -52,14 +63,30 @@ local function generate_char_diff(old_line, new_line)
     local i, j = #old_chars, #new_chars
     while i > 0 or j > 0 do
         if i > 0 and j > 0 and old_chars[i] == new_chars[j] then
-            table.insert(diff, 1, { type = 'common', char = old_chars[i] })
+            -- 公共字符：记录新旧范围
+            table.insert(diff, 1, {
+                type = 'common',
+                char = old_chars[i],
+                old_range = { start = old_ranges[i].start, end_ = old_ranges[i].end_ },
+                new_range = { start = new_ranges[j].start, end_ = new_ranges[j].end_ }
+            })
             i = i - 1
             j = j - 1
         elseif j > 0 and (i == 0 or dp[i][j - 1] >= dp[i - 1][j]) then
-            table.insert(diff, 1, { type = 'add', char = new_chars[j] })
+            -- 添加字符：只记录新范围
+            table.insert(diff, 1, {
+                type = 'add',
+                char = new_chars[j],
+                new_range = { start = new_ranges[j].start, end_ = new_ranges[j].end_ }
+            })
             j = j - 1
         elseif i > 0 and (j == 0 or dp[i][j - 1] < dp[i - 1][j]) then
-            table.insert(diff, 1, { type = 'remove', char = old_chars[i] })
+            -- 删除字符：只记录旧范围
+            table.insert(diff, 1, {
+                type = 'remove',
+                char = old_chars[i],
+                old_range = { start = old_ranges[i].start, end_ = old_ranges[i].end_ }
+            })
             i = i - 1
         end
     end
@@ -67,18 +94,8 @@ local function generate_char_diff(old_line, new_line)
     return diff
 end
 
--- 主差异分析函数
-function M.diff_text(old_text, new_text)
-    -- 分割文本为行
-    local old_lines = {}
-    for s in string.gmatch(old_text .. '\n', '([^\n]*)\n') do
-        table.insert(old_lines, s)
-    end
-    local new_lines = {}
-    for s in string.gmatch(new_text .. '\n', '([^\n]*)\n') do
-        table.insert(new_lines, s)
-    end
-
+-- 主差异分析函数，直接接受行数组
+function M.diff_lines(old_lines, new_lines)
     -- 初始化行差异矩阵
     local dp = {}
     for i = 0, #old_lines do
@@ -225,9 +242,6 @@ function M.diff_text(old_text, new_text)
 
     -- 为hunk内的修改行添加字符级差异
     for _, hunk in ipairs(hunks) do
-        local old_line_num = hunk.old_start
-        local new_line_num = hunk.new_start
-
         for _, line in ipairs(hunk.lines) do
             if line.type == 'remove' and line.char_diff == nil then
                 -- 查找对应的添加行
@@ -251,14 +265,6 @@ function M.diff_text(old_text, new_text)
                     line.char_diff = generate_char_diff('', line.line)
                 end
             end
-
-            -- 更新行号
-            if line.type ~= 'add' then
-                old_line_num = old_line_num + 1
-            end
-            if line.type ~= 'remove' then
-                new_line_num = new_line_num + 1
-            end
         end
     end
 
@@ -266,15 +272,15 @@ function M.diff_text(old_text, new_text)
 end
 
 local diff = M
-local old_text = [[
-ooo
-123中文请0
-]]
+local old_text = {
+    'ooo',
+    '123中文请0'
+}
 
-local new_text = [[
-ooo
-2额文0
-]]
+local new_text = {
+    'ooo',
+    '2额文0'
+}
 
 -- local old_text = [[
 -- Hello World!
@@ -296,7 +302,7 @@ ooo
 -- 2
 -- ]]
 
-local hunks = diff.diff_text(old_text, new_text)
+local hunks = diff.diff_lines(old_text, new_text)
 
 print(vim.inspect(hunks))
 
@@ -315,17 +321,18 @@ for h, hunk in ipairs(hunks) do
             prefix, hunk.old_start + l - 1, hunk.new_start + l - 1, line.line)
 
         if line.char_diff then
-            info = info .. ' [Char Diff: '
+            info = info .. '\n    Char Diff:'
             for _, d in ipairs(line.char_diff) do
                 if d.type == 'common' then
-                    info = info .. d.char
+                    info = info .. string.format(' [%s]', d.char)
                 elseif d.type == 'remove' then
-                    info = info .. '-' .. d.char
+                    info = info .. string.format(' -%s(old:%d-%d)',
+                        d.char, d.old_range.start, d.old_range.end_)
                 elseif d.type == 'add' then
-                    info = info .. '+' .. d.char
+                    info = info .. string.format(' +%s(new:%d-%d)',
+                        d.char, d.new_range.start, d.new_range.end_)
                 end
             end
-            info = info .. ']'
         end
 
         print(info)
