@@ -1,40 +1,69 @@
-local UTF8 = require('fittencode.fn.utf8')
+--[[
+
+local old_text = {
+    'ooo',
+    '123中文请0'
+}
+
+local new_text = {
+    'ooo',
+    '2额文0'
+}
+
+]]
 
 local M = {}
 
---- 将字符串分割为 UTF-8 字符数组
--- @param str string 输入字符串
--- @return table UTF-8 字符数组
-local function utf8_chars(str)
+-- 将字符串分割为UTF-8字符数组并记录字节范围
+local function to_utf8_array(str)
     local chars = {}
-    for _, c in UTF8.codes(str) do
-        table.insert(chars, UTF8.char(c))
+    local ranges = {}
+    local len = #str
+    local i = 1
+    local char_index = 1
+
+    while i <= len do
+        local start_byte = i
+        local c = string.sub(str, i, i)
+        local byte = string.byte(c)
+        local seq_len = 1
+
+        if byte >= 0xF0 then
+            seq_len = 4
+        elseif byte >= 0xE0 then
+            seq_len = 3
+        elseif byte >= 0xC0 then
+            seq_len = 2
+        end
+
+        local char = string.sub(str, i, i + seq_len - 1)
+        table.insert(chars, char)
+        table.insert(ranges, { start = start_byte, end_ = start_byte + seq_len - 1 })
+
+        i = i + seq_len
+        char_index = char_index + 1
     end
-    return chars
+
+    return chars, ranges
 end
 
---- 计算字符级差异
--- @param old_str string 旧文本
--- @param new_str string 新文本
--- @return table 字符级差异操作列表
-function M.char_diff(old_str, new_str)
-    -- 转换为 UTF-8 字符数组
-    local old_chars = utf8_chars(old_str)
-    local new_chars = utf8_chars(new_str)
+-- 生成字符级别的差异信息，包含字节范围
+local function generate_char_diff(old_line, new_line)
+    local old_chars, old_ranges = to_utf8_array(old_line)
+    local new_chars, new_ranges = to_utf8_array(new_line)
 
-    -- 初始化 DP 表
-    local m, n = #old_chars, #new_chars
+    -- 初始化DP矩阵用于LCS计算
     local dp = {}
-    for i = 0, m do
+    for i = 0, #old_chars do
         dp[i] = {}
-        for j = 0, n do
+        for j = 0, #new_chars do
             dp[i][j] = 0
         end
     end
 
-    -- 计算 LCS
-    for i = 1, m do
-        for j = 1, n do
+    -- 计算LCS长度
+    for i = 1, #old_chars do
+        for j = 1, #new_chars do
             if old_chars[i] == new_chars[j] then
                 dp[i][j] = dp[i - 1][j - 1] + 1
             else
@@ -43,73 +72,45 @@ function M.char_diff(old_str, new_str)
         end
     end
 
-    -- 回溯找出差异点
-    local changes = {}
-    local i, j = m, n
+    -- 回溯获取差异信息
+    local diff = {}
+    local i, j = #old_chars, #new_chars
     while i > 0 or j > 0 do
         if i > 0 and j > 0 and old_chars[i] == new_chars[j] then
-            i, j = i - 1, j - 1
-        else
-            table.insert(changes, 1, { old_index = i, new_index = j })
-            if j > 0 and (i == 0 or dp[i][j - 1] >= dp[i - 1][j]) then
-                j = j - 1
-            elseif i > 0 then
-                i = i - 1
-            end
-        end
-    end
-    table.insert(changes, 1, { old_index = 0, new_index = 0 })
-
-    -- 生成字符级差异操作
-    local ops = {}
-    for idx = 1, #changes - 1 do
-        local c1 = changes[idx]
-        local c2 = changes[idx + 1]
-
-        local old_start = c1.old_index + 1
-        local old_end = c2.old_index
-        local new_start = c1.new_index + 1
-        local new_end = c2.new_index
-
-        if old_end > old_start and new_end > new_start then
-            -- 修改操作
-            table.insert(ops, {
-                type = 'change',
-                old_text = table.concat(old_chars, '', old_start, old_end),
-                new_text = table.concat(new_chars, '', new_start, new_end),
-                old_start = old_start,
-                old_end = old_end,
-                new_start = new_start,
-                new_end = new_end
+            -- 公共字符：记录新旧范围
+            table.insert(diff, 1, {
+                type = 'common',
+                char = old_chars[i],
+                old_range = { start = old_ranges[i].start, end_ = old_ranges[i].end_ },
+                new_range = { start = new_ranges[j].start, end_ = new_ranges[j].end_ }
             })
-        elseif old_end > old_start then
-            -- 删除操作
-            table.insert(ops, {
-                type = 'delete',
-                text = table.concat(old_chars, '', old_start, old_end),
-                old_start = old_start,
-                old_end = old_end
+            i = i - 1
+            j = j - 1
+        elseif j > 0 and (i == 0 or dp[i][j - 1] >= dp[i - 1][j]) then
+            -- 添加字符：只记录新范围
+            table.insert(diff, 1, {
+                type = 'add',
+                char = new_chars[j],
+                new_range = { start = new_ranges[j].start, end_ = new_ranges[j].end_ }
             })
-        elseif new_end > new_start then
-            -- 插入操作
-            table.insert(ops, {
-                type = 'insert',
-                text = table.concat(new_chars, '', new_start, new_end),
-                new_start = new_start,
-                new_end = new_end
+            j = j - 1
+        elseif i > 0 and (j == 0 or dp[i][j - 1] < dp[i - 1][j]) then
+            -- 删除字符：只记录旧范围
+            table.insert(diff, 1, {
+                type = 'remove',
+                char = old_chars[i],
+                old_range = { start = old_ranges[i].start, end_ = old_ranges[i].end_ }
             })
+            i = i - 1
         end
     end
 
-    return ops
+    return diff
 end
 
---- 计算行级差异
--- @param old_lines table 旧文本行列表
--- @param new_lines table 新文本行列表
--- @return table 包含差异信息的 hunk 列表
-function M.diff(old_lines, new_lines)
-    -- 初始化差异矩阵
+-- 主差异分析函数，直接接受行数组
+function M.diff_lines(old_lines, new_lines)
+    -- 初始化行差异矩阵
     local dp = {}
     for i = 0, #old_lines do
         dp[i] = {}
@@ -118,7 +119,7 @@ function M.diff(old_lines, new_lines)
         end
     end
 
-    -- 计算最长公共子序列（LCS）
+    -- 计算行级LCS
     for i = 1, #old_lines do
         for j = 1, #new_lines do
             if old_lines[i] == new_lines[j] then
@@ -129,129 +130,194 @@ function M.diff(old_lines, new_lines)
         end
     end
 
-    -- 回溯找出差异点
-    local changes = {}
+    -- 回溯获取行差异
+    local line_diff = {}
     local i, j = #old_lines, #new_lines
     while i > 0 or j > 0 do
         if i > 0 and j > 0 and old_lines[i] == new_lines[j] then
-            i, j = i - 1, j - 1
+            table.insert(line_diff, 1, { type = 'common', line = old_lines[i] })
+            i = i - 1
+            j = j - 1
+        elseif j > 0 and (i == 0 or dp[i][j - 1] >= dp[i - 1][j]) then
+            table.insert(line_diff, 1, { type = 'add', line = new_lines[j] })
+            j = j - 1
+        elseif i > 0 and (j == 0 or dp[i][j - 1] < dp[i - 1][j]) then
+            table.insert(line_diff, 1, { type = 'remove', line = old_lines[i] })
+            i = i - 1
+        end
+    end
+
+    -- 合并相邻差异为hunks
+    local hunks = {}
+    local current_hunk = nil
+    local context_size = 3 -- 上下文行数
+
+    local function finalize_current_hunk()
+        if current_hunk then
+            -- 修剪首尾的公共行
+            while #current_hunk.lines > 0 and current_hunk.lines[1].type == 'common' do
+                table.remove(current_hunk.lines, 1)
+                current_hunk.old_start = current_hunk.old_start + 1
+                current_hunk.new_start = current_hunk.new_start + 1
+            end
+            while #current_hunk.lines > 0 and current_hunk.lines[#current_hunk.lines].type == 'common' do
+                table.remove(current_hunk.lines)
+            end
+
+            -- 添加上下文
+            if #current_hunk.lines > 0 then
+                -- 添加上文
+                local ctx_before = {}
+                for n = 1, context_size do
+                    local idx = current_hunk.old_start - n
+                    if idx >= 1 and idx <= #old_lines then
+                        table.insert(ctx_before, 1, { type = 'common', line = old_lines[idx] })
+                    else
+                        break
+                    end
+                end
+                current_hunk.old_start = current_hunk.old_start - #ctx_before
+                current_hunk.new_start = current_hunk.new_start - #ctx_before
+                for _, line in ipairs(ctx_before) do
+                    table.insert(current_hunk.lines, 1, line)
+                end
+
+                -- 添加下文
+                local ctx_after = {}
+                for n = 1, context_size do
+                    local idx = current_hunk.old_end + n
+                    if idx >= 1 and idx <= #old_lines then
+                        table.insert(ctx_after, { type = 'common', line = old_lines[idx] })
+                    else
+                        break
+                    end
+                end
+                current_hunk.old_end = current_hunk.old_end + #ctx_after
+                current_hunk.new_end = current_hunk.new_end + #ctx_after
+                for _, line in ipairs(ctx_after) do
+                    table.insert(current_hunk.lines, line)
+                end
+
+                table.insert(hunks, current_hunk)
+            end
+            current_hunk = nil
+        end
+    end
+
+    -- 当前行号跟踪
+    local old_lnum, new_lnum = 1, 1
+    for _, diff_line in ipairs(line_diff) do
+        if diff_line.type == 'common' then
+            if current_hunk then
+                current_hunk.old_end = old_lnum
+                current_hunk.new_end = new_lnum
+                table.insert(current_hunk.lines, diff_line)
+            end
         else
-            table.insert(changes, 1, { old_index = i, new_index = j })
-            if j > 0 and (i == 0 or dp[i][j - 1] >= dp[i - 1][j]) then
-                j = j - 1
-            elseif i > 0 then
-                i = i - 1
+            if not current_hunk then
+                current_hunk = {
+                    old_start = old_lnum,
+                    new_start = new_lnum,
+                    old_end = old_lnum,
+                    new_end = new_lnum,
+                    lines = {}
+                }
+            end
+            table.insert(current_hunk.lines, diff_line)
+        end
+
+        -- 更新行号
+        if diff_line.type ~= 'add' then
+            old_lnum = old_lnum + 1
+        end
+        if diff_line.type ~= 'remove' then
+            new_lnum = new_lnum + 1
+        end
+
+        -- 当前hunk结束条件：连续上下文行超过阈值
+        if diff_line.type == 'common' then
+            if current_hunk then
+                local consecutive_common = 0
+                for i = #current_hunk.lines, 1, -1 do
+                    if current_hunk.lines[i].type == 'common' then
+                        consecutive_common = consecutive_common + 1
+                    else
+                        break
+                    end
+                end
+
+                if consecutive_common > context_size * 2 then
+                    finalize_current_hunk()
+                end
             end
         end
     end
-    table.insert(changes, 1, { old_index = 0, new_index = 0 })
+    finalize_current_hunk()
 
-    -- 合并相邻差异形成 hunks
-    local hunks = {}
-    for idx = 1, #changes - 1 do
-        local c1 = changes[idx]
-        local c2 = changes[idx + 1]
+    -- 为hunk内的修改行添加字符级差异
+    for _, hunk in ipairs(hunks) do
+        for _, line in ipairs(hunk.lines) do
+            if line.type == 'remove' and line.char_diff == nil then
+                -- 查找对应的添加行
+                local next_idx = _ + 1
+                local add_line = next_idx <= #hunk.lines and hunk.lines[next_idx]
 
-        local old_start = c1.old_index + 1
-        local new_start = c1.new_index + 1
-        local old_end = c2.old_index
-        local new_end = c2.new_index
+                if add_line and add_line.type == 'add' then
+                    line.type = 'change'
+                    add_line.type = 'change'
+                    line.char_diff = generate_char_diff(line.line, add_line.line)
+                    add_line.char_diff = line.char_diff -- 共享相同的字符差异信息
+                else
+                    line.char_diff = generate_char_diff(line.line, '')
+                end
+            elseif line.type == 'add' and line.char_diff == nil then
+                -- 查找对应的删除行
+                local prev_idx = _ - 1
+                local remove_line = prev_idx >= 1 and hunk.lines[prev_idx]
 
-        if old_end > old_start or new_end > new_start then
-            local hunk = {
-                old_start = old_start,
-                old_count = old_end - old_start,
-                new_start = new_start,
-                new_count = new_end - new_start,
-                lines = {}
-            }
-
-            -- 收集旧文本行
-            for o = old_start, old_end - 1 do
-                table.insert(hunk.lines, {
-                    type = '-',
-                    text = old_lines[o],
-                    line_num = o
-                })
-            end
-
-            -- 收集新文本行
-            for n = new_start, new_end - 1 do
-                table.insert(hunk.lines, {
-                    type = '+',
-                    text = new_lines[n],
-                    line_num = n
-                })
-            end
-
-            -- 添加字符级差异信息
-            local old_lines_in_hunk = {}
-            local new_lines_in_hunk = {}
-
-            for o = old_start, old_end - 1 do
-                table.insert(old_lines_in_hunk, old_lines[o])
-            end
-
-            for n = new_start, new_end - 1 do
-                table.insert(new_lines_in_hunk, new_lines[n])
-            end
-
-            -- 在 hunk 内进行字符级差异分析
-            hunk.char_diffs = {}
-            for i, old_line in ipairs(old_lines_in_hunk) do
-                if i <= #new_lines_in_hunk then
-                    hunk.char_diffs[i] = M.char_diff(old_line, new_lines_in_hunk[i])
+                if not remove_line or remove_line.type ~= 'remove' then
+                    line.char_diff = generate_char_diff('', line.line)
                 end
             end
-
-            table.insert(hunks, hunk)
         end
     end
 
     return hunks
 end
 
---- 可视化显示差异结果
--- @param hunks table diff 函数返回的 hunk 列表
-function M.show_diff(hunks)
-    for hunk_idx, hunk in ipairs(hunks) do
-        print(string.format('Hunk %d:', hunk_idx))
-        print(string.format('  Old range: [%d, %d] (%d lines)',
-            hunk.old_start, hunk.old_start + hunk.old_count - 1, hunk.old_count))
-        print(string.format('  New range: [%d, %d] (%d lines)',
-            hunk.new_start, hunk.new_start + hunk.new_count - 1, hunk.new_count))
+function M.unified(hunks)
+    local infos = {}
+    for h, hunk in ipairs(hunks) do
+        print(string.format('Hunk %d (old: %d-%d, new: %d-%d)',
+            h, hunk.old_start, hunk.old_end, hunk.new_start, hunk.new_end))
 
-        -- 打印行级差异
-        for _, line in ipairs(hunk.lines) do
-            print('  ' .. line.type .. ' ' .. line.text)
-        end
+        for l, line in ipairs(hunk.lines) do
+            local prefix = line.type == 'common' and ' '
+                or line.type == 'remove' and '-'
+                or line.type == 'add' and '+'
+                or line.type == 'change' and '~'
 
-        -- 打印字符级差异
-        if hunk.char_diffs then
-            print('\n  Character-level differences:')
-            for line_idx, char_diffs in ipairs(hunk.char_diffs) do
-                if #char_diffs > 0 then
-                    local line_num = hunk.old_start + line_idx - 1
-                    print(string.format('    Line %d:', line_num))
+            local info = string.format('%s %d/%d | %s',
+                prefix, hunk.old_start + l - 1, hunk.new_start + l - 1, line.line)
 
-                    for _, diff in ipairs(char_diffs) do
-                        if diff.type == 'change' then
-                            print(string.format("      CHANGE: [%d-%d] '%s' -> [%d-%d] '%s'",
-                                diff.old_start, diff.old_end, diff.old_text,
-                                diff.new_start, diff.new_end, diff.new_text))
-                        elseif diff.type == 'delete' then
-                            print(string.format("      DELETE: [%d-%d] '%s'",
-                                diff.old_start, diff.old_end, diff.text))
-                        elseif diff.type == 'insert' then
-                            print(string.format("      INSERT: [%d-%d] '%s'",
-                                diff.new_start, diff.new_end, diff.text))
-                        end
+            if line.char_diff then
+                info = info .. '\n    Char Diff:'
+                for _, d in ipairs(line.char_diff) do
+                    if d.type == 'common' then
+                        info = info .. string.format(' [%s]', d.char)
+                    elseif d.type == 'remove' then
+                        info = info .. string.format(' -%s(old:%d-%d)',
+                            d.char, d.old_range.start, d.old_range.end_)
+                    elseif d.type == 'add' then
+                        info = info .. string.format(' +%s(new:%d-%d)',
+                            d.char, d.new_range.start, d.new_range.end_)
                     end
                 end
             end
+            table.insert(infos, info)
         end
-        print('')
     end
+    return infos
 end
 
 return M
