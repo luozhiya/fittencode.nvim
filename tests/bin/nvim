@@ -17,4 +17,4 @@ export XDG_DATA_HOME='tests/xdg/local/share/'
 # nvim --version
 # echo ================================================================================
 
-nvim --cmd 'set loadplugins' -l $@
+nvim --cmd 'set loadplugins' -u /home/qx/calculus/fx/fittencode.nvim/tests/xdg/config/nvim/init.lua -l $@
