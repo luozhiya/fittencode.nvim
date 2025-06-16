@@ -262,7 +262,7 @@ local function compute_line_diff(old_lines, new_lines)
 end
 
 -- 主差异分析函数，直接接受行数组
-function M.diff_lines_single_hunk(hunk)
+local function diff_lines_single_hunk(hunk)
     -- 智能匹配算法：寻找最相似的行进行配对
     local remove_lines = {}
     local add_lines = {}
@@ -389,7 +389,7 @@ function M.diff_lines(old_lines, new_lines, single_hunk)
 
     -- 为每个hunk单独计算字符级差异
     for _, hunk in ipairs(hunks) do
-        M.diff_lines_single_hunk(hunk)
+        diff_lines_single_hunk(hunk)
     end
 
     return hunks, common_hunks
