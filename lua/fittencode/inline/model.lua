@@ -54,6 +54,7 @@ function Model:selected_completion()
     return assert(self.completion_models[assert(self.selected_completion_index)], 'No completion model selected')
 end
 
+---@param scope string
 function Model:accept(scope)
     assert(self:selected_completion()):accept(scope)
 end

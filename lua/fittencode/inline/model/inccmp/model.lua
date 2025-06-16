@@ -165,6 +165,7 @@ function Model:find_valid_region(scope)
     end
 end
 
+---@param scope 'char' | 'word' | 'line' | 'all'
 function Model:accept(scope)
     if scope == 'all' then
         local new_commit = vim.deepcopy(self.stage_ranges)

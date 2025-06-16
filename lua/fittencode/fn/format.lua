@@ -261,7 +261,8 @@ local function format_arg(arg, spec_str)
     if vim.tbl_contains(by_inspect, arg_type) then
         return vim.inspect(arg, {
             process = function(item, path)
-                if item ~= getmetatable(arg) then
+                ---@diagnostic disable-next-line: undefined-field
+                if not vim.tbl_contains(path, vim.inspect.METATABLE) then
                     return item
                 end
             end
@@ -350,5 +351,22 @@ function M.nothrow_format(placeholders, ...)
     end
     return ''
 end
+
+local Position = {}
+Position.__index = Position
+
+---@return FittenCode.Position
+function Position.new(options)
+    options = options or {}
+    local self = {
+        row = options.row or 0,
+        col = options.col or 0,
+    }
+    setmetatable(self, Position)
+    return self
+end
+
+local p = Position.new()
+M.format('{}', p)
 
 return M

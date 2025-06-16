@@ -52,7 +52,7 @@ function Session:_initialize(options)
     self.position = options.position
     self.commit_position = options.position
     self.mode = options.mode
-    self.State = self.mode == 'inccmp' and IncViewState or EditViewState
+    self.StateClass = self.mode == 'inccmp' and IncViewState or EditViewState
     self.id = options.id
     self.requests = {}
     self.keymaps = {}
@@ -161,7 +161,7 @@ function Session:update_view()
     if self:is_terminated() then
         return
     end
-    self.view:update(self.State.get_state_from_model(self.model:snapshot()))
+    self.view:update(self.StateClass.get_state_from_model(self.model:snapshot()))
 end
 
 function Session:accept(range)
