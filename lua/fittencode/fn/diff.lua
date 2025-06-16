@@ -209,11 +209,11 @@ local function diff_split_hunks(line_diff)
         end
     end
 
-    local common_hunks = {}
+    local gap_common_hunks = {}
     local common_lines = { lines = {} }
     local function merge_common_lines()
         if #common_lines.lines > 0 then
-            table.insert(common_hunks, common_lines)
+            table.insert(gap_common_hunks, common_lines)
             common_lines = { lines = {} }
         end
     end
@@ -264,11 +264,11 @@ local function diff_split_hunks(line_diff)
     for _, hunk in ipairs(hunks) do
         hunk_line_range(hunk)
     end
-    for _, hunk in ipairs(common_hunks) do
+    for _, hunk in ipairs(gap_common_hunks) do
         hunk_line_range(hunk)
     end
 
-    return hunks, common_hunks
+    return hunks, gap_common_hunks
 end
 
 -- 计算行差异数组
@@ -432,11 +432,11 @@ function M.diff_lines(old_lines, new_lines, single_hunk)
 
     -- 拆分为多个hunk
     local hunks
-    local common_hunks
+    local gap_common_hunks
     if single_hunk then
         hunks = { { lines = line_diff } }
     else
-        hunks, common_hunks = diff_split_hunks(line_diff)
+        hunks, gap_common_hunks = diff_split_hunks(line_diff)
     end
 
     -- 为每个hunk单独计算字符级差异
@@ -444,10 +444,10 @@ function M.diff_lines(old_lines, new_lines, single_hunk)
         diff_lines_single_hunk(hunk)
     end
 
-    return hunks, common_hunks
+    return hunks, gap_common_hunks
 end
 
-local function gen_common_hunks(old_lines, new_lines, markers)
+local function make_gap_common_hunks(old_lines, new_lines, markers)
     -- 收集旧文件和新文件的被标记范围
     local old_covered = {}
     local new_covered = {}
@@ -518,7 +518,7 @@ local function gen_common_hunks(old_lines, new_lines, markers)
 
     assert(#old_gaps == #new_gaps)
 
-    local common_hunks = {}
+    local gap_common_hunks = {}
     for idx = 1, #old_gaps do
         local common_lines = { lines = {} }
         local old_start, old_end = old_gaps[idx][1], old_gaps[idx][2]
@@ -530,10 +530,10 @@ local function gen_common_hunks(old_lines, new_lines, markers)
         common_lines.old_end = old_end
         common_lines.new_start = new_start
         common_lines.new_end = new_end
-        table.insert(common_hunks, common_lines)
+        table.insert(gap_common_hunks, common_lines)
     end
 
-    return common_hunks
+    return gap_common_hunks
 end
 
 function M.diff_lines2(old_lines, new_lines)
@@ -541,7 +541,7 @@ function M.diff_lines2(old_lines, new_lines)
     ---@diagnostic disable-next-line: assign-type-mismatch
     local indices = vim.diff(table.concat(old_lines, '\n'), table.concat(new_lines, '\n'), { linematch = true, result_type = 'indices' })
     print(vim.inspect(indices))
-    local common_hunks = gen_common_hunks(old_lines, new_lines, indices)
+    local gap_common_hunks = make_gap_common_hunks(old_lines, new_lines, indices)
     local hunks = {}
     for _, hunk_range in ipairs(indices) do
         local old_start, old_len, new_start, new_len = unpack(hunk_range)
@@ -559,7 +559,7 @@ function M.diff_lines2(old_lines, new_lines)
 
         table.insert(hunks, hunk)
     end
-    return hunks, common_hunks
+    return hunks, gap_common_hunks
 end
 
 function M.unified(hunks)
