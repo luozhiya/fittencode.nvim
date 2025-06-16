@@ -1,5 +1,57 @@
 --[[
 
+-- local old_text = {
+--     'Hello world!',
+--     '这是一行中文文本',
+--     'Line 3: To be deleted',
+--     'Another line with 中文',
+--     'Final line'
+-- }
+
+-- local new_text = {
+--     'Hello world!', -- 未修改
+--     '这是一行修改后的中文文本', -- 修改
+--     'New line inserted', -- 新增
+--     'Another line with 中文', -- 未修改
+--     'Final line with changes' -- 修改
+-- }
+
+local old_text = {
+    '这是一行中文文本',
+    '1',
+    '2',
+    'Line 3: To be deleted',
+    'Open',
+    'QQ',
+    'QQ',
+    '>>>>',
+    'PP',
+    'PP',
+}
+
+local new_text = {
+    '这是一行修改后的中文文本', -- 修改
+    'Line 3: New line inserted', -- 新增
+    'Close',
+    'QQ',
+    'QQ',
+    '<<<<',
+    'PP',
+    'PP',
+}
+
+local ll, cl = M.diff_lines2(old_text, new_text)
+
+print(vim.inspect(cl))
+
+-- local ll = vim.diff(table.concat(old_text, '\n'), table.concat(new_text, '\n'), { result_type = 'indices' })
+-- local l0 = vim.list_slice(old_text, 2, 2+2-1)
+-- local l1 = vim.list_slice(new_text, 2, 2+2-1)
+
+-- print(vim.inspect(M.diff_lines(l0, l1)))
+-- -- local ll = M.diff_lines(old_text, new_text)
+-- print(vim.inspect(vim.diff(table.concat(old_text, '\n'), table.concat(new_text, '\n'), { result_type = 'indices' })))
+
 ]]
 
 local M = {}
@@ -549,57 +601,5 @@ function M.unified(hunks)
     end
     return infos
 end
-
--- local old_text = {
---     'Hello world!',
---     '这是一行中文文本',
---     'Line 3: To be deleted',
---     'Another line with 中文',
---     'Final line'
--- }
-
--- local new_text = {
---     'Hello world!', -- 未修改
---     '这是一行修改后的中文文本', -- 修改
---     'New line inserted', -- 新增
---     'Another line with 中文', -- 未修改
---     'Final line with changes' -- 修改
--- }
-
-local old_text = {
-    '这是一行中文文本',
-    '1',
-    '2',
-    'Line 3: To be deleted',
-    'Open',
-    'QQ',
-    'QQ',
-    '>>>>',
-    'PP',
-    'PP',
-}
-
-local new_text = {
-    '这是一行修改后的中文文本', -- 修改
-    'Line 3: New line inserted', -- 新增
-    'Close',
-    'QQ',
-    'QQ',
-    '<<<<',
-    'PP',
-    'PP',
-}
-
-local ll, cl = M.diff_lines2(old_text, new_text)
-
-print(vim.inspect(cl))
-
--- local ll = vim.diff(table.concat(old_text, '\n'), table.concat(new_text, '\n'), { result_type = 'indices' })
--- local l0 = vim.list_slice(old_text, 2, 2+2-1)
--- local l1 = vim.list_slice(new_text, 2, 2+2-1)
-
--- print(vim.inspect(M.diff_lines(l0, l1)))
--- -- local ll = M.diff_lines(old_text, new_text)
--- print(vim.inspect(vim.diff(table.concat(old_text, '\n'), table.concat(new_text, '\n'), { result_type = 'indices' })))
 
 return M
