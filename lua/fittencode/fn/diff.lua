@@ -380,10 +380,11 @@ function M.diff_lines(old_lines, new_lines, single_hunk)
 
     -- 拆分为多个hunk
     local hunks
+    local common_hunks
     if single_hunk then
         hunks = { { lines = line_diff } }
     else
-        hunks = diff_split_hunks(line_diff)
+        hunks, common_hunks = diff_split_hunks(line_diff)
     end
 
     -- 为每个hunk单独计算字符级差异
@@ -391,7 +392,96 @@ function M.diff_lines(old_lines, new_lines, single_hunk)
         M.diff_lines_single_hunk(hunk)
     end
 
-    return hunks
+    return hunks, common_hunks
+end
+
+local function gen_common_hunks(old_lines, new_lines, markers)
+    -- 收集旧文件和新文件的被标记范围
+    local old_covered = {}
+    local new_covered = {}
+
+    for _, m in ipairs(markers) do
+        local os, ol, ns, nl = m[1], m[2], m[3], m[4]
+
+        -- 处理旧文件被标记范围
+        if ol > 0 then
+            table.insert(old_covered, { os, os + ol - 1 })
+        end
+
+        -- 处理新文件被标记范围
+        if nl > 0 then
+            table.insert(new_covered, { ns, ns + nl - 1 })
+        end
+    end
+
+    -- 合并重叠或连续的区间
+    local function merge_intervals(intervals)
+        if #intervals == 0 then return {} end
+        table.sort(intervals, function(a, b) return a[1] < b[1] end)
+
+        local merged = {}
+        local start, end_ = intervals[1][1], intervals[1][2]
+
+        for i = 2, #intervals do
+            if intervals[i][1] <= end_ + 1 then
+                end_ = math.max(end_, intervals[i][2])
+            else
+                table.insert(merged, { start, end_ })
+                start, end_ = intervals[i][1], intervals[i][2]
+            end
+        end
+        table.insert(merged, { start, end_ })
+
+        return merged
+    end
+
+    -- 找出未被标记的间隙
+    local function find_gaps(merged, max_line)
+        if max_line == 0 then return {} end
+
+        local gaps = {}
+        local current = 1
+
+        for _, r in ipairs(merged) do
+            if current < r[1] then
+                table.insert(gaps, { current, r[1] - 1 })
+            end
+            current = r[2] + 1
+        end
+
+        if current <= max_line then
+            table.insert(gaps, { current, max_line })
+        end
+
+        return gaps
+    end
+
+    -- 处理旧文件未被标记块
+    local old_merged = merge_intervals(old_covered)
+    local old_gaps = find_gaps(old_merged, #old_lines)
+
+    -- 处理新文件未被标记块
+    local new_merged = merge_intervals(new_covered)
+    local new_gaps = find_gaps(new_merged, #new_lines)
+
+    assert(#old_gaps == #new_gaps)
+
+    local common_hunks = {}
+    for idx = 1, #old_gaps do
+        local common_lines = { lines = {} }
+        local old_start, old_end = old_gaps[idx][1], old_gaps[idx][2]
+        local new_start, new_end = new_gaps[idx][1], new_gaps[idx][2]
+        for i = 1, old_end - old_start + 1 do
+            table.insert(common_lines.lines, { type = 'common', line = old_lines[old_start + i - 1], old_lnum = old_start + i - 1, new_lnum = new_start + i - 1 })
+        end
+        common_lines.old_start = old_start
+        common_lines.old_end = old_end
+        common_lines.new_start = new_start
+        common_lines.new_end = new_end
+        table.insert(common_hunks, common_lines)
+    end
+
+    return common_hunks
 end
 
 function M.diff_lines2(old_lines, new_lines)
@@ -399,6 +489,7 @@ function M.diff_lines2(old_lines, new_lines)
     ---@diagnostic disable-next-line: assign-type-mismatch
     local indices = vim.diff(table.concat(old_lines, '\n'), table.concat(new_lines, '\n'), { linematch = true, result_type = 'indices' })
     print(vim.inspect(indices))
+    local common_hunks = gen_common_hunks(old_lines, new_lines, indices)
     local hunks = {}
     for _, hunk_range in ipairs(indices) do
         local old_start, old_len, new_start, new_len = unpack(hunk_range)
@@ -416,7 +507,7 @@ function M.diff_lines2(old_lines, new_lines)
 
         table.insert(hunks, hunk)
     end
-    return hunks
+    return hunks, common_hunks
 end
 
 function M.unified(hunks)
@@ -480,22 +571,28 @@ local old_text = {
     '1',
     '2',
     'Line 3: To be deleted',
+    'Open',
     'QQ',
     'QQ',
-    'QQ',
-    'Open'
+    '>>>>',
+    'PP',
+    'PP',
 }
 
 local new_text = {
     '这是一行修改后的中文文本', -- 修改
     'Line 3: New line inserted', -- 新增
+    'Close',
     'QQ',
-    'Close'
+    'QQ',
+    '<<<<',
+    'PP',
+    'PP',
 }
 
-local ll = M.diff_lines2(old_text, new_text)
+local ll, cl = M.diff_lines2(old_text, new_text)
 
-print(vim.inspect(ll))
+print(vim.inspect(cl))
 
 -- local ll = vim.diff(table.concat(old_text, '\n'), table.concat(new_text, '\n'), { result_type = 'indices' })
 -- local l0 = vim.list_slice(old_text, 2, 2+2-1)
