@@ -259,17 +259,7 @@ function View:update(state)
     end)
 end
 
---[[
-
-大概有2种情况，如果最末的模块是 Stage转Commit的则不需要调整cursor位置
-
-A
-AB
-
-A
-BA
-
-]]
+-- 对于存在 placeholder 的情况，需要将 cursor 移动到最末尾
 function View:on_complete()
     if self.commit:is_equal(self.last_insert_pos) then
         return
