@@ -24,7 +24,7 @@ end
 function View:clear()
 end
 
-function View:update()
+function View:update(state)
 end
 
 function View:register_message_receiver()

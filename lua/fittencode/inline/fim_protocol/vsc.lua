@@ -309,35 +309,18 @@ local function build_editcmp_items(response, buf, position)
         return
     end
 
-    local replace_range = {}
-    local replace_lines = {}
-
-    if ori_start_line > ori_end_line then
-        local line = assert(F.line_at(buf, position.row + ori_end_line))
-        Log.debug('build_editcmp_items line = {}', line)
-        local end_pos = line.range.end_
-        end_pos = end_pos:translate(0, 1) -- move to the next position
-        replace_range = Range.new({
-            start = end_pos,
-            end_ = end_pos
-        })
-        replace_lines = vim.list_extend({ '' }, display_lines)
-    else
-        local start_pos = F.line_at(buf, position.row + ori_start_line).range.start
-        local end_pos = F.line_at(buf, position.row + ori_end_line).range.end_
-        replace_range = Range.new({
-            start = start_pos,
-            end_ = end_pos
-        })
-        replace_lines = display_lines
-    end
-
-    return {
-        {
-            replace_range = replace_range,
-            replace_lines = replace_lines,
-        }
+    local completions = {}
+    local item = {
+        lines = display_lines,
     }
+    if ori_start_line > ori_end_line then
+        item.after_line = position.row + ori_end_line
+    else
+        item.start_line = position.row + ori_start_line
+        item.end_line = position.row + ori_end_line
+    end
+    table.insert(completions, item)
+    return completions
 end
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error

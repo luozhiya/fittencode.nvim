@@ -106,6 +106,7 @@ local function write_to_log(content)
     end
 end
 
+-- 更加底层的日志接口，可以做模块化的定制，如果是封装 __async_log 成新函数, 则 stack 应该要设置为 3
 function M.__async_log(stack, level, message)
     stack = stack or 3
     if level < Config.log.level or Config.log.level == LOG_LEVELS.OFF then

@@ -270,18 +270,14 @@ A
 BA
 
 ]]
-function View:update_cursor_with_col_delta()
-    if self.col_delta == 0 or self.commit:is_equal(self.last_insert_pos) then
+function View:on_complete()
+    if self.commit:is_equal(self.last_insert_pos) then
         return
     end
     ignoreevent_wrap(function()
         local win = vim.api.nvim_get_current_win()
-        self:update_win_cursor(win, self.commit, self.col_delta)
+        self:update_win_cursor(win, self.last_insert_pos)
     end)
-end
-
-function View:on_complete()
-    self:update_cursor_with_col_delta()
 end
 
 function View:register_message_receiver(receive_view_message)

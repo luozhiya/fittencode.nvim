@@ -469,6 +469,10 @@ function M.get_lines(buf, range, strict)
     return lines
 end
 
+function M.get_lines_by_line_range(buf, start_line, end_line)
+    return vim.api.nvim_buf_get_lines(buf, start_line, end_line + 1, false)
+end
+
 ---@param buf number?
 ---@param range FittenCode.Range
 ---@param strict boolean? range.start 是否允许超过行尾
