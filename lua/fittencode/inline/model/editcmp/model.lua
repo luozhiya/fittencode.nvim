@@ -62,7 +62,6 @@ function Model:accept(scope)
     elseif scope == 'all' then
         self.accepted = #self.hunks
     end
-    self:_update_hunks_status()
 end
 
 function Model:is_complete()
@@ -75,7 +74,6 @@ function Model:revoke()
     end
     assert(self.accepted ~= #self.hunks)
     self.accepted = self.accepted - 1
-    self:_update_hunks_status()
 end
 
 return Model
