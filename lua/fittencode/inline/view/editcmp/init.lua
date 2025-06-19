@@ -30,4 +30,13 @@ end
 function View:register_message_receiver()
 end
 
+function View:on_terminate()
+    -- TODO
+end
+
+function View:on_complete()
+    -- 现在只支持 Tab 一次性补全，所以只需要处理 on_complete
+    -- 替换内容
+end
+
 return View

@@ -27,7 +27,6 @@
 
 ---@class FittenCode.Inline.View
 ---@field clear function
----@field update_cursor_with_col_delta function
 ---@field update function
 ---@field register_message_receiver function
 ---@field on_complete function

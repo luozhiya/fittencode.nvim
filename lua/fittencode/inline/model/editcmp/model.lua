@@ -9,7 +9,7 @@ local Diff = require('fittencode.fn.diff')
 ---@field is_complete function
 ---@field revoke function
 ---@field merge string
----@field accepted number
+---@field commit_index number
 ---@field hunks table
 ---@field gap_common_hunks table
 ---@field start_line number
@@ -34,7 +34,7 @@ function Model.new(buf, position, completion)
         local old_lines = F.get_lines_by_line_range(buf, self.start_line, self.end_line)
         self.hunks, self.gap_common_hunks = Diff.diff_lines2(old_lines, completion.lines)
     end
-    self.accepted = 0
+    self.commit_index = 0
     return self
 end
 
@@ -43,7 +43,7 @@ function Model:snapshot()
         after_line = self.after_line,
         start_line = self.start_line,
         end_line = self.end_line,
-        accepted = self.accepted,
+        commit_index = self.commit_index,
         hunks = vim.deepcopy(self.hunks),
         gap_common_hunks = vim.deepcopy(self.gap_common_hunks),
     }
@@ -58,22 +58,26 @@ function Model:accept(scope)
         return
     end
     if scope == 'hunk' then
-        self.accepted = self.accepted + 1
+        -- TODO: implement hunk-by-hunk accept
+        return
+    end
+    if scope == 'hunk' then
+        self.commit_index = self.commit_index + 1
     elseif scope == 'all' then
-        self.accepted = #self.hunks
+        self.commit_index = #self.hunks
     end
 end
 
 function Model:is_complete()
-    return self.accepted == #self.hunks
+    return self.commit_index == #self.hunks
 end
 
 function Model:revoke()
-    if self.accepted == 0 then
+    if self.commit_index == 0 then
         return
     end
-    assert(self.accepted ~= #self.hunks)
-    self.accepted = self.accepted - 1
+    assert(self.commit_index ~= #self.hunks)
+    self.commit_index = self.commit_index - 1
 end
 
 return Model
