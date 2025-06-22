@@ -23,7 +23,7 @@ function View:__initialize(options)
     self.origin_pos = options.position
     self.col_delta = options.col_delta
     self.commit = options.position
-    self.completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.View')
+    self.completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.IncrementalCompletion.View')
     self.last_insert_pos = self.origin_pos:translate(0, self.col_delta)
 end
 

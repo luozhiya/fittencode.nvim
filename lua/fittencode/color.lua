@@ -1,4 +1,5 @@
 local Config = require('fittencode.config')
+local Fn = require('fittencode.fn.core')
 
 --[[
 Suggestion
@@ -9,16 +10,32 @@ Info
 - No more suggestion
 ]]
 local PRESET_THEME = {
-    ['Suggestion'] = { fg = '#808080', ctermfg = 'LightGrey' },
-    ['Commit'] = { fg = '#E2C07C', ctermfg = 'LightYellow' },
-    ['Info'] = { fg = '#FFEBCD', ctermfg = 'LightYellow' }
+    dark = {
+        ['Suggestion'] = { fg = '#808080' },
+        ['Commit'] = { fg = '#E2C07C' },
+        ['Info'] = { fg = '#FFEBCD' },
+        ['DiffInsertedChar'] = { bg = '#5CD6D6' },
+        ['DiffInserted'] = { bg = '#6BC7C7' },
+        ['DiffDeletedChar'] = { bg = '#D65C62' },
+        ['DiffDeleted'] = { bg = '#C76B70' },
+    },
+    light = {
+        ['Suggestion'] = { fg = '#808080' },
+        ['Commit'] = { fg = '#E2C07C' },
+        ['Info'] = { fg = '#FFEBCD' },
+        ['DiffInsertedChar'] = { bg = '#C6F0C2' },
+        ['DiffInserted'] = { bg = '#E5F8E2' },
+        ['DiffDeletedChar'] = { bg = '#F0C2C2' },
+        ['DiffDeleted'] = { bg = '#F8E2E2' },
+    },
 }
 
 vim.api.nvim_create_autocmd({ 'ColorScheme', 'VimEnter' }, {
     group = vim.api.nvim_create_augroup('FittenCode.ColorScheme', { clear = true }),
     pattern = '*',
     callback = function()
-        for name, color in pairs(PRESET_THEME) do
+        local theme = PRESET_THEME[Fn.is_dark_colorscheme() and 'dark' or 'light']
+        for name, color in pairs(theme) do
             local _ = Config.colors[name] or {}
             if not vim.tbl_isempty(_) then
                 color = _

@@ -5,6 +5,8 @@
 
 ]]
 
+local Position = require('fittencode.fn.position')
+
 ---@class FittenCode.Inline.EditCompletion.View
 ---@field clear function
 ---@field update function
@@ -19,24 +21,171 @@ function View.new(options)
 end
 
 function View:__initialize(options)
+    self.buf = options.buf
+    self.completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.EditCompletion.View')
 end
 
 function View:clear()
+    vim.api.nvim_buf_clear_namespace(self.buf, self.completion_ns, 0, -1)
+end
+
+function View:_render_add(pos, lines, hlgroup)
+    local virt_lines = {}
+    if hlgroup then
+        for _, line in ipairs(lines) do
+            virt_lines[#virt_lines + 1] = { { line, hlgroup } }
+        end
+    else
+        virt_lines = lines
+    end
+    vim.api.nvim_buf_set_extmark(
+        self.buf,
+        self.completion_ns,
+        pos.row,
+        pos.col,
+        {
+            virt_text = virt_lines[1],
+            virt_text_pos = 'inline',
+            hl_mode = 'combine',
+        })
+    table.remove(virt_lines, 1)
+    if vim.tbl_count(virt_lines) > 0 then
+        vim.api.nvim_buf_set_extmark(
+            self.buf,
+            self.completion_ns,
+            pos.row,
+            0,
+            {
+                virt_lines = virt_lines,
+                hl_mode = 'combine',
+            })
+    end
+end
+
+function View:_render_remove_char(pos, hlgroup)
+    vim.api.nvim_buf_set_extmark(
+        self.buf,
+        self.completion_ns,
+        pos.row,
+        pos.col,
+        {
+            hl_group = hlgroup,
+            end_row = pos.row,
+            end_col = pos.col + 1,
+            strict = false,
+            priority = 200,
+        })
+end
+
+function View:_render_remove_line(row, hlgroup)
+    vim.api.nvim_buf_set_extmark(
+        self.buf,
+        self.completion_ns,
+        row,
+        0,
+        {
+            hl_group = hlgroup,
+            end_row = row,
+            end_col = -1,
+            strict = false,
+            priority = 200,
+        })
 end
 
 function View:update(state)
+    self:clear()
+
+    self.start_line = state.start_line
+    self.end_line = state.end_line
+    self.after_line = state.after_line
+    self.replacement_lines = state.replacement_lines
+    self.hanks = state.hanks
+
+    if self.start_line then
+        local replacement_lines = vim.list_extend({ '' }, self.replacement_lines)
+        local pos = Position.of(self.start_line, -1)
+        self:_render_add(pos, replacement_lines, 'FittenCodeDiffInsertedChar')
+    elseif self.start_line and self.end_line then
+        for _, hunk in ipairs(self.hanks) do
+            local lines = hunk.lines
+            local old_start = hunk.old_start
+            local old_end = hunk.old_end
+            local add_virt_lines = {
+                { '', 'FittenCodeDiffInserted' },
+            }
+            for j = 1, #lines do
+                local lined = lines[j]
+                local char_diff = lined.char_diff
+                local old_lnum = lined.old_lnum
+                if lined.type == 'common' then
+                    -- skip
+                elseif lined.type == 'remove' then
+                    for _ = old_start, old_end do
+                        self:_render_remove_line(self.start_line + _ - 1, 'FittenCodeDiffDeleted')
+                    end
+                    if char_diff then
+                        for k = 1, #char_diff do
+                            local chard = char_diff[k]
+                            if chard.type == 'remove' then
+                                assert(chard.old_range)
+                                local pos = Position.of(self.start_line + old_lnum - 1, chard.old_range.start - 1)
+                                self:_render_remove_char(pos, 'FittenCodeDiffDeletedChar')
+                            end
+                        end
+                    else
+                        self:_render_remove_line(self.start_line + old_lnum - 1, 'FittenCodeDiffDeletedChar')
+                    end
+                elseif lined.type == 'add' then
+                    local curr_line = {}
+                    if char_diff then
+                        for k = 1, #char_diff do
+                            local chard = char_diff[k]
+                            if chard.type == 'add' then
+                                curr_line[#curr_line + 1] = { chard.char, 'FittenCodeDiffInsertedChar' }
+                            else
+                                curr_line[#curr_line + 1] = { chard.char, 'FittenCodeDiffInserted' }
+                            end
+                        end
+                    else
+                        curr_line = { lined.line, 'FittenCodeDiffInsertedChar' }
+                    end
+                    add_virt_lines[#add_virt_lines + 1] = curr_line
+                end
+            end
+            self:_render_add(Position.of(self.start_line + old_end - 1, -1), add_virt_lines)
+        end
+    end
 end
 
 function View:register_message_receiver()
 end
 
+function View:_set_text(lines, start, end_)
+    if vim.tbl_isempty(lines) then
+        return
+    end
+    if not end_ then
+        end_ = start
+    end
+    vim.api.nvim_buf_set_text(self.buf, start.row, start.col, end_.row, end_.col, lines)
+end
+
 function View:on_terminate()
-    -- TODO
+    self:clear()
 end
 
 function View:on_complete()
-    -- 现在只支持 Tab 一次性补全，所以只需要处理 on_complete
-    -- 替换内容
+    self:clear()
+    if self.after_line then
+        local replacement_lines = vim.list_extend({ '' }, self.replacement_lines)
+        local pos = Position.of(self.after_line, -1)
+        self:_set_text(replacement_lines, pos)
+    elseif self.start_line and self.end_line then
+        local replacement_lines = self.replacement_lines
+        local start_pos = Position.of(self.start_line, 0)
+        local end_pos = Position.of(self.end_line, -1)
+        self:_set_text(replacement_lines, start_pos, end_pos)
+    end
 end
 
 return View

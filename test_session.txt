@@ -1,0 +1,1219 @@
+Script started on 2025-06-21 20:51:43+08:00 [COMMAND="make test" TERM="xterm-256color" TTY="/dev/pts/1" COLUMNS="183" LINES="32"]
+[32m●[0m
+{ "h" }
+{ "hello" }
+{ "hell" }
+{ "hello" }
+{ "hello" }
+{ "", "" }[32m●[0m
+Position<0:4>
+Position<0:4>
+Position<0:4>
+Position<0:4>
+Position<0:0>[32m●[0m
+{ "hello", "world" }[32m●[0m
+{ {
+    lines = { {
+        char_diff = <1>{ {
+            char = "这",
+            new_range = {
+              end_ = 3,
+              start = 1
+            },
+            old_range = {
+              end_ = 3,
+              start = 1
+            },
+            type = "common"
+          }, {
+            char = "是",
+            new_range = {
+              end_ = 6,
+              start = 4
+            },
+            old_range = {
+              end_ = 6,
+              start = 4
+            },
+            type = "common"
+          }, {
+            char = "一",
+            new_range = {
+              end_ = 9,
+              start = 7
+            },
+            old_range = {
+              end_ = 9,
+              start = 7
+            },
+            type = "common"
+          }, {
+            char = "行",
+            new_range = {
+              end_ = 12,
+              start = 10
+            },
+            old_range = {
+              end_ = 12,
+              start = 10
+            },
+            type = "common"
+          }, {
+            char = "修",
+            new_range = {
+              end_ = 15,
+              start = 13
+            },
+            type = "add"
+          }, {
+            char = "改",
+            new_range = {
+              end_ = 18,
+              start = 16
+            },
+            type = "add"
+          }, {
+            char = "后",
+            new_range = {
+              end_ = 21,
+              start = 19
+            },
+            type = "add"
+          }, {
+            char = "的",
+            new_range = {
+              end_ = 24,
+              start = 22
+            },
+            type = "add"
+          }, {
+            char = "中",
+            new_range = {
+              end_ = 27,
+              start = 25
+            },
+            old_range = {
+              end_ = 15,
+              start = 13
+            },
+            type = "common"
+          }, {
+            char = "文",
+            new_range = {
+              end_ = 30,
+              start = 28
+            },
+            old_range = {
+              end_ = 18,
+              start = 16
+            },
+            type = "common"
+          }, {
+            char = "文",
+            new_range = {
+              end_ = 33,
+              start = 31
+            },
+            old_range = {
+              end_ = 21,
+              start = 19
+            },
+            type = "common"
+          }, {
+            char = "本",
+            new_range = {
+              end_ = 36,
+              start = 34
+            },
+            old_range = {
+              end_ = 24,
+              start = 22
+            },
+            type = "common"
+          } },
+        line = "这是一行中文文本",
+        old_lnum = 2,
+        type = "remove"
+      }, {
+        char_diff = <2>{ {
+            char = "L",
+            old_range = {
+              end_ = 1,
+              start = 1
+            },
+            type = "remove"
+          }, {
+            char = "i",
+            old_range = {
+              end_ = 2,
+              start = 2
+            },
+            type = "remove"
+          }, {
+            char = "n",
+            old_range = {
+              end_ = 3,
+              start = 3
+            },
+            type = "remove"
+          }, {
+            char = "N",
+            new_range = {
+              end_ = 1,
+              start = 1
+            },
+            type = "add"
+          }, {
+            char = "e",
+            new_range = {
+              end_ = 2,
+              start = 2
+            },
+            old_range = {
+              end_ = 4,
+              start = 4
+            },
+            type = "common"
+          }, {
+            char = " ",
+            old_range = {
+              end_ = 5,
+              start = 5
+            },
+            type = "remove"
+          }, {
+            char = "3",
+            old_range = {
+              end_ = 6,
+              start = 6
+            },
+            type = "remove"
+          }, {
+            char = ":",
+            old_range = {
+              end_ = 7,
+              start = 7
+            },
+            type = "remove"
+          }, {
+            char = " ",
+            old_range = {
+              end_ = 8,
+              start = 8
+            },
+            type = "remove"
+          }, {
+            char = "T",
+            old_range = {
+              end_ = 9,
+              start = 9
+            },
+            type = "remove"
+          }, {
+            char = "o",
+            old_range = {
+              end_ = 10,
+              start = 10
+            },
+            type = "remove"
+          }, {
+            char = "w",
+            new_range = {
+              end_ = 3,
+              start = 3
+            },
+            type = "add"
+          }, {
+            char = " ",
+            new_range = {
+              end_ = 4,
+              start = 4
+            },
+            old_range = {
+              end_ = 11,
+              start = 11
+            },
+            type = "common"
+          }, {
+            char = "b",
+            old_range = {
+              end_ = 12,
+              start = 12
+            },
+            type = "remove"
+          }, {
+            char = "l",
+            new_range = {
+              end_ = 5,
+              start = 5
+            },
+            type = "add"
+          }, {
+            char = "i",
+            new_range = {
+              end_ = 6,
+              start = 6
+            },
+            type = "add"
+          }, {
+            char = "n",
+            new_range = {
+              end_ = 7,
+              start = 7
+            },
+            type = "add"
+          }, {
+            char = "e",
+            new_range = {
+              end_ = 8,
+              start = 8
+            },
+            old_range = {
+              end_ = 13,
+              start = 13
+            },
+            type = "common"
+          }, {
+            char = " ",
+            new_range = {
+              end_ = 9,
+              start = 9
+            },
+            old_range = {
+              end_ = 14,
+              start = 14
+            },
+            type = "common"
+          }, {
+            char = "d",
+            old_range = {
+              end_ = 15,
+              start = 15
+            },
+            type = "remove"
+          }, {
+            char = "e",
+            old_range = {
+              end_ = 16,
+              start = 16
+            },
+            type = "remove"
+          }, {
+            char = "l",
+            old_range = {
+              end_ = 17,
+              start = 17
+            },
+            type = "remove"
+          }, {
+            char = "i",
+            new_range = {
+              end_ = 10,
+              start = 10
+            },
+            type = "add"
+          }, {
+            char = "n",
+            new_range = {
+              end_ = 11,
+              start = 11
+            },
+            type = "add"
+          }, {
+            char = "s",
+            new_range = {
+              end_ = 12,
+              start = 12
+            },
+            type = "add"
+          }, {
+            char = "e",
+            new_range = {
+              end_ = 13,
+              start = 13
+            },
+            old_range = {
+              end_ = 18,
+              start = 18
+            },
+            type = "common"
+          }, {
+            char = "r",
+            new_range = {
+              end_ = 14,
+              start = 14
+            },
+            type = "add"
+          }, {
+            char = "t",
+            new_range = {
+              end_ = 15,
+              start = 15
+            },
+            old_range = {
+              end_ = 19,
+              start = 19
+            },
+            type = "common"
+          }, {
+            char = "e",
+            new_range = {
+              end_ = 16,
+              start = 16
+            },
+            old_range = {
+              end_ = 20,
+              start = 20
+            },
+            type = "common"
+          }, {
+            char = "d",
+            new_range = {
+              end_ = 17,
+              start = 17
+            },
+            old_range = {
+              end_ = 21,
+              start = 21
+            },
+            type = "common"
+          } },
+        line = "Line 3: To be deleted",
+        old_lnum = 3,
+        type = "remove"
+      }, {
+        char_diff = <table 1>,
+        line = "这是一行修改后的中文文本",
+        new_lnum = 2,
+        type = "add"
+      }, {
+        char_diff = <table 2>,
+        line = "New line inserted",
+        new_lnum = 3,
+        type = "add"
+      } },
+    new_end = 3,
+    new_start = 2,
+    old_end = 3,
+    old_start = 2
+  }, {
+    lines = { {
+        char_diff = <3>{ {
+            char = "F",
+            new_range = {
+              end_ = 1,
+              start = 1
+            },
+            old_range = {
+              end_ = 1,
+              start = 1
+            },
+            type = "common"
+          }, {
+            char = "i",
+            new_range = {
+              end_ = 2,
+              start = 2
+            },
+            old_range = {
+              end_ = 2,
+              start = 2
+            },
+            type = "common"
+          }, {
+            char = "n",
+            new_range = {
+              end_ = 3,
+              start = 3
+            },
+            old_range = {
+              end_ = 3,
+              start = 3
+            },
+            type = "common"
+          }, {
+            char = "a",
+            new_range = {
+              end_ = 4,
+              start = 4
+            },
+            old_range = {
+              end_ = 4,
+              start = 4
+            },
+            type = "common"
+          }, {
+            char = "l",
+            new_range = {
+              end_ = 5,
+              start = 5
+            },
+            old_range = {
+              end_ = 5,
+              start = 5
+            },
+            type = "common"
+          }, {
+            char = " ",
+            new_range = {
+              end_ = 6,
+              start = 6
+            },
+            old_range = {
+              end_ = 6,
+              start = 6
+            },
+            type = "common"
+          }, {
+            char = "l",
+            new_range = {
+              end_ = 7,
+              start = 7
+            },
+            old_range = {
+              end_ = 7,
+              start = 7
+            },
+            type = "common"
+          }, {
+            char = "i",
+            new_range = {
+              end_ = 8,
+              start = 8
+            },
+            type = "add"
+          }, {
+            char = "n",
+            new_range = {
+              end_ = 9,
+              start = 9
+            },
+            type = "add"
+          }, {
+            char = "e",
+            new_range = {
+              end_ = 10,
+              start = 10
+            },
+            type = "add"
+          }, {
+            char = " ",
+            new_range = {
+              end_ = 11,
+              start = 11
+            },
+            type = "add"
+          }, {
+            char = "w",
+            new_range = {
+              end_ = 12,
+              start = 12
+            },
+            type = "add"
+          }, {
+            char = "i",
+            new_range = {
+              end_ = 13,
+              start = 13
+            },
+            old_range = {
+              end_ = 8,
+              start = 8
+            },
+            type = "common"
+          }, {
+            char = "t",
+            new_range = {
+              end_ = 14,
+              start = 14
+            },
+            type = "add"
+          }, {
+            char = "h",
+            new_range = {
+              end_ = 15,
+              start = 15
+            },
+            type = "add"
+          }, {
+            char = " ",
+            new_range = {
+              end_ = 16,
+              start = 16
+            },
+            type = "add"
+          }, {
+            char = "c",
+            new_range = {
+              end_ = 17,
+              start = 17
+            },
+            type = "add"
+          }, {
+            char = "h",
+            new_range = {
+              end_ = 18,
+              start = 18
+            },
+            type = "add"
+          }, {
+            char = "a",
+            new_range = {
+              end_ = 19,
+              start = 19
+            },
+            type = "add"
+          }, {
+            char = "n",
+            new_range = {
+              end_ = 20,
+              start = 20
+            },
+            old_range = {
+              end_ = 9,
+              start = 9
+            },
+            type = "common"
+          }, {
+            char = "g",
+            new_range = {
+              end_ = 21,
+              start = 21
+            },
+            type = "add"
+          }, {
+            char = "e",
+            new_range = {
+              end_ = 22,
+              start = 22
+            },
+            old_range = {
+              end_ = 10,
+              start = 10
+            },
+            type = "common"
+          }, {
+            char = "s",
+            new_range = {
+              end_ = 23,
+              start = 23
+            },
+            type = "add"
+          } },
+        line = "Final line",
+        old_lnum = 5,
+        type = "remove"
+      }, {
+        char_diff = <table 3>,
+        line = "Final line with changes",
+        new_lnum = 5,
+        type = "add"
+      } },
+    new_end = 5,
+    new_start = 5,
+    old_end = 5,
+    old_start = 5
+  } }[32m●[0m
+{ { 2, 2, 2, 2 }, { 5, 1, 5, 1 } }
+{ { {
+      lines = { {
+          char_diff = <1>{ {
+              char = "这",
+              new_range = {
+                end_ = 3,
+                start = 1
+              },
+              old_range = {
+                end_ = 3,
+                start = 1
+              },
+              type = "common"
+            }, {
+              char = "是",
+              new_range = {
+                end_ = 6,
+                start = 4
+              },
+              old_range = {
+                end_ = 6,
+                start = 4
+              },
+              type = "common"
+            }, {
+              char = "一",
+              new_range = {
+                end_ = 9,
+                start = 7
+              },
+              old_range = {
+                end_ = 9,
+                start = 7
+              },
+              type = "common"
+            }, {
+              char = "行",
+              new_range = {
+                end_ = 12,
+                start = 10
+              },
+              old_range = {
+                end_ = 12,
+                start = 10
+              },
+              type = "common"
+            }, {
+              char = "修",
+              new_range = {
+                end_ = 15,
+                start = 13
+              },
+              type = "add"
+            }, {
+              char = "改",
+              new_range = {
+                end_ = 18,
+                start = 16
+              },
+              type = "add"
+            }, {
+              char = "后",
+              new_range = {
+                end_ = 21,
+                start = 19
+              },
+              type = "add"
+            }, {
+              char = "的",
+              new_range = {
+                end_ = 24,
+                start = 22
+              },
+              type = "add"
+            }, {
+              char = "中",
+              new_range = {
+                end_ = 27,
+                start = 25
+              },
+              old_range = {
+                end_ = 15,
+                start = 13
+              },
+              type = "common"
+            }, {
+              char = "文",
+              new_range = {
+                end_ = 30,
+                start = 28
+              },
+              old_range = {
+                end_ = 18,
+                start = 16
+              },
+              type = "common"
+            }, {
+              char = "文",
+              new_range = {
+                end_ = 33,
+                start = 31
+              },
+              old_range = {
+                end_ = 21,
+                start = 19
+              },
+              type = "common"
+            }, {
+              char = "本",
+              new_range = {
+                end_ = 36,
+                start = 34
+              },
+              old_range = {
+                end_ = 24,
+                start = 22
+              },
+              type = "common"
+            } },
+          line = "这是一行中文文本",
+          type = "remove"
+        }, {
+          char_diff = <2>{ {
+              char = "L",
+              old_range = {
+                end_ = 1,
+                start = 1
+              },
+              type = "remove"
+            }, {
+              char = "i",
+              old_range = {
+                end_ = 2,
+                start = 2
+              },
+              type = "remove"
+            }, {
+              char = "n",
+              old_range = {
+                end_ = 3,
+                start = 3
+              },
+              type = "remove"
+            }, {
+              char = "N",
+              new_range = {
+                end_ = 1,
+                start = 1
+              },
+              type = "add"
+            }, {
+              char = "e",
+              new_range = {
+                end_ = 2,
+                start = 2
+              },
+              old_range = {
+                end_ = 4,
+                start = 4
+              },
+              type = "common"
+            }, {
+              char = " ",
+              old_range = {
+                end_ = 5,
+                start = 5
+              },
+              type = "remove"
+            }, {
+              char = "3",
+              old_range = {
+                end_ = 6,
+                start = 6
+              },
+              type = "remove"
+            }, {
+              char = ":",
+              old_range = {
+                end_ = 7,
+                start = 7
+              },
+              type = "remove"
+            }, {
+              char = " ",
+              old_range = {
+                end_ = 8,
+                start = 8
+              },
+              type = "remove"
+            }, {
+              char = "T",
+              old_range = {
+                end_ = 9,
+                start = 9
+              },
+              type = "remove"
+            }, {
+              char = "o",
+              old_range = {
+                end_ = 10,
+                start = 10
+              },
+              type = "remove"
+            }, {
+              char = "w",
+              new_range = {
+                end_ = 3,
+                start = 3
+              },
+              type = "add"
+            }, {
+              char = " ",
+              new_range = {
+                end_ = 4,
+                start = 4
+              },
+              old_range = {
+                end_ = 11,
+                start = 11
+              },
+              type = "common"
+            }, {
+              char = "b",
+              old_range = {
+                end_ = 12,
+                start = 12
+              },
+              type = "remove"
+            }, {
+              char = "l",
+              new_range = {
+                end_ = 5,
+                start = 5
+              },
+              type = "add"
+            }, {
+              char = "i",
+              new_range = {
+                end_ = 6,
+                start = 6
+              },
+              type = "add"
+            }, {
+              char = "n",
+              new_range = {
+                end_ = 7,
+                start = 7
+              },
+              type = "add"
+            }, {
+              char = "e",
+              new_range = {
+                end_ = 8,
+                start = 8
+              },
+              old_range = {
+                end_ = 13,
+                start = 13
+              },
+              type = "common"
+            }, {
+              char = " ",
+              new_range = {
+                end_ = 9,
+                start = 9
+              },
+              old_range = {
+                end_ = 14,
+                start = 14
+              },
+              type = "common"
+            }, {
+              char = "d",
+              old_range = {
+                end_ = 15,
+                start = 15
+              },
+              type = "remove"
+            }, {
+              char = "e",
+              old_range = {
+                end_ = 16,
+                start = 16
+              },
+              type = "remove"
+            }, {
+              char = "l",
+              old_range = {
+                end_ = 17,
+                start = 17
+              },
+              type = "remove"
+            }, {
+              char = "i",
+              new_range = {
+                end_ = 10,
+                start = 10
+              },
+              type = "add"
+            }, {
+              char = "n",
+              new_range = {
+                end_ = 11,
+                start = 11
+              },
+              type = "add"
+            }, {
+              char = "s",
+              new_range = {
+                end_ = 12,
+                start = 12
+              },
+              type = "add"
+            }, {
+              char = "e",
+              new_range = {
+                end_ = 13,
+                start = 13
+              },
+              old_range = {
+                end_ = 18,
+                start = 18
+              },
+              type = "common"
+            }, {
+              char = "r",
+              new_range = {
+                end_ = 14,
+                start = 14
+              },
+              type = "add"
+            }, {
+              char = "t",
+              new_range = {
+                end_ = 15,
+                start = 15
+              },
+              old_range = {
+                end_ = 19,
+                start = 19
+              },
+              type = "common"
+            }, {
+              char = "e",
+              new_range = {
+                end_ = 16,
+                start = 16
+              },
+              old_range = {
+                end_ = 20,
+                start = 20
+              },
+              type = "common"
+            }, {
+              char = "d",
+              new_range = {
+                end_ = 17,
+                start = 17
+              },
+              old_range = {
+                end_ = 21,
+                start = 21
+              },
+              type = "common"
+            } },
+          line = "Line 3: To be deleted",
+          type = "remove"
+        }, {
+          char_diff = <table 1>,
+          line = "这是一行修改后的中文文本",
+          type = "add"
+        }, {
+          char_diff = <table 2>,
+          line = "New line inserted",
+          type = "add"
+        } }
+    },
+    new_end = 3,
+    new_start = 2,
+    old_end = 3,
+    old_start = 2
+  }, { {
+      lines = { {
+          char_diff = <3>{ {
+              char = "F",
+              new_range = {
+                end_ = 1,
+                start = 1
+              },
+              old_range = {
+                end_ = 1,
+                start = 1
+              },
+              type = "common"
+            }, {
+              char = "i",
+              new_range = {
+                end_ = 2,
+                start = 2
+              },
+              old_range = {
+                end_ = 2,
+                start = 2
+              },
+              type = "common"
+            }, {
+              char = "n",
+              new_range = {
+                end_ = 3,
+                start = 3
+              },
+              old_range = {
+                end_ = 3,
+                start = 3
+              },
+              type = "common"
+            }, {
+              char = "a",
+              new_range = {
+                end_ = 4,
+                start = 4
+              },
+              old_range = {
+                end_ = 4,
+                start = 4
+              },
+              type = "common"
+            }, {
+              char = "l",
+              new_range = {
+                end_ = 5,
+                start = 5
+              },
+              old_range = {
+                end_ = 5,
+                start = 5
+              },
+              type = "common"
+            }, {
+              char = " ",
+              new_range = {
+                end_ = 6,
+                start = 6
+              },
+              old_range = {
+                end_ = 6,
+                start = 6
+              },
+              type = "common"
+            }, {
+              char = "l",
+              new_range = {
+                end_ = 7,
+                start = 7
+              },
+              old_range = {
+                end_ = 7,
+                start = 7
+              },
+              type = "common"
+            }, {
+              char = "i",
+              new_range = {
+                end_ = 8,
+                start = 8
+              },
+              type = "add"
+            }, {
+              char = "n",
+              new_range = {
+                end_ = 9,
+                start = 9
+              },
+              type = "add"
+            }, {
+              char = "e",
+              new_range = {
+                end_ = 10,
+                start = 10
+              },
+              type = "add"
+            }, {
+              char = " ",
+              new_range = {
+                end_ = 11,
+                start = 11
+              },
+              type = "add"
+            }, {
+              char = "w",
+              new_range = {
+                end_ = 12,
+                start = 12
+              },
+              type = "add"
+            }, {
+              char = "i",
+              new_range = {
+                end_ = 13,
+                start = 13
+              },
+              old_range = {
+                end_ = 8,
+                start = 8
+              },
+              type = "common"
+            }, {
+              char = "t",
+              new_range = {
+                end_ = 14,
+                start = 14
+              },
+              type = "add"
+            }, {
+              char = "h",
+              new_range = {
+                end_ = 15,
+                start = 15
+              },
+              type = "add"
+            }, {
+              char = " ",
+              new_range = {
+                end_ = 16,
+                start = 16
+              },
+              type = "add"
+            }, {
+              char = "c",
+              new_range = {
+                end_ = 17,
+                start = 17
+              },
+              type = "add"
+            }, {
+              char = "h",
+              new_range = {
+                end_ = 18,
+                start = 18
+              },
+              type = "add"
+            }, {
+              char = "a",
+              new_range = {
+                end_ = 19,
+                start = 19
+              },
+              type = "add"
+            }, {
+              char = "n",
+              new_range = {
+                end_ = 20,
+                start = 20
+              },
+              old_range = {
+                end_ = 9,
+                start = 9
+              },
+              type = "common"
+            }, {
+              char = "g",
+              new_range = {
+                end_ = 21,
+                start = 21
+              },
+              type = "add"
+            }, {
+              char = "e",
+              new_range = {
+                end_ = 22,
+                start = 22
+              },
+              old_range = {
+                end_ = 10,
+                start = 10
+              },
+              type = "common"
+            }, {
+              char = "s",
+              new_range = {
+                end_ = 23,
+                start = 23
+              },
+              type = "add"
+            } },
+          line = "Final line",
+          type = "remove"
+        }, {
+          char_diff = <table 3>,
+          line = "Final line with changes",
+          type = "add"
+        } }
+    },
+    new_end = 5,
+    new_start = 5,
+    old_end = 5,
+    old_start = 5
+  } }[32m●[0m
+[32m6[0m successes / [31m0[0m failures / [35m0[0m errors / [33m0[0m pending : [1m0.035199[0m seconds
+
+
+Script done on 2025-06-21 20:51:43+08:00 [COMMAND_EXIT_CODE="0"]
