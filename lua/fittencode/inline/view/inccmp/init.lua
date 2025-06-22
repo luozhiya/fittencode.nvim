@@ -113,10 +113,9 @@ function View:calculate_cursor_position_after_insertion(start_pos, inserted_line
     return cursor
 end
 
-function View:update_win_cursor(win, pos, col_offset)
-    col_offset = col_offset or 0
+function View:update_win_cursor(win, pos)
     if win and vim.api.nvim_win_is_valid(win) then
-        vim.api.nvim_win_set_cursor(win, { pos.row + 1, pos.col + col_offset }) -- API需要1-based行号
+        vim.api.nvim_win_set_cursor(win, { pos.row + 1, pos.col}) -- API需要1-based行号
     end
 end
 
