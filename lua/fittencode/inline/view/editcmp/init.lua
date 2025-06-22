@@ -51,6 +51,7 @@ function View:_render_add(pos, lines, hlgroup)
             virt_text = virt_lines[1],
             virt_text_pos = 'inline',
             hl_mode = 'combine',
+            priority = 1000,
         })
     table.remove(virt_lines, 1)
     if vim.tbl_count(virt_lines) > 0 then
@@ -62,6 +63,7 @@ function View:_render_add(pos, lines, hlgroup)
             {
                 virt_lines = virt_lines,
                 hl_mode = 'combine',
+                priority = 1000,
             })
     end
 end
@@ -77,7 +79,24 @@ function View:_render_remove_char(pos, hlgroup)
             end_row = pos.row,
             end_col = pos.col + 1,
             strict = false,
-            priority = 200,
+            priority = 1000,
+        })
+end
+
+-- 现在 Neovim 不支持 cursorline style 的 virt_lines，不用这个函数
+function View:_render_remove_line_cursorline(row, hlgroup)
+    vim.api.nvim_buf_set_extmark(
+        self.buf,
+        self.completion_ns,
+        row,
+        0,
+        {
+            hl_eol = true,
+            hl_group = hlgroup,
+            end_row = row + 1,
+            end_col = nil,
+            strict = false,
+            priority = 1000,
         })
 end
 
@@ -93,7 +112,7 @@ function View:_render_remove_line(row, hlgroup)
             end_row = row,
             end_col = end_col + 1,
             strict = false,
-            priority = 200,
+            priority = 1000,
         })
 end
 
