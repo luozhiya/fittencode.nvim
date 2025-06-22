@@ -6,6 +6,8 @@
 ]]
 
 local Position = require('fittencode.fn.position')
+local Log = require('fittencode.log')
+local F = require('fittencode.fn.buf')
 
 ---@class FittenCode.Inline.EditCompletion.View
 ---@field clear function
@@ -38,6 +40,7 @@ function View:_render_add(pos, lines, hlgroup)
     else
         virt_lines = lines
     end
+    Log.debug('View:_render_add = {}', { pos = pos, lines = lines, hlgroup = hlgroup })
     vim.api.nvim_buf_set_extmark(
         self.buf,
         self.completion_ns,
@@ -78,6 +81,7 @@ function View:_render_remove_char(pos, hlgroup)
 end
 
 function View:_render_remove_line(row, hlgroup)
+    local end_col = F.line_at(self.buf, row).range.end_.col
     vim.api.nvim_buf_set_extmark(
         self.buf,
         self.completion_ns,
@@ -86,7 +90,7 @@ function View:_render_remove_line(row, hlgroup)
         {
             hl_group = hlgroup,
             end_row = row,
-            end_col = -1,
+            end_col = end_col + 1,
             strict = false,
             priority = 200,
         })
@@ -95,24 +99,29 @@ end
 function View:update(state)
     self:clear()
 
+    Log.debug('View:update = {}', state)
+
+    self.after_line = state.after_line
     self.start_line = state.start_line
     self.end_line = state.end_line
-    self.after_line = state.after_line
     self.replacement_lines = state.replacement_lines
-    self.hanks = state.hanks
+    self.hunks = state.hunks
 
-    if self.start_line then
+    if self.after_line then
         local replacement_lines = vim.list_extend({ '' }, self.replacement_lines)
         local pos = Position.of(self.start_line, -1)
         self:_render_add(pos, replacement_lines, 'FittenCodeDiffInsertedChar')
     elseif self.start_line and self.end_line then
-        for _, hunk in ipairs(self.hanks) do
+        for _, hunk in ipairs(self.hunks) do
             local lines = hunk.lines
             local old_start = hunk.old_start
             local old_end = hunk.old_end
             local add_virt_lines = {
-                { '', 'FittenCodeDiffInserted' },
+                { { '', 'FittenCodeDiffInserted' } },
             }
+            for _ = old_start, old_end do
+                self:_render_remove_line(self.start_line + _ - 1, 'FittenCodeDiffDeleted')
+            end
             for j = 1, #lines do
                 local lined = lines[j]
                 local char_diff = lined.char_diff
@@ -120,9 +129,6 @@ function View:update(state)
                 if lined.type == 'common' then
                     -- skip
                 elseif lined.type == 'remove' then
-                    for _ = old_start, old_end do
-                        self:_render_remove_line(self.start_line + _ - 1, 'FittenCodeDiffDeleted')
-                    end
                     if char_diff then
                         for k = 1, #char_diff do
                             local chard = char_diff[k]

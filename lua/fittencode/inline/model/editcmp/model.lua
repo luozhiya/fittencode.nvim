@@ -15,6 +15,7 @@ local Diff = require('fittencode.fn.diff')
 ---@field start_line number
 ---@field end_line number
 ---@field after_line number
+---@field lines string[]
 local Model = {}
 Model.__index = Model
 
@@ -23,6 +24,7 @@ function Model.new(buf, position, completion)
     Log.debug('Edit completion model created, completion = {}', completion)
     assert(completion.lines)
 
+    self.lines = vim.deepcopy(completion.lines)
     if completion.after_line then
         self.merge = 'after_line'
         self.after_line = completion.after_line
@@ -46,6 +48,7 @@ function Model:snapshot()
         commit_index = self.commit_index,
         hunks = vim.deepcopy(self.hunks),
         gap_common_hunks = vim.deepcopy(self.gap_common_hunks),
+        lines = vim.deepcopy(self.lines),
     }
     return result
 end
