@@ -8,6 +8,7 @@
 local Position = require('fittencode.fn.position')
 local Log = require('fittencode.log')
 local F = require('fittencode.fn.buf')
+local V = require('fittencode.fn.view')
 
 ---@class FittenCode.Inline.EditCompletion.View
 ---@field clear function
@@ -104,8 +105,11 @@ function View:update(state)
     self.after_line = state.after_line
     self.start_line = state.start_line
     self.end_line = state.end_line
+    assert((self.start_line and self.end_line) or self.after_line)
     self.replacement_lines = state.replacement_lines
+    assert(#self.replacement_lines > 0)
     self.hunks = state.hunks
+    assert(#self.hunks > 0)
 
     if self.after_line then
         local replacement_lines = vim.list_extend({ '' }, self.replacement_lines)
@@ -180,6 +184,18 @@ function View:on_terminate()
     self:clear()
 end
 
+function View:_adjust_cursor_position_on_complete()
+    local win = vim.api.nvim_get_current_win()
+    local start_pos
+    if self.after_line then
+        start_pos = Position.of(self.after_line + 1, 0)
+    else
+        start_pos = Position.of(self.start_line, 0)
+    end
+    local new_pos = V.calculate_cursor_position_after_insertion(start_pos, self.replacement_lines)
+    V.update_win_cursor(win, new_pos)
+end
+
 function View:on_complete()
     self:clear()
     if self.after_line then
@@ -192,6 +208,7 @@ function View:on_complete()
         local end_pos = Position.of(self.end_line, -1)
         self:_set_text(replacement_lines, start_pos, end_pos)
     end
+    self:_adjust_cursor_position_on_complete()
 end
 
 return View

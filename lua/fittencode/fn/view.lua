@@ -40,7 +40,7 @@ end
 
 function M.update_win_cursor(win, pos)
     if win and vim.api.nvim_win_is_valid(win) then
-        vim.api.nvim_win_set_cursor(win, { pos.row + 1, pos.col}) -- API需要1-based行号
+        vim.api.nvim_win_set_cursor(win, { pos.row + 1, pos.col }) -- API需要1-based行号
     end
 end
 
