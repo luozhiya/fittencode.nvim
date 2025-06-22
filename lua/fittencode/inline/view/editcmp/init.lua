@@ -132,7 +132,7 @@ function View:update(state)
 
     if self.after_line then
         local replacement_lines = vim.list_extend({ '' }, self.replacement_lines)
-        local pos = Position.of(self.start_line, -1)
+        local pos = Position.of(self.after_line, -1)
         self:_render_add(pos, replacement_lines, 'FittenCodeDiffInsertedChar')
     elseif self.start_line and self.end_line then
         for _, hunk in ipairs(self.hunks) do

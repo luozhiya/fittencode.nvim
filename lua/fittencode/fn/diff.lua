@@ -18,6 +18,11 @@
 
 ]]
 
+-- local Log = require('fittencode.log')
+local Log = {
+    debug = function(...) end,
+}
+
 local M = {}
 
 -- 将字符串分割为UTF-8字符数组并记录字节范围
@@ -412,6 +417,7 @@ function M.diff_lines(old_lines, new_lines, single_hunk)
 end
 
 local function make_gap_common_hunks(old_lines, new_lines, markers)
+    Log.debug('make_gap_common_hunks old_liens = {}, new_lines = {}, markers = {}', old_lines, new_lines, markers)
     -- 收集旧文件和新文件的被标记范围
     local old_covered = {}
     local new_covered = {}
@@ -480,6 +486,10 @@ local function make_gap_common_hunks(old_lines, new_lines, markers)
     local new_merged = merge_intervals(new_covered)
     local new_gaps = find_gaps(new_merged, #new_lines)
 
+    Log.debug('old_covered = {}, new_covered = {}', old_covered, new_covered)
+    Log.debug('old_merged = {}, new_merged = {}', old_merged, new_merged)
+    Log.debug('old_gaps = {}, new_gaps = {}', old_gaps, new_gaps)
+
     assert(#old_gaps == #new_gaps)
 
     local gap_common_hunks = {}
@@ -504,7 +514,7 @@ function M.diff_lines2(old_lines, new_lines)
     ---@type integer[][]
     ---@diagnostic disable-next-line: assign-type-mismatch
     local indices = vim.diff(table.concat(old_lines, '\n'), table.concat(new_lines, '\n'), { linematch = true, result_type = 'indices' })
-    -- print(vim.inspect(indices))
+    print(vim.inspect(indices))
     local gap_common_hunks = make_gap_common_hunks(old_lines, new_lines, indices)
     local hunks = {}
     for _, hunk_range in ipairs(indices) do
@@ -568,33 +578,54 @@ function M.unified(hunks)
     return infos
 end
 
-local old_text = {
-    '这是一行中文文本',
-    '1',
-    '2',
-    'Line 3: To be deleted',
-    'Open',
-    'QQ',
-    'QQ',
-    '>>>>',
-    'PP',
-    'PP',
+--[[
+
+[2025-06-22T23:30:18.379211000+08:00 inline/model/editcmp/model.lua:24 DEBUG] Edit completion model created, completion = {
+  end_line = 9,
+  lines = { "", "// " },
+  start_line = 9
 }
+[2025-06-22T23:30:18.379220000+08:00 fn/diff.lua:417 DEBUG] make_gap_common_hunks old_liens = { "" }, new_lines = { "", "// " }, markers = { { 0, 0, 1, 2 } }
+[2025-06-22T23:30:18.379231000+08:00 fn/diff.lua:486 DEBUG] old_covered = {}, new_covered = { { 1, 2 } }
+[2025-06-22T23:30:18.379243000+08:00 fn/diff.lua:487 DEBUG] old_merged = {}, new_merged = { { 1, 2 } }
+[2025-06-22T23:30:18.379253000+08:00 fn/diff.lua:488 DEBUG] old_gaps = { { 1, 1 } }, new_gaps = {}
 
-local new_text = {
-    '这是一行修改后的中文文本', -- 修改
-    'Line 3: New line inserted', -- 新增
-    'Close',
-    'QQ',
-    'QQ',
-    '<<<<',
-    'PP',
-    'PP',
-}
+]]
 
--- local ll, cl = M.diff_lines(old_text, new_text)
+-- local old_text = {
+--     '这是一行中文文本',
+--     '1',
+--     '2',
+--     'Line 3: To be deleted',
+--     'Open',
+--     'QQ',
+--     'QQ',
+--     '>>>>',
+--     'PP',
+--     'PP',
+-- }
 
--- print(vim.inspect(cl))
+-- local old_text = { "" }
+
+-- local new_text = {
+--     "",
+--     "// "
+-- }
+
+-- -- local ll, cl = M.diff_lines(old_text, new_text)
+-- -- print(vim.inspect(ll))
+
+-- local markers = { { 0, 0, 1, 2 } }
+
+-- local s0 = table.concat(old_text, '\n')
+-- print(s0)
+-- local s1 = table.concat(new_text, '\n')
+-- print(s1)
+
+-- local indices = vim.diff(s0, s1, { linematch = true, result_type = 'indices' })
+-- print(vim.inspect(indices))
+
+-- make_gap_common_hunks(old_text, new_text, markers)
 
 -- local ll = vim.diff(table.concat(old_text, '\n'), table.concat(new_text, '\n'), { result_type = 'indices' })
 -- local l0 = vim.list_slice(old_text, 2, 2+2-1)
