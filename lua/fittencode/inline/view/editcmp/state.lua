@@ -17,6 +17,7 @@ function M.get_state_from_model(model)
         end_line = model.end_line,
         after_line = model.after_line,
         hunks = model.hunks,
+        gap_common_hunks = model.gap_common_hunks,
         replacement_lines = model.lines,
         commit_index = model.commit_index,
     }

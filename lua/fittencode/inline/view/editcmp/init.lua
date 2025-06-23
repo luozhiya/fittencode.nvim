@@ -203,6 +203,7 @@ function View:update(state, update_state)
     self.replacement_lines = state.replacement_lines
     assert(#self.replacement_lines > 0)
     self.hunks = state.hunks
+    self.gap_common_hunks = state.gap_common_hunks
     assert(#self.hunks > 0)
 
     local width = get_win_width()
@@ -229,7 +230,7 @@ function View:update(state, update_state)
                 local char_diff = lined.char_diff
                 local old_lnum = lined.old_lnum
                 if lined.type == 'common' then
-                    -- skip
+                    -- 所有的 old 都被标记了 deleted，那么 hank 中所有的 common 则应该被标记为 inserted
                 elseif lined.type == 'remove' then
                     if char_diff then
                         for k = 1, #char_diff do
