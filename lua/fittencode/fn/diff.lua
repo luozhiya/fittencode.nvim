@@ -644,7 +644,7 @@ function M.diff_classic(old_lines, new_lines, options)
     end
 end
 
-function M.diff_blocks(old_lines, new_lines)
+function M.diff_block(old_lines, new_lines)
     return diff_lines(old_lines, new_lines, false)
 end
 
