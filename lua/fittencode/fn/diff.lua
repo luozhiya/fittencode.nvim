@@ -627,7 +627,7 @@ end
 ---@param new_lines string[]
 ---@param options? {hunk_policy: 'vim'|'builtin'}
 ---@return FittenCode.Diff.Hunk[], FittenCode.Diff.CommonHunk[]
-function M.diff(old_lines, new_lines, options)
+function M.diff_classic(old_lines, new_lines, options)
     options = options or {}
     local hunk_policy = options.hunk_policy or 'vim'
 
@@ -642,6 +642,10 @@ function M.diff(old_lines, new_lines, options)
     else
         return diff_lines(old_lines, new_lines, false)
     end
+end
+
+function M.diff_blocks(old_lines, new_lines)
+    return diff_lines(old_lines, new_lines, false)
 end
 
 --[[
