@@ -137,8 +137,8 @@ function View:update(state)
     elseif self.start_line and self.end_line then
         for _, hunk in ipairs(self.hunks) do
             local lines = hunk.lines
-            local old_start = hunk.old_start
-            local old_end = hunk.old_end
+            local old_start = hunk.old_start or 1
+            local old_end = hunk.old_end or 1
             local add_virt_lines = {
                 { { '', 'FittenCodeDiffInserted' } },
             }

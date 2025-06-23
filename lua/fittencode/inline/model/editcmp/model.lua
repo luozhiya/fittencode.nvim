@@ -28,13 +28,13 @@ function Model.new(buf, position, completion)
     if completion.after_line then
         self.merge = 'after_line'
         self.after_line = completion.after_line
-        self.hunks, self.gap_common_hunks = Diff.diff_lines({}, completion.lines)
+        self.hunks, self.gap_common_hunks = Diff.diff({}, completion.lines)
     else
         self.merge = 'line_range'
         self.start_line = completion.start_line
         self.end_line = completion.end_line
         local old_lines = F.get_lines_by_line_range(buf, self.start_line, self.end_line)
-        self.hunks, self.gap_common_hunks = Diff.diff_lines(old_lines, completion.lines, false, true)
+        self.hunks, self.gap_common_hunks = Diff.diff(old_lines, completion.lines)
     end
     self.commit_index = 0
     return self

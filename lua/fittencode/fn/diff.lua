@@ -600,6 +600,50 @@ local function unified(hunks)
     return infos
 end
 
+---@class FittenCode.Diff.LineDiff
+---@field type string
+---@field line string
+---@field old_lnum integer|nil
+---@field new_lnum integer|nil
+---@field char_diff FittenCode.Diff.CharDiff[]|nil
+
+---@class FittenCode.Diff.CharDiff
+---@field type string
+---@field char string
+
+---@class FittenCode.Diff.Hunk
+---@field lines FittenCode.Diff.LineDiff[]
+---@field old_start integer|nil
+---@field old_end integer|nil
+---@field new_start integer|nil
+---@field new_end integer|nil
+
+---@alias FittenCode.Diff.CommonHunk FittenCode.Diff.Hunk
+
+-- 对于 vim.diff
+-- - "" 等价于空文档，在 diff_lines 时需要特殊处理
+-- - 一个空行，如果调用 nvim_buf_get_lines 时，会返回 "" 而不是 nil
+---@param old_lines string[]
+---@param new_lines string[]
+---@param options? {hunk_policy: 'vim'|'builtin'}
+---@return FittenCode.Diff.Hunk[], FittenCode.Diff.CommonHunk[]
+function M.diff(old_lines, new_lines, options)
+    options = options or {}
+    local hunk_policy = options.hunk_policy or 'vim'
+
+    if #old_lines == 1 and old_lines[1] == '' then
+        old_lines = {}
+    end
+    if #new_lines == 1 and new_lines[1] == '' then
+        new_lines = {}
+    end
+    if hunk_policy == 'vim' then
+        return diff_by_vim(old_lines, new_lines)
+    else
+        return diff_lines(old_lines, new_lines, false)
+    end
+end
+
 --[[
 
 [2025-06-22T23:30:18.379211000+08:00 inline/model/editcmp/model.lua:24 DEBUG] Edit completion model created, completion = {
@@ -634,8 +678,11 @@ end
 --     "// "
 -- }
 
--- -- local ll, cl = M.diff_lines(old_text, new_text)
--- -- print(vim.inspect(ll))
+-- local ll, cl = M.diff(old_text, new_text, { hunk_policy = 'vim' })
+-- print(vim.inspect(ll))
+
+-- local ll, cl = M.diff(old_text, new_text, { hunk_policy = 'builtin' })
+-- print(vim.inspect(ll))
 
 -- local markers = { { 0, 0, 1, 2 } }
 
@@ -656,49 +703,5 @@ end
 -- print(vim.inspect(M.diff_lines(l0, l1)))
 -- -- local ll = M.diff_lines(old_text, new_text)
 -- print(vim.inspect(vim.diff(table.concat(old_text, '\n'), table.concat(new_text, '\n'), { result_type = 'indices' })))
-
----@class FittenCode.Diff.LineDiff
----@field type string
----@field line string
----@field old_lnum integer|nil
----@field new_lnum integer|nil
----@field char_diff FittenCode.Diff.CharDiff[]|nil
-
----@class FittenCode.Diff.CharDiff
----@field type string
----@field char string
-
----@class FittenCode.Diff.Hunk
----@field lines FittenCode.Diff.LineDiff[]
----@field old_start integer|nil
----@field old_end integer|nil
----@field new_start integer|nil
----@field new_end integer|nil
-
----@alias FittenCode.Diff.CommonHunk FittenCode.Diff.Hunk
-
--- 对于 vim.diff
--- - "" 等价于空文档，在 diff_lines 时需要特殊处理
--- - 一个空行，如果调用 nvim_buf_get_lines 时，会返回 "" 而不是 nil
----@param old_lines string[]
----@param new_lines string[]
----@param options {hunk_policy: 'vim'|'builtin'}
----@return FittenCode.Diff.Hunk[], FittenCode.Diff.CommonHunk[]
-function M.diff(old_lines, new_lines, options)
-    options = options or {}
-    local hunk_policy = options.hunk_policy or 'vim'
-
-    if #old_lines == 1 and old_lines[1] == '' then
-        old_lines = {}
-    end
-    if #new_lines == 1 and new_lines[1] == '' then
-        new_lines = {}
-    end
-    if hunk_policy == 'vim' then
-        return diff_by_vim(old_lines, new_lines)
-    else
-        return diff_lines(old_lines, new_lines, false)
-    end
-end
 
 return M
