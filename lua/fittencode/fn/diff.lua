@@ -274,18 +274,18 @@ local function compute_line_diff(old_lines, new_lines)
 
     -- 回溯获取行差异
     local line_diff = {}
-    local i, j = #old_lines, #new_lines
-    while i > 0 or j > 0 do
-        if i > 0 and j > 0 and old_lines[i] == new_lines[j] then
-            table.insert(line_diff, 1, { type = 'common', line = old_lines[i] })
-            i = i - 1
-            j = j - 1
-        elseif j > 0 and (i == 0 or dp[i][j - 1] >= dp[i - 1][j]) then
-            table.insert(line_diff, 1, { type = 'add', line = new_lines[j] })
-            j = j - 1
-        elseif i > 0 and (j == 0 or dp[i][j - 1] < dp[i - 1][j]) then
-            table.insert(line_diff, 1, { type = 'remove', line = old_lines[i] })
-            i = i - 1
+    local i, j = 1, 1
+    while i <= #old_lines or j <= #new_lines do
+        if i <= #old_lines and j <= #new_lines and old_lines[i] == new_lines[j] then
+            table.insert(line_diff, { type = 'common', line = old_lines[i] })
+            i = i + 1
+            j = j + 1
+        elseif j <= #new_lines and (i == #old_lines + 1 or dp[i][j - 1] >= dp[i - 1][j]) then
+            table.insert(line_diff, { type = 'add', line = new_lines[j] })
+            j = j + 1
+        elseif i <= #old_lines and (j == #new_lines + 1 or dp[i][j - 1] < dp[i - 1][j]) then
+            table.insert(line_diff, { type = 'remove', line = old_lines[i] })
+            i = i + 1
         end
     end
 
