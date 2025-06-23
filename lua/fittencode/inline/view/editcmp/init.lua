@@ -10,6 +10,7 @@ local Log = require('fittencode.log')
 local F = require('fittencode.fn.buf')
 local V = require('fittencode.fn.view')
 local Format = require('fittencode.fn.format')
+local Fn = require('fittencode.fn.core')
 
 ---@class FittenCode.Inline.EditCompletion.View
 ---@field clear function
@@ -27,6 +28,7 @@ end
 function View:__initialize(options)
     self.buf = options.buf
     self.completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.EditCompletion.View')
+    self:_setup_autocmds()
 end
 
 function View:clear()
@@ -140,9 +142,9 @@ function View:_render_hunk_status(row, current, commit_index, total_hunks)
         {
             -- virt_text = { { msg, 'FittenCodeDiffHunkStatus' } },
             virt_lines = {
-                { { '', 'FittenCodeDiffHunkStatus' } },
+                -- { { '', 'FittenCodeDiffHunkStatus' } },
                 { { msg, 'FittenCodeDiffHunkStatus' } },
-                { { '', 'FittenCodeDiffHunkStatus' } },
+                -- { { '', 'FittenCodeDiffHunkStatus' } },
             },
             virt_text_pos = 'inline',
             virt_lines_above = true,
@@ -151,8 +153,45 @@ function View:_render_hunk_status(row, current, commit_index, total_hunks)
         })
 end
 
-function View:update(state)
+function View:_redraw()
+    self:update(self.state, false)
+end
+
+local function get_win_width()
+    local win = vim.api.nvim_get_current_win()
+    local wininfo = vim.fn.getwininfo(win)[1]
+    return wininfo.width
+end
+
+function View:_setup_autocmds()
+    vim.api.nvim_create_autocmd({ 'WinResized' }, {
+        group = vim.api.nvim_create_augroup('FittenCode.Inline.EditCompletion.View.Resize', { clear = true }),
+        pattern = '*',
+        callback = function()
+            if not vim.tbl_contains(vim.v.event.windows or {}, vim.api.nvim_get_current_win()) then
+                return
+            end
+            local width = get_win_width()
+            if width < self.prev_width then
+                return
+            end
+            if not self.debounced_redraw then
+                self.debounced_redraw = Fn.debounce(function()
+                    self:_redraw()
+                end, 100)
+            end
+            self.debounced_redraw()
+        end,
+    })
+end
+
+function View:update(state, update_state)
+    update_state = update_state == nil and true or update_state
     self:clear()
+
+    if update_state then
+        self.state = vim.deepcopy(state)
+    end
 
     Log.debug('View:update = {}', state)
 
@@ -165,6 +204,9 @@ function View:update(state)
     assert(#self.replacement_lines > 0)
     self.hunks = state.hunks
     assert(#self.hunks > 0)
+
+    local width = get_win_width()
+    self.prev_width = width
 
     if self.after_line then
         local replacement_lines = vim.list_extend({ '' }, self.replacement_lines)
@@ -212,8 +254,9 @@ function View:update(state)
                                 curr_line[#curr_line + 1] = { chard.char, 'FittenCodeDiffInserted' }
                             end
                         end
+                        curr_line[#curr_line + 1] = { string.rep(' ', width), 'FittenCodeDiffInserted' }
                     else
-                        curr_line = { { lined.line, 'FittenCodeDiffInsertedChar' } }
+                        curr_line = { { lined.line, 'FittenCodeDiffInsertedChar' }, { string.rep(' ', width), 'FittenCodeDiffInserted' } }
                     end
                     add_virt_lines[#add_virt_lines + 1] = curr_line
                 end
