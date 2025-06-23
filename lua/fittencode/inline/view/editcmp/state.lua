@@ -4,12 +4,6 @@ Commit: √  (Hunk状态行)
 AAAAAAAAAAAA
 BBBBBBBBBB    (Hunk内容行)
 
-        after_line = self.after_line,
-        start_line = self.start_line,
-        end_line = self.end_line,
-        accepted = self.accepted,
-        hunks = vim.deepcopy(self.hunks),
-        gap_common_hunks = vim.deepcopy(self.gap_common_hunks),
 ]]
 
 local M = {}
