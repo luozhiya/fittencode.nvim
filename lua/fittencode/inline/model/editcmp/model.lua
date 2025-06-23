@@ -34,7 +34,7 @@ function Model.new(buf, position, completion)
         self.start_line = completion.start_line
         self.end_line = completion.end_line
         local old_lines = F.get_lines_by_line_range(buf, self.start_line, self.end_line)
-        self.hunks, self.gap_common_hunks = Diff.diff_lines(old_lines, completion.lines)
+        self.hunks, self.gap_common_hunks = Diff.diff_lines(old_lines, completion.lines, false, true)
     end
     self.commit_index = 0
     return self

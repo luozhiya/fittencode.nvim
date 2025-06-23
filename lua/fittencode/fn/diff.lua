@@ -16,6 +16,8 @@
 --     'Final line with changes' -- 修改
 -- }
 
+符合一般性 git 对比的结果
+
 ]]
 
 -- local Log = require('fittencode.log')
@@ -85,6 +87,9 @@ local function lcs_length(s1, s2)
 end
 
 -- 生成字符级别的差异信息，包含字节范围
+---@param old_line string
+---@param new_line string
+---@return FittenCode.Diff.CharDiff[]
 local function generate_char_diff(old_line, new_line)
     if old_line == new_line then
         -- 如果两行完全相同，直接返回公共字符序列
@@ -161,6 +166,8 @@ local function generate_char_diff(old_line, new_line)
 end
 
 -- 将行差异拆分为多个hunk
+---@param line_diff FittenCode.Diff.LineDiff[]
+---@return FittenCode.Diff.Hunk[], FittenCode.Diff.CommonHunk[]
 local function diff_split_hunks(line_diff)
     local hunks = {}
     local current_hunk = { lines = {} }
@@ -241,6 +248,9 @@ local function diff_split_hunks(line_diff)
 end
 
 -- 计算行差异数组
+---@param old_lines string[]
+---@param new_lines string[]
+---@return FittenCode.Diff.LineDiff[]
 local function compute_line_diff(old_lines, new_lines)
     -- 初始化行差异矩阵
     local dp = {}
@@ -395,7 +405,11 @@ local function diff_lines_single_hunk(hunk)
     return hunk
 end
 
-function M.diff_lines(old_lines, new_lines, single_hunk)
+---@param old_lines string[]
+---@param new_lines string[]
+---@param single_hunk boolean
+---@return FittenCode.Diff.Hunk[], FittenCode.Diff.CommonHunk[]
+local function diff_lines(old_lines, new_lines, single_hunk)
     -- 计算行差异
     local line_diff = compute_line_diff(old_lines, new_lines)
 
@@ -416,6 +430,10 @@ function M.diff_lines(old_lines, new_lines, single_hunk)
     return hunks, gap_common_hunks
 end
 
+---@param old_lines string[]
+---@param new_lines string[]
+---@param markers integer[][]
+---@return FittenCode.Diff.CommonHunk[]
 local function make_gap_common_hunks(old_lines, new_lines, markers)
     Log.debug('make_gap_common_hunks old_liens = {}, new_lines = {}, markers = {}', old_lines, new_lines, markers)
     -- 收集旧文件和新文件的被标记范围
@@ -510,12 +528,16 @@ local function make_gap_common_hunks(old_lines, new_lines, markers)
     return gap_common_hunks
 end
 
-function M.diff_lines2(old_lines, new_lines)
+---@param old_lines string[]
+---@param new_lines string[]
+---@return FittenCode.Diff.Hunk[], FittenCode.Diff.CommonHunk[]
+local function diff_by_vim(old_lines, new_lines)
     ---@type integer[][]
     ---@diagnostic disable-next-line: assign-type-mismatch
     local indices = vim.diff(table.concat(old_lines, '\n'), table.concat(new_lines, '\n'), { linematch = true, result_type = 'indices' })
     print(vim.inspect(indices))
     local gap_common_hunks = make_gap_common_hunks(old_lines, new_lines, indices)
+    ---@type FittenCode.Diff.Hunk[]
     local hunks = {}
     for _, hunk_range in ipairs(indices) do
         local old_start, old_len, new_start, new_len = unpack(hunk_range)
@@ -525,7 +547,7 @@ function M.diff_lines2(old_lines, new_lines)
         local new_slice = new_len == 0 and {}
             or vim.list_slice(new_lines, new_start, new_start + new_len - 1)
 
-        local _hunks = M.diff_lines(old_slice, new_slice, true)
+        local _hunks = diff_lines(old_slice, new_slice, true)
         assert(#_hunks == 1)
         local hunk = _hunks[1]
         hunk.old_start = old_len ~= 0 and old_start or nil
@@ -538,7 +560,7 @@ function M.diff_lines2(old_lines, new_lines)
     return hunks, gap_common_hunks
 end
 
-function M.unified(hunks)
+local function unified(hunks)
     local infos = {}
     for h, hunk in ipairs(hunks) do
         for _, line in ipairs(hunk.lines) do
@@ -634,5 +656,49 @@ end
 -- print(vim.inspect(M.diff_lines(l0, l1)))
 -- -- local ll = M.diff_lines(old_text, new_text)
 -- print(vim.inspect(vim.diff(table.concat(old_text, '\n'), table.concat(new_text, '\n'), { result_type = 'indices' })))
+
+---@class FittenCode.Diff.LineDiff
+---@field type string
+---@field line string
+---@field old_lnum integer|nil
+---@field new_lnum integer|nil
+---@field char_diff FittenCode.Diff.CharDiff[]|nil
+
+---@class FittenCode.Diff.CharDiff
+---@field type string
+---@field char string
+
+---@class FittenCode.Diff.Hunk
+---@field lines FittenCode.Diff.LineDiff[]
+---@field old_start integer|nil
+---@field old_end integer|nil
+---@field new_start integer|nil
+---@field new_end integer|nil
+
+---@alias FittenCode.Diff.CommonHunk FittenCode.Diff.Hunk
+
+-- 对于 vim.diff
+-- - "" 等价于空文档，在 diff_lines 时需要特殊处理
+-- - 一个空行，如果调用 nvim_buf_get_lines 时，会返回 "" 而不是 nil
+---@param old_lines string[]
+---@param new_lines string[]
+---@param options {hunk_policy: 'vim'|'builtin'}
+---@return FittenCode.Diff.Hunk[], FittenCode.Diff.CommonHunk[]
+function M.diff(old_lines, new_lines, options)
+    options = options or {}
+    local hunk_policy = options.hunk_policy or 'vim'
+
+    if #old_lines == 1 and old_lines[1] == '' then
+        old_lines = {}
+    end
+    if #new_lines == 1 and new_lines[1] == '' then
+        new_lines = {}
+    end
+    if hunk_policy == 'vim' then
+        return diff_by_vim(old_lines, new_lines)
+    else
+        return diff_lines(old_lines, new_lines, false)
+    end
+end
 
 return M
