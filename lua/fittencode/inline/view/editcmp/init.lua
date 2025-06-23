@@ -100,7 +100,11 @@ function View:_render_remove_line_cursorline(row, hlgroup)
         })
 end
 
-function View:_render_remove_line(row, hlgroup)
+function View:_render_remove_line(row, hlgroup, cursorline)
+    cursorline = cursorline == nil and true or cursorline
+    if cursorline then
+        return self:_render_remove_line_cursorline(row, hlgroup)
+    end
     local end_col = F.line_at(self.buf, row).range.end_.col
     vim.api.nvim_buf_set_extmark(
         self.buf,
@@ -178,7 +182,7 @@ function View:update(state)
                     else
                         curr_line = { lined.line, 'FittenCodeDiffInsertedChar' }
                     end
-                    add_virt_lines[#add_virt_lines + 1] = curr_line
+                    add_virt_lines[#add_virt_lines + 1] = { curr_line }
                 end
             end
             self:_render_add(Position.of(self.start_line + old_end - 1, -1), add_virt_lines)
