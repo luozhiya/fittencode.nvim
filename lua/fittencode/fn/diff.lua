@@ -708,4 +708,12 @@ end
 -- -- local ll = M.diff_lines(old_text, new_text)
 -- print(vim.inspect(vim.diff(table.concat(old_text, '\n'), table.concat(new_text, '\n'), { result_type = 'indices' })))
 
+-- local old_text = { "" }
+-- local new_text = {
+--     "", "// bb", ""
+-- }
+-- local ll, cl = M.diff_block(old_text, new_text)
+-- print(vim.inspect(ll))
+-- print(vim.inspect(cl))
+
 return M

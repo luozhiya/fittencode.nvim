@@ -18,6 +18,7 @@ local PRESET_THEME = {
         ['DiffInserted'] = { fg = '#00083a', bg = '#49abab' },
         ['DiffDeletedChar'] = { bg = '#D65C62' },
         ['DiffDeleted'] = { bg = '#C76B70' },
+        ['DiffHunkStatus'] = { fg = '#bdeeee', bg = '#0078d7' },
     },
     light = {
         ['Suggestion'] = { fg = '#808080' },
@@ -27,6 +28,7 @@ local PRESET_THEME = {
         ['DiffInserted'] = { fg = '#C6F0C2', bg = '#E5F8E2' },
         ['DiffDeletedChar'] = { bg = '#F0C2C2' },
         ['DiffDeleted'] = { bg = '#F8E2E2' },
+        ['DiffHunkStatus'] = { fg = '#00083a', bg = '#cee0f3' },
     },
 }
 

@@ -9,6 +9,7 @@ local Position = require('fittencode.fn.position')
 local Log = require('fittencode.log')
 local F = require('fittencode.fn.buf')
 local V = require('fittencode.fn.view')
+local Format = require('fittencode.fn.format')
 
 ---@class FittenCode.Inline.EditCompletion.View
 ---@field clear function
@@ -120,6 +121,36 @@ function View:_render_remove_line(row, hlgroup, cursorline)
         })
 end
 
+function View:_render_hunk_status(row, current, commit_index, total_hunks)
+    -- Commit: √ ✔
+    -- '✗'
+    -- ?
+
+    local status = '🚀 ' -- '⏳' -- '● '
+    if current <= commit_index then
+        status = '✅ ' -- '✔ '
+    end
+    -- local msg = 'Press [Tab] to accept; [Esc] to cancel. Commit Status: ' .. status
+    local msg = Format.nothrow_format('>> Hunk = {}/{}; Commit = {}', current, total_hunks, status)
+    vim.api.nvim_buf_set_extmark(
+        self.buf,
+        self.completion_ns,
+        row,
+        0,
+        {
+            -- virt_text = { { msg, 'FittenCodeDiffHunkStatus' } },
+            virt_lines = {
+                { { '', 'FittenCodeDiffHunkStatus' } },
+                { { msg, 'FittenCodeDiffHunkStatus' } },
+                { { '', 'FittenCodeDiffHunkStatus' } },
+            },
+            virt_text_pos = 'inline',
+            virt_lines_above = true,
+            hl_mode = 'combine',
+            priority = 1000,
+        })
+end
+
 function View:update(state)
     self:clear()
 
@@ -128,6 +159,7 @@ function View:update(state)
     self.after_line = state.after_line
     self.start_line = state.start_line
     self.end_line = state.end_line
+    self.commit_index = state.commit_index
     assert((self.start_line and self.end_line) or self.after_line)
     self.replacement_lines = state.replacement_lines
     assert(#self.replacement_lines > 0)
@@ -139,10 +171,11 @@ function View:update(state)
         local pos = Position.of(self.after_line, -1)
         self:_render_add(pos, replacement_lines, 'FittenCodeDiffInsertedChar')
     elseif self.start_line and self.end_line then
-        for _, hunk in ipairs(self.hunks) do
+        for i, hunk in ipairs(self.hunks) do
             local lines = hunk.lines
             local old_start = hunk.old_start or 1
             local old_end = hunk.old_end or 1
+            self:_render_hunk_status(self.start_line, i, self.commit_index, #self.hunks)
             local add_virt_lines = {
                 { { '', 'FittenCodeDiffInserted' } },
             }
@@ -170,7 +203,7 @@ function View:update(state)
                     end
                 elseif lined.type == 'add' then
                     local curr_line = {}
-                    if char_diff then
+                    if char_diff and #char_diff > 0 then
                         for k = 1, #char_diff do
                             local chard = char_diff[k]
                             if chard.type == 'add' then
@@ -180,9 +213,9 @@ function View:update(state)
                             end
                         end
                     else
-                        curr_line = { lined.line, 'FittenCodeDiffInsertedChar' }
+                        curr_line = { { lined.line, 'FittenCodeDiffInsertedChar' } }
                     end
-                    add_virt_lines[#add_virt_lines + 1] = { curr_line }
+                    add_virt_lines[#add_virt_lines + 1] = curr_line
                 end
             end
             self:_render_add(Position.of(self.start_line + old_end - 1, -1), add_virt_lines)
