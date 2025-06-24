@@ -15,11 +15,11 @@ View.__index = View
 
 function View.new(options)
     local self = setmetatable({}, View)
-    self:__initialize(options)
+    self:_initialize(options)
     return self
 end
 
-function View:__initialize(options)
+function View:_initialize(options)
     self.buf = options.buf
     self.origin_pos = options.position
     self.col_delta = options.col_delta

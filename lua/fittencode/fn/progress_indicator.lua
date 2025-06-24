@@ -20,11 +20,11 @@ local STYLES = {
 
 function ProgressIndicator.new(options)
     local self = setmetatable({}, ProgressIndicator)
-    self:__initialize(options)
+    self:_initialize(options)
     return self
 end
 
-function ProgressIndicator:__initialize(options)
+function ProgressIndicator:_initialize(options)
     options = options or {}
     self.frames = options.style or STYLES.spin
     self.update_interval = 150                  -- 毫秒

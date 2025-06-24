@@ -21,11 +21,11 @@ View.__index = View
 
 function View.new(options)
     local self = setmetatable({}, View)
-    self:__initialize(options)
+    self:_initialize(options)
     return self
 end
 
-function View:__initialize(options)
+function View:_initialize(options)
     self.buf = options.buf
     self.completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.EditCompletion.View')
     self:_setup_autocmds()

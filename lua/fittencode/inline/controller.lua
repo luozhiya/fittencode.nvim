@@ -40,11 +40,11 @@ Controller.__index = Controller
 
 function Controller.new(options)
     local self = setmetatable({}, Controller)
-    self:__initialize(options)
+    self:_initialize(options)
     return self
 end
 
-function Controller:__initialize(options)
+function Controller:_initialize(options)
     do
         self.observers = {}
         self.sessions = {}
