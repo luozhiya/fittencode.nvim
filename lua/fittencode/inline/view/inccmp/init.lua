@@ -28,7 +28,7 @@ function View:_initialize(options)
     self.last_insert_pos = self.origin_pos:translate(0, self.col_delta)
 end
 
-function View:render_stage(pos, lines)
+function View:_render_stage(pos, lines)
     -- Log.debug('View:render_stage, pos = {}, lines = {}', pos, lines)
 
     local virt_lines = {}
@@ -63,7 +63,7 @@ function View:clear()
     vim.api.nvim_buf_clear_namespace(self.buf, self.completion_ns, 0, -1)
 end
 
-function View:delete_text(start_pos, end_pos)
+function View:_delete_text(start_pos, end_pos)
     -- Log.debug('View:delete_text, start_pos = {}, end_pos = {}', start_pos, end_pos)
     -- Indexing is zero-based. Row indices are end-inclusive, and column indices are end-exclusive.
     if start_pos:is_equal(end_pos) then
@@ -72,7 +72,7 @@ function View:delete_text(start_pos, end_pos)
     vim.api.nvim_buf_set_text(self.buf, start_pos.row, start_pos.col, end_pos.row, end_pos.col, {})
 end
 
-function View:insert_text(pos, lines)
+function View:_insert_text(pos, lines)
     -- Log.debug('View:insert_text, pos = {}, lines = {}', pos, lines)
     if vim.tbl_isempty(lines) then
         return
@@ -85,7 +85,7 @@ function View:update(state)
 
     -- Log.debug('update view, state = {}', state)
 
-    local function __set_text(lines)
+    local function _set_text(lines)
         local old_commit = vim.deepcopy(self.commit)
         self.commit = self.origin_pos
         self.last_insert_pos = self.origin_pos
@@ -124,7 +124,7 @@ function View:update(state)
                 end
                 pre_packed = {}
                 if lstate.type == 'commit' or lstate.type == 'placeholder' then
-                    self:insert_text(self.last_insert_pos, packed)
+                    self:_insert_text(self.last_insert_pos, packed)
                     self.last_insert_pos = V.calculate_cursor_position_after_insertion(self.last_insert_pos, packed)
                     if lstate.type == 'commit' then
                         self.commit = self.last_insert_pos
@@ -142,7 +142,7 @@ function View:update(state)
 
         if #record_stages > 0 then
             for _, stage in ipairs(record_stages) do
-                self:render_stage(stage.position, stage.lines)
+                self:_render_stage(stage.position, stage.lines)
             end
         end
 
@@ -163,17 +163,17 @@ function View:update(state)
         end
     end
 
-    local function __update()
+    local function _update()
         -- 0. clear all previous hints
         self:clear()
         -- 1. Remove all content
-        self:delete_text(self.origin_pos, self.last_insert_pos)
+        self:_delete_text(self.origin_pos, self.last_insert_pos)
         -- 2. Set text
-        __set_text(state.lines)
+        _set_text(state.lines)
     end
 
     V.ignoreevent_wrap(function()
-        V.view_wrap(win, __update)
+        V.view_wrap(win, _update)
         -- 4. update position
         V.update_win_cursor(win, self.commit)
         V.move_to_center_vertical(#state.lines)
