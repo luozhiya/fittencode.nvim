@@ -47,6 +47,14 @@ local DEFAULTS = {
             show_in_editor_context_menu = true,
         },
     },
+    -- Add Certain Type to Commit Message
+    add_type_to_commit_message = {
+        -- Avaiable options:
+        -- * 'auto'
+        -- * 'concise'  -- 'Concise Commit Message'
+        -- * 'detailed' -- 'Detailed Commit Message'
+        open = 'auto',
+    },
     agent = {
         -- Simplify Agent's Thinking Output
         -- Avaiable options:
@@ -80,13 +88,6 @@ local DEFAULTS = {
         auto_triggering_completion = true,
     },
     language_preference = {
-        -- Language preference when using function "Fitten Code - Document Code".
-        -- Lower case of the BCP 47 language tag.
-        -- Avaiable options:
-        -- * 'en'
-        -- * 'zh-cn'
-        -- * 'auto'
-        comment_preference = 'auto',
         -- Language preference for display and responses in Fitten Code (excluding "Fitten Code - Document Code" function).
         -- Lower case of the BCP 47 language tag.
         -- Avaiable options:
@@ -94,6 +95,20 @@ local DEFAULTS = {
         -- * 'zh-cn'
         -- * 'auto'
         display_preference = 'zh-cn',
+        -- Language preference when using function "Fitten Code - Document Code".
+        -- Lower case of the BCP 47 language tag.
+        -- Avaiable options:
+        -- * 'en'
+        -- * 'zh-cn'
+        -- * 'auto'
+        comment_preference = 'auto',
+        -- Language preference for commit message.
+        -- Lower case of the BCP 47 language tag.
+        -- Avaiable options:
+        -- * 'en'
+        -- * 'zh-cn'
+        -- * 'auto'
+        commit_message_preference = 'auto',
     },
     -- Show menu as submenu in the editor context menu, when you right-click on the code.
     show_submenu = false,
