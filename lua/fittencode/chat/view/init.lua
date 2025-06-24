@@ -169,7 +169,7 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     local username = api_key_manager:get_username()
     local bot_id = 'Fitten Code'
 
-    local function __split(msg)
+    local function _split(msg)
         local lines = {}
         local v = vim.split(msg, '\n', { trimempty = false })
         for i, line in ipairs(v) do
@@ -182,17 +182,17 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
         return lines
     end
 
-    local function __section(author, msg)
+    local function _section(author, msg)
         local lines = {}
         lines[#lines + 1] = string.format('# %s', author)
         if msg then
-            vim.list_extend(lines, __split(msg))
+            vim.list_extend(lines, _split(msg))
         end
         lines[#lines + 1] = ''
         return lines
     end
 
-    local function __view_wrap(fn)
+    local function _view_wrap(fn)
         local view
         if self.messages_exchange.win and vim.api.nvim_win_is_valid(self.messages_exchange.win) then
             view = vim.fn.winsaveview()
@@ -203,16 +203,16 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
         end
     end
 
-    local function __set_text(content, start_row, start_col, end_row, end_col)
+    local function _set_text(content, start_row, start_col, end_row, end_col)
         start_row = start_row or -1
         start_col = start_col or -1
         end_row = end_row or -1
         end_col = end_col or -1
         vim.api.nvim_buf_call(self.messages_exchange.buf, function()
-            __view_wrap(function()
+            _view_wrap(function()
                 vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
                 if type(content) == 'string' then
-                    content = __split(content)
+                    content = _split(content)
                 end
                 vim.api.nvim_buf_set_text(self.messages_exchange.buf, start_row, start_col, end_row, end_col, content)
                 vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
@@ -221,7 +221,7 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     end
 
     if clean_canvas then
-        __set_text({}, 0, 0, -1, -1)
+        _set_text({}, 0, 0, -1, -1)
     end
 
     self.rendering[conversation.id] = self.rendering[conversation.id] or {}
@@ -253,10 +253,10 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     if not skip_welcome_msg then
         if not has_msg and not streaming and not self.rendering[conversation.id].show_welcome_msg then
             self.rendering[conversation.id].show_welcome_msg = true
-            __set_text(welcome_message[i18n.display_preference()])
+            _set_text(welcome_message[i18n.display_preference()])
         elseif self.rendering[conversation.id].show_welcome_msg then
             vim.api.nvim_buf_call(self.messages_exchange.buf, function()
-                __view_wrap(function()
+                _view_wrap(function()
                     vim.api.nvim_set_option_value('modifiable', true, { buf = self.messages_exchange.buf })
                     vim.api.nvim_buf_set_lines(self.messages_exchange.buf, 0, -1, false, {})
                     vim.api.nvim_set_option_value('modifiable', false, { buf = self.messages_exchange.buf })
@@ -273,15 +273,15 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     for i = last_msg + 1, #messages do
         local msg = messages[i]
         if msg.author == 'user' then
-            __set_text(__section(username, msg.content))
+            _set_text(_section(username, msg.content))
         elseif msg.author == 'bot' then
             if i == #messages and not streaming and self.rendering[conversation.id].streaming then
-                __set_text(__section(bot_id, msg.content), self.rendering[conversation.id].last_buffer_ending.row, self.rendering[conversation.id].last_buffer_ending.col, -1, -1)
+                _set_text(_section(bot_id, msg.content), self.rendering[conversation.id].last_buffer_ending.row, self.rendering[conversation.id].last_buffer_ending.col, -1, -1)
             else
-                __set_text(__section(bot_id, msg.content))
+                _set_text(_section(bot_id, msg.content))
             end
         end
-        __set_text('\n')
+        _set_text('\n')
         self.rendering[conversation.id].last_msg = i
     end
 
@@ -292,14 +292,14 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
                 row = vim.api.nvim_buf_line_count(self.messages_exchange.buf) - 1,
                 col = #lines > 0 and lines[1]:len() or 0
             }
-            __set_text(__section(bot_id))
+            _set_text(_section(bot_id))
             self.rendering[conversation.id].start_streaming_pos = {
                 row = vim.api.nvim_buf_line_count(self.messages_exchange.buf) - 1,
                 col = #lines > 0 and lines[1]:len() or 0
             }
             self.rendering[conversation.id].streaming = true
         end
-        __set_text(conversation.content.state.partial_answer, self.rendering[conversation.id].start_streaming_pos.row, self.rendering[conversation.id].start_streaming_pos.col, -1, -1)
+        _set_text(conversation.content.state.partial_answer, self.rendering[conversation.id].start_streaming_pos.row, self.rendering[conversation.id].start_streaming_pos.col, -1, -1)
     else
         self.rendering[conversation.id].streaming = false
     end
@@ -322,7 +322,7 @@ function View:set_mode(mode)
     self.mode = mode
 end
 
-function View:__setup_autoclose(self, win_id)
+function View:_setup_autoclose(self, win_id)
     vim.api.nvim_create_autocmd('WinClosed', {
         pattern = tostring(win_id),
         callback = function()
@@ -332,7 +332,7 @@ function View:__setup_autoclose(self, win_id)
     })
 end
 
-function View:__show_as_panel()
+function View:_show_as_panel()
     local editor_width = vim.o.columns
     local editor_height = vim.o.lines - vim.o.cmdheight
 
@@ -359,7 +359,7 @@ function View:__show_as_panel()
         vim.api.nvim_set_option_value('list', false, { win = self.messages_exchange.win })
         vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.messages_exchange.win })
     end)
-    self:__setup_autoclose(self, self.messages_exchange.win)
+    self:_setup_autoclose(self, self.messages_exchange.win)
 
     self.reference.win = vim.api.nvim_open_win(self.reference.buf, true, {
         vertical = true,
@@ -385,7 +385,7 @@ function View:__show_as_panel()
         vim.api.nvim_set_option_value('list', false, { win = self.reference.win })
         vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.reference.win })
     end)
-    self:__setup_autoclose(self, self.reference.win)
+    self:_setup_autoclose(self, self.reference.win)
 
     self.char_input.win = vim.api.nvim_open_win(self.char_input.buf, true, {
         vertical = true,
@@ -411,7 +411,7 @@ function View:__show_as_panel()
         vim.api.nvim_set_option_value('list', false, { win = self.char_input.win })
         vim.api.nvim_set_option_value('signcolumn', 'no', { win = self.char_input.win })
     end)
-    self:__setup_autoclose(self, self.char_input.win)
+    self:_setup_autoclose(self, self.char_input.win)
 
     self:set_key_filter()
 end
@@ -429,7 +429,7 @@ function View:show()
     assert(self.reference.buf)
 
     if self.mode == 'panel' then
-        self:__show_as_panel()
+        self:_show_as_panel()
     end
 end
 

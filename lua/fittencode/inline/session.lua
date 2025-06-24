@@ -74,10 +74,10 @@ end
 
 local function debug_log(self, msg, ...)
     local meta = Format.nothrow_format('Session id = {}, version = {}, session_event = {}, completion_event = {} --> ', self.id, self.version, self.session_event, self.completion_event)
-    Log.__async_log(3, vim.log.levels.DEBUG, meta .. Format.nothrow_format(msg, ...))
+    Log._async_log(3, vim.log.levels.DEBUG, meta .. Format.nothrow_format(msg, ...))
 end
 
-function Session:__segments()
+function Session:_segments()
     local text = self.model:get_text()
     if F.is_ascii_only(text) then
         Log.debug('Text is ASCII only, skip segment')
@@ -89,7 +89,7 @@ function Session:__segments()
             message = 'Failed to send segments request',
         })
     end
-    self:__add_request(request)
+    self:_add_request(request)
     return promise:forward(function(segments)
         self.model:update({
             segments = segments
@@ -110,7 +110,7 @@ function Session:set_model(completions)
 
         if self.mode == 'inccmp' then
             self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_PRE)
-            self:__segments():finally(function()
+            self:_segments():finally(function()
                 self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_POST)
             end)
         end
@@ -125,7 +125,7 @@ function Session:receive_view_message(msg)
 end
 
 ---@return FittenCode.Inline.View
-function Session:__new_view()
+function Session:_new_view()
     if self.mode == 'inccmp' then
         ---@diagnostic disable-next-line: return-type-mismatch
         return IncView.new({
@@ -144,7 +144,7 @@ end
 
 function Session:set_interactive()
     if self.session_event == SESSION_EVENT.MODEL_READY then
-        self.view = self:__new_view()
+        self.view = self:_new_view()
         self.view:register_message_receiver(function(...) self:receive_view_message(...) end)
         self:set_keymaps()
         self:set_onkey()
@@ -284,12 +284,12 @@ function Session:sync_session_task_event(event)
     self.on_session_task_event()
 end
 
-function Session:__add_request(handle)
+function Session:_add_request(handle)
     self.requests[#self.requests + 1] = handle
 end
 
 function Session:generate_prompt()
-    local check = self:__preflight_check()
+    local check = self:_preflight_check()
     if check:is_rejected() then
         return check
     end
@@ -318,13 +318,13 @@ function Session:async_compress_prompt(prompt)
     end)
 end
 
-function Session:__preflight_check()
+function Session:_preflight_check()
     if self:is_terminated() then
         return Promise.rejected({
             message = 'Session is terminated',
         })
     end
-    local function __check_version()
+    local function _check_version()
         local document_version = F.version(self.buf)
         if document_version == self.version then
             return Promise.resolved(true)
@@ -338,7 +338,7 @@ function Session:__preflight_check()
             })
         end
     end
-    local check = __check_version()
+    local check = _check_version()
     if check:is_rejected() then
         return check
     end
@@ -353,7 +353,7 @@ function Session:send_completions()
     self:sync_session_event(SESSION_EVENT.REQUESTING)
     self:sync_completion_event(COMPLETION_EVENT.START)
 
-    local function __send_completions()
+    local function _send_completions()
         return Promise.all({
             self:generate_prompt():forward(function(res)
                 debug_log(self, 'Generated prompt: {}', res)
@@ -373,7 +373,7 @@ function Session:send_completions()
             end
             return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
         end):forward(function(parse_result)
-            local check = self:__preflight_check()
+            local check = self:_preflight_check()
             if check:is_rejected() then
                 return check
             else
@@ -393,7 +393,7 @@ function Session:send_completions()
             return Promise.rejected(_)
         end)
     end
-    return __send_completions():catch(function(_)
+    return _send_completions():catch(function(_)
         self:sync_completion_event(COMPLETION_EVENT.ERROR)
         debug_log(self, 'Failed to send completions: {}', _)
         return Promise.rejected(_)
@@ -403,7 +403,7 @@ end
 -- 获取补全版本号
 ---@return FittenCode.Promise
 function Session:get_completion_version()
-    local check = self:__preflight_check()
+    local check = self:_preflight_check()
     if check:is_rejected() then
         return check
     end
@@ -414,7 +414,7 @@ function Session:get_completion_version()
             message = 'Failed to make get_completion_version request',
         })
     end
-    self:__add_request(request)
+    self:_add_request(request)
 
     return request:async():forward(function(_)
         ---@type FittenCode.Protocol.Methods.GetCompletionVersion.Response
@@ -434,7 +434,7 @@ function Session:get_completion_version()
     end)
 end
 
-function Session:__with_tmpfile(data, callback, ...)
+function Session:_with_tmpfile(data, callback, ...)
     local path
     local args = { ... }
     return Promise.promisify(vim.uv.fs_mkstemp)(vim.fn.tempname() .. '.FittenCode_TEMP_XXXXXX'):forward(function(handle)
@@ -451,7 +451,7 @@ function Session:__with_tmpfile(data, callback, ...)
 end
 
 function Session:generate_one_stage_auth(completion_version, compressed_prompt_binary)
-    local check = self:__preflight_check()
+    local check = self:_preflight_check()
     if check:is_rejected() then
         return check
     end
@@ -473,7 +473,7 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
             message = 'Failed to make generate_one_stage_auth request',
         })
     end
-    self:__add_request(request)
+    self:_add_request(request)
 
     return request:async():forward(function(_)
         ---@type FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error

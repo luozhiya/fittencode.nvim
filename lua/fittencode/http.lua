@@ -351,12 +351,12 @@ function M.fetch(url, options)
                 status[#status + 1] = m.status_line.status_code
             end
         end
-        local function __is_ok(c)
+        local function _is_ok(c)
             return c and (c >= 200 and c < 300) or false
         end
-        local function __is_all_ok(ss)
+        local function _is_all_ok(ss)
             for _, s in ipairs(ss) do
-                if not __is_ok(s) then
+                if not _is_ok(s) then
                     return false
                 end
             end
@@ -373,7 +373,7 @@ function M.fetch(url, options)
             local response = {
                 status = status,
                 http_messages = http_messages,
-                ok = __is_all_ok(status),
+                ok = _is_all_ok(status),
                 timing = timing,
                 text = function() return data_content end,
                 json = function()

@@ -179,7 +179,7 @@ end
 ---@param bot_action string?
 function Conversation:add_user_message(content, bot_action)
     Log.debug('Add user message: {}', content)
-    self:__add_message({
+    self:_add_message({
         author = 'user',
         content = content,
     })
@@ -338,7 +338,7 @@ function Conversation:handle_completion(completion)
     self:add_bot_message({ content = content })
 end
 
-function Conversation:__add_message(message)
+function Conversation:_add_message(message)
     self.messages[#self.messages + 1] = message
 end
 
@@ -350,7 +350,7 @@ function Conversation:add_bot_message(msg)
         self.abort_before_answer = false
         return
     end
-    self:__add_message({
+    self:_add_message({
         author = 'bot',
         content = msg.content,
         reference = self.reference,

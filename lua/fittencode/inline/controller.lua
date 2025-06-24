@@ -141,16 +141,16 @@ function Controller:notify_observers(event, data)
 end
 
 ---@param data? table
-function Controller:__emit(event, data)
+function Controller:_emit(event, data)
     self:notify_observers(event, data)
 end
 
 function Controller:on_buffer_enter(event)
     local buf = event.buf
     if self.is_enabled(buf) then
-        self:__emit(CONTROLLER_EVENT.INLINE_IDLE)
+        self:_emit(CONTROLLER_EVENT.INLINE_IDLE)
     else
-        self:__emit(CONTROLLER_EVENT.INLINE_DISABLED)
+        self:_emit(CONTROLLER_EVENT.INLINE_DISABLED)
     end
 end
 
@@ -262,7 +262,7 @@ function Controller:trigger_inline_suggestion(options)
         mode = options.mode,
         id = self.selected_session_id,
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
-        on_session_update_event = function(data) self:__emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
+        on_session_update_event = function(data) self:_emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
         on_session_event = function(data) self:on_session_event(data) end,
         version = F.version(buf)
     })
@@ -273,14 +273,14 @@ end
 
 function Controller:on_session_event(data)
     if data.session_event == SESSION_EVENT.CREATED then
-        self:__emit(CONTROLLER_EVENT.INLINE_RUNNING, { id = data.id })
-        self:__emit(CONTROLLER_EVENT.SESSION_ADDED, { id = data.id })
+        self:_emit(CONTROLLER_EVENT.INLINE_RUNNING, { id = data.id })
+        self:_emit(CONTROLLER_EVENT.SESSION_ADDED, { id = data.id })
     elseif data.session_event == SESSION_EVENT.TERMINATED then
-        self:__emit(CONTROLLER_EVENT.SESSION_DELETED, { id = data.id })
+        self:_emit(CONTROLLER_EVENT.SESSION_DELETED, { id = data.id })
         self.sessions[data.id] = nil
         if self.selected_session_id == data.id then
             self.selected_session_id = nil
-            self:__emit(CONTROLLER_EVENT.INLINE_IDLE, { id = data.id })
+            self:_emit(CONTROLLER_EVENT.INLINE_IDLE, { id = data.id })
         end
     end
 end
@@ -307,7 +307,7 @@ end
 
 ---@param msg string
 ---@param timeout number
-function Controller:__show_no_more_suggestion(msg, timeout)
+function Controller:_show_no_more_suggestion(msg, timeout)
     local buf = vim.api.nvim_get_current_buf()
     vim.api.nvim_buf_clear_namespace(buf, self.no_more_suggestion_ns, 0, -1)
     local position = assert(F.position(vim.api.nvim_get_current_win()))
@@ -342,7 +342,7 @@ function Controller:trigger_inline_suggestion_by_shortcut()
             return Promise.rejected()
         end
     end):catch((function()
-        self:__show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000)
+        self:_show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000)
     end))
 end
 
@@ -355,7 +355,7 @@ function Controller:trigger_edit_completion_by_shortcut()
             return Promise.rejected()
         end
     end):catch((function()
-        self:__show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000)
+        self:_show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000)
     end))
 end
 

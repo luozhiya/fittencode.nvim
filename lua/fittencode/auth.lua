@@ -176,7 +176,7 @@ function M.login3rd(source, options)
         return
     end
 
-    local function __check_login()
+    local function _check_login()
         if not login3rd.start_check then return end
 
         login3rd.try_count = login3rd.try_count + 1
@@ -215,7 +215,7 @@ function M.login3rd(source, options)
     end
 
     -- 启动定时检查
-    login3rd.check_timer = Fn.set_interval(login3rd.time_delta * 1000, __check_login)
+    login3rd.check_timer = Fn.set_interval(login3rd.time_delta * 1000, _check_login)
 end
 
 function M.logout()

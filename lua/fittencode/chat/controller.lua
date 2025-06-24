@@ -80,7 +80,7 @@ function Controller:notify_observers(event_type, data)
     end
 end
 
-function Controller:__emit(event_type, data)
+function Controller:_emit(event_type, data)
     self:notify_observers(event_type, data)
 end
 

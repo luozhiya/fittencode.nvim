@@ -106,8 +106,8 @@ local function write_to_log(content)
     end
 end
 
--- 更加底层的日志接口，可以做模块化的定制，如果是封装 __async_log 成新函数, 则 stack 应该要设置为 3
-function M.__async_log(stack, level, message)
+-- 更加底层的日志接口，可以做模块化的定制，如果是封装 _async_log 成新函数, 则 stack 应该要设置为 3
+function M._async_log(stack, level, message)
     stack = stack or 3
     if level < Config.log.level or Config.log.level == LOG_LEVELS.OFF then
         return
@@ -152,13 +152,13 @@ for _, level_name in ipairs(LOG_LEVEL_NAMES) do
     local method_name = level_name:lower()
 
     M[method_name] = function(msg, ...)
-        M.__async_log(3, level, Format.nothrow_format(msg, ...))
+        M._async_log(3, level, Format.nothrow_format(msg, ...))
     end
 
     M['notify_' .. method_name] = function(msg, ...)
         local formatted = Format.nothrow_format(msg, ...)
         vim.notify(formatted, level, { title = 'FittenCode' })
-        M.__async_log(3, level, formatted)
+        M._async_log(3, level, formatted)
     end
 end
 

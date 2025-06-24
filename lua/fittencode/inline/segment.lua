@@ -245,7 +245,7 @@ function M.send_segments(text)
         local raw = response.text()
 
         local segments = {}
-        local function __parse()
+        local function _parse()
             local v = vim.split(raw, '\n', { trimempty = true })
             for _, line in ipairs(v) do
                 ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
@@ -261,7 +261,7 @@ function M.send_segments(text)
                 end
             end
         end
-        __parse()
+        _parse()
         Log.debug('Segments: {}', segments)
 
         if #segments == 0 then
