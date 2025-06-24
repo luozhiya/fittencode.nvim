@@ -535,7 +535,7 @@ local function diff_by_vim(old_lines, new_lines)
     ---@type integer[][]
     ---@diagnostic disable-next-line: assign-type-mismatch
     local indices = vim.diff(table.concat(old_lines, '\n'), table.concat(new_lines, '\n'), { linematch = true, result_type = 'indices' })
-    print(vim.inspect(indices))
+    -- print(vim.inspect(indices))
     local gap_common_hunks = make_gap_common_hunks(old_lines, new_lines, indices)
     ---@type FittenCode.Diff.Hunk[]
     local hunks = {}
