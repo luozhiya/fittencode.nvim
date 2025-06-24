@@ -90,11 +90,11 @@ function Controller:_initialize(options)
                 self:edit_completion_cancel({ vimev = args })
             end,
         })
-        vim.api.nvim_create_autocmd({ 'BufEnter' }, {
-            group = vim.api.nvim_create_augroup('FittenCode.Inline.BufferEnterCheck', { clear = true }),
+        vim.api.nvim_create_autocmd({ 'BufEnter', 'BufFilePost' }, {
+            group = vim.api.nvim_create_augroup('FittenCode.Inline.CheckAvailability', { clear = true }),
             pattern = '*',
             callback = function(args)
-                self:on_buffer_enter({ event = args })
+                self:_check_availability({ event = args })
             end,
         })
     end
@@ -145,7 +145,7 @@ function Controller:_emit(event, data)
     self:notify_observers(event, data)
 end
 
-function Controller:on_buffer_enter(event)
+function Controller:_check_availability(event)
     local buf = event.buf
     if self.is_enabled(buf) then
         self:_emit(CONTROLLER_EVENT.INLINE_IDLE)
