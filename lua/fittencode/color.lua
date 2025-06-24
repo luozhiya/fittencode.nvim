@@ -16,7 +16,7 @@ local PRESET_THEME = {
         ['Info'] = { fg = '#FFEBCD' },
         ['DiffInsertedChar'] = { fg = '#00083a', bg = '#bdeeee' },
         ['DiffInserted'] = { fg = '#00083a', bg = '#49abab' },
-        ['DiffDeletedChar'] = { bg = '#D65C62' },
+        ['DiffDeletedChar'] = { bg = '#cc333b' },
         ['DiffDeleted'] = { bg = '#C76B70' },
         ['DiffHunkStatus'] = { fg = '#bdeeee', bg = '#0078d7' },
     },

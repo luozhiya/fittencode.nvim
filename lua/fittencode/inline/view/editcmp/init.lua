@@ -127,6 +127,9 @@ function View:_render_hunk_status(row, current, commit_index, total_hunks)
     -- Commit: √ ✔
     -- '✗'
     -- ?
+    if total_hunks == 1 then
+        return
+    end
 
     local status = '🚀 ' -- '⏳' -- '● '
     if current <= commit_index then
@@ -154,7 +157,7 @@ function View:_render_hunk_status(row, current, commit_index, total_hunks)
 end
 
 function View:_redraw()
-    self:update(self.state, false)
+    self:_update(self.state, false)
 end
 
 local function get_win_width()
@@ -178,14 +181,18 @@ function View:_setup_autocmds()
             if not self.debounced_redraw then
                 self.debounced_redraw = Fn.debounce(function()
                     self:_redraw()
-                end, 100)
+                end, 30)
             end
             self.debounced_redraw()
         end,
     })
 end
 
-function View:update(state, update_state)
+function View:update(state)
+    self:_update(state, true)
+end
+
+function View:_update(state, update_state)
     update_state = update_state == nil and true or update_state
     self:clear()
 
@@ -216,23 +223,19 @@ function View:update(state, update_state)
     elseif self.start_line and self.end_line then
         for i, hunk in ipairs(self.hunks) do
             local lines = hunk.lines
-            local old_start = hunk.old_start or 1
+            -- local old_start = hunk.old_start or 1
             local old_end = hunk.old_end or 1
             self:_render_hunk_status(self.start_line, i, self.commit_index, #self.hunks)
             local add_virt_lines = {
                 { { '', 'FittenCodeDiffInserted' } },
             }
-            for _ = old_start, old_end do
-                self:_render_remove_line(self.start_line + _ - 1, 'FittenCodeDiffDeleted')
-            end
             for j = 1, #lines do
                 local lined = lines[j]
                 local char_diff = lined.char_diff
                 local old_lnum = lined.old_lnum
-                if lined.type == 'common' then
-                    -- 所有的 old 都被标记了 deleted，那么 hank 中所有的 common 则应该被标记为 inserted
-                elseif lined.type == 'remove' then
+                if lined.type == 'remove' then
                     if char_diff then
+                        self:_render_remove_line(self.start_line + old_lnum - 1, 'FittenCodeDiffDeleted')
                         for k = 1, #char_diff do
                             local chard = char_diff[k]
                             if chard.type == 'remove' then
@@ -251,7 +254,7 @@ function View:update(state, update_state)
                             local chard = char_diff[k]
                             if chard.type == 'add' then
                                 curr_line[#curr_line + 1] = { chard.char, 'FittenCodeDiffInsertedChar' }
-                            else
+                            elseif chard.type == 'common' then
                                 curr_line[#curr_line + 1] = { chard.char, 'FittenCodeDiffInserted' }
                             end
                         end
