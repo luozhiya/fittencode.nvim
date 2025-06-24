@@ -51,8 +51,8 @@ local DEFAULTS = {
     add_type_to_commit_message = {
         -- Avaiable options:
         -- * 'auto'
-        -- * 'concise'  -- 'Concise Commit Message'
-        -- * 'detailed' -- 'Detailed Commit Message'
+        -- * 'concise'  Concise Commit Message
+        -- * 'detailed' Detailed Commit Message
         open = 'auto',
     },
     agent = {
