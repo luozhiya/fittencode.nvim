@@ -67,13 +67,11 @@ function Model:is_complete()
     return assert(self:selected_completion()):is_complete()
 end
 
-function Model:update(state)
-    -- if #vim.tbl_keys(state) ~= #self.completion_models then
-    --     return
-    -- end
-    -- for _, s in pairs(state) do
-    --     self.completion_models[_]:update(s)
-    -- end
+function Model:update(data)
+    local segments = data.segments or {}
+    for _, s in pairs(segments) do
+        self.completion_models[tonumber(_)]:update({ segment = s })
+    end
 end
 
 -- 一旦开始 comletion 则不允许再选择其他的 completion

@@ -240,8 +240,8 @@ function Model:get_next_char()
     end
 end
 
-function Model:update(state)
-    return self:update_segments(state.segment)
+function Model:update(data)
+    return self:update_segments(data.segment)
 end
 
 function Model:update_segments(segment)

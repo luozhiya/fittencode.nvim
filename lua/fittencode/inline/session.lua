@@ -91,9 +91,9 @@ function Session:__segments()
     end
     self:__add_request(request)
     return promise:forward(function(segments)
-        -- self.model:update({
-        --     segments = segments
-        -- })
+        self.model:update({
+            segments = segments
+        })
     end)
 end
 

@@ -196,25 +196,25 @@ function View:_update(state, update_state)
     update_state = update_state == nil and true or update_state
     self:clear()
 
-    if update_state then
-        self.state = vim.deepcopy(state)
-    end
-
     Log.debug('View:update = {}', state)
 
-    self.after_line = state.after_line
-    self.start_line = state.start_line
-    self.end_line = state.end_line
-    self.commit_index = state.commit_index
-    assert((self.start_line and self.end_line) or self.after_line)
-    self.replacement_lines = state.replacement_lines
-    assert(#self.replacement_lines > 0)
-    self.hunks = state.hunks
-    self.gap_common_hunks = state.gap_common_hunks
-    assert(#self.hunks > 0)
+    if update_state then
+        self.state = vim.deepcopy(state)
+        self.after_line = state.after_line
+        self.start_line = state.start_line
+        self.end_line = state.end_line
+        self.commit_index = state.commit_index
+        assert((self.start_line and self.end_line) or self.after_line)
+        self.replacement_lines = state.replacement_lines
+        assert(#self.replacement_lines > 0)
+        self.hunks = state.hunks
+        assert(#self.hunks > 0)
+        self.gap_common_hunks = state.gap_common_hunks
+    end
 
     local width = get_win_width()
     self.prev_width = width
+    local hl_eol = string.rep(' ', width)
 
     if self.after_line then
         local replacement_lines = vim.list_extend({ '' }, self.replacement_lines)
@@ -258,9 +258,9 @@ function View:_update(state, update_state)
                                 curr_line[#curr_line + 1] = { chard.char, 'FittenCodeDiffInserted' }
                             end
                         end
-                        curr_line[#curr_line + 1] = { string.rep(' ', width), 'FittenCodeDiffInserted' }
+                        curr_line[#curr_line + 1] = { hl_eol, 'FittenCodeDiffInserted' }
                     else
-                        curr_line = { { lined.line, 'FittenCodeDiffInsertedChar' }, { string.rep(' ', width), 'FittenCodeDiffInserted' } }
+                        curr_line = { { lined.line, 'FittenCodeDiffInsertedChar' }, { hl_eol, 'FittenCodeDiffInserted' } }
                     end
                     add_virt_lines[#add_virt_lines + 1] = curr_line
                 end
