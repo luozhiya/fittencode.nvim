@@ -1,4 +1,4 @@
----@class Fittencode.API
+---@type FittenCode.API | { setup : function }
 local M = {}
 
 ---@param options? FittenCode.Config

@@ -198,7 +198,6 @@ function Session:set_keymaps()
             { Config.keymaps.inline['accept_next_line'], function() self:accept('line') end },
             { Config.keymaps.inline['accept_next_word'], function() self:accept('word') end },
             { Config.keymaps.inline['revoke'],           function() self:revoke() end },
-            { Config.keymaps.inline['revoke'],           function() self:revoke() end },
         }
     elseif self.mode == 'editcmp' then
         self.keymaps = {
@@ -209,8 +208,14 @@ function Session:set_keymaps()
         }
     end
     for _, v in ipairs(self.keymaps) do
-        if v[1] and type(v[1]) == 'string' and v[1] ~= '' then
-            vim.keymap.set('i', v[1], v[2], vim.tbl_deep_extend('force', { noremap = true, silent = true }, v[3] or {}))
+        local lhs = {}
+        if type(v[1]) == 'string' and v[1] ~= '' then
+            lhs = { v[1] }
+        elseif type(v[1]) == 'table' then
+            lhs = v[1]
+        end
+        for _, key in ipairs(lhs) do
+            vim.keymap.set('i', key, v[2], vim.tbl_deep_extend('force', { noremap = true, silent = true }, v[3] or {}))
         end
     end
 end
