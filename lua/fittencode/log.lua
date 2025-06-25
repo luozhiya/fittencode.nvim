@@ -49,10 +49,9 @@ end
 local function collect_neovim_info()
     local version_info = vim.fn.execute('version')
     local info = {
-        nvim = version_info:match('NVIM v(%d+%.%d+%.%d+)'),
+        nvim = version_info:match('NVIM (%S+)'),
         build_type = version_info:match('Build type: (%S+)'),
         luajit = version_info:match('LuaJIT (%d+%.%d+%.%d+)'),
-        os_info = vim.uv.os_uname(),
     }
     return info
 end
@@ -64,10 +63,11 @@ local function prepare_log_header()
         string.format('Verbose logging started: %s', os.date('%Y-%m-%d %H:%M:%S')),
         string.format('Log level: %s', get_level_name(Config.log.level)),
         string.format('Calling process: %s', vim.uv.exepath()),
-        string.format('Neovim version: %s', collect_neovim_info().nvim),
+        string.format('Neovim version: %s', vim.inspect(collect_neovim_info())),
         string.format('Process ID: %d', vim.uv.os_getpid()),
         string.format('Parent process ID: %d', vim.uv.os_getppid()),
         string.format('OS name: %s', vim.inspect(vim.uv.os_uname())),
+        string.format('TERM: %s', vim.fn.getenv('TERM')),
         string.format('GUI running: %s', vim.fn.has('gui_running')),
         string.format('WSL running: %s', vim.fn.has('wsl')),
     }

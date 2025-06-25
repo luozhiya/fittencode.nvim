@@ -173,7 +173,6 @@ vim.api.nvim_create_user_command('FittenCode', function(input)
 end, {
     nargs = '*',
     range = true,
-    bang = true,
     complete = function(...)
         return complete(...)
     end,
