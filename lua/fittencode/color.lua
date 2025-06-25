@@ -30,20 +30,25 @@ local PRESET_THEME = {
     },
 }
 
+local function update()
+    local theme = PRESET_THEME[Fn.is_dark_colorscheme() and 'dark' or 'light']
+    for name, color in pairs(theme) do
+        local _ = Config.colors[name] or {}
+        if not vim.tbl_isempty(_) then
+            color = _
+        end
+        vim.api.nvim_set_hl(0, 'FittenCode' .. name, color)
+    end
+end
+
 vim.api.nvim_create_autocmd({ 'ColorScheme', 'VimEnter' }, {
     group = vim.api.nvim_create_augroup('FittenCode.ColorScheme', { clear = true }),
     pattern = '*',
     callback = function()
-        local theme = PRESET_THEME[Fn.is_dark_colorscheme() and 'dark' or 'light']
-        for name, color in pairs(theme) do
-            local _ = Config.colors[name] or {}
-            if not vim.tbl_isempty(_) then
-                color = _
-            end
-            vim.api.nvim_set_hl(0, 'FittenCode' .. name, color)
-        end
+        update()
     end,
 })
+update()
 
 return {
     FittenCodeSuggestion = 'FittenCodeSuggestion',

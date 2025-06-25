@@ -193,6 +193,21 @@ function View:update(state)
     self:_update(state, true)
 end
 
+function View:_after_line_update(after_line, replacement_lines)
+    local ret = {
+        pos = nil,
+        replacement_lines = nil,
+    }
+    if after_line ~= -1 then
+        ret.replacement_lines = vim.list_extend({ '' }, replacement_lines)
+        ret.pos = Position.of(after_line, -1)
+    else
+        ret.replacement_lines = replacement_lines
+        ret.pos = Position.of(0, -1)
+    end
+    return ret.pos, ret.replacement_lines
+end
+
 function View:_update(state, update_state)
     update_state = update_state == nil and true or update_state
     self:clear()
@@ -218,8 +233,7 @@ function View:_update(state, update_state)
     local hl_eol = string.rep(' ', width)
 
     if self.after_line then
-        local replacement_lines = vim.list_extend({ '' }, self.replacement_lines)
-        local pos = Position.of(self.after_line, -1)
+        local pos, replacement_lines = self:_after_line_update(self.after_line, self.replacement_lines)
         self:_render_add(pos, replacement_lines, Color.FittenCodeDiffInsertedChar)
     elseif self.start_line and self.end_line then
         for i, hunk in ipairs(self.hunks) do
@@ -303,8 +317,7 @@ end
 function View:on_complete()
     self:clear()
     if self.after_line then
-        local replacement_lines = vim.list_extend({ '' }, self.replacement_lines)
-        local pos = Position.of(self.after_line, -1)
+        local pos, replacement_lines = self:_after_line_update(self.after_line, self.replacement_lines)
         self:_set_text(replacement_lines, pos)
     elseif self.start_line and self.end_line then
         local replacement_lines = self.replacement_lines
