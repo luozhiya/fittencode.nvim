@@ -185,7 +185,7 @@ local DEFAULTS = {
     -- Default keymaps for Fitten Code.
     keymaps = {
         inline = {
-            ['increment_completion'] = '<A-\\>',
+            ['inline_completion'] = '<A-\\>',
             ['edit_completion'] = '<A-o>',
             ['accept_all'] = '<Tab>',
             ['accept_next_line'] = '<C-Down>',
