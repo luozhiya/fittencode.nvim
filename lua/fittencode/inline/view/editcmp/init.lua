@@ -36,7 +36,7 @@ function View:clear()
     vim.api.nvim_buf_clear_namespace(self.buf, self.completion_ns, 0, -1)
 end
 
-function View:_render_add(pos, lines, hlgroup)
+function View:_render_inserted(pos, lines, hlgroup)
     local virt_lines = {}
     if hlgroup then
         for _, line in ipairs(lines) do
@@ -72,7 +72,7 @@ function View:_render_add(pos, lines, hlgroup)
     end
 end
 
-function View:_render_remove_char(pos, hlgroup)
+function View:_render_deletedchar(pos, hlgroup)
     vim.api.nvim_buf_set_extmark(
         self.buf,
         self.completion_ns,
@@ -83,12 +83,11 @@ function View:_render_remove_char(pos, hlgroup)
             end_row = pos.row,
             end_col = pos.col + 1,
             strict = false,
-            priority = 1000,
+            priority = 2000,
         })
 end
 
--- 现在 Neovim 不支持 cursorline style 的 virt_lines，不用这个函数
-function View:_render_remove_line_cursorline(row, hlgroup)
+function View:_render_line_deleted(row, hlgroup)
     vim.api.nvim_buf_set_extmark(
         self.buf,
         self.completion_ns,
@@ -104,23 +103,19 @@ function View:_render_remove_line_cursorline(row, hlgroup)
         })
 end
 
-function View:_render_remove_line(row, hlgroup, cursorline)
-    cursorline = cursorline == nil and true or cursorline
-    if cursorline then
-        return self:_render_remove_line_cursorline(row, hlgroup)
-    end
-    local end_col = F.line_at(self.buf, row).range.end_.col
+function View:_render_line_deletedchar(row, hlgroup)
     vim.api.nvim_buf_set_extmark(
         self.buf,
         self.completion_ns,
         row,
         0,
         {
+            hl_eol = true,
             hl_group = hlgroup,
-            end_row = row,
-            end_col = end_col + 1,
+            end_row = row + 1,
+            end_col = nil,
             strict = false,
-            priority = 1000,
+            priority = 2000,
         })
 end
 
@@ -129,7 +124,7 @@ function View:_render_hunk_status(row, current, commit_index, total_hunks)
     -- '✗'
     -- ?
     if total_hunks == 1 then
-        return
+        -- return
     end
 
     local status = '🚀 ' -- '⏳' -- '● '
@@ -234,7 +229,7 @@ function View:_update(state, update_state)
 
     if self.after_line then
         local pos, replacement_lines = self:_after_line_update(self.after_line, self.replacement_lines)
-        self:_render_add(pos, replacement_lines, Color.FittenCodeDiffInsertedChar)
+        self:_render_inserted(pos, replacement_lines, Color.FittenCodeDiffInsertedChar)
     elseif self.start_line and self.end_line then
         for i, hunk in ipairs(self.hunks) do
             local lines = hunk.lines
@@ -250,17 +245,17 @@ function View:_update(state, update_state)
                 local old_lnum = lined.old_lnum
                 if lined.type == 'remove' then
                     if char_diff then
-                        self:_render_remove_line(self.start_line + old_lnum - 1, Color.FittenCodeDiffDeleted)
+                        self:_render_line_deleted(self.start_line + old_lnum - 1, Color.FittenCodeDiffDeleted)
                         for k = 1, #char_diff do
                             local chard = char_diff[k]
                             if chard.type == 'remove' then
                                 assert(chard.old_range)
                                 local pos = Position.of(self.start_line + old_lnum - 1, chard.old_range.start - 1)
-                                self:_render_remove_char(pos, Color.FittenCodeDiffDeletedChar)
+                                self:_render_deletedchar(pos, Color.FittenCodeDiffDeletedChar)
                             end
                         end
                     else
-                        self:_render_remove_line(self.start_line + old_lnum - 1, Color.FittenCodeDiffDeletedChar)
+                        self:_render_line_deletedchar(self.start_line + old_lnum - 1, Color.FittenCodeDiffDeletedChar)
                     end
                 elseif lined.type == 'add' then
                     local curr_line = {}
@@ -280,7 +275,7 @@ function View:_update(state, update_state)
                     add_virt_lines[#add_virt_lines + 1] = curr_line
                 end
             end
-            self:_render_add(Position.of(self.start_line + old_end - 1, -1), add_virt_lines)
+            self:_render_inserted(Position.of(self.start_line + old_end - 1, -1), add_virt_lines)
         end
     end
 end
