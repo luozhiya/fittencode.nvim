@@ -179,6 +179,17 @@ function Session:revoke()
     self:update_view()
 end
 
+function Session:on_esc()
+    local function _default_esc()
+        return vim.api.nvim_replace_termcodes('<Esc>', true, false, true)
+    end
+    if self.mode == 'editcmp' and self:is_interactive() then
+        self:terminate()
+        return
+    end
+    return _default_esc()
+end
+
 function Session:set_keymaps()
     if self.mode == 'inccmp' then
         self.keymaps = {
@@ -193,10 +204,11 @@ function Session:set_keymaps()
             { '<Tab>',    function() self:accept('all') end },
             { '<C-Down>', function() self:accept('hunk') end },
             { '<C-Up>',   function() self:revoke() end },
+            { '<ESC>',    function() return self:on_esc() end, { expr = true } }
         }
     end
     for _, map in ipairs(self.keymaps) do
-        vim.keymap.set('i', map[1], map[2], { noremap = true, silent = true })
+        vim.keymap.set('i', map[1], map[2], vim.tbl_deep_extend('force', { noremap = true, silent = true }, map[3] or {}))
     end
 end
 
