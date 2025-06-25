@@ -66,11 +66,13 @@ function Controller:_initialize(options)
 
     do
         self.keymaps = {
-            { '<A-\\>', function() self:trigger_inline_suggestion_by_shortcut() end },
-            { '<A-o>',  function() self:trigger_edit_completion_by_shortcut() end },
+            { Config.keymaps.inline['increment_completion'], function() self:trigger_inline_suggestion_by_shortcut() end },
+            { Config.keymaps.inline['edit_completion'],      function() self:trigger_edit_completion_by_shortcut() end },
         }
         for _, v in ipairs(self.keymaps) do
-            vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
+            if v[1] and type(v[1]) == 'string' and v[1] ~= '' then
+                vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
+            end
         end
     end
 

@@ -185,11 +185,12 @@ local DEFAULTS = {
     -- Default keymaps for Fitten Code.
     keymaps = {
         inline = {
-            ['trigger_inline_suggestion'] = '<A-\\>',
-            ['trigger_edit_completion'] = '<A-o>',
+            ['increment_completion'] = '<A-\\>',
+            ['edit_completion'] = '<A-o>',
             ['accept_all'] = '<Tab>',
             ['accept_next_line'] = '<C-Down>',
             ['accept_next_word'] = '<C-Right>',
+            ['accept_next_hunk'] = '<C-Down>', -- Edit completion only
             ['revoke'] = { '<C-Left>', '<C-Up>' },
             ['cancel'] = '<Esc>',
         },

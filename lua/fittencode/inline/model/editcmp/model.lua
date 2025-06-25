@@ -61,10 +61,6 @@ function Model:accept(scope)
         return
     end
     if scope == 'hunk' then
-        -- TODO: implement hunk-by-hunk accept
-        return
-    end
-    if scope == 'hunk' then
         self.commit_index = self.commit_index + 1
     elseif scope == 'all' then
         self.commit_index = #self.hunks

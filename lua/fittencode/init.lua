@@ -7,7 +7,8 @@ function M.setup(options)
         vim.api.nvim_echo({ { 'FittenCode requires Neovim >= 0.11.0.' } }, false, { err = true })
         return
     end
-    require('fittencode.config').init(options)
+    local Config = require('fittencode.config')
+    Config.init(options)
 
     -- Lazy loading
     require('fittencode.commands')
@@ -26,7 +27,7 @@ function M.setup(options)
         end,
     })
 
-    local keys = { '<A-\\>', '<A-o>' }
+    local keys = { Config.keymaps.inline['increment_completion'], Config.keymaps.inline['edit_completion'] }
     for _, lhs in ipairs(keys) do
         vim.keymap.set('i', lhs, function()
             pcall(vim.keymap.del, 'i', lhs)

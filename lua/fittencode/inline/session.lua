@@ -23,6 +23,7 @@ local Fim = require('fittencode.inline.fim_protocol.vsc')
 local Definitions = require('fittencode.inline.definitions')
 local Format = require('fittencode.fn.format')
 local Segment = require('fittencode.inline.segment')
+local Config = require('fittencode.config')
 
 local SESSION_EVENT = Definitions.SESSION_EVENT
 local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
@@ -193,22 +194,24 @@ end
 function Session:set_keymaps()
     if self.mode == 'inccmp' then
         self.keymaps = {
-            { '<Tab>',     function() self:accept('all') end },
-            { '<C-Down>',  function() self:accept('line') end },
-            { '<C-Right>', function() self:accept('word') end },
-            { '<C-Up>',    function() self:revoke() end },
-            { '<C-Left>',  function() self:revoke() end },
+            { Config.keymaps.inline['accept_all'],       function() self:accept('all') end },
+            { Config.keymaps.inline['accept_next_line'], function() self:accept('line') end },
+            { Config.keymaps.inline['accept_next_word'], function() self:accept('word') end },
+            { Config.keymaps.inline['revoke'],           function() self:revoke() end },
+            { Config.keymaps.inline['revoke'],           function() self:revoke() end },
         }
     elseif self.mode == 'editcmp' then
         self.keymaps = {
-            { '<Tab>',    function() self:accept('all') end },
-            { '<C-Down>', function() self:accept('hunk') end },
-            { '<C-Up>',   function() self:revoke() end },
-            { '<ESC>',    function() return self:on_esc() end, { expr = true } }
+            { Config.keymaps.inline['accept_all'],       function() self:accept('all') end },
+            { Config.keymaps.inline['accept_next_hunk'], function() self:accept('hunk') end },
+            { Config.keymaps.inline['revoke'],           function() self:revoke() end },
+            { '<ESC>',                                   function() return self:on_esc() end, { expr = true } }
         }
     end
-    for _, map in ipairs(self.keymaps) do
-        vim.keymap.set('i', map[1], map[2], vim.tbl_deep_extend('force', { noremap = true, silent = true }, map[3] or {}))
+    for _, v in ipairs(self.keymaps) do
+        if v[1] and type(v[1]) == 'string' and v[1] ~= '' then
+            vim.keymap.set('i', v[1], v[2], vim.tbl_deep_extend('force', { noremap = true, silent = true }, v[3] or {}))
+        end
     end
 end
 
