@@ -8,10 +8,23 @@ function M.setup(options)
         return
     end
     require('fittencode.config').init(options)
+
+    -- Lazy loading
     require('fittencode.commands')
-    require('fittencode.color')
-    require('fittencode.chat')
-    require('fittencode.inline')
+
+    vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteChanged' }, {
+        group = vim.api.nvim_create_augroup('FittenCode.LazyLoading.Inline', { clear = true }),
+        pattern = '*',
+        callback = function(ev)
+            require('fittencode.inline')
+            vim.api.nvim_del_augroup_by_name('FittenCode.LazyLoading.Inline')
+            vim.api.nvim_exec_autocmds(ev.event, {
+                buffer = ev.buf,
+                modeline = false,
+                data = ev.data,
+            })
+        end,
+    })
 end
 
 return setmetatable(M, {

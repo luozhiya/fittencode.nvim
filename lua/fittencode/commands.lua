@@ -1,52 +1,45 @@
-local Log = require('fittencode.log')
-local i18n = require('fittencode.i18n')
-local Auth = require('fittencode.auth')
-local Config = require('fittencode.config')
-
 local BASE = {
     -- Account
-    register = Auth.register,
-    login = Auth.login,
+    register = { execute = function() require('fittencode.auth').register() end },
+    login = { execute = function() require('fittencode.auth').login() end },
     login3rd = {
-        execute = function(source) Auth.login3rd(source) end,
-        complete = Auth.supported_login3rd_providers()
+        execute = function(source) require('fittencode.auth').login3rd(source) end,
+        complete = function() return require('fittencode.auth').supported_login3rd_providers() end
     },
-    logout = Auth.logout,
+    logout = { execute = function() require('fittencode.auth').logout() end },
     -- Help
-    ask_question = Auth.question,
-    user_guide = Auth.tutor,
-    -- Log
-    open_log_file = Log.open_log_file,
+    ask_question = { execute = function() require('fittencode.auth').question() end },
+    user_guide = { execute = function() require('fittencode.auth').tutor() end },
 }
 
 local INLINE = {
     enable_completions = {
         execute = function()
             require('fittencode.inline'):set_suffix_permissions(true)
-            Log.notify_info(i18n.tr('Global completions are activated'))
+            require('fittencode.log').notify_info(require('fittencode.i18n').tr('Global completions are activated'))
         end
     },
     disable_completions = {
         execute = function()
             require('fittencode.inline'):set_suffix_permissions(false)
-            Log.notify_info(i18n.tr('Gloabl completions are deactivated'))
+            require('fittencode.log').notify_info(require('fittencode.i18n').tr('Gloabl completions are deactivated'))
         end
     },
     onlyenable_completions = {
         execute = function(suffixes)
-            local prev = Config.inline_completion.enable
+            local prev = require('fittencode.config').inline_completion.enable
             require('fittencode.inline'):set_suffix_permissions(true, suffixes)
             if not prev then
-                Log.notify_info(i18n.tr('Completions for files with the extensions of {} are enabled, global completions have been automatically activated'), suffixes)
+                require('fittencode.log').notify_info(require('fittencode.i18n').tr('Completions for files with the extensions of {} are enabled, global completions have been automatically activated'), suffixes)
             else
-                Log.notify_info(i18n.tr('Completions for files with the extensions of {} are enabled'), suffixes)
+                require('fittencode.log').notify_info(require('fittencode.i18n').tr('Completions for files with the extensions of {} are enabled'), suffixes)
             end
         end
     },
     onlydisable_completions = {
         execute = function(suffixes)
             require('fittencode.inline'):set_suffix_permissions(false, suffixes)
-            Log.notify_info(i18n.tr('Completions for files with the extensions of {} are disabled'), suffixes)
+            require('fittencode.log').notify_info(require('fittencode.i18n').tr('Completions for files with the extensions of {} are disabled'), suffixes)
         end
     }
 }
@@ -142,12 +135,12 @@ local commands = vim.tbl_deep_extend('error', {}, BASE, INLINE, CHAT)
 
 local function execute(input)
     if not commands[input.fargs[1]] then
-        Log.error('Command not found: {}', input.fargs[1])
+        require('fittencode.log').error('Command not found: {}', input.fargs[1])
         return
     end
     local fn = type(commands[input.fargs[1]]) == 'table' and commands[input.fargs[1]].execute or commands[input.fargs[1]]
     if not fn then
-        Log.error('Command not executable: {}', commands[input.fargs[1]])
+        require('fittencode.log').error('Command not executable: {}', commands[input.fargs[1]])
         return
     end
     local args = vim.list_slice(input.fargs, 2, #input.fargs)
@@ -166,7 +159,7 @@ local function complete(arg_lead, cmd_line, cursor_pos)
             local next = table.remove(eles, 1) or ''
             return vim.tbl_filter(function(key)
                 return key:find(next, 1, true) == 1
-            end, commands[prefix].complete)
+            end, commands[prefix].complete())
         end
     else
         return vim.tbl_filter(function(key)

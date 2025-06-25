@@ -21,6 +21,7 @@ local Log = require('fittencode.log')
 local Definitions = require('fittencode.inline.definitions')
 local CtrlObserver = require('fittencode.inline.ctrl_observer')
 local ProgressIndicator = require('fittencode.fn.progress_indicator')
+local Color = require('fittencode.color')
 
 local Status = CtrlObserver.Status
 local ProgressIndicatorObserver = CtrlObserver.ProgressIndicatorObserver
@@ -317,7 +318,7 @@ function Controller:_show_no_more_suggestion(msg, timeout)
         position.row,
         position.col,
         {
-            virt_text = { { msg, 'FittenCodeNoMoreSuggestion' } },
+            virt_text = { { msg, Color.FittenCodeInfo } },
             virt_text_pos = 'inline',
             hl_mode = 'replace',
         })

@@ -162,8 +162,4 @@ for _, level_name in ipairs(LOG_LEVEL_NAMES) do
     end
 end
 
-function M.open_log_file()
-    vim.cmd.edit(LOG_FILE)
-end
-
 return M

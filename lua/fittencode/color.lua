@@ -12,7 +12,6 @@ Info
 local PRESET_THEME = {
     dark = {
         ['Suggestion'] = { fg = '#808080' },
-        ['Commit'] = { fg = '#E2C07C' },
         ['Info'] = { fg = '#FFEBCD' },
         ['DiffInsertedChar'] = { fg = '#00083a', bg = '#bdeeee' },
         ['DiffInserted'] = { fg = '#00083a', bg = '#49abab' },
@@ -22,7 +21,6 @@ local PRESET_THEME = {
     },
     light = {
         ['Suggestion'] = { fg = '#808080' },
-        ['Commit'] = { fg = '#E2C07C' },
         ['Info'] = { fg = '#FFEBCD' },
         ['DiffInsertedChar'] = { fg = '#C6F0C2', bg = '#C6F0C2' },
         ['DiffInserted'] = { fg = '#C6F0C2', bg = '#E5F8E2' },
@@ -46,3 +44,13 @@ vim.api.nvim_create_autocmd({ 'ColorScheme', 'VimEnter' }, {
         end
     end,
 })
+
+return {
+    FittenCodeSuggestion = 'FittenCodeSuggestion',
+    FittenCodeInfo = 'FittenCodeInfo',
+    FittenCodeDiffInsertedChar = 'FittenCodeDiffInsertedChar',
+    FittenCodeDiffInserted = 'FittenCodeDiffInserted',
+    FittenCodeDiffDeletedChar = 'FittenCodeDiffDeletedChar',
+    FittenCodeDiffDeleted = 'FittenCodeDiffDeleted',
+    FittenCodeDiffHunkStatus = 'FittenCodeDiffHunkStatus',
+}

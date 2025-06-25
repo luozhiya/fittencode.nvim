@@ -3,6 +3,7 @@ local Fn = require('fittencode.fn.core')
 local Log = require('fittencode.log')
 local Position = require('fittencode.fn.position')
 local V = require('fittencode.fn.view')
+local Color = require('fittencode.color')
 
 ---@class FittenCode.Inline.IncrementalCompletion.View
 ---@field buf integer
@@ -33,7 +34,7 @@ function View:_render_stage(pos, lines)
 
     local virt_lines = {}
     for _, line in ipairs(lines) do
-        virt_lines[#virt_lines + 1] = { { line, 'FittenCodeSuggestion' } }
+        virt_lines[#virt_lines + 1] = { { line, Color.FittenCodeSuggestion } }
     end
     vim.api.nvim_buf_set_extmark(
         self.buf,

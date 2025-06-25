@@ -36,9 +36,8 @@ do
         controller:receive_view_message(message)
     end)
     conversation_types_provider:async_load_conversation_types():forward(function()
-        for _, id in ipairs(TEMPLATE_CATEGORIES) do
-            assert(conversation_types_provider:get_conversation_type(id .. '-en'), 'Missing builtin conversation type: ' .. id .. '-en' .. '. Extension may not be installed correctly.')
-        end
+        conversation_types_provider:is_builtin_template_loaded(true)
+        conversation_types_provider.template_ready = true
     end)
 end
 

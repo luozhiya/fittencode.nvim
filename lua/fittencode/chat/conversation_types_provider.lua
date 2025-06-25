@@ -6,6 +6,7 @@ local F = require('fittencode.fn.buf')
 local Log = require('fittencode.log')
 local Path = require('fittencode.fn.path')
 local Perf = require('fittencode.fn.perf')
+local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
 
 ---@class FittenCode.Chat.ConversationTypeProvider
 local ConversationTypesProvider = {}
@@ -22,6 +23,7 @@ function ConversationTypesProvider:_initialize(options)
     self.extension_templates = {}
     self.conversation_types = {}
     self.extension_uri = options.extension_uri
+    self.template_ready = false
 end
 
 ---@param id string
@@ -84,6 +86,18 @@ function ConversationTypesProvider:load_builtin_template(type, file)
     if t then
         return ConversationType.new({ template = t, source = 'built-in' })
     end
+end
+
+function ConversationTypesProvider:is_builtin_template_loaded(strict)
+    for _, id in ipairs(TEMPLATE_CATEGORIES) do
+        if not self:get_conversation_type(id .. '-en') then
+            if strict then
+                assert(false, 'Missing builtin conversation type: ' .. id .. '-en' .. '. Extension may not be installed correctly.')
+            end
+            return false
+        end
+    end
+    return true
 end
 
 function ConversationTypesProvider:load_extension_templates()

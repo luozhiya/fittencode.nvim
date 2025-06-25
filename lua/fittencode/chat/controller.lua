@@ -175,6 +175,13 @@ function Controller:create_conversation(template_id, show, mode, context)
     show = show or true
     mode = mode or 'chat'
 
+    if not self.conversation_types_provider.template_ready then
+        Log.error('Builtin templates not loaded')
+        vim.wait(1000, function()
+            return self.conversation_types_provider.template_ready
+        end, 100)
+    end
+
     -- Log.debug('Creating conversation with template_id = {}, show = {}, mode = {}, context = {}', template_id, show, mode, context)
 
     ---@type FittenCode.Chat.ConversationType
@@ -389,6 +396,7 @@ end
 
 function Controller:from_builtin_template_with_selection(type, mode)
     mode = mode or 'chat'
+
     local context = {}
     if mode == 'chat' then
         -- chat 和 edit-code 对选区没有严格要求

@@ -11,6 +11,7 @@ local F = require('fittencode.fn.buf')
 local V = require('fittencode.fn.view')
 local Format = require('fittencode.fn.format')
 local Fn = require('fittencode.fn.core')
+local Color = require('fittencode.color')
 
 ---@class FittenCode.Inline.EditCompletion.View
 ---@field clear function
@@ -143,11 +144,11 @@ function View:_render_hunk_status(row, current, commit_index, total_hunks)
         row,
         0,
         {
-            -- virt_text = { { msg, 'FittenCodeDiffHunkStatus' } },
+            -- virt_text = { { msg, Color.FittenCodeDiffHunkStatus } },
             virt_lines = {
-                -- { { '', 'FittenCodeDiffHunkStatus' } },
-                { { msg, 'FittenCodeDiffHunkStatus' } },
-                -- { { '', 'FittenCodeDiffHunkStatus' } },
+                -- { { '', Color.FittenCodeDiffHunkStatus } },
+                { { msg, Color.FittenCodeDiffHunkStatus } },
+                -- { { '', Color.FittenCodeDiffHunkStatus } },
             },
             virt_text_pos = 'inline',
             virt_lines_above = true,
@@ -219,7 +220,7 @@ function View:_update(state, update_state)
     if self.after_line then
         local replacement_lines = vim.list_extend({ '' }, self.replacement_lines)
         local pos = Position.of(self.after_line, -1)
-        self:_render_add(pos, replacement_lines, 'FittenCodeDiffInsertedChar')
+        self:_render_add(pos, replacement_lines, Color.FittenCodeDiffInsertedChar)
     elseif self.start_line and self.end_line then
         for i, hunk in ipairs(self.hunks) do
             local lines = hunk.lines
@@ -227,7 +228,7 @@ function View:_update(state, update_state)
             local old_end = hunk.old_end or 1
             self:_render_hunk_status(self.start_line, i, self.commit_index, #self.hunks)
             local add_virt_lines = {
-                { { '', 'FittenCodeDiffInserted' } },
+                { { '', Color.FittenCodeDiffInserted } },
             }
             for j = 1, #lines do
                 local lined = lines[j]
@@ -235,17 +236,17 @@ function View:_update(state, update_state)
                 local old_lnum = lined.old_lnum
                 if lined.type == 'remove' then
                     if char_diff then
-                        self:_render_remove_line(self.start_line + old_lnum - 1, 'FittenCodeDiffDeleted')
+                        self:_render_remove_line(self.start_line + old_lnum - 1, Color.FittenCodeDiffDeleted)
                         for k = 1, #char_diff do
                             local chard = char_diff[k]
                             if chard.type == 'remove' then
                                 assert(chard.old_range)
                                 local pos = Position.of(self.start_line + old_lnum - 1, chard.old_range.start - 1)
-                                self:_render_remove_char(pos, 'FittenCodeDiffDeletedChar')
+                                self:_render_remove_char(pos, Color.FittenCodeDiffDeletedChar)
                             end
                         end
                     else
-                        self:_render_remove_line(self.start_line + old_lnum - 1, 'FittenCodeDiffDeletedChar')
+                        self:_render_remove_line(self.start_line + old_lnum - 1, Color.FittenCodeDiffDeletedChar)
                     end
                 elseif lined.type == 'add' then
                     local curr_line = {}
@@ -253,14 +254,14 @@ function View:_update(state, update_state)
                         for k = 1, #char_diff do
                             local chard = char_diff[k]
                             if chard.type == 'add' then
-                                curr_line[#curr_line + 1] = { chard.char, 'FittenCodeDiffInsertedChar' }
+                                curr_line[#curr_line + 1] = { chard.char, Color.FittenCodeDiffInsertedChar }
                             elseif chard.type == 'common' then
-                                curr_line[#curr_line + 1] = { chard.char, 'FittenCodeDiffInserted' }
+                                curr_line[#curr_line + 1] = { chard.char, Color.FittenCodeDiffInserted }
                             end
                         end
-                        curr_line[#curr_line + 1] = { hl_eol, 'FittenCodeDiffInserted' }
+                        curr_line[#curr_line + 1] = { hl_eol, Color.FittenCodeDiffInserted }
                     else
-                        curr_line = { { lined.line, 'FittenCodeDiffInsertedChar' }, { hl_eol, 'FittenCodeDiffInserted' } }
+                        curr_line = { { lined.line, Color.FittenCodeDiffInsertedChar }, { hl_eol, Color.FittenCodeDiffInserted } }
                     end
                     add_virt_lines[#add_virt_lines + 1] = curr_line
                 end
