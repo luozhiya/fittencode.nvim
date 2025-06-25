@@ -186,6 +186,7 @@ local DEFAULTS = {
     keymaps = {
         inline = {
             ['trigger_inline_suggestion'] = '<A-\\>',
+            ['trigger_edit_completion'] = '<A-o>',
             ['accept_all'] = '<Tab>',
             ['accept_next_line'] = '<C-Down>',
             ['accept_next_word'] = '<C-Right>',
