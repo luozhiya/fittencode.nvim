@@ -30,3 +30,5 @@
 ---@field update function
 ---@field register_message_receiver function
 ---@field on_complete function
+
+---@alias FittenCode.Inline.AcceptScope 'all' | 'hunk' | 'char' | 'word' | 'line'

@@ -165,8 +165,9 @@ function Session:update_view()
     self.view:update(self.StateClass.get_state_from_model(self.model:snapshot()))
 end
 
-function Session:accept(range)
-    self.model:accept(range)
+---@param scope FittenCode.Inline.AcceptScope
+function Session:accept(scope)
+    self.model:accept(scope)
     self:update_view()
     if self.model:is_complete() then
         self:terminate()
@@ -366,8 +367,8 @@ function Session:_preflight_check()
 end
 
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
--- * resolve 包含 suggestions_ready
--- * reject 包含 error / no_more_suggestions
+-- * resolve 包含 suggestions_ready / no_more_suggestions
+-- * reject 包含 error
 ---@return FittenCode.Promise
 function Session:send_completions()
     self:sync_session_event(SESSION_EVENT.REQUESTING)

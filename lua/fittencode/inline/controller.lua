@@ -157,10 +157,11 @@ function Controller:_check_availability(event)
     end
 end
 
-function Controller:has_suggestions()
+function Controller:has_completions()
     return self:get_active_session() ~= nil
 end
 
+---@param scope FittenCode.Inline.AcceptScope
 function Controller:accept(scope)
     assert(self:get_active_session()):accept(scope)
 end
@@ -325,7 +326,7 @@ function Controller:_show_no_more_suggestion(msg, timeout, timestamp)
             hl_mode = 'replace',
         })
     vim.defer_fn(function()
-        if timestamp ~= self.last_timestamp then
+        if timestamp ~= self.last_trigger_timestamp then
             return
         end
         vim.api.nvim_buf_clear_namespace(buf, self.no_more_suggestion_ns, 0, -1)
@@ -340,7 +341,7 @@ function Controller:_show_no_more_suggestion(msg, timeout, timestamp)
 end
 
 function Controller:trigger_inline_suggestion_by_shortcut()
-    self.last_timestamp = vim.uv.hrtime()
+    self.last_trigger_timestamp = vim.uv.hrtime()
     self:trigger_inline_suggestion({
         force = true,
         mode = 'inccmp'
@@ -349,11 +350,12 @@ function Controller:trigger_inline_suggestion_by_shortcut()
             return Promise.rejected()
         end
     end):catch((function()
-        self:_show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000, self.last_timestamp)
+        self:_show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000, self.last_trigger_timestamp)
     end))
 end
 
 function Controller:trigger_edit_completion_by_shortcut()
+    self.last_trigger_timestamp = vim.uv.hrtime()
     self:trigger_inline_suggestion({
         force = true,
         mode = 'editcmp',
@@ -362,7 +364,7 @@ function Controller:trigger_edit_completion_by_shortcut()
             return Promise.rejected()
         end
     end):catch((function()
-        self:_show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000, self.last_timestamp)
+        self:_show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000, self.last_trigger_timestamp)
     end))
 end
 
