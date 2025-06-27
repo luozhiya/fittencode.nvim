@@ -46,82 +46,74 @@ function Controller.new(options)
 end
 
 function Controller:_initialize(options)
-    do
-        self.observers = {}
-        self.sessions = {}
-        self.filter_events = {}
-        self.keymaps = {}
-        self:set_suffix_permissions(Config.inline_completion.enable)
-        self.no_more_suggestion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
-        self.status_observer = Status.new()
-        self:add_observer(self.status_observer)
-        self.pi = ProgressIndicator.new()
-        self.progress_observer = ProgressIndicatorObserver.new({
-            pi = self.pi
-        })
-        self:add_observer(self.progress_observer)
-        self.debounce_trigger_inline_suggestion = Fn.debounce(function(...) self:trigger_inline_suggestion(...) end, 60)
-        -- self.debounce_trigger_inline_suggestion = function(...) self:trigger_inline_suggestion(...) end
-    end
+    self.observers = {}
+    self.sessions = {}
+    self.filter_events = {}
+    self.keymaps = {}
+    self:set_suffix_permissions(Config.inline_completion.enable)
+    self.no_more_suggestion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
+    self.status_observer = Status.new()
+    self:add_observer(self.status_observer)
+    self.pi = ProgressIndicator.new()
+    self.progress_observer = ProgressIndicatorObserver.new({
+        pi = self.pi
+    })
+    self:add_observer(self.progress_observer)
+    -- self.debounce_trigger_inline_suggestion = Fn.debounce(function(...) self:trigger_inline_suggestion(...) end, 60)
+    self.debounce_trigger_inline_suggestion = function(...) self:trigger_inline_suggestion(...) end
 
-    do
-        self.keymaps = {
-            { Config.keymaps.inline['inline_completion'], function() self:trigger_inline_suggestion_by_shortcut() end },
-            { Config.keymaps.inline['edit_completion'],   function() self:trigger_edit_completion_by_shortcut() end },
-        }
-        for _, v in ipairs(self.keymaps) do
-            if v[1] and type(v[1]) == 'string' and v[1] ~= '' then
-                vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
-            end
+    self.keymaps = {
+        { Config.keymaps.inline['inline_completion'], function() self:trigger_inline_suggestion_by_shortcut() end },
+        { Config.keymaps.inline['edit_completion'],   function() self:trigger_edit_completion_by_shortcut() end },
+    }
+    for _, v in ipairs(self.keymaps) do
+        if v[1] and type(v[1]) == 'string' and v[1] ~= '' then
+            vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
         end
     end
 
-    do
-        vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteChanged' }, {
-            group = vim.api.nvim_create_augroup('FittenCode.Inline.TriggerInlineSuggestion', { clear = true }),
-            pattern = '*',
-            callback = function(args)
-                Log.debug('trigger_inline_suggestion_auto autocmd = {}', args.event)
-                self:trigger_inline_suggestion_auto({ vimev = args })
-            end,
-        })
-        vim.api.nvim_create_autocmd({ 'CursorMovedI', 'InsertLeave', 'BufLeave' }, {
-            group = vim.api.nvim_create_augroup('FittenCode.Inline.EditCompletionCancel', { clear = true }),
-            pattern = '*',
-            callback = function(args)
-                Log.debug('edit_completion_cancel autocmd = {}', args.event)
-                self:edit_completion_cancel({ vimev = args })
-            end,
-        })
-        vim.api.nvim_create_autocmd({ 'BufEnter', 'BufFilePost' }, {
-            group = vim.api.nvim_create_augroup('FittenCode.Inline.CheckAvailability', { clear = true }),
-            pattern = '*',
-            callback = function(args)
-                self:_check_availability({ event = args })
-            end,
-        })
-    end
+    vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteChanged' }, {
+        group = vim.api.nvim_create_augroup('FittenCode.Inline.TriggerInlineSuggestion', { clear = true }),
+        pattern = '*',
+        callback = function(args)
+            Log.debug('trigger_inline_suggestion_auto autocmd = {}', args.event)
+            self:trigger_inline_suggestion_auto({ vimev = args })
+        end,
+    })
+    vim.api.nvim_create_autocmd({ 'CursorMovedI', 'InsertLeave', 'BufLeave' }, {
+        group = vim.api.nvim_create_augroup('FittenCode.Inline.EditCompletionCancel', { clear = true }),
+        pattern = '*',
+        callback = function(args)
+            Log.debug('edit_completion_cancel autocmd = {}', args.event)
+            self:edit_completion_cancel({ vimev = args })
+        end,
+    })
+    vim.api.nvim_create_autocmd({ 'BufEnter', 'BufFilePost' }, {
+        group = vim.api.nvim_create_augroup('FittenCode.Inline.CheckAvailability', { clear = true }),
+        pattern = '*',
+        callback = function(args)
+            self:_check_availability({ event = args })
+        end,
+    })
 
-    do
-        local filtered = {}
-        vim.tbl_map(function(key)
-            filtered[#filtered + 1] = vim.api.nvim_replace_termcodes(key, true, true, true)
-        end, {
-            '<Backspace>',
-            '<Delete>',
-        })
-        -- If {fn} returns an empty string, {key} is discarded/ignored.
-        vim.on_key(function(key)
-            local buf = vim.api.nvim_get_current_buf()
-            self.filter_events = {}
-            if vim.api.nvim_get_mode().mode == 'i' and self:is_enabled(buf) then
-                if vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
-                    self.filter_events = { 'CursorMovedI', 'TextChangedI', }
-                    return
-                end
+    local filtered = {}
+    vim.tbl_map(function(key)
+        filtered[#filtered + 1] = vim.api.nvim_replace_termcodes(key, true, true, true)
+    end, {
+        '<Backspace>',
+        '<Delete>',
+    })
+    -- If {fn} returns an empty string, {key} is discarded/ignored.
+    vim.on_key(function(key)
+        local buf = vim.api.nvim_get_current_buf()
+        self.filter_events = {}
+        if vim.api.nvim_get_mode().mode == 'i' and self:is_enabled(buf) then
+            if vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
+                self.filter_events = { 'CursorMovedI', 'TextChangedI', }
+                return
             end
-        end)
-    end
+        end
+    end)
 end
 
 function Controller:add_observer(observer)
@@ -196,10 +188,10 @@ function Controller:is_ft_disabled(buf)
 end
 
 function Controller:terminate_sessions()
-    Log.debug('terminate_sessions, count sessions = {}', #self.sessions)
-    for k, v in pairs(self.sessions) do
-        v:terminate()
-    end
+    Log.debug('Terminate all sessions, sessions count = {}, selected_session_id = {}', #vim.tbl_keys(self.sessions), self.selected_session_id)
+    vim.tbl_map(function(session)
+        session:terminate()
+    end, self.sessions)
     self.selected_session_id = nil
 end
 
@@ -240,8 +232,8 @@ function Controller:_preflight_check(options)
 end
 
 -- 触发补全
--- * resolve 成功时返回补全列表
--- * reject 没有补全或者出错了
+-- * resolve 没有补全或者成功时返回补全列表
+-- * reject 出错了
 ---@param options? FittenCode.Inline.TriggerInlineSuggestionOptions
 ---@return FittenCode.Promise
 function Controller:trigger_inline_suggestion(options)

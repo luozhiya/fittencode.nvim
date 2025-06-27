@@ -260,7 +260,7 @@ function Session:abort_and_clear_requests()
 end
 
 function Session:terminate()
-    debug_log(self, 'Session terminated, event: {}', self.session_event)
+    debug_log(self, 'Session terminated')
     if self.session_event == SESSION_EVENT.TERMINATED then
         return
     end

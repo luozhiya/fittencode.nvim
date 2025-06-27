@@ -194,7 +194,7 @@ local function format_arg(arg, spec_str)
         if spec.width then
             s = apply_padding(s, spec.width, spec.fill, spec.align or '<')
         end
-        return s
+        return vim.inspect(s)
     end
 
     if arg_type == 'number' then

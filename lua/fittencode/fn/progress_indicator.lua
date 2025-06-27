@@ -71,10 +71,11 @@ function ProgressIndicator:update_progress()
     self.current_frame = (self.current_frame % #self.frames) + 1
 end
 
-function ProgressIndicator:start(start_time)
+function ProgressIndicator:start(start_time, options)
     if self.progress_timer then
         return
     end
+    options = options or {}
 
     self.progress_buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = self.progress_buf })
@@ -90,12 +91,15 @@ function ProgressIndicator:start(start_time)
     local time_width = #string.format(self.time_format, 10000) * 2
     local win_width = max_frame_width + time_width
 
+    local row = options.row or height - 2
+    local col = options.col or 0
+
     self.progress_win = vim.api.nvim_open_win(self.progress_buf, false, {
         relative = 'editor',
         width = win_width, -- 1
         height = 1,
-        row = height - 2,
-        col = 0, -- width - 2
+        row = row,
+        col = col, -- width - 2
         style = 'minimal',
         focusable = false,
     })
