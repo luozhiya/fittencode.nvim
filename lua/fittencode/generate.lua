@@ -63,4 +63,16 @@ function M.request_chat(payload, strict)
     end), request
 end
 
+---@param payload FittenCode.Protocol.Methods.ChatAuth.Payload
+---@param strict? boolean
+---@return table?
+function M.request_chat_sync(payload, strict)
+    local res, request = M.request_chat(payload, strict)
+    if not request then
+        return
+    end
+    local chunks = res:wait()
+    return chunks and chunks.value
+end
+
 return M
