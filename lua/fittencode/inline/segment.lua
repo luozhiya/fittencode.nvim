@@ -149,7 +149,7 @@ Please do not use markdown when replying.
 <|assistant|>]]
 
 ---@param text string|string[]
----@return FittenCode.Protocol.Methods.ChatAuth.Body
+---@return FittenCode.Protocol.Methods.ChatAuth.Payload
 local function build_request_payload(text)
     assert(text)
     ---@type string[]

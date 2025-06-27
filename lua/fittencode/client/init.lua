@@ -236,7 +236,7 @@ end
 local function refresh_refresh_token(last_refresh_token)
     local protocol = Protocal.Methods.refresh_refresh_token
     local req = M.make_request(protocol, {
-        ---@type FittenCode.Protocol.Methods.RefreshRefreshToken.Body
+        ---@type FittenCode.Protocol.Methods.RefreshRefreshToken.Payload
         body = vim.json.encode(last_refresh_token)
     })
     if not req then

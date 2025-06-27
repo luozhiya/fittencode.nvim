@@ -104,7 +104,7 @@ function M.login(username, password)
         return
     end
 
-    ---@type FittenCode.Protocol.Methods.Login.Body
+    ---@type FittenCode.Protocol.Methods.Login.Payload
     local body = { username = username, password = password }
 
     request = Client.make_request(Protocol.Methods.login, {

@@ -12,7 +12,7 @@ local M = {}
 
 ---@param env table
 ---@param template string
----@return FittenCode.Protocol.Methods.ChatAuth.Body
+---@return FittenCode.Protocol.Methods.ChatAuth.Payload
 function M.build_request_chat_payload(env, template)
     local inputs = assert(OPL.run(env, template))
     local api_key_manager = Client.get_api_key_manager()
@@ -26,7 +26,7 @@ function M.build_request_chat_payload(env, template)
 end
 
 -- 非 Streaming API, 发送 Chat 请求，返回组合后的 Chat 内容
----@param payload FittenCode.Protocol.Methods.ChatAuth.Body
+---@param payload FittenCode.Protocol.Methods.ChatAuth.Payload
 ---@param strict? boolean
 ---@return FittenCode.Promise, FittenCode.HTTP.Request?
 function M.request_chat(payload, strict)

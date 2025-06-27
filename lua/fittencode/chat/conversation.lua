@@ -254,7 +254,7 @@ local function start_normal_chat(self)
     self.update_status({ id = self.id, phase = PHASE.MAKE_REQUEST })
 
     local completion = {}
-    ---@type FittenCode.Protocol.Methods.ChatAuth.Body
+    ---@type FittenCode.Protocol.Methods.ChatAuth.Payload
     local body = {
         inputs = evaluated,
         ft_token = api_key_manager:get_fitten_user_id() or '',

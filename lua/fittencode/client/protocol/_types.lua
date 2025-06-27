@@ -47,7 +47,7 @@
 -- Signup
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.Signup.Body
+---@class FittenCode.Protocol.Methods.Signup.Payload
 ---@field username string
 ---@field password string
 ---@field phone string
@@ -63,7 +63,7 @@
 -- Login
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.Login.Body
+---@class FittenCode.Protocol.Methods.Login.Payload
 ---@field username string
 ---@field password string
 
@@ -78,7 +78,7 @@
 -- UpdatePassword
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.UpdatePassword.Body
+---@class FittenCode.Protocol.Methods.UpdatePassword.Payload
 ---@field username string
 ---@field password string
 ---@field phone string
@@ -93,7 +93,7 @@
 -- UpdatePasswordEmail
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.UpdatePasswordEmail.Body
+---@class FittenCode.Protocol.Methods.UpdatePasswordEmail.Payload
 ---@field username string
 ---@field password string
 ---@field phone string
@@ -108,7 +108,7 @@
 -- EmailCode
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.EmailCode.Body
+---@class FittenCode.Protocol.Methods.EmailCode.Payload
 ---@field phone string
 
 ---@class FittenCode.Protocol.Methods.EmailCode.Response
@@ -119,7 +119,7 @@
 -- PhoneCode
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.PhoneCode.Body
+---@class FittenCode.Protocol.Methods.PhoneCode.Payload
 ---@field phone string
 
 ---@class FittenCode.Protocol.Methods.PhoneCode.Response
@@ -157,14 +157,14 @@
 -- Accept
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.Accept.Body
+---@class FittenCode.Protocol.Methods.Accept.Payload
 ---@field request_id string
 
 ------------------------------------------------
 -- RefreshRefreshToken
 ------------------------------------------------
 
----@alias FittenCode.Protocol.Methods.RefreshRefreshToken.Body string
+---@alias FittenCode.Protocol.Methods.RefreshRefreshToken.Payload string
 
 --[[
     access_token = "Not expired",
@@ -194,12 +194,12 @@
 -- ChatAuth
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.ChatAuth.Body
+---@class FittenCode.Protocol.Methods.ChatAuth.Payload
 ---@field inputs string
 ---@field ft_token string
----@field meta_datas FittenCode.Protocol.Methods.ChatAuth.Body.MetaDatas
+---@field meta_datas FittenCode.Protocol.Methods.ChatAuth.Payload.MetaDatas
 
----@class FittenCode.Protocol.Methods.ChatAuth.Body.MetaDatas
+---@class FittenCode.Protocol.Methods.ChatAuth.Payload.MetaDatas
 ---@field project_id string
 
 ---@class FittenCode.Protocol.Methods.ChatAuth.Response.ChunkUsage
@@ -218,7 +218,7 @@
 -- RagChat
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.RagChat.Body : FittenCode.Protocol.Methods.ChatAuth.Body
+---@class FittenCode.Protocol.Methods.RagChat.Payload : FittenCode.Protocol.Methods.ChatAuth.Payload
 ---@class FittenCode.Protocol.Methods.RagChat.Response.Chunk : FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
 ---@alias FittenCode.Protocol.Methods.RagChat.Response table<FittenCode.Protocol.Methods.RagChat.Response.Chunk>
 
@@ -237,11 +237,11 @@
 -- DeleteKnowledgeBase
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.DeleteKnowledgeBase.Body
+---@class FittenCode.Protocol.Methods.DeleteKnowledgeBase.Payload
 ---@field inputs string
----@field meta_datas FittenCode.Protocol.Methods.DeleteKnowledgeBase.Body.MetaDatas
+---@field meta_datas FittenCode.Protocol.Methods.DeleteKnowledgeBase.Payload.MetaDatas
 
----@class FittenCode.Protocol.Methods.DeleteKnowledgeBase.Body.MetaDatas
+---@class FittenCode.Protocol.Methods.DeleteKnowledgeBase.Payload.MetaDatas
 ---@field knowledgeBaseName string
 ---@field FT_Token string
 ---@field KB_ID string
@@ -250,11 +250,11 @@
 -- CreateKnowledgeBase
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.CreateKnowledgeBase.Body
+---@class FittenCode.Protocol.Methods.CreateKnowledgeBase.Payload
 ---@field inputs string
----@field meta_datas FittenCode.Protocol.Methods.CreateKnowledgeBase.Body.MetaDatas
+---@field meta_datas FittenCode.Protocol.Methods.CreateKnowledgeBase.Payload.MetaDatas
 
----@class FittenCode.Protocol.Methods.CreateKnowledgeBase.Body.MetaDatas
+---@class FittenCode.Protocol.Methods.CreateKnowledgeBase.Payload.MetaDatas
 ---@field knowledgeBaseName string
 ---@field FT_Token string
 ---@field description string
@@ -272,11 +272,11 @@
 -- DeleteFile
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.DeleteFile.Body
+---@class FittenCode.Protocol.Methods.DeleteFile.Payload
 ---@field inputs string
----@field meta_datas FittenCode.Protocol.Methods.DeleteFile.Body.MetaDatas
+---@field meta_datas FittenCode.Protocol.Methods.DeleteFile.Payload.MetaDatas
 
----@class FittenCode.Protocol.Methods.DeleteFile.Body.MetaDatas
+---@class FittenCode.Protocol.Methods.DeleteFile.Payload.MetaDatas
 ---@field knowledgeBaseName string
 ---@field fileName string
 ---@field FT_Token string
@@ -287,7 +287,7 @@
 ------------------------------------------------
 
 -- FormData
----@class FittenCode.Protocol.Methods.UploadLargeFile.Body
+---@class FittenCode.Protocol.Methods.UploadLargeFile.Payload
 ---@field chunk string
 ---@field index string
 ---@field total_chunks string
@@ -302,11 +302,11 @@
 -- UpdateProject
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.UpdateProject.Body
+---@class FittenCode.Protocol.Methods.UpdateProject.Payload
 ---@field ft_token string
----@field meta_datas FittenCode.Protocol.Methods.UpdateProject.Body.MetaDatas
+---@field meta_datas FittenCode.Protocol.Methods.UpdateProject.Payload.MetaDatas
 
----@class FittenCode.Protocol.Methods.UpdateProject.Body.MetaDatas
+---@class FittenCode.Protocol.Methods.UpdateProject.Payload.MetaDatas
 ---@field project_id string
 ---@field project_name string
 
@@ -314,12 +314,12 @@
 -- SaveFileAndDirectoryNames
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.SaveFileAndDirectoryNames.Body
+---@class FittenCode.Protocol.Methods.SaveFileAndDirectoryNames.Payload
 ---@field inputs string
 ---@field ft_token string
----@field meta_datas FittenCode.Protocol.Methods.SaveFileAndDirectoryNames.Body.MetaDatas
+---@field meta_datas FittenCode.Protocol.Methods.SaveFileAndDirectoryNames.Payload.MetaDatas
 
----@class FittenCode.Protocol.Methods.SaveFileAndDirectoryNames.Body.MetaDatas
+---@class FittenCode.Protocol.Methods.SaveFileAndDirectoryNames.Payload.MetaDatas
 ---@field file_dir_names table
 ---@field file_hash table
 
@@ -327,12 +327,12 @@
 -- AddFilesAndDirectories
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.AddFilesAndDirectories.Body
+---@class FittenCode.Protocol.Methods.AddFilesAndDirectories.Payload
 ---@field inputs string
 ---@field ft_token string
----@field meta_datas FittenCode.Protocol.Methods.AddFilesAndDirectories.Body.MetaDatas
+---@field meta_datas FittenCode.Protocol.Methods.AddFilesAndDirectories.Payload.MetaDatas
 
----@class FittenCode.Protocol.Methods.AddFilesAndDirectories.Body.MetaDatas
+---@class FittenCode.Protocol.Methods.AddFilesAndDirectories.Payload.MetaDatas
 ---@field file_name string
 ---@field file_paths table
 
@@ -340,11 +340,11 @@
 -- GetLocalKnowledgeBaseRefs
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.GetLocalKnowledgeBaseRefs.Body
+---@class FittenCode.Protocol.Methods.GetLocalKnowledgeBaseRefs.Payload
 ---@field inputs string
----@field meta_datas FittenCode.Protocol.Methods.GetLocalKnowledgeBaseRefs.Body.MetaDatas
+---@field meta_datas FittenCode.Protocol.Methods.GetLocalKnowledgeBaseRefs.Payload.MetaDatas
 
----@class FittenCode.Protocol.Methods.GetLocalKnowledgeBaseRefs.Body.MetaDatas
+---@class FittenCode.Protocol.Methods.GetLocalKnowledgeBaseRefs.Payload.MetaDatas
 ---@field targetId string
 ---@field inputs string
 ---@field FT_Token string
@@ -354,11 +354,11 @@
 -- JoinKnowledgeBase
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.JoinKnowledgeBase.Body
+---@class FittenCode.Protocol.Methods.JoinKnowledgeBase.Payload
 ---@field inputs string
----@field meta_datas FittenCode.Protocol.Methods.JoinKnowledgeBase.Body.MetaDatas
+---@field meta_datas FittenCode.Protocol.Methods.JoinKnowledgeBase.Payload.MetaDatas
 
----@class FittenCode.Protocol.Methods.JoinKnowledgeBase.Body.MetaDatas
+---@class FittenCode.Protocol.Methods.JoinKnowledgeBase.Payload.MetaDatas
 ---@field knowledgeBaseName string
 ---@field description string
 ---@field FT_Token string
@@ -368,11 +368,11 @@
 -- GetKnowledgeBase
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.GetKnowledgeBase.Body
+---@class FittenCode.Protocol.Methods.GetKnowledgeBase.Payload
 ---@field inputs string
----@field meta_datas FittenCode.Protocol.Methods.GetKnowledgeBase.Body.MetaDatas
+---@field meta_datas FittenCode.Protocol.Methods.GetKnowledgeBase.Payload.MetaDatas
 
----@class FittenCode.Protocol.Methods.GetKnowledgeBase.Body.MetaDatas
+---@class FittenCode.Protocol.Methods.GetKnowledgeBase.Payload.MetaDatas
 ---@field ID string
 
 ---@class FittenCode.Protocol.Methods.GetKnowledgeBase.Response
@@ -383,11 +383,11 @@
 -- UpdateKnowledgeBase
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.UpdateKnowledgeBase.Body
+---@class FittenCode.Protocol.Methods.UpdateKnowledgeBase.Payload
 ---@field inputs string
----@field meta_datas FittenCode.Protocol.Methods.UpdateKnowledgeBase.Body.MetaDatas
+---@field meta_datas FittenCode.Protocol.Methods.UpdateKnowledgeBase.Payload.MetaDatas
 
----@class FittenCode.Protocol.Methods.UpdateKnowledgeBase.Body.MetaDatas
+---@class FittenCode.Protocol.Methods.UpdateKnowledgeBase.Payload.MetaDatas
 ---@field knowledgeBaseName string
 ---@field description string
 ---@field FT_Token string
@@ -397,19 +397,19 @@
 -- Feedback
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.Feedback.Body
+---@class FittenCode.Protocol.Methods.Feedback.Payload
 ---@field inputs string
 ---@field ft_token string
----@field meta_datas FittenCode.Protocol.Methods.Feedback.Body.MetaDatas
+---@field meta_datas FittenCode.Protocol.Methods.Feedback.Payload.MetaDatas
 
----@class FittenCode.Protocol.Methods.Feedback.Body.MetaDatas
+---@class FittenCode.Protocol.Methods.Feedback.Payload.MetaDatas
 ---@field feedback_type string
 
 ------------------------------------------------
 -- CheckInviteCode
 ------------------------------------------------
 
----@class FittenCode.Protocol.Methods.CheckInviteCode.Body
+---@class FittenCode.Protocol.Methods.CheckInviteCode.Payload
 ---@field inputs string
 
 ---@class FittenCode.Protocol.Methods.CheckInviteCode.Response
@@ -459,7 +459,7 @@
 -- GenerateOneStageAuth
 ------------------------------------------------
 
----@alias FittenCode.Protocol.Methods.GenerateOneStageAuth.Body string
+---@alias FittenCode.Protocol.Methods.GenerateOneStageAuth.Payload string
 
 ---@class FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion
 ---@field delete_offsets table<table<number>>
