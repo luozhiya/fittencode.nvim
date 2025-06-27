@@ -15,7 +15,7 @@ Status.__index = Status
 function Status.new(id)
     ---@type FittenCode.Chat.Status
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or ('status_observer' .. Fn.uuid_v1()))
+    local self = Observer.new(id or ('status_observer' .. Fn.uuid()))
     setmetatable(self, Status)
     self.selected_conversation_id = nil
     self.conversations = {}
@@ -46,7 +46,7 @@ function ProgressIndicatorObserver.new(pi, options)
     assert(pi)
     ---@type FittenCode.Chat.ProgressIndicatorObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(options.id or ('progress_indicator_observer' .. Fn.uuid_v1()))
+    local self = Observer.new(options.id or ('progress_indicator_observer' .. Fn.uuid()))
     setmetatable(self, ProgressIndicatorObserver)
     self.pi = pi
     self.start_time = {}
@@ -98,7 +98,7 @@ TimingObserver.__index = TimingObserver
 function TimingObserver.new(id)
     ---@type FittenCode.Chat.TimingObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or ('timing_observer' .. Fn.uuid_v1()))
+    local self = Observer.new(id or ('timing_observer' .. Fn.uuid()))
     setmetatable(self, TimingObserver)
     self.conversations = {}
     return self
@@ -270,7 +270,7 @@ TokenObserver.__index = TokenObserver
 function TokenObserver.new(id)
     ---@type FittenCode.Chat.TokenObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or ('token_observer' .. Fn.uuid_v1()))
+    local self = Observer.new(id or ('token_observer' .. Fn.uuid()))
     setmetatable(self, TokenObserver)
     self.conversations = {}
     return self

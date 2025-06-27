@@ -105,48 +105,7 @@ function M.slice(t, start)
     return result
 end
 
-function M.validate(uuid)
-    local pattern = '%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x'
-    return uuid:match(pattern) ~= nil
-end
-
-local byte_to_hex = {}
-for i = 0, 255 do
-    byte_to_hex[#byte_to_hex + 1] = string.sub(string.format('%x', i + 256), 2)
-end
-
-function M.stringify(arr)
-    local uuid_parts = {
-        byte_to_hex[arr[1]] .. byte_to_hex[arr[2]] .. byte_to_hex[arr[3]] .. byte_to_hex[arr[4]],
-        byte_to_hex[arr[5]] .. byte_to_hex[arr[6]],
-        byte_to_hex[arr[7]] .. byte_to_hex[arr[8]],
-        byte_to_hex[arr[9]] .. byte_to_hex[arr[10]],
-        byte_to_hex[arr[11]] .. byte_to_hex[arr[12]] .. byte_to_hex[arr[13]] .. byte_to_hex[arr[14]] .. byte_to_hex[arr[15]] .. byte_to_hex[arr[16]]
-    }
-    local uuid = table.concat(uuid_parts, '-')
-    if not M.validate(uuid) then
-        return
-    end
-    return uuid
-end
-
-function M.rng(len)
-    math.randomseed(os.time())
-    local arr = {}
-    for _ = 1, len do
-        arr[#arr + 1] = math.random(0, 256)
-    end
-    return arr
-end
-
-function M.uuid_v4()
-    local rnds = M.rng(16)
-    rnds[6] = bit.bor(bit.band(rnds[6], 15), 64)
-    rnds[8] = bit.bor(bit.band(rnds[8], 63), 128)
-    return M.stringify(rnds)
-end
-
-function M.uuid_v1()
+function M.uuid()
     local random = math.random
     local template = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
     return string.gsub(template, '[xy]', function(c)
