@@ -55,14 +55,15 @@ function ProgressIndicator:update_progress()
         time_str = string.format(self.time_format_stage, self.stage, elapsed_ms)
     end
     local content = self.frames[self.current_frame] .. time_str
+    local content_len = 1 + #time_str
 
     vim.api.nvim_buf_set_lines(self.progress_buf, 0, -1, false, { content })
 
     if self.progress_win and vim.api.nvim_win_is_valid(self.progress_win) then
         local width = vim.api.nvim_get_option_value('columns', {})
         local config = vim.api.nvim_win_get_config(self.progress_win)
-        config.width = #content
-        config.col = width - #content
+        config.width = content_len
+        config.col = width - content_len
         vim.api.nvim_win_set_config(self.progress_win, config)
         vim.hl.range(
             self.progress_buf,
