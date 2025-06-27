@@ -248,12 +248,10 @@ function Model:update_segments(segment)
     local snapshot = self:snapshot()
     local _, words = pcall(Segment.segments_to_words, snapshot, segment)
     if not _ then
-        local original = {}
-        for _, word in ipairs(snapshot.words) do
-            original[#original + 1] = word.content
-        end
+        Log.error('Failed to update words, invalid segment: {}', segment)
         return
     end
+    Log.debug('Update words success with segment: {}', segment)
     self:update_words(words)
 end
 

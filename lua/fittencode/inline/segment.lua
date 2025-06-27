@@ -241,7 +241,7 @@ function M.send_segments(text)
     end
 
     return request:async():forward(function(response)
-        Log.debug('Segment response: {}', response)
+        -- Log.debug('Segment response: {}', response)
         local raw = response.text()
 
         local segments = {}
@@ -262,7 +262,7 @@ function M.send_segments(text)
             end
         end
         _parse()
-        Log.debug('Segments: {}', segments)
+        -- Log.debug('Segments: {}', segments)
 
         if #segments == 0 then
             Log.error('No segments found in response')
@@ -271,7 +271,7 @@ function M.send_segments(text)
 
         local seg_str = table.concat(segments)
         local _, obj = pcall(vim.fn.json_decode, seg_str)
-        Log.debug('Segment object: {}', obj)
+        -- Log.debug('Segment object: {}', obj)
         if not _ then
             Log.error('Failed to parse segment response: {}', seg_str)
             return Promise.rejected()

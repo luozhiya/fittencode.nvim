@@ -482,25 +482,6 @@ function M.get_text(buf, range, strict)
     return table.concat(assert(M.get_lines(buf, range, strict)), '\n')
 end
 
--- Check if the given text contains only ASCII characters.
----@param text string|string[]
-function M.is_ascii_only(text)
-    assert(text)
-    if type(text) == 'table' then
-        for _, t in ipairs(text) do
-            if not M.is_ascii_only(t) then
-                return false
-            end
-        end
-        return true
-    else
-        if #Unicode.utf8_position_index(text).byte_counts == #text then
-            return true
-        end
-    end
-    return false
-end
-
 -- Check if the given position is within the line.
 ---@param buf integer?
 ---@param position FittenCode.Position

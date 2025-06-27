@@ -5,7 +5,7 @@ local ProgressIndicator = {}
 ProgressIndicator.__index = ProgressIndicator
 
 local STYLES = {
-    spin = { '⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷' },
+    spin = { '⣷', '⣯', '⣟', '⡿', '⢿', '⣻', '⣽', '⣾' },
     line = { '|', '/', '-', '\\' },
     dots = { '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏' },
     bars = { '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█', '▇', '▆', '▅', '▄', '▃', '▂', '▁' },
@@ -59,6 +59,11 @@ function ProgressIndicator:update_progress()
     vim.api.nvim_buf_set_lines(self.progress_buf, 0, -1, false, { content })
 
     if self.progress_win and vim.api.nvim_win_is_valid(self.progress_win) then
+        local width = vim.api.nvim_get_option_value('columns', {})
+        local config = vim.api.nvim_win_get_config(self.progress_win)
+        config.width = #content
+        config.col = width - #content
+        vim.api.nvim_win_set_config(self.progress_win, config)
         vim.hl.range(
             self.progress_buf,
             self.ns,
@@ -71,35 +76,22 @@ function ProgressIndicator:update_progress()
     self.current_frame = (self.current_frame % #self.frames) + 1
 end
 
-function ProgressIndicator:start(start_time, options)
+function ProgressIndicator:start(start_time)
     if self.progress_timer then
         return
     end
-    options = options or {}
 
     self.progress_buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = self.progress_buf })
 
-    local width = vim.api.nvim_get_option_value('columns', {})
     local height = vim.api.nvim_get_option_value('lines', {})
-
-    -- 计算窗口宽度
-    local max_frame_width = 0
-    for _, frame in ipairs(self.frames) do
-        max_frame_width = math.max(max_frame_width, #frame)
-    end
-    local time_width = #string.format(self.time_format, 10000) * 2
-    local win_width = max_frame_width + time_width
-
-    local row = options.row or height - 2
-    local col = options.col or 0
 
     self.progress_win = vim.api.nvim_open_win(self.progress_buf, false, {
         relative = 'editor',
-        width = win_width, -- 1
+        width = 1,
         height = 1,
-        row = row,
-        col = col, -- width - 2
+        row = height - 2,
+        col = 1,
         style = 'minimal',
         focusable = false,
     })

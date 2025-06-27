@@ -15,6 +15,7 @@ local EditViewState = require('fittencode.inline.view.editcmp.state')
 local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')
+local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
@@ -78,10 +79,27 @@ local function debug_log(self, msg, ...)
     Log._async_log(3, vim.log.levels.DEBUG, meta .. Format.nothrow_format(msg, ...))
 end
 
+local function _is_ascii_only(text)
+    assert(text)
+    if type(text) == 'table' then
+        for _, t in ipairs(text) do
+            if not _is_ascii_only(t) then
+                return false
+            end
+        end
+        return true
+    else
+        if #Unicode.utf8_position_index(text).byte_counts == #text then
+            return true
+        end
+    end
+    return false
+end
+
 function Session:_segments()
     local text = self.model:get_text()
-    if F.is_ascii_only(text) then
-        Log.debug('Text is ASCII only, skip segment')
+    if _is_ascii_only(text) then
+        Log.debug('text is ascii only, skip segments request')
         return Promise.resolved()
     end
     local promise, request = Segment.send_segments(text)
@@ -264,8 +282,8 @@ function Session:terminate()
     if self.session_event == SESSION_EVENT.TERMINATED then
         return
     end
+    self:abort_and_clear_requests()
     if self.session_event == SESSION_EVENT.INTERACTIVE then
-        self:abort_and_clear_requests()
         self.view:clear()
         self:restore_keymaps()
         self:restore_onkey()
@@ -377,7 +395,8 @@ function Session:send_completions()
     local function _send_completions()
         return Promise.all({
             self:generate_prompt():forward(function(res)
-                debug_log(self, 'Generated prompt: {}', res)
+                -- debug_log(self, 'Generated prompt: {}', res)
+                debug_log(self, 'Prompt generated')
                 self.cachedata = res.cachedata
                 return self:async_compress_prompt(res.prompt)
             end),
@@ -386,7 +405,7 @@ function Session:send_completions()
             local compressed_prompt_binary = _[1]
             local completion_version = _[2]
             debug_log(self, 'Got completion version: {}', completion_version)
-            debug_log(self, 'Compressed prompt: {}', compressed_prompt_binary)
+            debug_log(self, 'Compressed prompt length: {}', #compressed_prompt_binary)
             if not compressed_prompt_binary or not completion_version then
                 return Promise.rejected({
                     message = 'Failed to generate prompt or get completion version',

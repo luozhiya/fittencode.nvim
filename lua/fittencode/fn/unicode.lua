@@ -25,7 +25,7 @@ Unicode 码点与 UTF-8 字节数的对应关系：
 ]]
 
 local bit = require('bit')
-local Log = require('fittencode.log')
+-- local Log = require('fittencode.log')
 
 local M = {}
 
@@ -448,11 +448,46 @@ function M.js_codepoints(input)
     return M.utf8_to_codepoints(input)
 end
 
+function M.is_ascii(codepoint)
+    if codepoint then
+        if codepoint >= 0 and codepoint <= 127 then
+            return true
+        end
+    end
+    return false
+end
+
 -- 中文字符的Unicode范围: 0x4E00-0x9FFF
 ---@param codepoint number
 ---@return boolean
 function M.is_chinese(codepoint)
-    return (codepoint >= 0x4E00 and codepoint <= 0x9FFF)
+    if codepoint then
+        -- CJK 统一表意文字范围 (U+4E00 到 U+9FFF)
+        if codepoint >= 0x4E00 and codepoint <= 0x9FFF then
+            return true
+        end
+        -- CJK 统一表意文字扩展 A (U+3400 到 U+4DBF)
+        if codepoint >= 0x3400 and codepoint <= 0x4DBF then
+            return true
+        end
+        -- CJK 统一表意文字扩展 B (U+20000 到 U+2A6DF)
+        if codepoint >= 0x20000 and codepoint <= 0x2A6DF then
+            return true
+        end
+        -- CJK 兼容表意文字 (U+F900 到 U+FAFF)
+        if codepoint >= 0xF900 and codepoint <= 0xFAFF then
+            return true
+        end
+        -- CJK 兼容形式 (U+FE30 到 U+FE4F)
+        if codepoint >= 0xFE30 and codepoint <= 0xFE4F then
+            return true
+        end
+        -- CJK 符号和标点 (U+3000 到 U+303F)
+        if codepoint >= 0x3000 and codepoint <= 0x303F then
+            return true
+        end
+    end
+    return false
 end
 
 function M.utf8_to_unicode_escape_sequence(str)

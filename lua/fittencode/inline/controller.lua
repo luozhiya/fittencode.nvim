@@ -59,8 +59,8 @@ function Controller:_initialize(options)
         pi = self.pi
     })
     self:add_observer(self.progress_observer)
-    -- self.debounce_trigger_inline_suggestion = Fn.debounce(function(...) self:trigger_inline_suggestion(...) end, 60)
-    self.debounce_trigger_inline_suggestion = function(...) self:trigger_inline_suggestion(...) end
+    self.debounce_trigger_inline_suggestion = Fn.debounce(function(...) self:trigger_inline_suggestion(...) end, 60)
+    -- self.debounce_trigger_inline_suggestion = function(...) self:trigger_inline_suggestion(...) end
 
     self.keymaps = {
         { Config.keymaps.inline['inline_completion'], function() self:trigger_inline_suggestion_by_shortcut() end },
@@ -189,6 +189,7 @@ end
 
 function Controller:terminate_sessions()
     Log.debug('Terminate all sessions, sessions count = {}, selected_session_id = {}', #vim.tbl_keys(self.sessions), self.selected_session_id)
+    ---@param session FittenCode.Inline.Session
     vim.tbl_map(function(session)
         session:terminate()
     end, self.sessions)
@@ -274,8 +275,9 @@ function Controller:on_session_event(data)
     elseif data.session_event == SESSION_EVENT.TERMINATED then
         self:_emit(CONTROLLER_EVENT.SESSION_DELETED, { id = data.id })
         self.sessions[data.id] = nil
-        if self.selected_session_id == data.id then
+        if not self.selected_session_id or self.selected_session_id == data.id then
             self.selected_session_id = nil
+            Log.debug('selected_session_id is nil, emit inline_idle')
             self:_emit(CONTROLLER_EVENT.INLINE_IDLE, { id = data.id })
         end
     end

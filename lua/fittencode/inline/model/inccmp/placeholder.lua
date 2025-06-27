@@ -61,7 +61,7 @@ local function generate_placeholder_ranges(buf, position, completion)
         local index = 1
         for i = 1, #replaced_text do
             local c = replaced_text:sub(i, i)
-            local s, e = generated_text:find(c, index)
+            local s, e = generated_text:find(c, index, true)
             if s then
                 ranges[#ranges + 1] = { start = s, end_ = e }
                 index = e + 1

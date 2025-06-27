@@ -43,6 +43,8 @@ function Status:update(controller, event, data)
     elseif event == CONTROLLER_EVENT.INLINE_RUNNING then
         self.inline = INLINE_EVENT.RUNNING
     end
+
+    Log.debug('Inline status updated = {}', self)
 end
 
 ---@class FittenCode.Inline.ProgressIndicatorObserver : FittenCode.Observer
@@ -75,6 +77,9 @@ function ProgressIndicatorObserver:update(controller, event, data)
         self.start_time[data.id] = {
             completion = vim.uv.hrtime()
         }
+    elseif not controller:get_current_session_id() then
+        self.pi:stop()
+        return
     end
     if controller:get_current_session_id() == self.id then
         if data and data.id ~= self.id then
