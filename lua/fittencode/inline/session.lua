@@ -178,7 +178,6 @@ end
 
 function Session:update_view()
     if self:is_terminated() then
-        self.view:clear()
         return
     end
     self.view:update(self.StateClass.get_state_from_model(self.model:snapshot()))
