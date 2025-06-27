@@ -47,7 +47,7 @@ function ProgressIndicator:update_progress()
     end
 
     local elapsed = vim.loop.hrtime() - self.progress_start_time
-    local elapsed_ms = elapsed / 1e9 -- 转换为毫秒
+    local elapsed_ms = elapsed / 1e9
     self.last_elapsed_ms = elapsed_ms
 
     local time_str = string.format(self.time_format, elapsed_ms)

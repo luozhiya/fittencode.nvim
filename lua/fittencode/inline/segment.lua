@@ -1,10 +1,6 @@
-local Fn = require('fittencode.fn.core')
-local F = require('fittencode.fn.buf')
 local Promise = require('fittencode.fn.promise')
 local Log = require('fittencode.log')
-local Client = require('fittencode.client')
-local Protocol = require('fittencode.client.protocol')
-local OPL = require('fittencode.opl')
+local Generate = require('fittencode.generate')
 
 local M = {}
 
@@ -152,16 +148,13 @@ Please do not use markdown when replying.
 <|end|>
 <|assistant|>]]
 
----@param text? string|string[]
-local function generate(text)
-    if not text then
-        return
-    end
-
+---@param text string|string[]
+---@return FittenCode.Protocol.Methods.ChatAuth.Body
+local function build_request_payload(text)
+    assert(text)
     ---@type string[]
     ---@diagnostic disable-next-line: assign-type-mismatch
     text = (type(text) == 'string') and { text } or text
-
     local messages = {}
     for idx, t in ipairs(text) do
         assert(t and t ~= '', 'content should not be empty')
@@ -169,20 +162,10 @@ local function generate(text)
             content = string.format('# %d\n\n```\n%s\n```\n\n', idx, t)
         }
     end
-
     local env = {
         messages = messages,
     }
-    local inputs = assert(OPL.run(env, template))
-    local api_key_manager = Client.get_api_key_manager()
-
-    return {
-        inputs = inputs,
-        ft_token = api_key_manager:get_fitten_user_id() or '',
-        meta_datas = {
-            project_id = '',
-        }
-    }
+    return Generate.build_request_chat_payload(env, template)
 end
 
 -- 实现三阶段验证：
@@ -232,46 +215,18 @@ end
 -- 高级分词
 ---@return FittenCode.Promise, FittenCode.HTTP.Request?
 function M.send_segments(text)
-    local request = Client.make_request_auth(Protocol.Methods.chat_auth, {
-        body = assert(vim.fn.json_encode(generate(text))),
-    })
+    local res, request = Generate.request_chat(build_request_payload(text))
     if not request then
-        Log.error('Failed to send request')
         return Promise.rejected()
     end
-
-    return request:async():forward(function(response)
-        -- Log.debug('Segment response: {}', response)
-        local raw = response.text()
-
-        local segments = {}
-        local function _parse()
-            local v = vim.split(raw, '\n', { trimempty = true })
-            for _, line in ipairs(v) do
-                ---@type _, FittenCode.Protocol.Methods.ChatAuth.Response.Chunk
-                local _, chunk = pcall(vim.fn.json_decode, line)
-                if _ and chunk then
-                    local delta = chunk.delta
-                    if delta then
-                        segments[#segments + 1] = chunk.delta
-                    end
-                else
-                    -- 忽略非法的 chunk
-                    Log.debug('Invalid chunk: {} >> {}', line, chunk)
-                end
-            end
-        end
-        _parse()
-        -- Log.debug('Segments: {}', segments)
-
+    return res:forward(function(response)
+        local segments = response
         if #segments == 0 then
             Log.error('No segments found in response')
             return Promise.rejected()
         end
-
         local seg_str = table.concat(segments)
         local _, obj = pcall(vim.fn.json_decode, seg_str)
-        -- Log.debug('Segment object: {}', obj)
         if not _ then
             Log.error('Failed to parse segment response: {}', seg_str)
             return Promise.rejected()
