@@ -123,6 +123,14 @@ function Promise.new(executor, is_async)
     return self
 end
 
+function Promise:get_reason()
+    return self.reason
+end
+
+function Promise:get_value()
+    return self.value
+end
+
 -- 创建一个延时 Promise
 ---@param time number
 ---@param value any

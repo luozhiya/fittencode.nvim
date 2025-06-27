@@ -21,9 +21,13 @@
 ---@field edit_mode_history string
 ---@field edit_mode_trigger_type string
 
+---@alias FittenCode.Inline.CompletionMode 'inccmp' | 'editcmp'
+
 ---@class FittenCode.Inline.TriggerInlineSuggestionOptions
----@field force boolean
----@field mode 'inccmp' | 'editcmp'
+---@field force? boolean
+---@field mode? FittenCode.Inline.CompletionMode
+---@field debounced? boolean
+---@field vimev? vim.api.keyset.create_autocmd.callback_args
 
 ---@class FittenCode.Inline.View
 ---@field clear function

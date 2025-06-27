@@ -59,8 +59,8 @@ function Controller:_initialize(options)
         pi = self.pi
     })
     self:add_observer(self.progress_observer)
-    self.debounce_trigger_inline_suggestion = Fn.debounce(function(...) self:trigger_inline_suggestion(...) end, 60)
-    -- self.debounce_trigger_inline_suggestion = function(...) self:trigger_inline_suggestion(...) end
+    self.timing_observer = TimingObserver.new()
+    self:add_observer(self.timing_observer)
 
     self.keymaps = {
         { Config.keymaps.inline['inline_completion'], function() self:trigger_inline_suggestion_by_shortcut() end },
@@ -77,7 +77,7 @@ function Controller:_initialize(options)
         pattern = '*',
         callback = function(args)
             Log.debug('trigger_inline_suggestion_auto autocmd = {}', args.event)
-            self:trigger_inline_suggestion_auto({ vimev = args })
+            self:trigger_inline_suggestion_auto({ vimev = args, debounced = true })
         end,
     })
     vim.api.nvim_create_autocmd({ 'CursorMovedI', 'InsertLeave', 'BufLeave' }, {
@@ -207,7 +207,7 @@ local function is_within_the_line(position)
     return true
 end
 
-function Controller:_preflight_check(options)
+function Controller:_preflight_check(vimev, force)
     local buf = vim.api.nvim_get_current_buf()
     if vim.api.nvim_get_mode().mode ~= 'i' or not self:is_enabled(buf) then
         return
@@ -216,7 +216,7 @@ function Controller:_preflight_check(options)
     if not api_key_manager:has_fitten_access_token() then
         return
     end
-    if options.vimev and vim.tbl_contains(self.filter_events, options.vimev.event) then
+    if vimev and vim.tbl_contains(self.filter_events, vimev.event) then
         return
     end
     local position = F.position(vim.api.nvim_get_current_win())
@@ -225,11 +225,29 @@ function Controller:_preflight_check(options)
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
         return
     end
-    options.force = (options.force == nil) and false or options.force
-    if not options.force and self:get_active_session() and self:get_active_session():is_match_commit_position(position) then
+    force = (force == nil) and false or force
+    if not force and self:get_active_session() and self:get_active_session():is_match_commit_position(position) then
         return
     end
     return buf, position
+end
+
+function Controller:_make_session(buf, position, mode)
+    self.selected_session_id = assert(Fn.generate_short_id(13))
+    local session = Session.new({
+        buf = buf,
+        filename = F.filename(buf),
+        position = position,
+        mode = mode,
+        id = self.selected_session_id,
+        trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
+        on_session_update_event = function(data) self:_emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
+        on_session_event = function(data) self:on_session_event(data) end,
+        version = F.version(buf)
+    })
+    self.sessions[session.id] = session
+
+    return session:send_completions()
 end
 
 -- 触发补全
@@ -240,32 +258,31 @@ end
 function Controller:trigger_inline_suggestion(options)
     Log.debug('trigger_inline_suggestion')
     options = options or {}
-    options.mode = options.mode or 'inccmp'
-    options.force = options.force or false
-
-    local buf, position = self:_preflight_check(options)
+    local mode = options.mode or 'inccmp'
+    local debounced = options.debounced or false
+    local buf, position = self:_preflight_check(options.vimev, options.force)
     if not buf or not position then
         return Promise.rejected({
             message = 'Preflight check failed'
         })
     end
     self:terminate_sessions()
-
-    self.selected_session_id = assert(Fn.generate_short_id(13))
-    local session = Session.new({
-        buf = buf,
-        filename = F.filename(buf),
-        position = position,
-        mode = options.mode,
-        id = self.selected_session_id,
-        trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
-        on_session_update_event = function(data) self:_emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
-        on_session_event = function(data) self:on_session_event(data) end,
-        version = F.version(buf)
-    })
-    self.sessions[session.id] = session
-
-    return session:send_completions()
+    if debounced then
+        if not self.debounced_make_session then
+            self.debounced_make_session = Fn.debounce(function(...) return self:_make_session(...) end, 60)
+        end
+        return Promise.new(function(resolve, reject)
+            self.debounced_make_session(buf, position, mode, function(ret)
+                if ret:is_rejected() then
+                    reject(ret:get_reason())
+                elseif ret:is_resolved() then
+                    resolve(ret:get_value())
+                end
+            end)
+        end)
+    else
+        return self:_make_session(buf, position, mode)
+    end
 end
 
 function Controller:on_session_event(data)
@@ -362,11 +379,12 @@ function Controller:trigger_edit_completion_by_shortcut()
     end))
 end
 
+---@param options? FittenCode.Inline.TriggerInlineSuggestionOptions
 function Controller:trigger_inline_suggestion_auto(options)
     if not Config.inline_completion.auto_triggering_completion then
         return
     end
-    self.debounce_trigger_inline_suggestion(options)
+    self:trigger_inline_suggestion(options)
 end
 
 -- 什么情况下触发 edit_completion ?
