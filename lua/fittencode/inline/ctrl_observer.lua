@@ -1,6 +1,7 @@
 local Observer = require('fittencode.fn.observer')
 local Definitions = require('fittencode.inline.definitions')
 local Log = require('fittencode.log')
+local Fn = require('fittencode.fn.core')
 
 local INLINE_EVENT = Definitions.INLINE_EVENT
 local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
@@ -14,8 +15,11 @@ local Status = {}
 Status.__index = Status
 
 ---@return FittenCode.Inline.Status
-function Status.new()
-    local self = setmetatable({}, Status)
+function Status.new(id)
+    ---@type FittenCode.Inline.Status
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local self = Observer.new(id or ('status_observer_' .. Fn.uuid_v1()))
+    setmetatable(self, Status)
     self.inline = ''
     self.completion = ''
     return self
@@ -53,17 +57,15 @@ end
 local ProgressIndicatorObserver = setmetatable({}, { __index = Observer })
 ProgressIndicatorObserver.__index = ProgressIndicatorObserver
 
----@param options table
-function ProgressIndicatorObserver.new(options)
-    assert(options)
-    assert(options.pi)
+---@param id string
+---@param pi FittenCode.View.ProgressIndicator
+function ProgressIndicatorObserver.new(id, pi)
+    assert(pi)
     ---@type FittenCode.Inline.ProgressIndicatorObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new({
-        id = options.id or 'progress_indicator_observer'
-    })
+    local self = Observer.new(id or ('progress_indicator_observer_' .. Fn.uuid_v1()))
     setmetatable(self, ProgressIndicatorObserver)
-    self.pi = options.pi
+    self.pi = pi
     self.start_time = {}
     self.id = nil
     return self
@@ -118,7 +120,12 @@ end
 local StatisticObserver = {}
 StatisticObserver.__index = StatisticObserver
 
-function StatisticObserver.new()
+function StatisticObserver.new(id)
+    ---@type FittenCode.Inline.StatisticObserver
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local self = Observer.new(id or ('statistic_observer_' .. Fn.uuid_v1()))
+    setmetatable(self, StatisticObserver)
+    return self
 end
 
 ---@param controller FittenCode.Inline.Controller
@@ -131,7 +138,12 @@ end
 local TimingObserver = {}
 TimingObserver.__index = TimingObserver
 
-function TimingObserver.new()
+function TimingObserver.new(id)
+    ---@type FittenCode.Inline.TimingObserver
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local self = Observer.new(id or ('timing_observer_' .. Fn.uuid_v1()))
+    setmetatable(self, TimingObserver)
+    return self
 end
 
 ---@param controller FittenCode.Inline.Controller

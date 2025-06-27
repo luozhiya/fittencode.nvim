@@ -21,6 +21,7 @@ local Log = require('fittencode.log')
 local Definitions = require('fittencode.inline.definitions')
 local CtrlObserver = require('fittencode.inline.ctrl_observer')
 local ProgressIndicator = require('fittencode.fn.progress_indicator')
+local Observer = require('fittencode.fn.observer')
 local Color = require('fittencode.color')
 
 local Status = CtrlObserver.Status
@@ -116,23 +117,35 @@ function Controller:_initialize(options)
     end)
 end
 
+---@param observer FittenCode.Observer | function
 function Controller:add_observer(observer)
-    table.insert(self.observers, observer)
+    if type(observer) == 'function' then
+        local id = 'callback_observer_' .. Fn.uuid_v1()
+        observer = setmetatable({
+            id = id,
+            update = function(_, ctrl, event, data)
+                observer(ctrl, event, data)
+            end
+        }, { __index = Observer })
+    end
+    self.observers[observer.id] = observer
+    return observer
 end
 
-function Controller:remove_observer(observer)
-    for i, obs in ipairs(self.observers) do
-        if obs == observer then
-            table.remove(self.observers, i)
-            break
-        end
-    end
+---@param identifier string | FittenCode.Observer
+function Controller:remove_observer(identifier)
+    local id = type(identifier) == 'string' and identifier or identifier.id
+    self.observers[id] = nil
 end
 
-function Controller:notify_observers(event, data)
-    for _, observer in ipairs(self.observers) do
-        observer:update(self, event, data)
-    end
+function Controller:get_observer(id)
+    return self.observers[id]
+end
+
+function Controller:notify_observers(event_type, data)
+    vim.tbl_map(function(observer)
+        observer:update(self, event_type, data)
+    end, self.observers)
 end
 
 ---@param data? table

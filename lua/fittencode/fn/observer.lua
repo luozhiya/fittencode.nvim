@@ -5,12 +5,11 @@ local Fn = require('fittencode.fn.core')
 local Observer = {}
 Observer.__index = Observer
 
----@param options table
+---@param id? string
 ---@return FittenCode.Observer
-function Observer.new(options)
-    options = options or {}
+function Observer.new(id)
     local self = setmetatable({}, Observer)
-    self.id = options.id or ('observer_' .. Fn.uuid_v1())
+    self.id = id or ('observer_' .. Fn.uuid_v1())
     return self
 end
 
@@ -18,7 +17,6 @@ end
 ---@param event string
 ---@param data any
 function Observer:update(controller, event, data)
-    -- 基类方法，由子类实现
 end
 
 return Observer

@@ -1,6 +1,7 @@
 local Observer = require('fittencode.fn.observer')
 local Definitions = require('fittencode.chat.definitions')
 local Log = require('fittencode.log')
+local Fn = require('fittencode.fn.core')
 
 local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
 local CONVERSATION_PHASE = Definitions.CONVERSATION_PHASE
@@ -14,7 +15,7 @@ Status.__index = Status
 function Status.new(id)
     ---@type FittenCode.Chat.Status
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or 'status_observer')
+    local self = Observer.new(id or ('status_observer' .. Fn.uuid_v1()))
     setmetatable(self, Status)
     self.selected_conversation_id = nil
     self.conversations = {}
@@ -39,17 +40,15 @@ end
 local ProgressIndicatorObserver = setmetatable({}, { __index = Observer })
 ProgressIndicatorObserver.__index = ProgressIndicatorObserver
 
----@param options table
-function ProgressIndicatorObserver.new(options)
-    assert(options)
-    assert(options.pi)
+---@param id? string
+---@param pi FittenCode.View.ProgressIndicator
+function ProgressIndicatorObserver.new(id, pi)
+    assert(pi)
     ---@type FittenCode.Chat.ProgressIndicatorObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new({
-        id = options.id or 'progress_indicator_observer'
-    })
+    local self = Observer.new(id or ('progress_indicator_observer' .. Fn.uuid_v1()))
     setmetatable(self, ProgressIndicatorObserver)
-    self.pi = options.pi
+    self.pi = pi
     self.start_time = {}
     return self
 end
@@ -99,7 +98,7 @@ TimingObserver.__index = TimingObserver
 function TimingObserver.new(id)
     ---@type FittenCode.Chat.TimingObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or 'timing_observer')
+    local self = Observer.new(id or ('timing_observer' .. Fn.uuid_v1()))
     setmetatable(self, TimingObserver)
     self.conversations = {}
     return self
@@ -271,7 +270,7 @@ TokenObserver.__index = TokenObserver
 function TokenObserver.new(id)
     ---@type FittenCode.Chat.TokenObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or 'token_observer')
+    local self = Observer.new(id or ('token_observer' .. Fn.uuid_v1()))
     setmetatable(self, TokenObserver)
     self.conversations = {}
     return self
