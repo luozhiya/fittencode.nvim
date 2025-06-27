@@ -14,11 +14,13 @@ local SESSION_TASK_EVENT = Definitions.SESSION_TASK_EVENT
 local Status = {}
 Status.__index = Status
 
+---@param options? { id?: string }
 ---@return FittenCode.Inline.Status
-function Status.new(id)
+function Status.new(options)
+    options = options or {}
     ---@type FittenCode.Inline.Status
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or ('status_observer_' .. Fn.uuid()))
+    local self = Observer.new({ id = options.id or ('status_observer_' .. Fn.uuid()) })
     setmetatable(self, Status)
     self.inline = ''
     self.completion = ''
@@ -57,15 +59,15 @@ end
 local ProgressIndicatorObserver = setmetatable({}, { __index = Observer })
 ProgressIndicatorObserver.__index = ProgressIndicatorObserver
 
----@param pi FittenCode.View.ProgressIndicator
-function ProgressIndicatorObserver.new(pi, options)
+---@param options { id?: string, pi: FittenCode.View.ProgressIndicator }
+function ProgressIndicatorObserver.new(options)
     options = options or {}
-    assert(pi)
+    assert(options.pi)
     ---@type FittenCode.Inline.ProgressIndicatorObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(options.id or ('progress_indicator_observer_' .. Fn.uuid()))
+    local self = Observer.new({ id = options.id or ('progress_indicator_observer_' .. Fn.uuid()) })
     setmetatable(self, ProgressIndicatorObserver)
-    self.pi = pi
+    self.pi = options.pi
     self.start_time = {}
     self.id = nil
     return self
@@ -120,10 +122,12 @@ end
 local StatisticObserver = {}
 StatisticObserver.__index = StatisticObserver
 
-function StatisticObserver.new(id)
+---@param options { id?: string }
+function StatisticObserver.new(options)
+    options = options or {}
     ---@type FittenCode.Inline.StatisticObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or ('statistic_observer_' .. Fn.uuid()))
+    local self = Observer.new({ id = options.id or ('statistic_observer_' .. Fn.uuid()) })
     setmetatable(self, StatisticObserver)
     return self
 end
@@ -138,10 +142,12 @@ end
 local TimingObserver = {}
 TimingObserver.__index = TimingObserver
 
-function TimingObserver.new(id)
+---@param options? { id?: string }
+function TimingObserver.new(options)
+    options = options or {}
     ---@type FittenCode.Inline.TimingObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or ('timing_observer_' .. Fn.uuid()))
+    local self = Observer.new({ id = options.id or ('timing_observer_' .. Fn.uuid()) })
     setmetatable(self, TimingObserver)
     return self
 end

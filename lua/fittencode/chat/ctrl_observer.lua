@@ -12,10 +12,12 @@ local CONVERSATION_PHASE = Definitions.CONVERSATION_PHASE
 local Status = setmetatable({}, { __index = Observer })
 Status.__index = Status
 
-function Status.new(id)
+---@param options? { id? : string }
+function Status.new(options)
+    options = options or {}
     ---@type FittenCode.Chat.Status
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or ('status_observer' .. Fn.uuid()))
+    local self = Observer.new({ id = options.id or ('status_observer_' .. Fn.uuid()) })
     setmetatable(self, Status)
     self.selected_conversation_id = nil
     self.conversations = {}
@@ -40,15 +42,15 @@ end
 local ProgressIndicatorObserver = setmetatable({}, { __index = Observer })
 ProgressIndicatorObserver.__index = ProgressIndicatorObserver
 
----@param pi FittenCode.View.ProgressIndicator
-function ProgressIndicatorObserver.new(pi, options)
+---@param options { id? : string, pi : FittenCode.View.ProgressIndicator }
+function ProgressIndicatorObserver.new(options)
     options = options or {}
-    assert(pi)
+    assert(options.pi)
     ---@type FittenCode.Chat.ProgressIndicatorObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(options.id or ('progress_indicator_observer' .. Fn.uuid()))
+    local self = Observer.new({ id = options.id or ('progress_indicator_observer_' .. Fn.uuid()) })
     setmetatable(self, ProgressIndicatorObserver)
-    self.pi = pi
+    self.pi = options.pi
     self.start_time = {}
     return self
 end
@@ -95,10 +97,12 @@ end
 local TimingObserver = setmetatable({}, { __index = Observer })
 TimingObserver.__index = TimingObserver
 
-function TimingObserver.new(id)
+---@param options? { id? : string }
+function TimingObserver.new(options)
+    options = options or {}
     ---@type FittenCode.Chat.TimingObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or ('timing_observer' .. Fn.uuid()))
+    local self = Observer.new({ id = options.id or ('timing_observer_' .. Fn.uuid()) })
     setmetatable(self, TimingObserver)
     self.conversations = {}
     return self
@@ -250,8 +254,6 @@ function TimingObserver:debug()
                 end
             end
         end
-
-        -- output[#output + 1] = ''
     end
 
     Log.debug(table.concat(output, '\n'))
@@ -267,10 +269,12 @@ end
 local TokenObserver = setmetatable({}, { __index = Observer })
 TokenObserver.__index = TokenObserver
 
-function TokenObserver.new(id)
+---@param options? { id? : string }
+function TokenObserver.new(options)
+    options = options or {}
     ---@type FittenCode.Chat.TokenObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or ('token_observer' .. Fn.uuid()))
+    local self = Observer.new({ id = options.id or ('token_observer_' .. Fn.uuid()) })
     setmetatable(self, TokenObserver)
     self.conversations = {}
     return self
