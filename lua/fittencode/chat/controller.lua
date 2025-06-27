@@ -40,9 +40,7 @@ function Controller:_initialize(options)
     self.status_observer = Status.new()
     self:add_observer(self.status_observer)
     self.pi = ProgressIndicator.new()
-    self.progress_observer = ProgressIndicatorObserver.new({
-        pi = self.pi
-    })
+    self.progress_observer = ProgressIndicatorObserver.new(self.pi)
     self:add_observer(self.progress_observer)
     self.timing_observer = TimingObserver.new()
     self:add_observer(self.timing_observer)
@@ -50,8 +48,7 @@ function Controller:_initialize(options)
     self:add_observer(self.token_observer)
 end
 
-function Controller:add_observer(observer, callback)
-    -- 支持传入回调函数创建匿名观察者
+function Controller:add_observer(observer)
     if type(observer) == 'function' then
         local id = 'callback_observer_' .. Fn.uuid_v1()
         observer = setmetatable({
@@ -86,7 +83,7 @@ end
 
 ---@return string
 function Controller:generate_conversation_id()
-    return Fn.random(36):sub(2, 10)
+    return Fn.generate_short_id(8)
 end
 
 function Controller:update_view(options)

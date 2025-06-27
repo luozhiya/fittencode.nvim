@@ -40,28 +40,26 @@ local SESSION_EVENT = Definitions.SESSION_EVENT
 local Controller = {}
 Controller.__index = Controller
 
-function Controller.new(options)
+function Controller.new()
     local self = setmetatable({}, Controller)
-    self:_initialize(options)
+    self:_initialize()
     return self
 end
 
-function Controller:_initialize(options)
+function Controller:_initialize()
     self.observers = {}
     self.sessions = {}
     self.filter_events = {}
     self.keymaps = {}
     self:set_suffix_permissions(Config.inline_completion.enable)
-    self.no_more_suggestion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
     self.status_observer = Status.new()
     self:add_observer(self.status_observer)
     self.pi = ProgressIndicator.new()
-    self.progress_observer = ProgressIndicatorObserver.new({
-        pi = self.pi
-    })
+    self.progress_observer = ProgressIndicatorObserver.new(self.pi)
     self:add_observer(self.progress_observer)
     self.timing_observer = TimingObserver.new()
     self:add_observer(self.timing_observer)
+    self.no_more_suggestion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
 
     self.keymaps = {
         { Config.keymaps.inline['inline_completion'], function() self:trigger_inline_suggestion_by_shortcut() end },

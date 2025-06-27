@@ -57,13 +57,13 @@ end
 local ProgressIndicatorObserver = setmetatable({}, { __index = Observer })
 ProgressIndicatorObserver.__index = ProgressIndicatorObserver
 
----@param id string
 ---@param pi FittenCode.View.ProgressIndicator
-function ProgressIndicatorObserver.new(id, pi)
+function ProgressIndicatorObserver.new(pi, options)
+    options = options or {}
     assert(pi)
     ---@type FittenCode.Inline.ProgressIndicatorObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new(id or ('progress_indicator_observer_' .. Fn.uuid_v1()))
+    local self = Observer.new(options.id or ('progress_indicator_observer_' .. Fn.uuid_v1()))
     setmetatable(self, ProgressIndicatorObserver)
     self.pi = pi
     self.start_time = {}
