@@ -105,10 +105,10 @@ function M.login(username, password)
     end
 
     ---@type FittenCode.Protocol.Methods.Login.Payload
-    local body = { username = username, password = password }
+    local payload = { username = username, password = password }
 
     request = Client.make_request(Protocol.Methods.login, {
-        body = assert(vim.fn.json_encode(body)),
+        payload = assert(vim.fn.json_encode(payload)),
     })
     if not request then
         Log.notify_error(i18n.tr('[Fitten Code] Internal error'))

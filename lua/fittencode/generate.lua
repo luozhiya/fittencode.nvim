@@ -33,7 +33,7 @@ function M.request_chat(payload, strict)
     strict = strict or false
     assert(payload)
     local request = Client.make_request_auth(Protocol.Methods.chat_auth, {
-        body = assert(vim.fn.json_encode(payload))
+        payload = assert(vim.fn.json_encode(payload))
     })
     if not request then
         Log.error('Failed to make request')

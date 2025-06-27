@@ -255,17 +255,17 @@ local function start_normal_chat(self)
 
     local completion = {}
     ---@type FittenCode.Protocol.Methods.ChatAuth.Payload
-    local body = {
+    local payload = {
         inputs = evaluated,
         ft_token = api_key_manager:get_fitten_user_id() or '',
         meta_datas = {
             project_id = '',
         }
     }
-    Log.debug('Evaluated HTTP body: {}', body)
+    Log.debug('Evaluated HTTP payload: {}', payload)
 
     local res = Client.make_request_auth(protocol, {
-        body = assert(vim.fn.json_encode(body)),
+        payload = assert(vim.fn.json_encode(payload)),
     })
     if not res then
         return nil, 'Failed to create request chat'

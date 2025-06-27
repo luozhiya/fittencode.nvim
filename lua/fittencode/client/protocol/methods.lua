@@ -8,7 +8,7 @@
   * url: 对含有多语言版本的，采用 { en = '', ['zh-cn'] = '' } 的形式
   * headers: HTTP 请求头，如 { 'Content-Type' = 'application/json' }
   * query: URL 查询参数，如 `?user_id={{user_id}}&{{platform_info}}` 约定一个接口只能有一种query参数形式
-  * body: 请求体，如 `@FittenCode.Protocol.Methods.Login.Payload`
+  * payload: 请求体，如 `@FittenCode.Protocol.Methods.Login.Payload`
   * response: 响应体，如 `@FittenCode.Protocol.Methods.Login.Response`
   * 注：(`url`/`headers`/`query`) 均支持模版参数，可动态解析，如 `{{user_id}}`、`{{platform_info}}`、`{{access_token}}`、`{{refresh_token}}`、`{{client_token}}`、`{{source}}`
 
@@ -28,7 +28,7 @@ local Methods = {
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
     -- * `query = username={}&phone={}&email={}&lang={}&timezone={}`
-    -- * `body = @FittenCode.Protocol.Methods.Signup.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.Signup.Payload`
     -- * `response = @FittenCode.Protocol.Methods.Signup.Response`
     signup = {
         method = 'POST',
@@ -50,7 +50,7 @@ local Methods = {
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
     -- * `query = {}`
-    -- * `body = @FittenCode.Protocol.Methods.Login.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.Login.Payload`
     -- * `response = @FittenCode.Protocol.Methods.Login.Response`
     login = {
         method = 'POST',
@@ -60,7 +60,7 @@ local Methods = {
     -- 通过手机号更改密码接口
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.UpdatePassword.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.UpdatePassword.Payload`
     -- * `query = {}`
     -- * `response = @FittenCode.Protocol.Methods.UpdatePassword.Response`
     update_password = {
@@ -71,7 +71,7 @@ local Methods = {
     -- 通过邮箱更改密码接口
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.UpdatePasswordEmail.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.UpdatePasswordEmail.Payload`
     -- * `query = {}`
     -- * `response = @FittenCode.Protocol.Methods.UpdatePasswordEmail.Response`
     update_password_email = {
@@ -82,7 +82,7 @@ local Methods = {
     -- 发送邮箱验证码接口
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.EmailCode.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.EmailCode.Payload`
     -- * `query = ?email={}`
     -- * `response = @FittenCode.Protocol.Methods.EmailCode.Response`
     email_code = {
@@ -98,7 +98,7 @@ local Methods = {
     -- 发送手机验证码接口
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.PhoneCode.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.PhoneCode.Payload`
     -- * `query = ?phone={}`
     -- * `response = @FittenCode.Protocol.Methods.PhoneCode.Response`
     phone_code = {
@@ -114,7 +114,7 @@ local Methods = {
     -- 获取用户信息接口
     -- * `method = GET`
     -- * `headers = { 'Authorization' = 'Bearer {{access_token}}' }`
-    -- * `body = {}`
+    -- * `payload = {}`
     -- * `query = {}`
     -- * `response = @FittenCode.Protocol.Methods.UserInfo.Response`
     user_info = {
@@ -125,7 +125,7 @@ local Methods = {
     -- 根据 ft_token 获取 access_token
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = {}`
+    -- * `payload = {}`
     -- * `query = ?ft_token={}`
     auto_login = {
         method = 'POST',
@@ -140,7 +140,7 @@ local Methods = {
     -- 刷新 refresh_token
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.RefreshRefreshToken.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.RefreshRefreshToken.Payload`
     -- * `query = {}`
     -- * `response = @FittenCode.Protocol.Methods.RefreshRefreshToken.Response`
     refresh_refresh_token = {
@@ -150,7 +150,7 @@ local Methods = {
     },
     -- 刷新 access_token
     -- * `method = POST`
-    -- * `body = {}`
+    -- * `payload = {}`
     -- * `headers = { 'Authorization' = 'Bearer {{access_token}}', 'Content-Type' = 'application/json' }`
     -- * `query = {}`
     -- * `response = @FittenCode.Protocol.Methods.RefreshAccessToken.Response`
@@ -178,7 +178,7 @@ local Methods = {
     -- 监听第三方登录状态接口
     -- * `method = GET`
     -- * `headers = {}`
-    -- * `body = {}`
+    -- * `payload = {}`
     -- * `query = ?client_token={}`
     -- * `response = @FittenCode.Protocol.Methods.FBCheckLoginAuth.Response`
     fb_check_login_auth = {
@@ -194,7 +194,7 @@ local Methods = {
     -- * `method = GET`
     -- * `mode = cors`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = {}`
+    -- * `payload = {}`
     -- * ```
     --    query = &type={}?user_id={}
     --    支持的 type (事实上不同的 type 对应不同的 query 参数，暂不支持):
@@ -241,7 +241,7 @@ local Methods = {
     -- * `method = GET`
     -- * `mode = cors`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = {}`
+    -- * `payload = {}`
     -- * `query = ?{{completion_statistics}}`
     statistic_log = {
         method = 'GET',
@@ -256,7 +256,7 @@ local Methods = {
     -- * `method = GET`
     -- * `mode = cors`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = {}`
+    -- * `payload = {}`
     -- * `query = ?tracker={}` tracker=后面接一个json字符串
     statistic_log_v2 = {
         method = 'GET',
@@ -272,7 +272,7 @@ local Methods = {
     -- 参加灰度测试接口
     -- * `method = GET`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = {}`
+    -- * `payload = {}`
     -- * `query = ?plan_name={}&ft_token={}&{platform_info}`
     -- * `response = @FittenCode.Protocol.Methods.GrayTest.Response`
     gray_test = {
@@ -290,7 +290,7 @@ local Methods = {
     -- 检查用户是否有 Project Completion 权限
     -- * `method = GET`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = {}`
+    -- * `payload = {}`
     -- * `query = ?user_id={}&{platform_info}`
     -- * `response = @FittenCode.Protocol.Methods.PCCheckAuth.Response`
     pc_check_auth = {
@@ -307,7 +307,7 @@ local Methods = {
     -- 获取用户的 Completion 版本号，该值影响 generate_one_stage_auth 接口
     -- * `method = GET`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = {}`
+    -- * `payload = {}`
     -- * `query = ?ft_token={}`
     -- * `response = @FittenCode.Protocol.Methods.GetCompletionVersion.Response`
     get_completion_version = {
@@ -323,7 +323,7 @@ local Methods = {
     -- 当用户 Accept 代码补全时，向服务器发送事件
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.Accept.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.Accept.Payload`
     -- * `query = {}`
     accept = {
         method = 'POST',
@@ -342,7 +342,7 @@ local Methods = {
     -- 生成一阶段补全代码，有多个版本
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json', 'Content-Encoding' = 'gzip' }`
-    -- * `body = @FittenCode.Protocol.Methods.GenerateOneStageAuth.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.GenerateOneStageAuth.Payload`
     -- * `query = ?{platform_info}`
     -- * `response = @FittenCode.Protocol.Methods.GenerateOneStageAuth.Response`
     -- * `completion_version = { '', '2_1', '2_2', '2_3' }`
@@ -357,7 +357,7 @@ local Methods = {
     -- 对话接口 Chat (Fast/Search @FCPS)，以流的形式接受数据
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json', 'Authorization' = 'Bearer {{access_token}}' }`
-    -- * `body = @FittenCode.Protocol.Methods.ChatAuth.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.ChatAuth.Payload`
     -- * `query = ?ft_token={}&{platform_info}`
     -- * `response = @FittenCode.Protocol.Methods.ChatAuth.Response`
     chat_auth = {
@@ -374,7 +374,7 @@ local Methods = {
     -- 当用户选择插入或复制对话内容时，向服务器发送事件
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.Feedback.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.Feedback.Payload`
     -- * `query = ?ft_token={}&{platform_info}`
     -- * `response = {}`
     feedback = {
@@ -391,7 +391,7 @@ local Methods = {
     -- 检测用户的邀请码
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.CheckInviteCode.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.CheckInviteCode.Payload`
     -- * `query = ?code={}`
     -- * `response = @FittenCode.Protocol.Methods.CheckInviteCode.Response`
     check_invite_code = {
@@ -407,7 +407,7 @@ local Methods = {
     -- 发送 RAG 聊天信息，当使用 @project/@workspace 时，调用此接口
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.RagChat.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.RagChat.Payload`
     -- * `query = ?ft_token={}&{platform_info}`
     -- * `response = @FittenCode.Protocol.Methods.RagChat.Response`
     rag_chat = {
@@ -424,7 +424,7 @@ local Methods = {
     -- 获取知识库信息
     -- * `method = GET`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = {}`
+    -- * `payload = {}`
     -- * `query = ?FT_Token={}`
     -- * `response = @FittenCode.Protocol.Methods.KnowledgeBaseInfo.Response`
     knowledge_base_info = {
@@ -440,7 +440,7 @@ local Methods = {
     -- 获取本地知识库的引用
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.GetLocalKnowledgeBaseRefs.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.GetLocalKnowledgeBaseRefs.Payload`
     -- * `query = {}`
     -- * `response = @FittenCode.Protocol.Methods.GetLocalKnowledgeBaseRefs.Response`
     get_local_knowledge_base_refs = {
@@ -451,7 +451,7 @@ local Methods = {
     -- 创建知识库
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.CreateKnowledgeBase.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.CreateKnowledgeBase.Payload`
     -- * `query = {}`
     create_knowledge_base = {
         method = 'POST',
@@ -461,7 +461,7 @@ local Methods = {
     -- 加入指定 ID 的知识库
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.JoinKnowledgeBase.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.JoinKnowledgeBase.Payload`
     -- * `query = {}`
     -- * `response = @FittenCode.Protocol.Methods.JoinKnowledgeBase.Response`
     join_knowledge_base = {
@@ -472,7 +472,7 @@ local Methods = {
     -- 根据 ID 获取知识库信息
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.GetKnowledgeBase.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.GetKnowledgeBase.Payload`
     -- * `query = {}`
     -- * `response = @FittenCode.Protocol.Methods.GetKnowledgeBase.Response`
     get_knowledge_base = {
@@ -483,7 +483,7 @@ local Methods = {
     -- 更新知识库
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.UpdateKnowledgeBase.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.UpdateKnowledgeBase.Payload`
     -- * `query = {}`
     -- * `response = @FittenCode.Protocol.Methods.UpdateKnowledgeBase.Response`
     update_knowledge_base = {
@@ -494,7 +494,7 @@ local Methods = {
     -- 删除知识库
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.DeleteKnowledgeBase.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.DeleteKnowledgeBase.Payload`
     -- * `query = {}`
     delete_knowledge_base = {
         method = 'POST',
@@ -504,7 +504,7 @@ local Methods = {
     -- 获取文件列表
     -- * `method = GET`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = {}`
+    -- * `payload = {}`
     -- * `query = ?FT_Token={}&targetDirId={}`
     -- * `response = @FittenCode.Protocol.Methods.GetFilesList.Response`
     files_name_list = {
@@ -521,7 +521,7 @@ local Methods = {
     -- 上传文件
     -- * `method = POST`
     -- * `headers = {}`
-    -- * `body = @FittenCode.Protocol.Methods.UploadLargeFile.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.UploadLargeFile.Payload`
     -- * `query = ?ft_token={}&{platform_info}`
     -- * `response = @FittenCode.Protocol.Methods.UploadLargeFile.Response`
     upload_large_file = {
@@ -532,7 +532,7 @@ local Methods = {
     -- 删除文件
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.DeleteFile.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.DeleteFile.Payload`
     -- * `query = {}`
     -- * `response = {}`
     delete_file = {
@@ -543,7 +543,7 @@ local Methods = {
     -- 检测是否需要更新项目
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.NeedUpdateProject.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.NeedUpdateProject.Payload`
     -- * `query = {}`
     -- * `response = @FittenCode.Protocol.Methods.NeedUpdateProject.Response`
     need_update_project = {
@@ -554,7 +554,7 @@ local Methods = {
     -- 更新项目
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.UpdateProject.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.UpdateProject.Payload`
     -- * `query = ?ft_token={}`
     -- * `response = @FittenCode.Protocol.Methods.UpdateProject.Response`
     update_project = {
@@ -570,7 +570,7 @@ local Methods = {
     -- 保存文件和目录名
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.SaveFileAndDirectoryNames.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.SaveFileAndDirectoryNames.Payload`
     -- * `query = ?ft_token={}&{platform_info}`
     -- * `response = @FittenCode.Protocol.Methods.SaveFileAndDirectoryNames.Response`
     save_file_and_directory_names = {
@@ -587,7 +587,7 @@ local Methods = {
     -- 添加文件和目录
     -- * `method = POST`
     -- * `headers = { 'Content-Type' = 'application/json' }`
-    -- * `body = @FittenCode.Protocol.Methods.AddFilesAndDirectories.Payload`
+    -- * `payload = @FittenCode.Protocol.Methods.AddFilesAndDirectories.Payload`
     -- * `query = ?ft_token={}&{platform_info}`
     -- * `response = @FittenCode.Protocol.Methods.AddFilesAndDirectories.Response`
     add_files_and_directories = {

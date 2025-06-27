@@ -44,5 +44,5 @@
 
 ---@class FittenCode.Client.RequestOptions
 ---@field variables table<string, any>?
----@field body string?
+---@field payload string?
 ---@field timeout number?

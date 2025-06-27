@@ -7,7 +7,7 @@
 ---@field mode? string
 ---@field url FittenCode.Protocol.Element.URL
 ---@field headers? table<string, string>
----@field body? table<string, any>
+---@field payload? table<string, any>
 ---@field query? string|table<string, any>
 ---@field response? table<string, any>
 ---@field type? string 'method'|'url'

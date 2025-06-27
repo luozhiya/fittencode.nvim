@@ -5,7 +5,7 @@ local http = require('fittencode.http')
 local res = http.fetch('https://api.example.com', {
     method = 'POST',
     headers = { ['Content-Type'] = 'application/json' },
-    body = vim.json.encode({ query = 'test' })
+    payload = vim.json.encode({ query = 'test' })
 })
 
 -------------------------------
@@ -287,13 +287,13 @@ function M.fetch(url, options)
 
     local stdin_data
     -- Vim:E976: Using a Blob as a String
-    if Fn.filereadable(options.body) == 1 then
+    if Fn.filereadable(options.payload) == 1 then
         table.insert(args, '--data-binary')
-        table.insert(args, '@' .. options.body)
+        table.insert(args, '@' .. options.payload)
     else
         table.insert(args, '--data-binary')
         table.insert(args, '@-')
-        stdin_data = options.body
+        stdin_data = options.payload
     end
 
     table.insert(args, url)

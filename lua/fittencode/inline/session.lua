@@ -506,7 +506,7 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
         variables = {
             completion_version = vu[completion_version],
         },
-        body = compressed_prompt_binary,
+        payload = compressed_prompt_binary,
     })
     if not request then
         return Promise.rejected({

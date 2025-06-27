@@ -204,7 +204,7 @@ function M.make_request(protocol, options)
     local reqopt = {
         method = protocol.method,
         headers = evaluated.headers,
-        body = options.body,
+        payload = options.payload,
         timeout = options.timeout,
     }
 
@@ -237,7 +237,7 @@ local function refresh_refresh_token(last_refresh_token)
     local protocol = Protocal.Methods.refresh_refresh_token
     local req = M.make_request(protocol, {
         ---@type FittenCode.Protocol.Methods.RefreshRefreshToken.Payload
-        body = vim.json.encode(last_refresh_token)
+        payload = vim.json.encode(last_refresh_token)
     })
     if not req then
         return Promise.rejected()
