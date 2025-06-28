@@ -1,5 +1,5 @@
 local Log = require('fittencode.log')
-local State = require('fittencode.chat.state')
+local State = require('fittencode.chat.view.state')
 local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')
 local Config = require('fittencode.config')
@@ -23,6 +23,13 @@ local CONVERSATION_PHASE = Definitions.CONVERSATION_PHASE
 local Controller = {}
 Controller.__index = Controller
 
+---@class FittenCode.Chat.Controller.InitialOptions
+---@field view FittenCode.Chat.View
+---@field model FittenCode.Chat.Model
+---@field basic_chat_template_id string
+---@field conversation_types_provider FittenCode.Chat.ConversationTypeProvider
+
+---@param options FittenCode.Chat.Controller.InitialOptions
 ---@return FittenCode.Chat.Controller
 function Controller.new(options)
     local self = setmetatable({}, Controller)
@@ -30,6 +37,7 @@ function Controller.new(options)
     return self
 end
 
+---@param options FittenCode.Chat.Controller.InitialOptions
 function Controller:_initialize(options)
     options = options or {}
     self.view = options.view
@@ -40,7 +48,7 @@ function Controller:_initialize(options)
     self.status_observer = Status.new()
     self:add_observer(self.status_observer)
     self.pi = ProgressIndicator.new()
-    self.progress_observer = ProgressIndicatorObserver.new(self.pi)
+    self.progress_observer = ProgressIndicatorObserver.new({ pi = self.pi })
     self:add_observer(self.progress_observer)
     self.timing_observer = TimingObserver.new()
     self:add_observer(self.timing_observer)
@@ -48,6 +56,7 @@ function Controller:_initialize(options)
     self:add_observer(self.token_observer)
 end
 
+---@param observer FittenCode.Observer
 function Controller:add_observer(observer)
     if type(observer) == 'function' then
         local id = 'callback_observer_' .. Fn.uuid()
@@ -62,21 +71,28 @@ function Controller:add_observer(observer)
     return observer
 end
 
+---@param identifier string|FittenCode.Observer
 function Controller:remove_observer(identifier)
     local id = type(identifier) == 'string' and identifier or identifier.id
     self.observers[id] = nil
 end
 
+---@param id string
+---@return FittenCode.Observer
 function Controller:get_observer(id)
     return self.observers[id]
 end
 
+---@param event_type string
+---@param data table
 function Controller:notify_observers(event_type, data)
     for _, observer in pairs(self.observers) do
         observer:update(self, event_type, data)
     end
 end
 
+---@param event_type string
+---@param data table
 function Controller:_emit(event_type, data)
     self:notify_observers(event_type, data)
 end
@@ -86,6 +102,7 @@ function Controller:generate_conversation_id()
     return Fn.generate_short_id(8)
 end
 
+---@param options? { force?: boolean, clean_canvas?: boolean, skip_welcome_msg?: boolean }
 function Controller:update_view(options)
     options = options or {}
     local force = options.force or false
@@ -142,13 +159,14 @@ function Controller:add_and_show_conversation(conversation, show)
     return conversation
 end
 
----@param msg table
+---@param msg? { type: string, data: any }
 function Controller:receive_view_message(msg)
     if not msg then return end
     local ty = msg.type
     if ty == 'ping' then
         self:update_view()
     elseif ty == 'send_message' then
+        assert(msg.data)
         -- Log.debug('Received message id = {}', msg.data.id)
         -- Log.debug('Selected conversation id = {}', self.model:get_selected_conversation_id())
         assert(msg.data.id == self.model:get_selected_conversation_id())
@@ -220,6 +238,7 @@ function Controller:create_conversation(template_id, show, mode, context)
     end
 end
 
+---@param id string
 function Controller:delete_conversation(id)
     self.model:delete_conversation(id)
     self:update_view()
@@ -246,6 +265,8 @@ function Controller:list_conversations()
     return list
 end
 
+---@param id string
+---@param show boolean
 function Controller:select_conversation(id, show)
     if id == self.model:get_selected_conversation_id() then
         return
@@ -268,6 +289,10 @@ function Controller:get_status()
     return self.status_observer
 end
 
+---@param context { buf: number, selection: { range: FittenCode.Range } }
+---@param variables table
+---@param msgpack { messages: table }
+---@return any
 function Controller:_resolve_variables_internal(context, variables, msgpack)
     local buf = context and context.buf or nil
     if not buf then
@@ -353,6 +378,10 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
     return switch[variables.type]()
 end
 
+---@param context { buf: number, selection: { range: FittenCode.Range } }
+---@param variables table
+---@param event { messages: table, time: string }
+---@return table
 function Controller:_resolve_variables(context, variables, event)
     local resolved_vars = {
         messages = event.messages,
@@ -375,6 +404,8 @@ end
 
 local VCODES = { ['v'] = true, ['V'] = true, [vim.api.nvim_replace_termcodes('<C-V>', true, true, true)] = true }
 
+---@param buf integer
+---@return FittenCode.Range?
 local function get_range_from_visual_selection(buf)
     if VCODES[vim.api.nvim_get_mode().mode] then
         -- [bufnum, lnum, col, off]
@@ -391,6 +422,8 @@ local function get_range_from_visual_selection(buf)
     end
 end
 
+---@param type string
+---@param mode? string
 function Controller:from_builtin_template_with_selection(type, mode)
     mode = mode or 'chat'
 
@@ -434,7 +467,7 @@ end
 
 function Controller:add_selection_context_to_input()
     local buf = vim.api.nvim_get_current_buf()
-    local range = get_range_from_visual_selection()
+    local range = get_range_from_visual_selection(buf)
     local conversation = self:selected_conversation()
     if not conversation then
         Log.error('No conversation selected')

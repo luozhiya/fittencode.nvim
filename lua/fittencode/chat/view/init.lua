@@ -123,7 +123,7 @@ function View:select_conversation(conversation_id)
 end
 
 function View:update(options)
-    ---@type FittenCode.Chat.State
+    ---@type FittenCode.Chat.ViewState
     local state = options.state
     local clean_canvas = options.clean_canvas or false
     local skip_welcome_msg = options.skip_welcome_msg or false
@@ -162,7 +162,7 @@ function View:render_reference(conversation)
     end)
 end
 
----@param conversation FittenCode.Chat.State.ConversationState
+---@param conversation FittenCode.Chat.ViewState.Conversation
 function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
     assert(self.messages_exchange.buf)
     local api_key_manager = Client.get_api_key_manager()

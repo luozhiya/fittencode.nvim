@@ -69,7 +69,7 @@ function ProgressIndicatorObserver.new(options)
     setmetatable(self, ProgressIndicatorObserver)
     self.pi = options.pi
     self.start_time = {}
-    self.id = nil
+    self.session_id = nil
     return self
 end
 
@@ -85,12 +85,12 @@ function ProgressIndicatorObserver:update(controller, event, data)
         self.pi:stop()
         return
     end
-    if controller:get_current_session_id() == self.id then
-        if data and data.id ~= self.id then
+    if controller:get_current_session_id() == self.session_id then
+        if data and data.id ~= self.session_id then
             return
         end
     else
-        self.id = controller:get_current_session_id()
+        self.session_id = controller:get_current_session_id()
         self.pi:stop()
     end
     local cmp_busy = {

@@ -40,13 +40,13 @@ local SESSION_EVENT = Definitions.SESSION_EVENT
 local Controller = {}
 Controller.__index = Controller
 
-function Controller.new()
+function Controller.new(options)
     local self = setmetatable({}, Controller)
-    self:_initialize()
+    self:_initialize(options)
     return self
 end
 
-function Controller:_initialize()
+function Controller:_initialize(options)
     self.observers = {}
     self.sessions = {}
     self.filter_events = {}
@@ -55,7 +55,7 @@ function Controller:_initialize()
     self.status_observer = Status.new()
     self:add_observer(self.status_observer)
     self.pi = ProgressIndicator.new()
-    self.progress_observer = ProgressIndicatorObserver.new(self.pi)
+    self.progress_observer = ProgressIndicatorObserver.new({ pi = self.pi })
     self:add_observer(self.progress_observer)
     self.timing_observer = TimingObserver.new()
     self:add_observer(self.timing_observer)

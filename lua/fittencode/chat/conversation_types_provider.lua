@@ -12,6 +12,10 @@ local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLAT
 local ConversationTypesProvider = {}
 ConversationTypesProvider.__index = ConversationTypesProvider
 
+---@class FittenCode.Chat.ConversationTypeProvider.InitialOptions
+---@field extension_uri string
+
+---@param options FittenCode.Chat.ConversationTypeProvider.InitialOptions
 ---@return FittenCode.Chat.ConversationTypeProvider
 function ConversationTypesProvider.new(options)
     local self = setmetatable({}, ConversationTypesProvider)
@@ -19,7 +23,10 @@ function ConversationTypesProvider.new(options)
     return self
 end
 
+---@param options FittenCode.Chat.ConversationTypeProvider.InitialOptions
 function ConversationTypesProvider:_initialize(options)
+    assert(options)
+    assert(options.extension_uri)
     self.extension_templates = {}
     self.conversation_types = {}
     self.extension_uri = options.extension_uri
@@ -37,9 +44,9 @@ function ConversationTypesProvider:get_conversation_types()
     return self.conversation_types
 end
 
----@param opts table
-function ConversationTypesProvider:register_extension_template(opts)
-    table.insert(self.extension_templates, opts.template)
+---@param options { template: string }
+function ConversationTypesProvider:register_extension_template(options)
+    table.insert(self.extension_templates, options.template)
 end
 
 function ConversationTypesProvider:load_conversation_types()
@@ -88,6 +95,7 @@ function ConversationTypesProvider:load_builtin_template(type, file)
     end
 end
 
+---@param strict boolean?
 function ConversationTypesProvider:is_builtin_template_loaded(strict)
     for _, id in ipairs(TEMPLATE_CATEGORIES) do
         if not self:get_conversation_type(id .. '-en') then

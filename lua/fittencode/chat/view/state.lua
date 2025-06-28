@@ -10,18 +10,19 @@ local F = require('fittencode.fn.buf')
 local Definitions = require('fittencode.chat.definitions')
 local VIEW_TYPE = Definitions.CONVERSATION_VIEW_TYPE
 
----@class FittenCode.Chat.State.ConversationState
+---@class FittenCode.Chat.ViewState.Conversation
 local ConversationState = {}
 ConversationState.__index = ConversationState
 
 ---@param conversation FittenCode.Chat.Conversation
----@return FittenCode.Chat.State.ConversationState
+---@return FittenCode.Chat.ViewState.Conversation
 function ConversationState.new(conversation)
     local self = setmetatable({}, ConversationState)
     self:_initialize(conversation)
     return self
 end
 
+---@param conversation FittenCode.Chat.Conversation
 function ConversationState:_initialize(conversation)
     self.id = conversation.id
     self.reference = { select_text = nil, select_range = nil }
@@ -44,11 +45,11 @@ function ConversationState:user_can_reply()
     return self.content.state == nil or (self.content.state ~= nil and self.content.state.type == VIEW_TYPE.USER_CAN_REPLY)
 end
 
----@class FittenCode.Chat.State
+---@class FittenCode.Chat.ViewState
 local State = {}
 State.__index = State
 
----@return FittenCode.Chat.State
+---@return FittenCode.Chat.ViewState
 function State.new(options)
     local self = setmetatable({}, State)
     self:_initialize(options)
@@ -59,7 +60,7 @@ function State:_initialize(options)
 end
 
 ---@param conversation FittenCode.Chat.Conversation
----@return FittenCode.Chat.State.ConversationState
+---@return FittenCode.Chat.ViewState.Conversation
 local function to_state(conversation)
     -- local chat_interface = conversation.template.chatInterface or 'message-exchange'
     -- Force to use message-exchange interface for now
@@ -78,7 +79,7 @@ end
 
 ---@param model FittenCode.Chat.Model
 ---@param selected_state? boolean
----@return FittenCode.Chat.State
+---@return FittenCode.Chat.ViewState
 function State.get_state_from_model(model, selected_state)
     selected_state = selected_state == nil and true or selected_state
     local state = State.new()

@@ -13,7 +13,19 @@ local VIEW_TYPE = Definitions.CONVERSATION_VIEW_TYPE
 local Conversation = {}
 Conversation.__index = Conversation
 
----@param options table
+---@class FittenCode.Chat.Conversation.InitialOptions
+---@field id string
+---@field template table
+---@field init_variables table
+---@field template_id string
+---@field update_view function
+---@field update_status function
+---@field resolve_variables function
+---@field variables table?
+---@field context table?
+---@field should_immediately_answer boolean?
+
+---@param options FittenCode.Chat.Conversation.InitialOptions
 ---@return FittenCode.Chat.Conversation
 function Conversation.new(options)
     local self = setmetatable({}, Conversation)
@@ -21,6 +33,7 @@ function Conversation.new(options)
     return self
 end
 
+---@param options FittenCode.Chat.Conversation.InitialOptions
 function Conversation:_initialize(options)
     self.id = options.id
     self.template = options.template
@@ -112,7 +125,7 @@ function Conversation:resolve_variables_at_message_time()
 end
 
 ---@param template string
----@param variables table?
+---@param variables? table
 ---@return string?
 function Conversation:evaluate_template(template, variables)
     if variables == nil then
@@ -126,10 +139,10 @@ function Conversation:evaluate_template(template, variables)
     return OPL.run(env, template)
 end
 
+---@param error? table | string
 function Conversation:recovered_from_error(error)
-    -- [GitHub](https://github.com/luozhiya/fittencode.nvim/issues)
     local content = {
-        i18n.tr('Error encountered. Refer to error message for troubleshooting or file an issue on {}.', 'GitHub'),
+        i18n.tr('Error encountered. Refer to error message for troubleshooting or file an issue on {}.', 'https://github.com/luozhiya/fittencode.nvim/issues'),
         '```json',
         vim.inspect(error),
         '```',
@@ -190,6 +203,8 @@ function Conversation:add_user_message(content, bot_action)
     self.update_view()
 end
 
+---@param delta string
+---@return boolean
 local function validate_delta(delta)
     assert(type(delta) == 'string')
     -- "\0\0\0\0\0\0\0\0\n\n"
@@ -202,6 +217,8 @@ local function validate_delta(delta)
     return true
 end
 
+---@param self FittenCode.Chat.Conversation
+---@return boolean
 local function is_rag_chat(self)
     if #self.messages == 0 then
         return false
@@ -232,6 +249,7 @@ local function is_rag_chat(self)
     return false
 end
 
+---@param self FittenCode.Chat.Conversation
 local function start_normal_chat(self)
     self.update_status({ id = self.id, phase = PHASE.START })
 
@@ -274,7 +292,7 @@ local function start_normal_chat(self)
     local err_chunks = {}
     local message_metadata = {}
 
-    -- Start streaming
+    -- streaming
     res.stream:on('data', function(data)
         local data_chunk = data.chunk
         self.update_status({ id = self.id, phase = PHASE.STREAMING })
@@ -330,7 +348,7 @@ function Conversation:execute_chat()
     end
 end
 
----@param completion table
+---@param completion table<string>
 function Conversation:handle_completion(completion)
     assert(completion)
     completion = completion or {}
@@ -338,6 +356,7 @@ function Conversation:handle_completion(completion)
     self:add_bot_message({ content = content })
 end
 
+---@param message FittenCode.Chat.Message
 function Conversation:_add_message(message)
     self.messages[#self.messages + 1] = message
 end
@@ -379,6 +398,8 @@ function Conversation:update_partial_bot_message(msg)
 end
 
 -- Add reference to chat
+---@param buf integer
+---@param range FittenCode.Range
 function Conversation:add_selection_context_to_input(buf, range)
 end
 

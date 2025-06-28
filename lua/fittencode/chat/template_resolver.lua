@@ -3,6 +3,7 @@ local Fn = require('fittencode.fn.core')
 ---@class FittenCode.Chat.TemplateResolver
 local TemplateResolver = {}
 
+---@param buf integer
 function TemplateResolver.load_from_buffer(buf)
     local parser = vim.treesitter.get_parser(buf, 'markdown')
     local query_string = [[
@@ -92,7 +93,9 @@ function TemplateResolver.load_from_buffer(buf)
     return template
 end
 
+---@param e string | string[]
 function TemplateResolver.load_from_file(e)
+    assert(e)
     local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_call(buf, function()
         vim.api.nvim_set_option_value('buflisted', false, { buf = buf })
@@ -100,11 +103,14 @@ function TemplateResolver.load_from_file(e)
     end)
     local success, err = pcall(vim.api.nvim_buf_call, buf, function()
         local lines = e
+        ---@diagnostic disable-next-line: param-type-mismatch
         if vim.fn.filereadable(e) == 1 then
+        ---@diagnostic disable-next-line: param-type-mismatch
             lines = vim.fn.readfile(e)
             -- vim.cmd('silent edit ' .. e) -- create win?
             -- vim.fn.fnamemodify(e, ':t')
         end
+        ---@diagnostic disable-next-line: param-type-mismatch
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
     end)
     if not success then
@@ -117,7 +123,9 @@ function TemplateResolver.load_from_file(e)
     return template
 end
 
+---@param dir string
 function TemplateResolver.load_from_directory(dir)
+    assert(dir)
     local templates = {}
     local entries = Fn.fs_all_entries(dir, {})
     for _, entry in ipairs(entries) do

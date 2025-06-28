@@ -12,7 +12,7 @@ function Model.new(options)
 end
 
 function Model:_initialize(options)
-    self.options = options or {}
+    options = options or {}
     self.conversations = {}
     self.selected_conversation_id = nil
 end
@@ -43,6 +43,7 @@ function Model:get_selected_conversation_id()
     return self.selected_conversation_id
 end
 
+---@param id string
 function Model:select_conversation(id)
     self.selected_conversation_id = id
 end
@@ -96,6 +97,7 @@ function Model:is_empty(id)
     return conversation:is_empty()
 end
 
+---@param id string
 function Model:user_can_reply(id)
     local conversation = self:get_conversation_by_id(id)
     if not conversation then return false end
@@ -103,6 +105,7 @@ function Model:user_can_reply(id)
 end
 
 -- 获取 Conversation 列表
+---@return { selected_conversation_id: string?, conversations: { id: string, title: string, is_favorited: boolean }[] }
 function Model:list_conversations()
     local result = {
         selected_conversation_id = self.selected_conversation_id,

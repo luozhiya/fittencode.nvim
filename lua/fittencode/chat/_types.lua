@@ -47,21 +47,21 @@
 ---@field load_from_directory function
 
 ---@class FittenCode.Chat.View
----@field state? FittenCode.Chat.State
+---@field state? FittenCode.Chat.ViewState
 
----@class FittenCode.Chat.State.ConversationState
+---@class FittenCode.Chat.ViewState.Conversation
 ---@field id string
 ---@field reference table
----@field header table<string, string>
+---@field header table<string, any>
 ---@field content table<string, any>
 ---@field timestamp number
 ---@field is_favorited boolean
 ---@field mode string
 
----@class FittenCode.Chat.State
+---@class FittenCode.Chat.ViewState
 ---@field type string
 ---@field selected_conversation_id string
----@field conversations table<string, FittenCode.Chat.State.ConversationState>
+---@field conversations table<string, FittenCode.Chat.ViewState.Conversation>
 ---@field get_state_from_model function
 
 ---@class FittenCode.Chat.CreatedConversation
@@ -70,7 +70,6 @@
 ---@field should_immediately_answer boolean
 ---@field display? boolean
 ---@field message? string
-
 
 ---@class FittenCode.Chat.Message
 ---@field author 'bot'|'user'
@@ -89,7 +88,7 @@
 ---@field project_path_name string
 ---@field state FittenCode.Chat.Conversation.State
 ---@field regenerate_enable boolean
----@field creation_timestamp string
+---@field creation_timestamp integer
 ---@field variables table
 ---@field temporary_editor_content string
 ---@field update_partial_bot_message function
