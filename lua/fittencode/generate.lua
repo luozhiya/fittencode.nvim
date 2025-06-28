@@ -29,7 +29,7 @@ end
 -- 非 Streaming API, 发送 Chat 请求，返回组合后的 Chat 内容
 ---@param payload FittenCode.Protocol.Methods.ChatAuth.Payload
 ---@param strict? boolean
----@return FittenCode.Promise, FittenCode.HTTP.Request?
+---@return FittenCode.Promise<string[], FittenCode.Error>, FittenCode.HTTP.Request?
 function M.request_chat(payload, strict)
     strict = strict or false
     assert(payload)
@@ -37,11 +37,14 @@ function M.request_chat(payload, strict)
         payload = assert(vim.fn.json_encode(payload))
     })
     if not request then
-        Log.error('Failed to make request')
-        return Promise.rejected()
+        return Promise.rejected({
+            message = 'Failed to make request',
+        })
     end
-    return request:async():forward(function(response)
-        local raw = response.text()
+    ---@param ee FittenCode.HTTP.Request.Stream.EndEvent
+    return request:async():forward(function(ee)
+        local raw = ee.text()
+        ---@type string[]
         local chunks = {}
         local v = vim.split(raw, '\n', { trimempty = true })
         for _, line in ipairs(v) do
@@ -54,8 +57,7 @@ function M.request_chat(payload, strict)
                 end
             else
                 if strict then
-                    Log.error('Invalid chunk: {}', line)
-                    return Promise.rejected()
+                    return Promise.rejected({ message = 'Invalid chunk: ' .. line })
                 end
                 Log.debug('Invalid chunk: {} >> {}', line, chunk)
             end
@@ -66,27 +68,36 @@ end
 
 ---@param payload FittenCode.Protocol.Methods.ChatAuth.Payload
 ---@param strict? boolean
----@return table?
+---@return string[]?
 function M.request_chat_sync(payload, strict)
     local res, request = M.request_chat(payload, strict)
     if not request then
         return
     end
-    local chunks = res:wait()
-    return chunks and chunks.value
+    local pro = res:wait()
+    return pro and pro.value
 end
 
----@return FittenCode.Promise
-function M.send_completions(buf, row, col)
-    return require('fittencode.inline.session').new({
+---@return FittenCode.Promise, FittenCode.Inline.HeadlessSession?
+function M.request_completions(buf, row, col, options)
+    options = options or {}
+    local filename = options.filename or vim.api.nvim_buf_get_name(buf)
+    local session = require('fittencode.inline.session_headless').new({
         buf = buf,
         position = Position.of(row, col),
         mode = 'inccmp',
-        headless = true,
-    }):send_completions()
+        filename = filename,
+    })
+    return session:send_completions(), session
 end
 
-function M.send_completions_sync(buf, row, col)
+function M.request_completions_sync(buf, row, col, options)
+    local res = M.request_completions(buf, row, col, options):wait()
+    if res and res:is_fulfilled() then
+        return res:get_value()
+    else
+        return nil
+    end
 end
 
 return M

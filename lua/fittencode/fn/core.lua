@@ -183,6 +183,10 @@ function M.generate_short_id(length)
     return M.random(36):sub(2, 2 + length)
 end
 
+function M.generate_short_id_as_string(length)
+    return '(' .. M.generate_short_id(length) .. ')'
+end
+
 function M.is_dark_colorscheme()
     -- 获取 Normal 组的背景色
     local normal_hl = vim.api.nvim_get_hl(0, { name = 'Normal' })

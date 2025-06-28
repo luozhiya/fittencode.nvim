@@ -59,7 +59,7 @@ end
 ---@param observer FittenCode.Observer
 function Controller:add_observer(observer)
     if type(observer) == 'function' then
-        local id = 'callback_observer_' .. Fn.generate_short_id()
+        local id = 'callback_observer' .. Fn.generate_short_id_as_string()
         observer = setmetatable({
             id = id,
             update = function(_, ctrl, event, data)

@@ -95,6 +95,7 @@ function Model:get_col_delta()
     return assert(self:selected_completion()):get_col_delta()
 end
 
+---@return string[]
 function Model:get_text()
     local text = {}
     for _, completion in ipairs(self.completion_models) do

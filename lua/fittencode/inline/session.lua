@@ -17,14 +17,12 @@ local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
-local Client = require('fittencode.client')
-local Protocol = require('fittencode.client.protocol')
-local Zip = require('fittencode.fn.gzip')
 local Fim = require('fittencode.inline.fim_protocol.vsc')
 local Definitions = require('fittencode.inline.definitions')
 local Format = require('fittencode.fn.format')
 local Segment = require('fittencode.inline.segment')
 local Config = require('fittencode.config')
+local SessionFunctional = require('fittencode.inline.session_functional')
 
 local SESSION_EVENT = Definitions.SESSION_EVENT
 local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
@@ -48,26 +46,30 @@ function Session:_initialize(options)
     self.position = options.position
     self.commit_position = options.position
     self.mode = options.mode
+    assert(self.mode == 'inccmp' or self.mode == 'editcmp')
     self.StateClass = self.mode == 'inccmp' and IncViewState or EditViewState
     self.id = options.id
     self.requests = {}
     self.keymaps = {}
     self.filename = options.filename
     self.version = options.version
-    self.trigger_inline_suggestion = options.trigger_inline_suggestion
     self.trigger_inline_suggestion = function(...) Fn.check_call(options.trigger_inline_suggestion(...)) end
     self.on_completion_event = function() Fn.check_call(options.on_session_update_event, { id = self.id, completion_event = self.completion_event, }) end
     self.on_session_event = function() Fn.check_call(options.on_session_event, { id = self.id, session_event = self.session_event, }) end
     self.on_session_task_event = function() Fn.check_call(options.on_session_update_event, { id = self.id, session_task_event = self.session_task_event, }) end
     self:sync_session_event(SESSION_EVENT.CREATED)
-    self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey')
+    self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey' .. Fn.generate_short_id_as_string())
 end
 
+---@param self FittenCode.Inline.Session
+---@param msg string
+---@param... any
 local function debug_log(self, msg, ...)
     local meta = Format.nothrow_format('Session id = {}, version = {}, session_event = {}, completion_event = {} --> ', self.id, self.version, self.session_event, self.completion_event)
     Log._async_log(3, vim.log.levels.DEBUG, meta .. Format.nothrow_format(msg, ...))
 end
 
+---@param text string|string[]
 local function _is_ascii_only(text)
     assert(text)
     if type(text) == 'table' then
@@ -297,55 +299,56 @@ function Session:is_terminated()
     return self.session_event == SESSION_EVENT.TERMINATED
 end
 
+---@param event FittenCode.Inline.SessionEvent
 function Session:sync_session_event(event)
     self.session_event = event
     self.on_session_event()
 end
 
+---@param event FittenCode.Inline.CompletionEvent
 function Session:sync_completion_event(event)
     self.completion_event = event
     self.on_completion_event()
 end
 
+---@param event FittenCode.Inline.SessionTaskEvent
 function Session:sync_session_task_event(event)
     self.session_task_event = event
     self.on_session_task_event()
 end
 
+---@param handle FittenCode.HTTP.Request
 function Session:_add_request(handle)
     self.requests[#self.requests + 1] = handle
 end
 
+---@return FittenCode.Promise
 function Session:generate_prompt()
     local check = self:_preflight_check()
     if check:is_rejected() then
         return check
     end
-    self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
-    local zerepos = self.position:translate(0, -1)
-    return Fim.generate(self.buf, zerepos, {
-        filename = F.filename(self.buf),
-        version = self.version,
+    return SessionFunctional.generate_prompt({
+        on_before_generate_prompt = function()
+            self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
+        end,
+        buf = self.buf,
+        position = self.position:translate(0, -1),
         mode = self.mode,
+        version = self.version,
+        filename = self.filename,
     })
 end
 
+---@param prompt string
+---@return FittenCode.Promise
 function Session:async_compress_prompt(prompt)
-    local _, data = pcall(vim.fn.json_encode, prompt)
-    if not _ then
-        return Promise.rejected({
-            message = 'Failed to encode prompt to JSON',
-            metadata = {
-                prompt = prompt,
-            }
-        })
-    end
-    assert(data)
-    return Zip.compress({ source = data }):forward(function(_)
-        return _.output
-    end)
+    return SessionFunctional.async_compress_prompt({
+        prompt = prompt,
+    })
 end
 
+---@return FittenCode.Promise
 function Session:_preflight_check()
     if self:is_terminated() then
         return Promise.rejected({
@@ -374,48 +377,42 @@ function Session:send_completions()
     self:sync_session_event(SESSION_EVENT.REQUESTING)
     self:sync_completion_event(COMPLETION_EVENT.START)
 
-    local function _send_completions()
-        return Promise.all({
-            self:generate_prompt():forward(function(res)
-                -- debug_log(self, 'Generated prompt: {}', res)
-                debug_log(self, 'Prompt generated')
-                self.cachedata = res.cachedata
-                return self:async_compress_prompt(res.prompt)
-            end),
-            self:get_completion_version()
-        }):forward(function(_)
-            local compressed_prompt_binary = _[1]
-            local completion_version = _[2]
-            debug_log(self, 'Got completion version: {}', completion_version)
-            debug_log(self, 'Compressed prompt length: {}', #compressed_prompt_binary)
-            if not compressed_prompt_binary or not completion_version then
-                return Promise.rejected({
-                    message = 'Failed to generate prompt or get completion version',
-                })
-            end
-            return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
-        end):forward(function(parse_result)
-            local check = self:_preflight_check()
-            if check:is_rejected() then
-                return check
-            else
-                Fim.update_last_version(self.filename, self.version, self.cachedata)
-                debug_log(self, 'Updated FIM last version')
-            end
-            if parse_result.status == 'no_completion' then
-                debug_log(self, 'No more suggestions')
-                self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
-                return Promise.resolved(nil)
-            end
-            debug_log(self, 'Got completion: {}', parse_result)
-            self:set_model(parse_result.data.completions)
-            self:set_interactive()
-            return Promise.resolved(parse_result.data)
-        end):catch(function(_)
-            return Promise.rejected(_)
-        end)
-    end
-    return _send_completions():catch(function(_)
+    return Promise.all({
+        self:generate_prompt():forward(function(res)
+            debug_log(self, 'Prompt generated')
+            self.cachedata = res.cachedata
+            return self:async_compress_prompt(res.prompt)
+        end),
+        self:get_completion_version()
+    }):forward(function(_)
+        local compressed_prompt_binary = _[1]
+        local completion_version = _[2]
+        debug_log(self, 'Got completion version: {}', completion_version)
+        debug_log(self, 'Compressed prompt length: {}', #compressed_prompt_binary)
+        if not compressed_prompt_binary or not completion_version then
+            return Promise.rejected({
+                message = 'Failed to generate prompt or get completion version',
+            })
+        end
+        return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
+    end):forward(function(parse_result)
+        local check = self:_preflight_check()
+        if check:is_rejected() then
+            return check
+        else
+            Fim.update_last_version(self.filename, self.version, self.cachedata)
+            debug_log(self, 'Updated FIM last version')
+        end
+        if parse_result.status == 'no_completion' then
+            debug_log(self, 'No more suggestions')
+            self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
+            return Promise.resolved(nil)
+        end
+        debug_log(self, 'Got completion: {}', parse_result)
+        self:set_model(parse_result.data.completions)
+        self:set_interactive()
+        return Promise.resolved(parse_result.data)
+    end):catch(function(_)
         self:sync_completion_event(COMPLETION_EVENT.ERROR)
         debug_log(self, 'Failed to send completions: {}', _)
         return Promise.rejected(_)
@@ -429,47 +426,15 @@ function Session:get_completion_version()
     if check:is_rejected() then
         return check
     end
-    self:sync_completion_event(COMPLETION_EVENT.GETTING_COMPLETION_VERSION)
-    local request = Client.make_request(Protocol.Methods.get_completion_version)
-    if not request then
-        return Promise.rejected({
-            message = 'Failed to make get_completion_version request',
-        })
+    local res, request = SessionFunctional.get_completion_version({
+        on_before_get_completion_version = function()
+            self:sync_completion_event(COMPLETION_EVENT.GETTING_COMPLETION_VERSION)
+        end,
+    })
+    if request then
+        self:_add_request(request)
     end
-    self:_add_request(request)
-
-    return request:async():forward(function(_)
-        ---@type FittenCode.Protocol.Methods.GetCompletionVersion.Response
-        local response = _.json()
-        if not response then
-            return Promise.rejected({
-                message = 'Failed to decode completion version response',
-                metadata = {
-                    response = _,
-                }
-            })
-        else
-            return response
-        end
-    end):catch(function(_)
-        return Promise.rejected(_)
-    end)
-end
-
-function Session:_with_tmpfile(data, callback, ...)
-    local path
-    local args = { ... }
-    return Promise.promisify(vim.uv.fs_mkstemp)(vim.fn.tempname() .. '.FittenCode_TEMP_XXXXXX'):forward(function(handle)
-        local fd = handle[1]
-        path = handle[2]
-        return Promise.promisify(vim.uv.fs_write)(fd, data):forward(function()
-            return Promise.promisify(vim.uv.fs_close)(fd)
-        end)
-    end):forward(function()
-        return callback(path, unpack(args))
-    end):finally(function()
-        Promise.promisify(vim.uv.fs_unlink)(path)
-    end)
+    return res
 end
 
 function Session:generate_one_stage_auth(completion_version, compressed_prompt_binary)
@@ -477,52 +442,20 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
     if check:is_rejected() then
         return check
     end
-    self:sync_completion_event(COMPLETION_EVENT.GENERATE_ONE_STAGE)
-    local vu = {
-        ['0'] = '',
-        ['1'] = '2_1',
-        ['2'] = '2_2',
-        ['3'] = '2_3',
-    }
-    local request = Client.make_request_auth(Protocol.Methods.generate_one_stage_auth, {
-        variables = {
-            completion_version = vu[completion_version],
-        },
-        payload = compressed_prompt_binary,
+    local res, request = SessionFunctional.generate_one_stage_auth({
+        on_before_generate_one_stage_auth = function()
+            self:sync_completion_event(COMPLETION_EVENT.GENERATE_ONE_STAGE)
+        end,
+        completion_version = completion_version,
+        compressed_prompt_binary = compressed_prompt_binary,
+        buf = self.buf,
+        position = self.position,
+        mode = self.mode,
     })
-    if not request then
-        return Promise.rejected({
-            message = 'Failed to make generate_one_stage_auth request',
-        })
+    if request then
+        self:_add_request(request)
     end
-    self:_add_request(request)
-
-    return request:async():forward(function(_)
-        ---@type FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
-        local response = _.json()
-        if not response then
-            return Promise.rejected({
-                message = 'Failed to decode completion response',
-                metadata = {
-                    response = _,
-                }
-            })
-        end
-        local zerepos = self.position:translate(0, -1)
-        local parse_result = Fim.parse(response, {
-            buf = self.buf,
-            position = zerepos,
-            mode = self.mode
-        })
-        if parse_result.status == 'error' then
-            return Promise.rejected({
-                message = parse_result.message or 'Parsed completion response error',
-            })
-        end
-        return parse_result
-    end):catch(function(_)
-        return Promise.rejected(_)
-    end)
+    return res
 end
 
 function Session:is_match_commit_position(position)

@@ -2,18 +2,8 @@
 
 基于 source string，Index 采用 Lua 字符串 1 开始的索引
 
------------------------------------
--- 分词转换方法 segments_to_words
------------------------------------
-
-local custom_segments = {'我', '吃', '苹果'}
-local model = CompletionModel.new(s, placeholder_ranges)
-local words = segments_to_words(custom_segments)
-model:update_words(words)
-
 --]]
 
-local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 local Parse = require('fittencode.inline.model.inccmp.parse')
 local Placeholder = require('fittencode.inline.model.inccmp.placeholder')
@@ -22,16 +12,24 @@ local Segment = require('fittencode.inline.segment')
 ---@class FittenCode.Inline.IncrementalCompletion.Model
 ---@field source string
 ---@field cursor integer
----@field commit_history table<table<table<integer>>>
----@field placeholder_ranges table<table<integer>>
----@field commit_ranges table<table<integer>>
----@field stage_ranges table<table<integer>>
----@field chars table<table<integer>>
----@field words table<table<integer>>
----@field lines table<table<integer>>
+---@field commit_history FittenCode.Inline.IncrementalCompletion.Model.CommitHistory
+---@field placeholder_ranges FittenCode.Inline.IncrementalCompletion.Model.PlaceholderRanges
+---@field commit_ranges FittenCode.Inline.IncrementalCompletion.Model.CommitRanges
+---@field stage_ranges FittenCode.Inline.IncrementalCompletion.Model.StageRanges
+---@field chars FittenCode.Inline.IncrementalCompletion.Model.Chars
+---@field words FittenCode.Inline.IncrementalCompletion.Model.Words
+---@field lines FittenCode.Inline.IncrementalCompletion.Model.Lines
 ---@field completion table
 local Model = {}
 Model.__index = Model
+
+---@class FittenCode.Inline.IncrementalCompletion.Model.Chars
+---@class FittenCode.Inline.IncrementalCompletion.Model.Words
+---@class FittenCode.Inline.IncrementalCompletion.Model.Lines
+---@class FittenCode.Inline.IncrementalCompletion.Model.StageRanges
+---@class FittenCode.Inline.IncrementalCompletion.Model.CommitRanges
+---@class FittenCode.Inline.IncrementalCompletion.Model.PlaceholderRanges
+---@class FittenCode.Inline.IncrementalCompletion.Model.CommitHistory
 
 function Model.new(buf, position, completion)
     local self = setmetatable({}, Model)

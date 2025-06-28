@@ -123,10 +123,12 @@ function Promise.new(executor, is_async)
     return self
 end
 
+---@return any
 function Promise:get_reason()
     return self.reason
 end
 
+---@return any
 function Promise:get_value()
     return self.value
 end

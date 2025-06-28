@@ -1,9 +1,7 @@
 local MD5 = require('fittencode.fn.md5')
-local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
-local Config = require('fittencode.config')
 local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
@@ -15,6 +13,15 @@ local END_OF_TEXT_TOKEN = '<|endoftext|>'
 local DEFAULT_CONTEXT_THRESHOLD = 100
 local FIM_MIDDLE_TOKEN = '<fim_middle>'
 
+---@class FittenCode.Inline.FimProtocol.VSC.Last
+---@field filename string
+---@field text string
+---@field ciphertext string
+---@field version number
+---@field once boolean
+
+---@class FittenCode.Inline.FimProtocol.VSC
+---@field last FittenCode.Inline.FimProtocol.VSC.Last
 local M = {
     last = {
         filename = '',
@@ -25,6 +32,10 @@ local M = {
     }
 }
 
+---@param buf integer
+---@param position FittenCode.Position
+---@param threshold number
+---@return { prefix: string, suffix: string }
 local function retrieve_context_fragments(buf, position, threshold)
     local current_line = assert(F.line_at(buf, position.row))
     local round_curr_col = F.round_col_end(current_line.text, position.col + 1) - 1
@@ -55,6 +66,8 @@ end
 
 -- `var CM = /<((fim_((prefix)|(suffix)|(middle)))|(\|[a-z]*\|))>/g`
 -- Lua patterns do not support alternation | or group matching,
+---@param str string
+---@return string
 local function clean_fim_markers(str)
     str = str or ''
     str = str:gsub('<fim_prefix>', '')
@@ -69,6 +82,10 @@ end
 FittenCode VSCode 采用 UTF-16 的编码计算
 
 ]]
+---@param current_text string
+---@param filename string
+---@param version number
+---@return FittenCode.Inline.Prompt.MetaDatas
 local function build_diff_metadata(current_text, filename, version)
     if filename ~= M.last.filename or version <= M.last.version or not M.last.once then
         Log.debug('Skip computing diff metadata for unchanged file, last version = {}, current version = {}', M.last.version, version)
@@ -128,6 +145,10 @@ end
 -- TODO：存在 FIM Marker 的话会影响 position 的计算？
 
 ]]
+---@param buf integer
+---@param position FittenCode.Position
+---@param options { filename: string }
+---@return FittenCode.Inline.Prompt.MetaDatas?, string?, string?
 local function build_base_prompt(buf, position, options)
     local charscount = F.wordcount(buf).chars
     local prefix
@@ -180,6 +201,8 @@ local function build_base_prompt(buf, position, options)
     return base, text, ciphertext
 end
 
+---@param mode FittenCode.Inline.CompletionMode
+---@return FittenCode.Inline.Prompt.MetaDatas
 local function build_edit_metadata(mode)
     return {
         edit_mode = mode == 'editcmp' and 'true' or nil,
@@ -193,14 +216,31 @@ local function build_edit_metadata(mode)
     }
 end
 
+---@class FittenCode.Inline.FimProtocol.VSC.GenerateOptions
+---@field mode FittenCode.Inline.CompletionMode
+---@field filename string
+---@field version? number
+---@field diff_metadata_provider? boolean
+
+---@class FittenCode.Inline.PromptWithCacheData
+---@field prompt FittenCode.Inline.Prompt
+---@field cachedata { text: string, ciphertext: string }
+
 ---@param buf number
 ---@param position FittenCode.Position
+---@param options FittenCode.Inline.FimProtocol.VSC.GenerateOptions
+---@return FittenCode.Promise<FittenCode.Inline.PromptWithCacheData>
 function M.generate(buf, position, options)
     local base, text, ciphertext = build_base_prompt(buf, position, options)
     if not base then
         return Promise.rejected()
     end
-    local diff = build_diff_metadata(text, options.filename, options.version)
+    assert(text)
+    assert(ciphertext)
+    local diff = {}
+    if options.diff_metadata_provider then
+        diff = build_diff_metadata(text, options.filename, options.version)
+    end
     local edit = build_edit_metadata(options.mode)
     return Promise.resolved({
         prompt = {
@@ -214,6 +254,9 @@ function M.generate(buf, position, options)
     })
 end
 
+---@param filename string
+---@param version number
+---@param cachedata { text: string, ciphertext: string }
 function M.update_last_version(filename, version, cachedata)
     Log.debug('Update last version, filename = {}, version = {}', filename, version)
     M.last.filename = filename
@@ -227,10 +270,24 @@ end
 ---@field status 'error'|'success'|'no_completion'
 ---@field message string
 ---@field request_id string
----@field completions table
+---@field completions FittenCode.Inline.IncrementalCompletion[] | FittenCode.Inline.EditCompletion[]
 ---@field context string
 
+---@class FittenCode.Inline.IncrementalCompletion
+---@field generated_text string
+---@field character_delta number
+---@field line_delta number
+
+---@class FittenCode.Inline.EditCompletion
+---@field lines string[]
+---@field start_line number
+---@field end_line number
+---@field after_line number
+
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion
+---@param buf integer
+---@param position FittenCode.Position
+---@return FittenCode.Inline.IncrementalCompletion[]?
 local function build_inccmp_items(response, buf, position)
     local clean_text = vim.fn.substitute(
         response.generated_text or '',
@@ -283,7 +340,9 @@ local function build_inccmp_items(response, buf, position)
 end
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion
+---@param buf integer
 ---@param position FittenCode.Position
+---@return FittenCode.Inline.EditCompletion[]?
 local function build_editcmp_items(response, buf, position)
     if not response.delete_offsets or not response.insert_offsets then
         return
@@ -323,7 +382,13 @@ local function build_editcmp_items(response, buf, position)
     return completions
 end
 
+---@class FittenCode.Inline.FimProtocol.VSC.ParseOptions
+---@field mode FittenCode.Inline.CompletionMode
+---@field buf integer
+---@field position FittenCode.Position
+
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
+---@param options FittenCode.Inline.FimProtocol.VSC.ParseOptions
 ---@return FittenCode.Inline.FimProtocol.VSC.ParseResult
 function M.parse(response, options)
     assert(options)

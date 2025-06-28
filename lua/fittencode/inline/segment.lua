@@ -148,6 +148,8 @@ Please do not use markdown when replying.
 <|end|>
 <|assistant|>]]
 
+---@alias FittenCode.Inline.Segment table<string, string[]>
+
 ---@param text string|string[]
 ---@return FittenCode.Protocol.Methods.ChatAuth.Payload
 local function build_request_payload(text)
@@ -173,6 +175,7 @@ end
 -- 2. 内容验证（实际字符匹配）
 -- 3. 总量验证（总字符数一致）
 -- 返回与self.words结构相同的分词范围
+---@param model { chars : table, source : string }
 function M.segments_to_words(model, segments)
     local words = {}
     local ptr = 1 -- 字符指针（基于chars数组索引）
@@ -213,23 +216,22 @@ function M.segments_to_words(model, segments)
 end
 
 -- 高级分词
----@return FittenCode.Promise, FittenCode.HTTP.Request?
+---@param text string|string[]
+---@return FittenCode.Promise<FittenCode.Inline.Segment, FittenCode.Error>, FittenCode.HTTP.Request?
 function M.send_segments(text)
     local res, request = Generate.request_chat(build_request_payload(text))
     if not request then
         return Promise.rejected()
     end
-    return res:forward(function(response)
-        local segments = response
+    ---@param segments string[]
+    return res:forward(function(segments)
         if #segments == 0 then
-            Log.error('No segments found in response')
-            return Promise.rejected()
+            return Promise.rejected({ message = 'No segments found in response' })
         end
         local seg_str = table.concat(segments)
         local _, obj = pcall(vim.fn.json_decode, seg_str)
         if not _ then
-            Log.error('Failed to parse segment response: {}', seg_str)
-            return Promise.rejected()
+            return Promise.rejected({ message = 'Failed to decode segment', meta_datas = { seg = seg_str } })
         end
         return obj
     end), request
