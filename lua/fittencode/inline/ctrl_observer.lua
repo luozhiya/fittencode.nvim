@@ -77,45 +77,47 @@ end
 ---@param event string
 ---@param data any
 function ProgressIndicatorObserver:update(controller, event, data)
-    if event == CONTROLLER_EVENT.SESSION_ADDED then
-        self.start_time[data.id] = {
-            completion = vim.uv.hrtime()
-        }
-    elseif not controller:get_current_session_id() then
-        self.pi:stop()
-        return
-    end
-    if controller:get_current_session_id() == self.session_id then
-        if data and data.id ~= self.session_id then
+    vim.schedule(function()
+        if event == CONTROLLER_EVENT.SESSION_ADDED then
+            self.start_time[data.id] = {
+                completion = vim.uv.hrtime()
+            }
+        elseif not controller:get_current_session_id() then
+            self.pi:stop()
             return
         end
-    else
-        self.session_id = controller:get_current_session_id()
-        self.pi:stop()
-    end
-    local cmp_busy = {
-        COMPLETION_EVENT.START,
-        COMPLETION_EVENT.GENERATE_ONE_STAGE,
-        COMPLETION_EVENT.GENERATING_PROMPT,
-        COMPLETION_EVENT.GETTING_COMPLETION_VERSION,
-    }
-    local busy
-    if event == CONTROLLER_EVENT.SESSION_UPDATED then
-        if vim.tbl_contains(cmp_busy, data.completion_event) then
-            busy = 'completion'
-        elseif data.session_task_event == SESSION_TASK_EVENT.SEMANTIC_SEGMENT_PRE then
-            self.start_time[data.id].task = vim.uv.hrtime()
-            self.pi:record_stage(true)
-            busy = 'task'
+        if controller:get_current_session_id() == self.session_id then
+            if data and data.id ~= self.session_id then
+                return
+            end
+        else
+            self.session_id = controller:get_current_session_id()
+            self.pi:stop()
         end
-    end
-    if busy then
-        assert(self.start_time[data.id][busy])
-        self.pi:start(self.start_time[data.id][busy])
-    else
-        self.pi:record_stage(false)
-        self.pi:stop()
-    end
+        local cmp_busy = {
+            COMPLETION_EVENT.START,
+            COMPLETION_EVENT.GENERATE_ONE_STAGE,
+            COMPLETION_EVENT.GENERATING_PROMPT,
+            COMPLETION_EVENT.GETTING_COMPLETION_VERSION,
+        }
+        local busy
+        if event == CONTROLLER_EVENT.SESSION_UPDATED then
+            if vim.tbl_contains(cmp_busy, data.completion_event) then
+                busy = 'completion'
+            elseif data.session_task_event == SESSION_TASK_EVENT.SEMANTIC_SEGMENT_PRE then
+                self.start_time[data.id].task = vim.uv.hrtime()
+                self.pi:record_stage(true)
+                busy = 'task'
+            end
+        end
+        if busy then
+            assert(self.start_time[data.id][busy])
+            self.pi:start(self.start_time[data.id][busy])
+        else
+            self.pi:record_stage(false)
+            self.pi:stop()
+        end
+    end)
 end
 
 ---@class FittenCode.Inline.StatisticObserver : FittenCode.Observer

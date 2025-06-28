@@ -58,7 +58,7 @@ function Session:_initialize(options)
     self.on_session_event = function() Fn.check_call(options.on_session_event, { id = self.id, session_event = self.session_event, }) end
     self.on_session_task_event = function() Fn.check_call(options.on_session_update_event, { id = self.id, session_task_event = self.session_task_event, }) end
     self:sync_session_event(SESSION_EVENT.CREATED)
-    self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey' .. Fn.generate_short_id_as_string())
+    self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey(' .. Fn.generate_short_id() .. ')')
 end
 
 ---@param self FittenCode.Inline.Session
@@ -93,14 +93,14 @@ function Session:_segments()
         Log.debug('text is ascii only, skip segments request')
         return Promise.resolved()
     end
-    local promise, request = Segment.send_segments(text)
+    local res, request = Segment.send_segments(text)
     if not request then
         return Promise.rejected({
             message = 'Failed to send segments request',
         })
     end
     self:_add_request(request)
-    return promise:forward(function(segments)
+    return res:forward(function(segments)
         self.model:update({
             segments = segments
         })
@@ -241,7 +241,7 @@ function Session:set_onkey()
     if self.mode == 'inccmp' then
         vim.on_key(function(key)
             local buf = vim.api.nvim_get_current_buf()
-            if vim.api.nvim_get_mode().mode == 'i' and buf == self.buf and self:is_interactive() then
+            if vim.api.nvim_get_mode().mode:sub(1, 1) == 'i' and buf == self.buf and self:is_interactive() then
                 if vim.fn.keytrans(key) == '<CR>' then
                     key = '\n'
                 end
@@ -408,7 +408,7 @@ function Session:send_completions()
             self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
             return Promise.resolved(nil)
         end
-        debug_log(self, 'Got completion: {}', parse_result)
+        debug_log(self, 'Got completion: {}', parse_result.data.completions)
         self:set_model(parse_result.data.completions)
         self:set_interactive()
         return Promise.resolved(parse_result.data)

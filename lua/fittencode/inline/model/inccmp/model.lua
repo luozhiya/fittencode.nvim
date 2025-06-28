@@ -211,10 +211,21 @@ function Model:is_complete()
     return #self.stage_ranges == 0
 end
 
+---@param words FittenCode.Inline.IncrementalCompletion.Model.Words
 function Model:update_words(words)
     self.words = words
 end
 
+---@class FittenCode.Inline.IncrementalCompletion.Model.Snapshot
+---@field source string
+---@field chars FittenCode.Inline.IncrementalCompletion.Model.Chars
+---@field words FittenCode.Inline.IncrementalCompletion.Model.Words
+---@field lines FittenCode.Inline.IncrementalCompletion.Model.Lines
+---@field commit_ranges FittenCode.Inline.IncrementalCompletion.Model.CommitRanges
+---@field placeholder_ranges FittenCode.Inline.IncrementalCompletion.Model.PlaceholderRanges
+---@field stage_ranges FittenCode.Inline.IncrementalCompletion.Model.StageRanges
+
+---@return FittenCode.Inline.IncrementalCompletion.Model.Snapshot
 function Model:snapshot()
     local result = {}
     local fields_for_snapshot = { 'source', 'chars', 'words', 'lines', 'commit_ranges', 'placeholder_ranges', 'stage_ranges' }

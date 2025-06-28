@@ -88,7 +88,7 @@ FittenCode VSCode 采用 UTF-16 的编码计算
 ---@return FittenCode.Inline.Prompt.MetaDatas
 local function build_diff_metadata(current_text, filename, version)
     if filename ~= M.last.filename or version <= M.last.version or not M.last.once then
-        Log.debug('Skip computing diff metadata for unchanged file, last version = {}, current version = {}', M.last.version, version)
+        Log.debug('Skip computing diff metadata, last version = {}, current version = {}', M.last.version, version)
         return {
             pmd5 = '',
             diff = current_text

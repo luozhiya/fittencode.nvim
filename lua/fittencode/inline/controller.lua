@@ -8,6 +8,10 @@ Inline
 - IncrementalCompletion
 - EditCompletion
 
+事件
+- 按照 Vim 的事件机制，键入字符时依次触发 TextChangedI CursorMovedI
+- mini.completion 有时会重复发送 TextChangedI CursorMovedI
+
 ]]
 
 local Client = require('fittencode.client')
@@ -71,11 +75,11 @@ function Controller:_initialize(options)
         end
     end
 
-    vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteChanged' }, {
+    vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteChanged', 'InsertEnter' }, {
         group = vim.api.nvim_create_augroup('FittenCode.Inline.TriggerInlineSuggestion', { clear = true }),
         pattern = '*',
         callback = function(args)
-            Log.debug('trigger_inline_suggestion_auto autocmd = {}', args.event)
+            Log.debug('trigger_inline_suggestion_auto autocmd = {}, args = {}', args.event, args)
             self:trigger_inline_suggestion_auto({ vimev = args, debounced = true })
         end,
     })
@@ -83,7 +87,7 @@ function Controller:_initialize(options)
         group = vim.api.nvim_create_augroup('FittenCode.Inline.EditCompletionCancel', { clear = true }),
         pattern = '*',
         callback = function(args)
-            Log.debug('edit_completion_cancel autocmd = {}', args.event)
+            Log.debug('edit_completion_cancel autocmd = {}, args = {}', args.event, args)
             self:edit_completion_cancel({ vimev = args })
         end,
     })
@@ -106,7 +110,7 @@ function Controller:_initialize(options)
     vim.on_key(function(key)
         local buf = vim.api.nvim_get_current_buf()
         self.filter_events = {}
-        if vim.api.nvim_get_mode().mode == 'i' and self:is_enabled(buf) then
+        if vim.api.nvim_get_mode().mode:sub(1, 1) == 'i' and self:is_enabled(buf) then
             if vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
                 self.filter_events = { 'CursorMovedI', 'TextChangedI', }
                 return
@@ -220,30 +224,36 @@ end
 
 function Controller:_preflight_check(vimev, force)
     local buf = vim.api.nvim_get_current_buf()
-    if vim.api.nvim_get_mode().mode ~= 'i' or not self:is_enabled(buf) then
+    if vim.api.nvim_get_mode().mode:sub(1, 1) ~= 'i' or not self:is_enabled(buf) then
+        Log.debug('Preflight check failed, mode = {}, is_enabled = {}', vim.api.nvim_get_mode().mode, self:is_enabled(buf))
         return
     end
     local api_key_manager = Client.get_api_key_manager()
     if not api_key_manager:has_fitten_access_token() then
+        Log.debug('Preflight check failed, has_fitten_access_token = {}', api_key_manager:has_fitten_access_token())
         return
     end
     if vimev and vim.tbl_contains(self.filter_events, vimev.event) then
+        Log.debug('Preflight check failed, filter_events = {}', self.filter_events)
         return
     end
     local position = F.position(vim.api.nvim_get_current_win())
     assert(position)
     local within_the_line = is_within_the_line(position)
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
+        Log.debug('Preflight check failed, within_the_line = {}', within_the_line)
         return
     end
     force = (force == nil) and false or force
     if not force and self:get_active_session() and self:get_active_session():is_match_commit_position(position) then
+        Log.debug('Preflight check failed, is_match_commit_position = {}', self:get_active_session():is_match_commit_position(position))
         return
     end
     return buf, position
 end
 
 function Controller:_make_session(buf, position, mode)
+    Log.debug('Make session, buf = {}, position = {}, mode = {}', buf, position, mode)
     self.selected_session_id = assert(Fn.generate_short_id(13))
     local session = Session.new({
         buf = buf,

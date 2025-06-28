@@ -455,7 +455,7 @@ function View:set_key_filter()
     local ENTER_KEY = vim.api.nvim_replace_termcodes('<Enter>', true, true, true)
     vim.on_key(function(key)
         vim.schedule(function()
-            if vim.api.nvim_get_mode().mode == 'i' and vim.api.nvim_get_current_buf() == self.char_input.buf and key == ENTER_KEY and self.update_char_input_enabled then
+            if vim.api.nvim_get_mode().mode:sub(1, 1) == 'i' and vim.api.nvim_get_current_buf() == self.char_input.buf and key == ENTER_KEY and self.update_char_input_enabled then
                 vim.api.nvim_buf_call(self.char_input.buf, function()
                     -- Log.debug('ChatInputReady')
                     vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCode.ChatInputReady' })
