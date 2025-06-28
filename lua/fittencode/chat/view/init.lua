@@ -443,7 +443,7 @@ end
 
 function View:send_message(msg)
     if type(msg) == 'table' then
-        Fn.schedule_call(self.receive_view_message, msg)
+        Fn.check_call(self.receive_view_message, msg)
     end
 end
 

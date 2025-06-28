@@ -5,6 +5,7 @@
 local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
 local Promise = require('fittencode.fn.promise')
+local Position = require('fittencode.fn.position')
 local OPL = require('fittencode.opl')
 local Log = require('fittencode.log')
 
@@ -73,6 +74,18 @@ function M.request_chat_sync(payload, strict)
     end
     local chunks = res:wait()
     return chunks and chunks.value
+end
+
+---@return FittenCode.Promise
+function M.send_completions(buf, row, col)
+    return require('fittencode.inline.session').new({
+        buf = buf,
+        position = Position.of(row, col),
+        headless = true,
+    }):send_completions()
+end
+
+function M.send_completions_sync(buf, row, col)
 end
 
 return M

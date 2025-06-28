@@ -105,7 +105,7 @@ function TemplateResolver.load_from_file(e)
         local lines = e
         ---@diagnostic disable-next-line: param-type-mismatch
         if vim.fn.filereadable(e) == 1 then
-        ---@diagnostic disable-next-line: param-type-mismatch
+            ---@diagnostic disable-next-line: param-type-mismatch
             lines = vim.fn.readfile(e)
             -- vim.cmd('silent edit ' .. e) -- create win?
             -- vim.fn.fnamemodify(e, ':t')

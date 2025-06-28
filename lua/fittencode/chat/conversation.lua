@@ -40,9 +40,9 @@ function Conversation:_initialize(options)
     self.init_variables = options.init_variables
     self.template_id = options.template_id
     self.messages = {}
-    self.update_view = Fn.schedule_call_wrap_fn(options.update_view)
-    self.update_status = Fn.schedule_call_wrap_fn(options.update_status)
-    self.resolve_variables = Fn.schedule_call_wrap_fn(options.resolve_variables)
+    self.update_view = options.update_view
+    self.update_status = options.update_status
+    self.resolve_variables = options.resolve_variables
     self.variables = options.variables or {}
     self.context = options.context or {}
     self.temporary_editor_content = nil
