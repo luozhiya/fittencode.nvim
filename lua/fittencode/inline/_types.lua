@@ -36,3 +36,31 @@
 ---@field on_complete function
 
 ---@alias FittenCode.Inline.AcceptScope 'all' | 'hunk' | 'char' | 'word' | 'line'
+
+---@class FittenCode.Inline.Session.InitialOptions
+---@field buf number
+---@field position FittenCode.Position
+---@field mode? FittenCode.Inline.Session.Mode
+---@field id? string
+---@field filename? string
+---@field version? number
+---@field headless? boolean
+---@field trigger_inline_suggestion? function
+---@field on_session_event? function
+---@field on_session_update_event? function
+
+---@alias FittenCode.Inline.Session.Mode 'inccmp' | 'editcmp'
+
+---@class FittenCode.Inline.Session
+---@field buf number
+---@field position FittenCode.Position
+---@field commit_position FittenCode.Position
+---@field id string
+---@field filename string
+---@field mode FittenCode.Inline.Session.Mode
+---@field requests table<number, FittenCode.HTTP.Request>
+---@field keymaps table<number, any>
+---@field view FittenCode.Inline.View
+---@field model FittenCode.Inline.Model
+---@field version number
+---@field headless boolean

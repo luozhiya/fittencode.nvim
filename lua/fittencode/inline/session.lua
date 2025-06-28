@@ -31,36 +31,16 @@ local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
 local SESSION_TASK_EVENT = Definitions.SESSION_TASK_EVENT
 
 ---@class FittenCode.Inline.Session
----@field buf number
----@field position FittenCode.Position
----@field commit_position FittenCode.Position
----@field id string
----@field requests table<number, FittenCode.HTTP.Request>
----@field keymaps table<number, any>
----@field view FittenCode.Inline.View
----@field model FittenCode.Inline.Model
----@field version string
 local Session = {}
 Session.__index = Session
 
+---@param options FittenCode.Inline.Session.InitialOptions
+---@return FittenCode.Inline.Session
 function Session.new(options)
     local self = setmetatable({}, Session)
     self:_initialize(options)
     return self
 end
-
----@class FittenCode.Inline.Session.InitialOptions
----@field buf number
----@field position FittenCode.Position
----@field commit_position FittenCode.Position
----@field mode string
----@field id string
----@field filename string
----@field version string
----@field headless boolean
----@field trigger_inline_suggestion function
----@field on_session_event function
----@field on_session_update_event function
 
 ---@param options FittenCode.Inline.Session.InitialOptions
 function Session:_initialize(options)
@@ -75,6 +55,7 @@ function Session:_initialize(options)
     self.filename = options.filename
     self.version = options.version
     self.trigger_inline_suggestion = options.trigger_inline_suggestion
+    self.trigger_inline_suggestion = function(...) Fn.check_call(options.trigger_inline_suggestion(...)) end
     self.on_completion_event = function() Fn.check_call(options.on_session_update_event, { id = self.id, completion_event = self.completion_event, }) end
     self.on_session_event = function() Fn.check_call(options.on_session_event, { id = self.id, session_event = self.session_event, }) end
     self.on_session_task_event = function() Fn.check_call(options.on_session_update_event, { id = self.id, session_task_event = self.session_task_event, }) end
@@ -371,25 +352,18 @@ function Session:_preflight_check()
             message = 'Session is terminated',
         })
     end
-    local function _check_version()
-        local document_version = F.version(self.buf)
-        if document_version == self.version then
-            return Promise.resolved(true)
-        else
-            return Promise.rejected({
-                message = 'Session version is outdated',
-                metadata = {
-                    session_version = self.version,
-                    document_version = document_version,
-                }
-            })
-        end
+    local document_version = F.version(self.buf)
+    if document_version == self.version then
+        return Promise.resolved(true)
+    else
+        return Promise.rejected({
+            message = 'Session version is outdated',
+            metadata = {
+                session_version = self.version,
+                document_version = document_version,
+            }
+        })
     end
-    local check = _check_version()
-    if check:is_rejected() then
-        return check
-    end
-    return Promise.resolved(true)
 end
 
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求

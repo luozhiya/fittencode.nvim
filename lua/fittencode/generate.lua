@@ -81,6 +81,7 @@ function M.send_completions(buf, row, col)
     return require('fittencode.inline.session').new({
         buf = buf,
         position = Position.of(row, col),
+        mode = 'inccmp',
         headless = true,
     }):send_completions()
 end

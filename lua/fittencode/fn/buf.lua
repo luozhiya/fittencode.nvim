@@ -48,6 +48,8 @@ function M.is_dirty(buf)
 end
 
 -- The version number of this document (it will strictly increase after each change, including undo/redo).
+---@param buf integer
+---@return number
 function M.version(buf)
     assert(buf)
     local version

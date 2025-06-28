@@ -10,7 +10,7 @@ Observer.__index = Observer
 function Observer.new(options)
     options = options or {}
     local self = setmetatable({}, Observer)
-    self.id = options.id or ('observer_' .. Fn.uuid())
+    self.id = options.id or ('observer_' .. Fn.generate_short_id())
     return self
 end
 

@@ -20,7 +20,7 @@ function Status.new(options)
     options = options or {}
     ---@type FittenCode.Inline.Status
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new({ id = options.id or ('status_observer_' .. Fn.uuid()) })
+    local self = Observer.new({ id = options.id or ('status_observer_' .. Fn.generate_short_id()) })
     setmetatable(self, Status)
     self.inline = ''
     self.completion = ''
@@ -65,7 +65,7 @@ function ProgressIndicatorObserver.new(options)
     assert(options.pi)
     ---@type FittenCode.Inline.ProgressIndicatorObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new({ id = options.id or ('progress_indicator_observer_' .. Fn.uuid()) })
+    local self = Observer.new({ id = options.id or ('progress_indicator_observer_' .. Fn.generate_short_id()) })
     setmetatable(self, ProgressIndicatorObserver)
     self.pi = options.pi
     self.start_time = {}
@@ -127,7 +127,7 @@ function StatisticObserver.new(options)
     options = options or {}
     ---@type FittenCode.Inline.StatisticObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new({ id = options.id or ('statistic_observer_' .. Fn.uuid()) })
+    local self = Observer.new({ id = options.id or ('statistic_observer_' .. Fn.generate_short_id()) })
     setmetatable(self, StatisticObserver)
     return self
 end
@@ -147,7 +147,7 @@ function TimingObserver.new(options)
     options = options or {}
     ---@type FittenCode.Inline.TimingObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new({ id = options.id or ('timing_observer_' .. Fn.uuid()) })
+    local self = Observer.new({ id = options.id or ('timing_observer_' .. Fn.generate_short_id()) })
     setmetatable(self, TimingObserver)
     return self
 end
