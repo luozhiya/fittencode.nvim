@@ -67,6 +67,10 @@ function Model:is_complete()
     return assert(self:selected_completion()):is_complete()
 end
 
+---@class FittenCode.Inline.Model.UpdateData
+---@field segments FittenCode.Inline.Segments
+
+---@param data FittenCode.Inline.Model.UpdateData
 function Model:update(data)
     local segments = data.segments or {}
     for _, s in pairs(segments) do

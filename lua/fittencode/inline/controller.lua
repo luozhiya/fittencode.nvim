@@ -75,7 +75,11 @@ function Controller:_initialize(options)
         end
     end
 
-    vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteChanged', 'InsertEnter' }, {
+    local trigger_events = { 'TextChangedI', 'CompleteDone' }
+    if not Config.inline_completion.disable_completion_when_insert_enter then
+        trigger_events[#trigger_events + 1] = 'InsertEnter'
+    end
+    vim.api.nvim_create_autocmd(trigger_events, {
         group = vim.api.nvim_create_augroup('FittenCode.Inline.TriggerInlineSuggestion', { clear = true }),
         pattern = '*',
         callback = function(args)

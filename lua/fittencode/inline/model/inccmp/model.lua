@@ -240,6 +240,7 @@ function Model:snapshot()
     return result
 end
 
+---@return string?
 function Model:get_next_char()
     local next_pos = self.cursor + 1
     for i = 1, #self.chars do
@@ -249,13 +250,18 @@ function Model:get_next_char()
     end
 end
 
+---@class FittenCode.Inline.IncrementalCompletion.Model.UpdateData
+---@field segment FittenCode.Inline.Segment
+
+---@param data FittenCode.Inline.IncrementalCompletion.Model.UpdateData
 function Model:update(data)
     return self:update_segments(data.segment)
 end
 
+---@param segment FittenCode.Inline.Segment
 function Model:update_segments(segment)
     local snapshot = self:snapshot()
-    local _, words = pcall(Segment.segments_to_words, snapshot, segment)
+    local _, words = pcall(Segment.segment_to_words, snapshot, segment)
     if not _ then
         Log.error('Failed to update words, invalid segment: {}', segment)
         return
@@ -264,10 +270,12 @@ function Model:update_segments(segment)
     self:update_words(words)
 end
 
+---@return string
 function Model:get_text()
     return self.completion.generated_text
 end
 
+---@return integer
 function Model:get_col_delta()
     return self.completion.col_delta
 end

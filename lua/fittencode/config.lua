@@ -83,6 +83,8 @@ local DEFAULTS = {
         -- Disable auto completion when pressing Backspace or Delete.
         ---@type boolean
         disable_completion_when_delete = false,
+        -- Disable auto completion when entering Insert mode `InsertEnter`.
+        disable_completion_when_insert_enter = false,
         -- Auto triggering completion
         ---@type boolean
         auto_triggering_completion = true,
