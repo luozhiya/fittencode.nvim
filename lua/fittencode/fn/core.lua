@@ -11,27 +11,6 @@ function M.schedule_call(fx, ...)
     end
 end
 
-function M.schedule_call_wrap_fn(fx, ...)
-    return function(...)
-        M.schedule_call(fx, ...)
-    end
-end
-
-function M.schedule_call_foreach(v, ...)
-    if not v then
-        return
-    end
-    if vim.islist(v) then
-        for _, fx in ipairs(v) do
-            M.schedule_call(fx, ...)
-        end
-    else
-        for _, fx in pairs(v) do
-            M.schedule_call(fx, ...)
-        end
-    end
-end
-
 function M.check_call(fx, ...)
     if fx then
         local args = { ... }
@@ -46,7 +25,7 @@ function M.debounce(func, delay, on_return)
             local args = { ... }
             vim.schedule(function()
                 local v = func(unpack(args))
-                M.schedule_call(on_return, v)
+                M.check_call(on_return, v)
             end)
         end
     end
@@ -63,7 +42,7 @@ function M.debounce(func, delay, on_return)
             timer:close()
             vim.schedule(function()
                 local v = func(unpack(args))
-                M.schedule_call(on_return, v)
+                M.check_call(on_return, v)
             end)
         end)
     end

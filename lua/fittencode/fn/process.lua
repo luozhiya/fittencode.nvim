@@ -195,13 +195,13 @@ local function new(command, args, options)
             local cbs = self._callbacks[event]
             if cbs then
                 for _, cb in ipairs(cbs) do
-                    Fn.schedule_call(cb, ...)
+                    Fn.check_call(cb, ...)
                 end
             end
         end,
         -- async 方法用于异步启动进程
         async = function(self)
-            Fn.schedule_call(run, self)
+            Fn.check_call(run, self)
         end,
     }
 end

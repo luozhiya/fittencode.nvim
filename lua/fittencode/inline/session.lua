@@ -49,6 +49,20 @@ function Session.new(options)
     return self
 end
 
+---@class FittenCode.Inline.Session.InitialOptions
+---@field buf number
+---@field position FittenCode.Position
+---@field commit_position FittenCode.Position
+---@field mode string
+---@field id string
+---@field filename string
+---@field version string
+---@field headless boolean
+---@field trigger_inline_suggestion function
+---@field on_session_event function
+---@field on_session_update_event function
+
+---@param options FittenCode.Inline.Session.InitialOptions
 function Session:_initialize(options)
     self.buf = options.buf
     self.position = options.position
@@ -60,10 +74,10 @@ function Session:_initialize(options)
     self.keymaps = {}
     self.filename = options.filename
     self.version = options.version
-    self.trigger_inline_suggestion = Fn.schedule_call_wrap_fn(options.trigger_inline_suggestion)
-    self.on_completion_event = function() Fn.schedule_call(options.on_session_update_event, { id = self.id, completion_event = self.completion_event, }) end
-    self.on_session_event = function() Fn.schedule_call(options.on_session_event, { id = self.id, session_event = self.session_event, }) end
-    self.on_session_task_event = function() Fn.schedule_call(options.on_session_update_event, { id = self.id, session_task_event = self.session_task_event, }) end
+    self.trigger_inline_suggestion = options.trigger_inline_suggestion
+    self.on_completion_event = function() Fn.check_call(options.on_session_update_event, { id = self.id, completion_event = self.completion_event, }) end
+    self.on_session_event = function() Fn.check_call(options.on_session_event, { id = self.id, session_event = self.session_event, }) end
+    self.on_session_task_event = function() Fn.check_call(options.on_session_update_event, { id = self.id, session_task_event = self.session_task_event, }) end
     self:sync_session_event(SESSION_EVENT.CREATED)
     self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey')
 end
