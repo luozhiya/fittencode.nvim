@@ -17,7 +17,7 @@ local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
-local Fim = require('fittencode.inline.fim_protocol.vsc')
+local FimGenerate = require('fittencode.inline.fim_protocol.generate')
 local Definitions = require('fittencode.inline.definitions')
 local Format = require('fittencode.fn.format')
 local Segment = require('fittencode.inline.segment')
@@ -400,7 +400,7 @@ function Session:send_completions()
         if check:is_rejected() then
             return check
         else
-            Fim.update_last_version(self.filename, self.version, self.cachedata)
+            FimGenerate.update_last_version(self.filename, self.version, self.cachedata)
             debug_log(self, 'Updated FIM last version')
         end
         if parse_result.status == 'no_completion' then

@@ -1,5 +1,6 @@
 local Fn = require('fittencode.fn.core')
-local Fim = require('fittencode.inline.fim_protocol.vsc')
+local FimGenerate = require('fittencode.inline.fim_protocol.generate')
+local FimParse = require('fittencode.inline.fim_protocol.parse')
 local Promise = require('fittencode.fn.promise')
 local Zip = require('fittencode.fn.gzip')
 local Log = require('fittencode.log')
@@ -30,7 +31,7 @@ function M.generate_prompt(options)
     local diff_metadata_provider = options.diff_metadata_provider == nil and true or options.diff_metadata_provider
 
     Fn.check_call(on_before_generate_prompt)
-    return Fim.generate(buf, position, {
+    return FimGenerate.generate(buf, position, {
         filename = filename,
         version = version,
         mode = mode,
@@ -151,7 +152,7 @@ function M.generate_one_stage_auth(options)
                 }
             })
         end
-        local parse_result = Fim.parse(response, {
+        local parse_result = FimParse.parse(response, {
             buf = buf,
             position = position,
             mode = mode
