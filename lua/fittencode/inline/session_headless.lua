@@ -76,11 +76,12 @@ function HeadlessSession:generate_prompt()
         on_before_generate_prompt = function()
             self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
         end,
+        version = 0,
         buf = self.buf,
         position = self.position,
         mode = self.mode,
         filename = self.filename,
-        diff_metadata_provider = false,
+        diff_required = false,
     })
 end
 

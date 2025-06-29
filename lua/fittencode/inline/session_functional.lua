@@ -15,7 +15,7 @@ local M = {}
 ---@field filename string
 ---@field version integer
 ---@field mode string
----@field diff_metadata_provider? boolean
+---@field diff_required? boolean
 ---@field on_before_generate_prompt? function
 
 ---@param options FittenCode.Inline.SessionFunctional.GeneratePromptOptions
@@ -28,14 +28,14 @@ function M.generate_prompt(options)
     local filename = assert(options.filename)
     local version = assert(options.version)
     local mode = assert(options.mode)
-    local diff_metadata_provider = options.diff_metadata_provider == nil and true or options.diff_metadata_provider
+    local diff_required = options.diff_required == nil and true or options.diff_required
 
     Fn.check_call(on_before_generate_prompt)
     return FimGenerate.generate(buf, position, {
         filename = filename,
         version = version,
         mode = mode,
-        diff_metadata_provider = diff_metadata_provider,
+        diff_required = diff_required,
     })
 end
 

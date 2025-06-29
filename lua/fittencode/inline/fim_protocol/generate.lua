@@ -185,7 +185,7 @@ end
 ---@field mode FittenCode.Inline.CompletionMode
 ---@field filename string
 ---@field version? number
----@field diff_metadata_provider? boolean
+---@field diff_required? boolean
 
 ---@class FittenCode.Inline.PromptWithCacheData
 ---@field prompt FittenCode.Inline.Prompt
@@ -203,7 +203,7 @@ function M.generate(buf, position, options)
     assert(text)
     assert(ciphertext)
     local diff = {}
-    if options.diff_metadata_provider then
+    if options.diff_required then
         diff = build_diff_metadata(text, options.filename, options.version)
     end
     local edit = build_edit_metadata(options.mode)
