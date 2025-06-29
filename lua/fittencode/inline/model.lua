@@ -9,11 +9,6 @@ Model 的设计思路：
 local IncModel = require('fittencode.inline.model.inccmp.model')
 local EditModel = require('fittencode.inline.model.editcmp.model')
 local Log = require('fittencode.log')
-local Fn = require('fittencode.fn.core')
-local F = require('fittencode.fn.buf')
-local Range = require('fittencode.fn.range')
-local Position = require('fittencode.fn.position')
-local Unicode = require('fittencode.fn.unicode')
 
 ---@class FittenCode.Inline.Model
 ---@field buf number
@@ -31,6 +26,14 @@ function Model.new(options)
     return self
 end
 
+---@class FittenCode.Inline.Model.InitialOptions
+---@field buf number
+---@field position FittenCode.Position
+---@field mode FittenCode.Inline.CompletionMode
+---@field completions
+---@field response any
+
+---@param options FittenCode.Inline.Model.InitialOptions
 function Model:_initialize(options)
     self.buf = options.buf
     self.position = options.position

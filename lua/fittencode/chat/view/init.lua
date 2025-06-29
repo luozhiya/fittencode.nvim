@@ -326,7 +326,7 @@ function View:_setup_autoclose(self, win_id)
     vim.api.nvim_create_autocmd('WinClosed', {
         pattern = tostring(win_id),
         callback = function()
-            self:hide()
+            Fn.schedule_call(function() self:hide() end)
         end,
         once = true,
     })

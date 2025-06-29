@@ -84,7 +84,7 @@ function Controller:_initialize(options)
         pattern = '*',
         callback = function(args)
             Log.debug('trigger_inline_suggestion_auto autocmd = {}, args = {}', args.event, args)
-            self:trigger_inline_suggestion_auto({ vimev = args, debounced = false })
+            Fn.schedule_call(function() self:trigger_inline_suggestion_auto({ vimev = args, debounced = false }) end)
         end,
     })
     vim.api.nvim_create_autocmd({ 'CursorMovedI', 'InsertLeave', 'BufLeave' }, {
@@ -92,14 +92,15 @@ function Controller:_initialize(options)
         pattern = '*',
         callback = function(args)
             Log.debug('edit_completion_cancel autocmd = {}, args = {}', args.event, args)
-            self:edit_completion_cancel({ vimev = args })
+            Fn.schedule_call(function() self:edit_completion_cancel({ vimev = args }) end)
         end,
     })
     vim.api.nvim_create_autocmd({ 'BufEnter', 'BufFilePost' }, {
         group = vim.api.nvim_create_augroup('FittenCode.Inline.CheckAvailability', { clear = true }),
         pattern = '*',
         callback = function(args)
-            self:_check_availability({ event = args })
+            Log.debug('check_availability autocmd = {}, args = {}', args.event, args)
+            self:_check_availability({ vimev = args })
         end,
     })
 
@@ -159,9 +160,24 @@ function Controller:_emit(event, data)
     self:notify_observers(event, data)
 end
 
-function Controller:_check_availability(event)
-    local buf = event.buf
-    if self.is_enabled(buf) then
+function Controller:_check_availability(options)
+    assert(options)
+    assert(options.vimev)
+    Log.debug('Check availability, options = {}', options)
+    local current_buf = vim.api.nvim_get_current_buf()
+    Log.debug('current_buf = {}', current_buf)
+    local filename = F.filename(current_buf)
+    Log.debug('filename = {}', filename)
+    local active_buf = self:get_current_session().buf
+    Log.debug('active_buf = {}', active_buf)
+    local active_buf_filename = F.filename(active_buf)
+    Log.debug('active_buf_filename = {}', active_buf_filename)
+    local vimev = options.vimev
+    if (vimev.buf ~= active_buf or vimev.file ~= active_buf_filename) and vimev.event == 'BufFilePost' then
+        -- 没有发生切换文件，不需要检查可用性
+        return
+    end
+    if self.is_enabled(vimev.buf) then
         self:_emit(CONTROLLER_EVENT.INLINE_IDLE)
     else
         self:_emit(CONTROLLER_EVENT.INLINE_DISABLED)
@@ -333,6 +349,7 @@ function Controller:get_active_session()
     end
 end
 
+---@return FittenCode.Inline.Session
 function Controller:get_current_session()
     return self.sessions[self.selected_session_id]
 end

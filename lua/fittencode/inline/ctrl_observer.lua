@@ -30,13 +30,15 @@ end
 -- -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
 function Status:update(controller, event, data)
     Log.debug('Inline status update, event = {}, data = {}', event, data)
+
     if data and data.id == controller.selected_session_id then
         if event == CONTROLLER_EVENT.SESSION_ADDED then
             self.completion = COMPLETION_EVENT.CREATED
         elseif event == CONTROLLER_EVENT.SESSION_DELETED then
             self.completion = ''
         elseif event == CONTROLLER_EVENT.SESSION_UPDATED then
-            assert(self.inline == INLINE_EVENT.RUNNING)
+            assert(self.inline == INLINE_EVENT.RUNNING, 'Inline status should be running when session updated, inline = ' .. self.inline)
+            -- 有些 Completion 插件会导致写入其他 buf，此时 Inline 状态被设置为 DISABLED
             self.completion = data.completion_event
         end
     end
@@ -78,7 +80,7 @@ end
 ---@param event string
 ---@param data any
 function ProgressIndicatorObserver:update(controller, event, data)
-    vim.schedule(function()
+    local function _update()
         if event == CONTROLLER_EVENT.SESSION_ADDED then
             self.start_time[data.id] = {
                 completion = vim.uv.hrtime()
@@ -118,7 +120,8 @@ function ProgressIndicatorObserver:update(controller, event, data)
             self.pi:record_stage(false)
             self.pi:stop()
         end
-    end)
+    end
+    Fn.schedule_call(_update)
 end
 
 ---@class FittenCode.Inline.StatisticObserver : FittenCode.Observer

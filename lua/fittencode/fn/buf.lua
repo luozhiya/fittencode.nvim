@@ -27,7 +27,7 @@ function M.language_id(buf)
     return mapping[ft]
 end
 
----@return string?
+---@return string
 function M.filename(buf)
     assert(buf)
     local name

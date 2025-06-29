@@ -5,7 +5,7 @@ local Fn = require('fittencode.fn.core')
 local Observer = {}
 Observer.__index = Observer
 
----@param options? table
+---@param options? { id?: string }
 ---@return FittenCode.Observer
 function Observer.new(options)
     options = options or {}

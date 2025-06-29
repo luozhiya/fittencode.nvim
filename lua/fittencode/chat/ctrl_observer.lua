@@ -25,9 +25,9 @@ function Status.new(options)
 end
 
 ---@param controller FittenCode.Chat.Controller
-function Status:update(controller, event_type, data)
+function Status:update(controller, event, data)
     self.selected_conversation_id = controller.model:get_selected_conversation_id()
-    if event_type == CONTROLLER_EVENT.CONVERSATION_UPDATED then
+    if event == CONTROLLER_EVENT.CONVERSATION_UPDATED then
         assert(data)
         if not self.conversations[data.id] then
             self.conversations[data.id] = {}
