@@ -19,13 +19,21 @@ local Segment = require('fittencode.inline.segment')
 ---@field chars FittenCode.Inline.IncrementalCompletion.Model.Chars
 ---@field words FittenCode.Inline.IncrementalCompletion.Model.Words
 ---@field lines FittenCode.Inline.IncrementalCompletion.Model.Lines
----@field completion table
+---@field completion FittenCode.Inline.IncrementalCompletion
 local Model = {}
 Model.__index = Model
 
 ---@alias FittenCode.Inline.IncrementalCompletion.Model.CommitHistory FittenCode.Inline.IncrementalCompletion.Model.Ranges[]
 
-function Model.new(buf, position, completion)
+---@class FittenCode.Inline.IncrementalCompletion.Model.InitialOptions
+---@field buf integer
+---@field position FittenCode.Position
+---@field completion FittenCode.Inline.IncrementalCompletion
+
+---@param options FittenCode.Inline.IncrementalCompletion.Model.InitialOptions
+function Model.new(options)
+    assert(options and options.buf and options.position and options.completion, 'Invalid options')
+    local buf, position, completion = options.buf, options.position, options.completion
     local self = setmetatable({}, Model)
     Log.debug('CompletionModel initializing')
 
@@ -107,6 +115,7 @@ function Model:update_stage_ranges()
     self.stage_ranges = Parse.merge_ranges(stage)
 end
 
+---@param scope FittenCode.Inline.IncAcceptScope
 function Model:find_valid_region(scope)
     local candidates = {}
     local list = ({ char = self.chars, word = self.words, line = self.lines })[scope]
@@ -157,8 +166,17 @@ function Model:find_valid_region(scope)
     end
 end
 
----@param scope 'char' | 'word' | 'line' | 'all'
+---@param scope string
+function Model:is_scope_valid(scope)
+    local supported_scopes = { 'all', 'char', 'word', 'line' }
+    return vim.tbl_contains(supported_scopes, scope)
+end
+
+---@param scope FittenCode.Inline.IncAcceptScope
 function Model:accept(scope)
+    if not self:is_scope_valid(scope) then
+        Log.error('Invalid scope: ' .. scope)
+    end
     if scope == 'all' then
         local new_commit = vim.deepcopy(self.stage_ranges)
         table.insert(self.commit_history, new_commit)

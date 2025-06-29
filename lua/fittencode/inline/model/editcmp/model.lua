@@ -3,11 +3,7 @@ local F = require('fittencode.fn.buf')
 local Diff = require('fittencode.fn.diff')
 
 ---@class FittenCode.Inline.EditCompletion.Model
----@field snapshot function
----@field accept function
----@field is_complete function
----@field revoke function
----@field merge string
+---@field merge_method string
 ---@field commit_index integer
 ---@field start_line integer
 ---@field end_line integer
@@ -15,21 +11,33 @@ local Diff = require('fittencode.fn.diff')
 ---@field lines string[]
 ---@field hunks FittenCode.Diff.Hunk[]
 ---@field gap_common_hunks FittenCode.Diff.CommonHunk[]
+---@field snapshot function
+---@field accept function
+---@field is_complete function
+---@field revoke function
 local Model = {}
 Model.__index = Model
 
-function Model.new(buf, position, completion)
+---@class FittenCode.Inline.EditCompletion.Model.InitialOptions
+---@field buf integer
+---@field position FittenCode.Position
+---@field completion FittenCode.Inline.EditCompletion
+
+---@param options FittenCode.Inline.EditCompletion.Model.InitialOptions
+function Model.new(options)
+    assert(options and options.buf and options.position and options.completion, 'Invalid options')
+    local buf, position, completion = options.buf, options.position, options.completion
     local self = setmetatable({}, Model)
     Log.debug('Edit completion model created, completion = {}', completion)
     assert(completion.lines)
 
     self.lines = vim.deepcopy(completion.lines)
     if completion.after_line then
-        self.merge = 'after_line'
+        self.merge_method = 'after_line'
         self.after_line = completion.after_line
         self.hunks, self.gap_common_hunks = Diff.diff_block({}, completion.lines)
     else
-        self.merge = 'line_range'
+        self.merge_method = 'line_range'
         self.start_line = completion.start_line
         self.end_line = completion.end_line
         local old_lines = F.get_lines_by_line_range(buf, self.start_line, self.end_line)
@@ -62,11 +70,16 @@ function Model:snapshot()
     return result
 end
 
----@param scope 'all' | 'hunk'
-function Model:accept(scope)
+---@param scope string
+function Model:is_scope_valid(scope)
     local supported_scopes = { 'all', 'hunk' }
-    if not vim.tbl_contains(supported_scopes, scope) then
-        Log.error('Unsupported scope: ' .. scope)
+    return vim.tbl_contains(supported_scopes, scope)
+end
+
+---@param scope FittenCode.Inline.EditAcceptScope
+function Model:accept(scope)
+    if not self:is_scope_valid(scope) then
+        Log.error('Invalid scope: ' .. scope)
         return
     end
     if scope == 'hunk' then

@@ -1,10 +1,7 @@
 local Log = require('fittencode.log')
-local Fn = require('fittencode.fn.core')
 local F = require('fittencode.fn.buf')
 local Range = require('fittencode.fn.range')
 local Position = require('fittencode.fn.position')
-local Segment = require('fittencode.inline.segment')
-local Unicode = require('fittencode.fn.unicode')
 
 --[[
 (1+2*3
@@ -32,6 +29,8 @@ local Unicode = require('fittencode.fn.unicode')
 -- * 只支持 generated_text 比原来的文本长的情况
 ---@param buf number
 ---@param position FittenCode.Position
+---@param completion FittenCode.Inline.IncrementalCompletion
+---@return FittenCode.Inline.IncrementalCompletion.Model.Range[]
 local function generate_placeholder_ranges(buf, position, completion)
     local placeholder_ranges = {}
     ---@type string

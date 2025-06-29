@@ -275,8 +275,8 @@ end
 
 ---@class FittenCode.Inline.IncrementalCompletion
 ---@field generated_text string
----@field character_delta number
----@field line_delta number
+---@field row_delta integer
+---@field col_delta integer
 
 ---@class FittenCode.Inline.EditCompletion
 ---@field lines string[]

@@ -44,7 +44,7 @@ function Model:_initialize(options)
     local Class = self.mode == 'editcmp' and EditModel or IncModel
     self.completion_models = {}
     for _, completion in ipairs(self.completions) do
-        self.completion_models[#self.completion_models + 1] = Class.new(self.buf, self.position, completion)
+        self.completion_models[#self.completion_models + 1] = Class.new({ buf = self.buf, position = self.position, completion = completion })
     end
 
     -- 如果要支持多 completion 则需要修改这里，弹出一个对话框让用户选择

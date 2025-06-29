@@ -35,7 +35,9 @@
 ---@field register_message_receiver function
 ---@field on_complete function
 
----@alias FittenCode.Inline.AcceptScope 'all' | 'hunk' | 'char' | 'word' | 'line'
+---@alias FittenCode.Inline.IncAcceptScope 'all' | 'char' | 'word' | 'line'
+---@alias FittenCode.Inline.EditAcceptScope 'all' | 'hunk'
+---@alias FittenCode.Inline.AcceptScope FittenCode.Inline.IncAcceptScope | FittenCode.Inline.EditAcceptScope
 
 ---@class FittenCode.Inline.Session.InitialOptions
 ---@field buf number
