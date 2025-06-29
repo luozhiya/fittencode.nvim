@@ -11,7 +11,7 @@ local FIM_MIDDLE_TOKEN = '<fim_middle>'
 
 local M = {}
 
----@class FittenCode.Inline.FimProtocol.VSC.ParseResult
+---@class FittenCode.Inline.FimProtocol.ParseResult
 ---@field status 'error'|'success'|'no_completion'
 ---@field message string
 ---@field request_id string
@@ -127,14 +127,14 @@ local function build_editcmp_items(response, buf, position)
     return completions
 end
 
----@class FittenCode.Inline.FimProtocol.VSC.ParseOptions
+---@class FittenCode.Inline.FimProtocol.ParseOptions
 ---@field mode FittenCode.Inline.CompletionMode
 ---@field buf integer
 ---@field position FittenCode.Position
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
----@param options FittenCode.Inline.FimProtocol.VSC.ParseOptions
----@return FittenCode.Inline.FimProtocol.VSC.ParseResult
+---@param options FittenCode.Inline.FimProtocol.ParseOptions
+---@return FittenCode.Inline.FimProtocol.ParseResult
 function M.parse(response, options)
     assert(options)
 

@@ -111,7 +111,7 @@ end
 ---@field on_before_generate_one_stage_auth? function
 
 ---@param options FittenCode.Inline.SessionFunctional.GenerateOneStageAuthOptions
----@return FittenCode.Promise<FittenCode.Inline.FimProtocol.VSC.ParseResult, FittenCode.Error>, FittenCode.HTTP.Request?
+---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult, FittenCode.Error>, FittenCode.HTTP.Request?
 function M.generate_one_stage_auth(options)
     assert(options)
     local on_before_generate_one_stage_auth = options.on_before_generate_one_stage_auth

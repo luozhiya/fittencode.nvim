@@ -10,15 +10,15 @@ local Context = require('fittencode.inline.fim_protocol.context')
 local MAX_CHARS = 220000 -- ~200KB 220000
 local HALF_MAX = MAX_CHARS / 2
 
----@class FittenCode.Inline.FimProtocol.VSC.Last
+---@class FittenCode.Inline.FimProtocol.Last
 ---@field filename string
 ---@field text string
 ---@field ciphertext string
 ---@field version number
 ---@field once boolean
 
----@class FittenCode.Inline.FimProtocol.VSC
----@field last FittenCode.Inline.FimProtocol.VSC.Last
+---@class FittenCode.Inline.FimProtocol
+---@field last FittenCode.Inline.FimProtocol.Last
 local M = {
     last = {
         filename = '',
@@ -181,7 +181,7 @@ local function build_edit_metadata(mode)
     }
 end
 
----@class FittenCode.Inline.FimProtocol.VSC.GenerateOptions
+---@class FittenCode.Inline.FimProtocol.GenerateOptions
 ---@field mode FittenCode.Inline.CompletionMode
 ---@field filename string
 ---@field version? number
@@ -193,7 +193,7 @@ end
 
 ---@param buf number
 ---@param position FittenCode.Position
----@param options FittenCode.Inline.FimProtocol.VSC.GenerateOptions
+---@param options FittenCode.Inline.FimProtocol.GenerateOptions
 ---@return FittenCode.Promise<FittenCode.Inline.PromptWithCacheData>
 function M.generate(buf, position, options)
     local base, text, ciphertext = build_base_prompt(buf, position, options)
