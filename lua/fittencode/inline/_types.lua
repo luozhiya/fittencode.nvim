@@ -26,7 +26,7 @@
 ---@class FittenCode.Inline.TriggerInlineSuggestionOptions
 ---@field force? boolean
 ---@field mode? FittenCode.Inline.CompletionMode
----@field debounced? boolean
+---@field delaytime? integer
 ---@field vimev? vim.api.keyset.create_autocmd.callback_args
 
 ---@class FittenCode.Inline.View

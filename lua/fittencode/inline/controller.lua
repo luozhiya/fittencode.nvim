@@ -84,7 +84,7 @@ function Controller:_initialize(options)
         pattern = '*',
         callback = function(args)
             Log.debug('trigger_inline_suggestion_auto autocmd = {}, args = {}', args.event, args)
-            Fn.schedule_call(function() self:trigger_inline_suggestion_auto({ vimev = args, debounced = false }) end)
+            Fn.schedule_call(function() self:trigger_inline_suggestion_auto({ vimev = args, delaytime = Config.delay_completion.delaytime }) end)
         end,
     })
     vim.api.nvim_create_autocmd({ 'CursorMovedI', 'InsertLeave', 'BufLeave' }, {
@@ -294,7 +294,7 @@ function Controller:trigger_inline_suggestion(options)
     Log.debug('trigger_inline_suggestion')
     options = options or {}
     local mode = options.mode or 'inccmp'
-    local debounced = options.debounced or false
+    local delaytime = options.delaytime or 0
     local buf, position = self:_preflight_check(options.vimev, options.force)
     if not buf or not position then
         return Promise.rejected({
@@ -302,22 +302,18 @@ function Controller:trigger_inline_suggestion(options)
         })
     end
     self:terminate_sessions()
-    if debounced then
-        if not self.debounced_make_session then
-            self.debounced_make_session = Fn.debounce(function(...) return self:_make_session(...) end, 60)
-        end
-        return Promise.new(function(resolve, reject)
-            self.debounced_make_session(buf, position, mode, function(ret)
-                if ret:is_rejected() then
-                    reject(ret:get_reason())
-                elseif ret:is_resolved() then
-                    resolve(ret:get_value())
-                end
-            end)
-        end)
-    else
-        return self:_make_session(buf, position, mode)
+    if not self.debounced_make_session then
+        self.debounced_make_session = Fn.debounce(function(...) return self:_make_session(...) end, delaytime)
     end
+    return Promise.new(function(resolve, reject)
+        self.debounced_make_session(buf, position, mode, function(ret)
+            if ret:is_rejected() then
+                reject(ret:get_reason())
+            elseif ret:is_resolved() then
+                resolve(ret:get_value())
+            end
+        end)
+    end)
 end
 
 function Controller:on_session_event(data)

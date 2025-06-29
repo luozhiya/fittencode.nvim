@@ -66,7 +66,7 @@ local DEFAULTS = {
     delay_completion = {
         -- Delay time for inline completion (in milliseconds).
         ---@type integer
-        delaytime = 0,
+        delaytime = 150,
     },
     disable_specific_inline_completion = {
         -- Disable auto-completion for some specific file suffixes by entering them below
