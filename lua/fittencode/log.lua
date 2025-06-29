@@ -106,21 +106,56 @@ local function write_to_log(content)
     end
 end
 
--- 更加底层的日志接口，可以做模块化的定制，如果是封装 _async_log 成新函数, 则 stack 应该要设置为 3
-function M._async_log(stack, level, message)
-    stack = stack or 3
-    if level < Config.log.level or Config.log.level == LOG_LEVELS.OFF then
-        return
-    end
-
-    local info = debug.getinfo(stack, 'Snl')
+local function _filename(info)
     local file_name = info.source:sub(2) -- 去掉 '@' 符号
     local prefix = 'lua/fittencode/'
     local start_pos = file_name:find(prefix, 1, true)
     if start_pos then
         file_name = file_name:sub(start_pos + #prefix)
     end
+    return file_name
+end
+
+local function _func_from_line(line)
+    local func = ''
+    if line:sub(#line, #line) ~= "'" then
+        return func
+    end
+    for _ = #line - 1, 1, -1 do
+        if line:sub(_, _) == "'" then
+            func = line:sub(_ + 1, -2)
+            break
+        end
+    end
+    return func
+end
+
+local function _func(traceback)
+    local func = {}
+    local lines = vim.split(traceback, '\n')
+    for _ = 3, #lines do
+        table.insert(func, 1, _func_from_line(lines[_]))
+    end
+    return func
+end
+
+-- 更加底层的日志接口，可以做模块化的定制，如果是封装 _async_log 成新函数, 则 stack 应该要设置为 3
+function M._async_log(options)
+    assert(options)
+    local stack = assert(options.stack)
+    local level = assert(options.level)
+    local message = options.message or ''
+    if level < Config.log.level or Config.log.level == LOG_LEVELS.OFF then
+        return
+    end
+
+    local info = debug.getinfo(stack, 'Snl')
+    local file_name = _filename(info)
     local line_number = info.currentline
+    local func = info.name or ''
+    if Config.log.level <= LOG_LEVELS.DEBUG then
+        func = table.concat(_func(debug.traceback('', stack)), '->')
+    end
 
     vim.schedule(function()
         if needs_preface then
@@ -129,10 +164,11 @@ function M._async_log(stack, level, message)
             write_to_log(prepare_log_header())
             needs_preface = false
         end
-        local log_entry = string.format('[%s %s:%d %s] %s',
+        local log_entry = string.format('[%s %s:%d |%s| %s] %s',
             format_timestamp(),
             file_name,
             line_number,
+            func,
             get_level_name(level),
             message
         )
@@ -152,13 +188,13 @@ for _, level_name in ipairs(LOG_LEVEL_NAMES) do
     local method_name = level_name:lower()
 
     M[method_name] = function(msg, ...)
-        M._async_log(3, level, Format.nothrow_format(msg, ...))
+        M._async_log({ stack = 3, level = level, message = Format.nothrow_format(msg, ...) })
     end
 
     M['notify_' .. method_name] = function(msg, ...)
         local formatted = Format.nothrow_format(msg, ...)
         vim.notify(formatted, level, { title = 'FittenCode' })
-        M._async_log(3, level, formatted)
+        M._async_log({ stack = 3, level = level, message = formatted })
     end
 end
 

@@ -29,6 +29,7 @@ end
 
 -- -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
 function Status:update(controller, event, data)
+    Log.debug('Inline status update, event = {}, data = {}', event, data)
     if data and data.id == controller.selected_session_id then
         if event == CONTROLLER_EVENT.SESSION_ADDED then
             self.completion = COMPLETION_EVENT.CREATED

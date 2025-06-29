@@ -13,9 +13,9 @@ local Segment = require('fittencode.inline.segment')
 ---@field source string
 ---@field cursor integer
 ---@field commit_history FittenCode.Inline.IncrementalCompletion.Model.CommitHistory
----@field placeholder_ranges FittenCode.Inline.IncrementalCompletion.Model.PlaceholderRanges
----@field commit_ranges FittenCode.Inline.IncrementalCompletion.Model.CommitRanges
----@field stage_ranges FittenCode.Inline.IncrementalCompletion.Model.StageRanges
+---@field placeholder_ranges FittenCode.Inline.IncrementalCompletion.Model.Ranges
+---@field commit_ranges FittenCode.Inline.IncrementalCompletion.Model.Ranges
+---@field stage_ranges FittenCode.Inline.IncrementalCompletion.Model.Ranges
 ---@field chars FittenCode.Inline.IncrementalCompletion.Model.Chars
 ---@field words FittenCode.Inline.IncrementalCompletion.Model.Words
 ---@field lines FittenCode.Inline.IncrementalCompletion.Model.Lines
@@ -23,13 +23,7 @@ local Segment = require('fittencode.inline.segment')
 local Model = {}
 Model.__index = Model
 
----@class FittenCode.Inline.IncrementalCompletion.Model.Chars
----@class FittenCode.Inline.IncrementalCompletion.Model.Words
----@class FittenCode.Inline.IncrementalCompletion.Model.Lines
----@class FittenCode.Inline.IncrementalCompletion.Model.StageRanges
----@class FittenCode.Inline.IncrementalCompletion.Model.CommitRanges
----@class FittenCode.Inline.IncrementalCompletion.Model.PlaceholderRanges
----@class FittenCode.Inline.IncrementalCompletion.Model.CommitHistory
+---@alias FittenCode.Inline.IncrementalCompletion.Model.CommitHistory FittenCode.Inline.IncrementalCompletion.Model.Ranges[]
 
 function Model.new(buf, position, completion)
     local self = setmetatable({}, Model)
@@ -221,9 +215,9 @@ end
 ---@field chars FittenCode.Inline.IncrementalCompletion.Model.Chars
 ---@field words FittenCode.Inline.IncrementalCompletion.Model.Words
 ---@field lines FittenCode.Inline.IncrementalCompletion.Model.Lines
----@field commit_ranges FittenCode.Inline.IncrementalCompletion.Model.CommitRanges
----@field placeholder_ranges FittenCode.Inline.IncrementalCompletion.Model.PlaceholderRanges
----@field stage_ranges FittenCode.Inline.IncrementalCompletion.Model.StageRanges
+---@field commit_ranges FittenCode.Inline.IncrementalCompletion.Model.Ranges
+---@field placeholder_ranges FittenCode.Inline.IncrementalCompletion.Model.Ranges
+---@field stage_ranges FittenCode.Inline.IncrementalCompletion.Model.Ranges
 
 ---@return FittenCode.Inline.IncrementalCompletion.Model.Snapshot
 function Model:snapshot()

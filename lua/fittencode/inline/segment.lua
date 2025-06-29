@@ -173,6 +173,7 @@ end
 
 ---@param model FittenCode.Inline.IncrementalCompletion.Model.Snapshot
 ---@param segment FittenCode.Inline.Segment
+---@return FittenCode.Inline.IncrementalCompletion.Model.Words
 function M.segment_to_words(model, segment)
     local words = {}
     local ptr = 1
@@ -210,15 +211,15 @@ function M.send_segments(text)
     if not request then
         return Promise.rejected()
     end
-    ---@param segments string[]
-    return res:forward(function(segments)
-        if #segments == 0 then
+    ---@param chunks string[]
+    return res:forward(function(chunks)
+        if #chunks == 0 then
             return Promise.rejected({ message = 'No segments found in response' })
         end
-        local seg_str = table.concat(segments)
-        local _, obj = pcall(vim.fn.json_decode, seg_str)
+        local segments = table.concat(chunks)
+        local _, obj = pcall(vim.fn.json_decode, segments)
         if not _ then
-            return Promise.rejected({ message = 'Failed to decode segment', meta_datas = { seg = seg_str } })
+            return Promise.rejected({ message = 'Failed to decode segment', meta_datas = { segments = segments } })
         end
         return obj
     end), request

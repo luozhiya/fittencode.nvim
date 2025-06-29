@@ -1,5 +1,35 @@
 local Unicode = require('fittencode.fn.unicode')
 
+---@class FittenCode.Inline.IncrementalCompletion.Model.Char
+---@field start number
+---@field end_ number
+---@field content string
+
+---@alias FittenCode.Inline.IncrementalCompletion.Model.Chars FittenCode.Inline.IncrementalCompletion.Model.Char[]
+
+---@class FittenCode.Inline.IncrementalCompletion.Model.Word
+---@field start number
+---@field end_ number
+---@field type string
+---@field content string
+
+---@alias FittenCode.Inline.IncrementalCompletion.Model.Words FittenCode.Inline.IncrementalCompletion.Model.Word[]
+
+---@class FittenCode.Inline.IncrementalCompletion.Model.Line
+---@field start number
+---@field end_ number
+---@field content string
+
+---@alias FittenCode.Inline.IncrementalCompletion.Model.Lines FittenCode.Inline.IncrementalCompletion.Model.Line[]
+
+---@class FittenCode.Inline.IncrementalCompletion.Model.Range
+---@field start number
+---@field end_ number
+
+---@class FittenCode.Inline.IncrementalCompletion.Model.Ranges FittenCode.Inline.IncrementalCompletion.Model.Range[]
+
+---@param s string
+---@return FittenCode.Inline.IncrementalCompletion.Model.Chars
 local function parse_chars(s)
     local chars = {}
     local i = 1
@@ -12,6 +42,9 @@ local function parse_chars(s)
     return chars
 end
 
+---@param s string
+---@param chars FittenCode.Inline.IncrementalCompletion.Model.Chars
+---@return FittenCode.Inline.IncrementalCompletion.Model.Words
 local function parse_words(s, chars)
     local words = {}
     local current_word = nil
@@ -95,7 +128,7 @@ end
 
 ]]
 ---@param s string
----@return table
+---@return FittenCode.Inline.IncrementalCompletion.Model.Lines
 local function parse_lines(s)
     local lines = {}
     local line_start = 1
@@ -124,6 +157,8 @@ local function parse_lines(s)
     return lines
 end
 
+---@param ranges FittenCode.Inline.IncrementalCompletion.Model.Ranges
+---@return FittenCode.Inline.IncrementalCompletion.Model.Ranges
 local function merge_ranges(ranges)
     if #ranges == 0 then
         return {}

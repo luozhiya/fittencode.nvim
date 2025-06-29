@@ -75,7 +75,7 @@ function Controller:_initialize(options)
         end
     end
 
-    local trigger_events = { 'TextChangedI', 'CompleteDone' }
+    local trigger_events = { 'TextChangedI', 'CompleteDone', 'CompleteChanged' }
     if not Config.inline_completion.disable_completion_when_insert_enter then
         trigger_events[#trigger_events + 1] = 'InsertEnter'
     end
@@ -84,7 +84,7 @@ function Controller:_initialize(options)
         pattern = '*',
         callback = function(args)
             Log.debug('trigger_inline_suggestion_auto autocmd = {}, args = {}', args.event, args)
-            self:trigger_inline_suggestion_auto({ vimev = args, debounced = true })
+            self:trigger_inline_suggestion_auto({ vimev = args, debounced = false })
         end,
     })
     vim.api.nvim_create_autocmd({ 'CursorMovedI', 'InsertLeave', 'BufLeave' }, {

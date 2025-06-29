@@ -66,7 +66,7 @@ end
 ---@param... any
 local function debug_log(self, msg, ...)
     local meta = Format.nothrow_format('Session id = {}, version = {}, session_event = {}, completion_event = {} --> ', self.id, self.version, self.session_event, self.completion_event)
-    Log._async_log(3, vim.log.levels.DEBUG, meta .. Format.nothrow_format(msg, ...))
+    Log._async_log({ stack = 3, level = vim.log.levels.DEBUG, message = meta .. Format.nothrow_format(msg, ...) })
 end
 
 ---@param text string|string[]
