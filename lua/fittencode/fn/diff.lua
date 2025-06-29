@@ -644,6 +644,9 @@ function M.diff_classic(old_lines, new_lines, options)
     end
 end
 
+---@param old_lines string[]
+---@param new_lines string[]
+---@return FittenCode.Diff.Hunk[], FittenCode.Diff.CommonHunk[]
 function M.diff_block(old_lines, new_lines)
     return diff_lines(old_lines, new_lines, false)
 end

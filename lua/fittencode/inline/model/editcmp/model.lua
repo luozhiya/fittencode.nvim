@@ -1,4 +1,3 @@
-local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 local F = require('fittencode.fn.buf')
 local Diff = require('fittencode.fn.diff')
@@ -9,13 +8,13 @@ local Diff = require('fittencode.fn.diff')
 ---@field is_complete function
 ---@field revoke function
 ---@field merge string
----@field commit_index number
----@field hunks table
----@field gap_common_hunks table
----@field start_line number
----@field end_line number
----@field after_line number
+---@field commit_index integer
+---@field start_line integer
+---@field end_line integer
+---@field after_line integer
 ---@field lines string[]
+---@field hunks FittenCode.Diff.Hunk[]
+---@field gap_common_hunks FittenCode.Diff.CommonHunk[]
 local Model = {}
 Model.__index = Model
 
@@ -40,6 +39,16 @@ function Model.new(buf, position, completion)
     return self
 end
 
+---@class FittenCode.Inline.EditCompletion.Model.Snapshot
+---@field after_line integer
+---@field start_line integer
+---@field end_line integer
+---@field commit_index integer
+---@field hunks FittenCode.Diff.Hunk[]
+---@field gap_common_hunks FittenCode.Diff.CommonHunk[]
+---@field lines string[]
+
+---@return FittenCode.Inline.EditCompletion.Model.Snapshot
 function Model:snapshot()
     local result = {
         after_line = self.after_line,

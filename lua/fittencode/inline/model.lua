@@ -11,15 +11,15 @@ local EditModel = require('fittencode.inline.model.editcmp.model')
 local Log = require('fittencode.log')
 
 ---@class FittenCode.Inline.Model
----@field buf number
+---@field buf integer
 ---@field position FittenCode.Position
----@field response any
----@field selected_completion_index? number
----@field completions table<table<string, any>>
----@field completion_models table<number, FittenCode.Inline.EditCompletion.Model | FittenCode.Inline.IncrementalCompletion.Model>
+---@field selected_completion_index? integer
+---@field completions FittenCode.Inline.IncrementalCompletion[] | FittenCode.Inline.EditCompletion[]
+---@field completion_models FittenCode.Inline.EditCompletion.Model[] | FittenCode.Inline.IncrementalCompletion.Model[]
 local Model = {}
 Model.__index = Model
 
+---@param options FittenCode.Inline.Model.InitialOptions
 function Model.new(options)
     local self = setmetatable({}, Model)
     self:_initialize(options)
@@ -30,8 +30,7 @@ end
 ---@field buf number
 ---@field position FittenCode.Position
 ---@field mode FittenCode.Inline.CompletionMode
----@field completions
----@field response any
+---@field completions FittenCode.Inline.IncrementalCompletion[] | FittenCode.Inline.EditCompletion[]
 
 ---@param options FittenCode.Inline.Model.InitialOptions
 function Model:_initialize(options)
@@ -83,6 +82,7 @@ end
 
 -- 一旦开始 comletion 则不允许再选择其他的 completion
 -- TODO:?
+---@param index integer
 function Model:set_selected_completion(index)
     if self.selected_completion_index ~= nil then
         return
@@ -90,10 +90,12 @@ function Model:set_selected_completion(index)
     self.selected_completion_index = index
 end
 
+---@return FittenCode.Inline.IncrementalCompletion.Model.Snapshot | FittenCode.Inline.EditCompletion.Model.Snapshot
 function Model:snapshot()
     return assert(self:selected_completion()):snapshot()
 end
 
+---@param key string
 function Model:is_match_next_char(key)
     return key == assert(self:selected_completion()):get_next_char()
 end

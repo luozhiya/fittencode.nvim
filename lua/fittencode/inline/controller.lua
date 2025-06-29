@@ -163,18 +163,12 @@ end
 function Controller:_check_availability(options)
     assert(options)
     assert(options.vimev)
-    Log.debug('Check availability, options = {}', options)
-    local current_buf = vim.api.nvim_get_current_buf()
-    Log.debug('current_buf = {}', current_buf)
-    local filename = F.filename(current_buf)
-    Log.debug('filename = {}', filename)
-    local active_buf = self:get_current_session().buf
-    Log.debug('active_buf = {}', active_buf)
-    local active_buf_filename = F.filename(active_buf)
-    Log.debug('active_buf_filename = {}', active_buf_filename)
+    local session_buf = self:get_current_session() and self:get_current_session().buf
     local vimev = options.vimev
-    if (vimev.buf ~= active_buf or vimev.file ~= active_buf_filename) and vimev.event == 'BufFilePost' then
-        -- 没有发生切换文件，不需要检查可用性
+    assert(vimev.buf)
+    if (vimev.buf ~= session_buf) and vimev.event == 'BufFilePost' then
+        -- 没有发生切换 buffer，不需要检查可用性
+        Log.debug('Check availability failed, event_buf = {}, session_buf = {}', vimev.buf, session_buf)
         return
     end
     if self.is_enabled(vimev.buf) then
