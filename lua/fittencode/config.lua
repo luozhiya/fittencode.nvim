@@ -65,6 +65,7 @@ local DEFAULTS = {
     },
     delay_completion = {
         -- Delay time for inline completion (in milliseconds).
+        -- The default value is same as `vim.lsp.Client.Flags.debounce_text_changes` in `nvim/share/nvim/runtime/lua/vim/lsp/client.lua`
         ---@type integer
         delaytime = 150,
     },
@@ -85,6 +86,8 @@ local DEFAULTS = {
         disable_completion_when_delete = false,
         -- Disable auto completion when entering Insert mode `InsertEnter`.
         disable_completion_when_insert_enter = false,
+        -- Disable auto completion when the popup menu is changed `CompleteChanged` `CompletionDone`.
+        disable_completion_when_pum_changed = false,
         -- Auto triggering completion
         ---@type boolean
         auto_triggering_completion = true,

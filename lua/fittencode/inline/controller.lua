@@ -75,7 +75,11 @@ function Controller:_initialize(options)
         end
     end
 
-    local trigger_events = { 'TextChangedI', 'CompleteDone', 'CompleteChanged' }
+    local trigger_events = { 'TextChangedI' }
+    if not Config.inline_completion.disable_completion_when_pum_changed then
+        trigger_events[#trigger_events + 1] = 'CompleteChanged'
+        trigger_events[#trigger_events + 1] = 'CompleteDone'
+    end
     if not Config.inline_completion.disable_completion_when_insert_enter then
         trigger_events[#trigger_events + 1] = 'InsertEnter'
     end
@@ -168,7 +172,7 @@ function Controller:_check_availability(options)
     assert(vimev.buf)
     if (vimev.buf ~= session_buf) and vimev.event == 'BufFilePost' then
         -- 没有发生切换 buffer，不需要检查可用性
-        Log.debug('Check availability failed, event_buf = {}, session_buf = {}', vimev.buf, session_buf)
+        Log.debug('No need to check availability, event_buf = {}, session_buf = {}', vimev.buf, session_buf)
         return
     end
     if self.is_enabled(vimev.buf) then
@@ -184,11 +188,15 @@ end
 
 ---@param scope FittenCode.Inline.AcceptScope
 function Controller:accept(scope)
-    assert(self:get_active_session()):accept(scope)
+    if assert(self:get_active_session()):accept(scope) then
+        vim.api.nvim_exec_autocmds("User", { pattern = "FittenCodeInlineAccept", modeline = false, data = { scope = scope } })
+    end
 end
 
 function Controller:revoke()
-    assert(self:get_active_session()):revoke()
+    if assert(self:get_active_session()):revoke() then
+        vim.api.nvim_exec_autocmds("User", { pattern = "FittenCodeInlineRevoke", modeline = false, data = {} })
+    end
 end
 
 function Controller:edit_completion_cancel(options)

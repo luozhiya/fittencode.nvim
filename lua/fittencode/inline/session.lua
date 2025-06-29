@@ -181,7 +181,7 @@ function Session:accept(scope)
     if self.model:is_complete() then
         self:terminate()
         self.view:on_complete()
-        vim.defer_fn(function() self.trigger_inline_suggestion({ force = true, mode = self.mode }) end, 10)
+        vim.defer_fn(function() self.trigger_inline_suggestion({ force = true, mode = self.mode }) end, 30)
     end
 end
 
