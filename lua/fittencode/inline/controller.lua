@@ -85,12 +85,19 @@ function Controller:_initialize(options)
     self.no_more_suggestion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
 
     self.keymaps = {
-        { Config.keymaps.inline['inline_completion'], function() self:trigger_inline_suggestion_by_shortcut() end },
-        { Config.keymaps.inline['edit_completion'],   function() self:trigger_edit_completion_by_shortcut() end },
+        { lhs = Config.keymaps.inline['inline_completion'], rhs = function() self:trigger_inline_suggestion_by_shortcut() end },
+        { lhs = Config.keymaps.inline['edit_completion'],   rhs = function() self:trigger_edit_completion_by_shortcut() end },
     }
     for _, v in ipairs(self.keymaps) do
-        if v[1] and type(v[1]) == 'string' and v[1] ~= '' then
-            vim.keymap.set('i', v[1], v[2], { noremap = true, silent = true })
+        local lhs
+        if type(v.lhs) == 'string' and v.lhs ~= '' then
+            lhs = { v.lhs }
+        elseif type(v.lhs) == 'table' then
+            lhs = v.lhs
+        end
+        ---@cast lhs string[]
+        for _, key in ipairs(lhs) do
+            vim.keymap.set('i', key, v.rhs, vim.tbl_deep_extend('force', { noremap = true, silent = true }, v.options or {}))
         end
     end
 
@@ -153,8 +160,8 @@ function Controller:add_observer(observer)
         local id = 'callback_observer' .. Fn.generate_short_id_as_string()
         observer = setmetatable({
             id = id,
-            update = function(_, ctrl, event, data)
-                observer(ctrl, event, data)
+            update = function(_, ctrl, event)
+                observer(ctrl, event)
             end
         }, { __index = Observer })
     end

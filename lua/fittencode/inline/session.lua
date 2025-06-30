@@ -205,35 +205,36 @@ end
 function Session:set_keymaps()
     if self.mode == 'inccmp' then
         self.keymaps = {
-            { Config.keymaps.inline['accept_all'],       function() self:accept('all') end },
-            { Config.keymaps.inline['accept_next_line'], function() self:accept('line') end },
-            { Config.keymaps.inline['accept_next_word'], function() self:accept('word') end },
-            { Config.keymaps.inline['revoke'],           function() self:revoke() end },
+            { lhs = Config.keymaps.inline['accept_all'],       rhs = function() self:accept('all') end },
+            { lhs = Config.keymaps.inline['accept_next_line'], rhs = function() self:accept('line') end },
+            { lhs = Config.keymaps.inline['accept_next_word'], rhs = function() self:accept('word') end },
+            { lhs = Config.keymaps.inline['revoke'],           rhs = function() self:revoke() end },
         }
     elseif self.mode == 'editcmp' then
         self.keymaps = {
-            { Config.keymaps.inline['accept_all'],       function() self:accept('all') end },
-            { Config.keymaps.inline['accept_next_hunk'], function() self:accept('hunk') end },
-            { Config.keymaps.inline['revoke'],           function() self:revoke() end },
-            { '<ESC>',                                   function() return self:on_esc() end, { expr = true } }
+            { lhs = Config.keymaps.inline['accept_all'],       rhs = function() self:accept('all') end },
+            { lhs = Config.keymaps.inline['accept_next_hunk'], rhs = function() self:accept('hunk') end },
+            { lhs = Config.keymaps.inline['revoke'],           rhs = function() self:revoke() end },
+            { lhs = '<ESC>',                                   rhs = function() return self:on_esc() end, options = { expr = true } }
         }
     end
     for _, v in ipairs(self.keymaps) do
-        local lhs = {}
-        if type(v[1]) == 'string' and v[1] ~= '' then
-            lhs = { v[1] }
-        elseif type(v[1]) == 'table' then
-            lhs = v[1]
+        local lhs
+        if type(v.lhs) == 'string' and v.lhs ~= '' then
+            lhs = { v.lhs }
+        elseif type(v.lhs) == 'table' then
+            lhs = v.lhs
         end
+        ---@cast lhs string[]
         for _, key in ipairs(lhs) do
-            vim.keymap.set('i', key, v[2], vim.tbl_deep_extend('force', { noremap = true, silent = true }, v[3] or {}))
+            vim.keymap.set('i', key, v.rhs, vim.tbl_deep_extend('force', { noremap = true, silent = true }, v.options or {}))
         end
     end
 end
 
 function Session:restore_keymaps()
     vim.tbl_map(function(map)
-        pcall(vim.keymap.del, 'i', map[1], { noremap = true, silent = true })
+        pcall(vim.keymap.del, 'i', map.lhs, { noremap = true, silent = true })
     end, self.keymaps)
     self.keymaps = {}
 end
