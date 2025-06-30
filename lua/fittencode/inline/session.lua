@@ -372,7 +372,7 @@ end
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
 -- * resolve 包含 suggestions_ready / no_more_suggestions
 -- * reject 包含 error
----@return FittenCode.Promise
+---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
 function Session:send_completions()
     self:sync_session_event(SESSION_EVENT.REQUESTING)
     self:sync_completion_event(COMPLETION_EVENT.START)
@@ -395,6 +395,7 @@ function Session:send_completions()
             })
         end
         return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
+        ---@param parse_result FittenCode.Inline.FimProtocol.ParseResult
     end):forward(function(parse_result)
         local check = self:_preflight_check()
         if check:is_rejected() then
@@ -437,6 +438,9 @@ function Session:get_completion_version()
     return res
 end
 
+---@param completion_version string
+---@param compressed_prompt_binary string
+---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult, FittenCode.Error>
 function Session:generate_one_stage_auth(completion_version, compressed_prompt_binary)
     local check = self:_preflight_check()
     if check:is_rejected() then

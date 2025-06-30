@@ -279,10 +279,10 @@ end
 ---@param buf integer
 ---@param position FittenCode.Position
 ---@param options FittenCode.Inline.TriggerInlineSuggestionOptions
----@return FittenCode.Promise
-function Controller:_make_session(buf, position, options)
+---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
+function Controller:_make_session(buf, position, version, options)
     local buf_new, position_new = self:_preflight_check(options.vimev, options.force)
-    if not buf or not position or not buf_new or not position_new or buf_new ~= buf or not position_new:is_equal(position) then
+    if not(buf and position and buf_new and position_new and buf_new == buf and position_new:is_equal(position) and F.version(buf_new) == version) then
         return Promise.rejected({
             message = 'Preflight check failed'
         })
@@ -308,7 +308,7 @@ end
 -- * resolve 没有补全或者成功时返回补全列表
 -- * reject 出错了
 ---@param options? FittenCode.Inline.TriggerInlineSuggestionOptions
----@return FittenCode.Promise
+---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
 function Controller:trigger_inline_suggestion(options)
     Log.debug('trigger_inline_suggestion')
     options = options or {}
@@ -320,6 +320,7 @@ function Controller:trigger_inline_suggestion(options)
             message = 'Preflight check failed'
         })
     end
+    local version = F.version(buf)
     self:terminate_sessions()
     if debounced then
         if not self.debounced_make_session then
@@ -335,7 +336,7 @@ function Controller:trigger_inline_suggestion(options)
             end)
         end)
     else
-        return self:_make_session(buf, position, options)
+        return self:_make_session(buf, position, version, options)
     end
 end
 

@@ -11,12 +11,15 @@ local FIM_MIDDLE_TOKEN = '<fim_middle>'
 
 local M = {}
 
----@class FittenCode.Inline.FimProtocol.ParseResult
----@field status 'error'|'success'|'no_completion'
----@field message string
+---@class FittenCode.Inline.FimProtocol.ParseResult.Data
 ---@field request_id string
 ---@field completions FittenCode.Inline.IncrementalCompletion[] | FittenCode.Inline.EditCompletion[]
 ---@field context string
+
+---@class FittenCode.Inline.FimProtocol.ParseResult
+---@field status 'error'|'success'|'no_completion'
+---@field message? string
+---@field data? FittenCode.Inline.FimProtocol.ParseResult.Data
 
 ---@class FittenCode.Inline.IncrementalCompletion
 ---@field generated_text string

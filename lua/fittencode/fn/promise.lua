@@ -67,7 +67,9 @@ local PromiseState = {
 }
 
 -- The `Promise` object represents the eventual completion (or failure) of an asynchronous operation and its resulting value.
----@class FittenCode.Promise
+---@generic V
+---@generic R
+---@class FittenCode.Promise<V, R>
 ---@field state integer
 ---@field value any
 ---@field reason any
