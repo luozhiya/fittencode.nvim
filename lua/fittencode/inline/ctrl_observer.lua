@@ -29,9 +29,10 @@ end
 
 -- -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
 ---@param controller FittenCode.Inline.Controller
----@param event FittenCode.Inline.Event
-function Status:update(controller, event)
-    local data = event.data
+---@param event_args FittenCode.Inline.Event
+function Status:update(controller, event_args)
+    local event = assert(event_args.event)
+    local data = event_args.data
     if data and data.id == controller.selected_session_id then
         if event == CONTROLLER_EVENT.SESSION_ADDED then
             self.completion = COMPLETION_EVENT.CREATED
@@ -75,11 +76,13 @@ function ProgressIndicatorObserver.new(options)
 end
 
 ---@param controller FittenCode.Inline.Controller
----@param event FittenCode.Inline.Event
-function ProgressIndicatorObserver:update(controller, event)
-    local data = event.data
+---@param event_args FittenCode.Inline.Event
+function ProgressIndicatorObserver:update(controller, event_args)
+    local event = assert(event_args.event)
+    local data = event_args.data
     local function _update()
         if event == CONTROLLER_EVENT.SESSION_ADDED then
+            assert(data and data.id)
             self.start_time[data.id] = {
                 completion = vim.uv.hrtime()
             }
@@ -103,6 +106,7 @@ function ProgressIndicatorObserver:update(controller, event)
         }
         local busy
         if event == CONTROLLER_EVENT.SESSION_UPDATED then
+            assert(data and data.id)
             if vim.tbl_contains(cmp_busy, data.completion_event) then
                 busy = 'completion'
             elseif data.session_task_event == SESSION_TASK_EVENT.SEMANTIC_SEGMENT_PRE then
@@ -112,6 +116,7 @@ function ProgressIndicatorObserver:update(controller, event)
             end
         end
         if busy then
+            assert(data and data.id)
             assert(self.start_time[data.id][busy])
             self.pi:start(self.start_time[data.id][busy])
         else
@@ -137,9 +142,8 @@ function StatisticObserver.new(options)
 end
 
 ---@param controller FittenCode.Inline.Controller
----@param event string
----@param data any
-function StatisticObserver:update(controller, event, data)
+---@param event_args FittenCode.Inline.Event
+function StatisticObserver:update(controller, event_args)
 end
 
 ---@class FittenCode.Inline.TimingObserver : FittenCode.Observer
@@ -157,9 +161,8 @@ function TimingObserver.new(options)
 end
 
 ---@param controller FittenCode.Inline.Controller
----@param event string
----@param data any
-function TimingObserver:update(controller, event, data)
+---@param event_args FittenCode.Inline.Event
+function TimingObserver:update(controller, event_args)
 end
 
 return {
