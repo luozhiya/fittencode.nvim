@@ -327,7 +327,7 @@ function Controller:trigger_inline_suggestion(options)
             self.debounced_make_session = Fn.debounce(function(...) return self:_make_session(...) end, 150)
         end
         return Promise.new(function(resolve, reject)
-            self.debounced_make_session(buf, position, options, function(ret)
+            self.debounced_make_session(buf, position, version, options, function(ret)
                 if ret:is_rejected() then
                     reject(ret:get_reason())
                 elseif ret:is_resolved() then
