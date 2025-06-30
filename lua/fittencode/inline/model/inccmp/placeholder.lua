@@ -2,6 +2,7 @@ local Log = require('fittencode.log')
 local F = require('fittencode.fn.buf')
 local Range = require('fittencode.fn.range')
 local Position = require('fittencode.fn.position')
+local Diff = require('fittencode.fn.diff')
 
 --[[
 (1+2*3
@@ -61,10 +62,15 @@ local function generate_placeholder_ranges(buf, position, completion)
     })))
     Log.debug("replaced_text = {}", replaced_text)
     Log.debug("generated_text = {}", generated_text)
-    -- assert(#replaced_text <= #generated_text)
+    if #replaced_text >= #generated_text then
+        Log.debug("no need to generate placeholder ranges, replaced_text is longer or equal than generated_text")
+        return placeholder_ranges
+    end
+    assert(#replaced_text < #generated_text)
     -- 2. 对比 T0 与 generated_text 的文本差异，获取 placeholder 范围
     local start, end_ = generated_text:find(replaced_text, 1, true)
     if start then
+        -- 是否是完整的子串？
         Log.debug("placeholder_range = {}-{}", start, end_)
         Log.debug("placeholder_text = {}", generated_text:sub(start, end_))
         placeholder_ranges[#placeholder_ranges + 1] = { start = start, end_ = end_ }

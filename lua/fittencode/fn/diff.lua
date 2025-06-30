@@ -719,4 +719,10 @@ end
 -- print(vim.inspect(ll))
 -- print(vim.inspect(cl))
 
+-- local old_text = { "11+2*3/4" }
+-- local new_text = { "1+2)*3/4" }
+-- local ll, cl = M.diff_block(old_text, new_text)
+-- print(vim.inspect(ll))
+-- print(vim.inspect(cl))
+
 return M
