@@ -173,18 +173,16 @@ function Controller:get_observer(id)
     return self.observers[id]
 end
 
----@param event FittenCode.Inline.ControllerEvent
----@param data? table
-function Controller:notify_observers(event, data)
+---@param event FittenCode.Inline.Event
+function Controller:notify_observers(event)
     vim.tbl_map(function(observer)
-        observer:update(self, event, data)
+        observer:update(self, event)
     end, self.observers)
 end
 
----@param event FittenCode.Inline.ControllerEvent
----@param data? table
-function Controller:_emit(event, data)
-    self:notify_observers(event, data)
+---@param event FittenCode.Inline.Event
+function Controller:_emit(event)
+    self:notify_observers(event)
 end
 
 ---@param options { vimev: vim.api.keyset.create_autocmd.callback_args }
@@ -200,9 +198,9 @@ function Controller:_check_availability(options)
         return
     end
     if self:is_enabled(vimev.buf) then
-        self:_emit(CONTROLLER_EVENT.INLINE_IDLE)
+        self:_emit({ event = CONTROLLER_EVENT.INLINE_IDLE })
     else
-        self:_emit(CONTROLLER_EVENT.INLINE_DISABLED)
+        self:_emit({ event = CONTROLLER_EVENT.INLINE_DISABLED })
     end
 end
 
@@ -318,7 +316,7 @@ function Controller:_make_session(buf, position, version, options)
         mode = options.mode,
         id = self.selected_session_id,
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
-        on_session_update_event = function(data) self:_emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
+        on_session_update_event = function(data) self:_emit({ event = CONTROLLER_EVENT.SESSION_UPDATED, data = data }) end,
         on_session_event = function(data) self:on_session_event(data) end,
         version = F.version(buf)
     })
@@ -363,17 +361,17 @@ function Controller:trigger_inline_suggestion(options)
     end
 end
 
+---@param data FittenCode.Inline.Event.Data
 function Controller:on_session_event(data)
     if data.session_event == SESSION_EVENT.CREATED then
-        self:_emit(CONTROLLER_EVENT.INLINE_RUNNING, { id = data.id })
-        self:_emit(CONTROLLER_EVENT.SESSION_ADDED, { id = data.id })
+        self:_emit({ event = CONTROLLER_EVENT.INLINE_RUNNING, data = { id = data.id } })
+        self:_emit({ event = CONTROLLER_EVENT.SESSION_ADDED, data = { id = data.id } })
     elseif data.session_event == SESSION_EVENT.TERMINATED then
-        self:_emit(CONTROLLER_EVENT.SESSION_DELETED, { id = data.id })
-        -- self.sessions[data.id] = nil
+        self:_emit({ event = CONTROLLER_EVENT.SESSION_DELETED, data = { id = data.id } })
+        self.sessions[data.id] = nil
         if not self.selected_session_id or self.selected_session_id == data.id then
             self.selected_session_id = nil
-            Log.debug('selected_session_id is nil, emit inline_idle')
-            self:_emit(CONTROLLER_EVENT.INLINE_IDLE, { id = data.id })
+            self:_emit({ event = CONTROLLER_EVENT.INLINE_IDLE, data = { id = data.id } })
         end
     end
 end

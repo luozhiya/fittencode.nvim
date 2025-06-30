@@ -28,9 +28,10 @@ function Status.new(options)
 end
 
 -- -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
-function Status:update(controller, event, data)
-    Log.debug('Inline status update, event = {}, data = {}', event, data)
-
+---@param controller FittenCode.Inline.Controller
+---@param event FittenCode.Inline.Event
+function Status:update(controller, event)
+    local data = event.data
     if data and data.id == controller.selected_session_id then
         if event == CONTROLLER_EVENT.SESSION_ADDED then
             self.completion = COMPLETION_EVENT.CREATED
@@ -42,7 +43,6 @@ function Status:update(controller, event, data)
             self.completion = data.completion_event
         end
     end
-
     if event == CONTROLLER_EVENT.INLINE_IDLE then
         self.inline = INLINE_EVENT.IDLE
         self.completion = ''
@@ -52,8 +52,6 @@ function Status:update(controller, event, data)
     elseif event == CONTROLLER_EVENT.INLINE_RUNNING then
         self.inline = INLINE_EVENT.RUNNING
     end
-
-    Log.debug('Inline status updated = {}', self)
 end
 
 ---@class FittenCode.Inline.ProgressIndicatorObserver : FittenCode.Observer
@@ -77,9 +75,9 @@ function ProgressIndicatorObserver.new(options)
 end
 
 ---@param controller FittenCode.Inline.Controller
----@param event string
----@param data any
-function ProgressIndicatorObserver:update(controller, event, data)
+---@param event FittenCode.Inline.Event
+function ProgressIndicatorObserver:update(controller, event)
+    local data = event.data
     local function _update()
         if event == CONTROLLER_EVENT.SESSION_ADDED then
             self.start_time[data.id] = {
