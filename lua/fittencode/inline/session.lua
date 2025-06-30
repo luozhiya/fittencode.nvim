@@ -107,6 +107,7 @@ function Session:_segments()
     end)
 end
 
+---@param completions FittenCode.Inline.IncrementalCompletion[] | FittenCode.Inline.EditCompletion[]
 function Session:set_model(completions)
     if self.session_event == SESSION_EVENT.REQUESTING then
         self.model = Model.new({
@@ -299,19 +300,19 @@ function Session:is_terminated()
     return self.session_event == SESSION_EVENT.TERMINATED
 end
 
----@param event FittenCode.Inline.SessionEvent
+---@param event FittenCode.Inline.SessionEvent.Type
 function Session:sync_session_event(event)
     self.session_event = event
     self.on_session_event()
 end
 
----@param event FittenCode.Inline.CompletionEvent
+---@param event FittenCode.Inline.CompletionEvent.Type
 function Session:sync_completion_event(event)
     self.completion_event = event
     self.on_completion_event()
 end
 
----@param event FittenCode.Inline.SessionTaskEvent
+---@param event FittenCode.Inline.SessionTaskEvent.Type
 function Session:sync_session_task_event(event)
     self.session_task_event = event
     self.on_session_task_event()

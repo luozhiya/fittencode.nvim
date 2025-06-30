@@ -34,6 +34,7 @@
 ---@field update function
 ---@field register_message_receiver function
 ---@field on_complete function
+---@field on_cancel function
 
 ---@alias FittenCode.Inline.IncAcceptScope 'all' | 'char' | 'word' | 'line'
 ---@alias FittenCode.Inline.EditAcceptScope 'all' | 'hunk'
@@ -60,8 +61,8 @@
 ---@field id string
 ---@field filename string
 ---@field mode FittenCode.Inline.Session.Mode
----@field requests table<number, FittenCode.HTTP.Request>
----@field keymaps table<number, any>
+---@field requests FittenCode.HTTP.Request[]
+---@field keymaps FittenCode.Keymap[]
 ---@field view FittenCode.Inline.View
 ---@field model FittenCode.Inline.Model
 ---@field version number

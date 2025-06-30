@@ -35,21 +35,40 @@ local TimingObserver = CtrlObserver.TimingObserver
 local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
 local SESSION_EVENT = Definitions.SESSION_EVENT
 
+---@class FittenCode.Keymap
+---@field lhs string|string[]
+---@field rhs function
+---@field options? table<string, any>
+
+---@class FittenCode.Inline.Event.Data
+---@field id? string
+---@field completion_event? string
+---@field session_event? string
+---@field session_task_event? string
+
+---@class FittenCode.Inline.Event
+---@field event FittenCode.Inline.ControllerEvent.Type
+---@field data? FittenCode.Inline.Event.Data
+
 ---@class FittenCode.Inline.Controller
 ---@field observers FittenCode.Observer[]
 ---@field sessions FittenCode.Inline.Session[]
 ---@field filter_events table<string, boolean>
 ---@field status_observer FittenCode.Inline.Status
----@field keymaps table<number, any>
+---@field keymaps FittenCode.Keymap[]
 local Controller = {}
 Controller.__index = Controller
 
+---@class FittenCode.Inline.Controller.InitialOptions
+
+---@param options FittenCode.Inline.Controller.InitialOptions
 function Controller.new(options)
     local self = setmetatable({}, Controller)
     self:_initialize(options)
     return self
 end
 
+---@param options FittenCode.Inline.Controller.InitialOptions
 function Controller:_initialize(options)
     self.observers = {}
     self.sessions = {}
@@ -236,6 +255,7 @@ function Controller:terminate_sessions()
 end
 
 -- position 0-based
+---@param position FittenCode.Position
 local function is_within_the_line(position)
     local line = vim.api.nvim_get_current_line()
     local col = position.col
@@ -246,6 +266,8 @@ local function is_within_the_line(position)
     return true
 end
 
+---@param vimev vim.api.keyset.create_autocmd.callback_args
+---@param force boolean?
 function Controller:_preflight_check(vimev, force)
     local buf = vim.api.nvim_get_current_buf()
     if vim.api.nvim_get_mode().mode:sub(1, 1) ~= 'i' or not self:is_enabled(buf) then
@@ -278,11 +300,12 @@ end
 
 ---@param buf integer
 ---@param position FittenCode.Position
+---@param version integer
 ---@param options FittenCode.Inline.TriggerInlineSuggestionOptions
 ---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
 function Controller:_make_session(buf, position, version, options)
     local buf_new, position_new = self:_preflight_check(options.vimev, options.force)
-    if not(buf and position and buf_new and position_new and buf_new == buf and position_new:is_equal(position) and F.version(buf_new) == version) then
+    if not (buf and position and buf_new and position_new and buf_new == buf and position_new:is_equal(position) and F.version(buf_new) == version) then
         return Promise.rejected({
             message = 'Preflight check failed'
         })
