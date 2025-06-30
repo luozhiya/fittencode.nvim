@@ -196,8 +196,7 @@ function View:on_complete()
     end)
 end
 
--- 没有任何 Accept，且没有任何 placeholder?，按 ESC 取消时恢复
-function View:on_cancel()
+local function _on_cancel(self)
     if not self.replaced_text or self.commit:is_equal(self.last_insert_pos) then
         return
     end
@@ -209,6 +208,11 @@ function View:on_cancel()
     V.ignoreevent_wrap(function()
         V.view_wrap(win, _update)
     end)
+end
+
+-- 没有任何 Accept，且没有任何 placeholder?，按 ESC 取消时恢复
+function View:on_cancel()
+    vim.schedule(function() _on_cancel(self) end)
 end
 
 function View:register_message_receiver(receive_view_message)
