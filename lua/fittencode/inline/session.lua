@@ -58,7 +58,7 @@ function Session:_initialize(options)
     self.on_session_event = function() Fn.check_call(options.on_session_event, { id = self.id, session_event = self.session_event, }) end
     self.on_session_task_event = function() Fn.check_call(options.on_session_update_event, { id = self.id, session_task_event = self.session_task_event, }) end
     self:sync_session_event(SESSION_EVENT.CREATED)
-    self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey(' .. Fn.generate_short_id() .. ')')
+    self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey' .. Fn.generate_short_id_as_string())
 end
 
 ---@param self FittenCode.Inline.Session
@@ -277,6 +277,9 @@ function Session:terminate()
     end
     self:abort_and_clear_requests()
     if self.session_event == SESSION_EVENT.INTERACTIVE then
+        if not self.model:any_accepted() then
+            self.view:on_cancel()
+        end
         self.view:clear()
         self:restore_keymaps()
         self:restore_onkey()

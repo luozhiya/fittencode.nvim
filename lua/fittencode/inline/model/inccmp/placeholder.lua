@@ -23,10 +23,19 @@ local Position = require('fittencode.fn.position')
   delta_line: 0,
   ex_msg: "1+20)*3",
 }
+
+(11+2*3/4
+^
+{
+    col_delta = 8,
+    generated_text = "1+2)*3/4",
+    row_delta = 0
+}
+
 ]]
+-- 支持 generated_text 比原来的文本长的情况，则会删除原来的文本
 -- TODO
 -- * 暂不支持 row_delta
--- * 只支持 generated_text 比原来的文本长的情况
 ---@param buf number
 ---@param position FittenCode.Position
 ---@param completion FittenCode.Inline.IncrementalCompletion
@@ -50,10 +59,14 @@ local function generate_placeholder_ranges(buf, position, completion)
             col = position.col + col_delta - 1,
         }),
     })))
-    assert(#replaced_text <= #generated_text)
+    Log.debug("replaced_text = {}", replaced_text)
+    Log.debug("generated_text = {}", generated_text)
+    -- assert(#replaced_text <= #generated_text)
     -- 2. 对比 T0 与 generated_text 的文本差异，获取 placeholder 范围
-    local start, end_ = generated_text:find(replaced_text)
+    local start, end_ = generated_text:find(replaced_text, 1, true)
     if start then
+        Log.debug("placeholder_range = {}-{}", start, end_)
+        Log.debug("placeholder_text = {}", generated_text:sub(start, end_))
         placeholder_ranges[#placeholder_ranges + 1] = { start = start, end_ = end_ }
     else
         local ranges = {}

@@ -113,4 +113,8 @@ function Model:get_text()
     return text
 end
 
+function Model:any_accepted()
+    return assert(self:selected_completion()):any_accepted()
+end
+
 return Model

@@ -323,4 +323,7 @@ function View:on_complete()
     self:_adjust_cursor_position_on_complete()
 end
 
+function View:on_cancel()
+end
+
 return View

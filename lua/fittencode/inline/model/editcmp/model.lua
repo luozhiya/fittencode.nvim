@@ -101,4 +101,8 @@ function Model:revoke()
     self.commit_index = self.commit_index - 1
 end
 
+function Model:any_accepted()
+    return self.commit_index > 0
+end
+
 return Model

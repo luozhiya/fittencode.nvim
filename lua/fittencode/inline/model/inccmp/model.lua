@@ -292,4 +292,8 @@ function Model:get_col_delta()
     return self.completion.col_delta
 end
 
+function Model:any_accepted()
+    return #self.commit_ranges > 0
+end
+
 return Model

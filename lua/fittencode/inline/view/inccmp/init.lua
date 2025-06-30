@@ -2,6 +2,7 @@ local F = require('fittencode.fn.buf')
 local Fn = require('fittencode.fn.core')
 local Log = require('fittencode.log')
 local Position = require('fittencode.fn.position')
+local Range = require('fittencode.fn.range')
 local V = require('fittencode.fn.view')
 local Color = require('fittencode.color')
 
@@ -27,6 +28,9 @@ function View:_initialize(options)
     self.commit = options.position
     self.completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.IncrementalCompletion.View')
     self.last_insert_pos = self.origin_pos:translate(0, self.col_delta)
+    if self.col_delta ~= 0 then
+        self.replaced_text = F.get_lines(self.buf, Range.of(self.origin_pos, self.last_insert_pos))
+    end
 end
 
 function View:_render_stage(pos, lines)
@@ -84,7 +88,7 @@ end
 function View:update(state)
     local win = vim.api.nvim_get_current_win()
 
-    -- Log.debug('update view, state = {}', state)
+    Log.debug('update view, state = {}', state)
 
     local function _set_text(lines)
         local old_commit = vim.deepcopy(self.commit)
@@ -189,6 +193,21 @@ function View:on_complete()
     V.ignoreevent_wrap(function()
         local win = vim.api.nvim_get_current_win()
         V.update_win_cursor(win, self.last_insert_pos)
+    end)
+end
+
+-- 没有任何 Accept，且没有任何 placeholder?，按 ESC 取消时恢复
+function View:on_cancel()
+    if not self.replaced_text or self.commit:is_equal(self.last_insert_pos) then
+        return
+    end
+    local win = vim.api.nvim_get_current_win()
+    local function _update()
+        self:clear()
+        self:_insert_text(self.origin_pos, self.replaced_text)
+    end
+    V.ignoreevent_wrap(function()
+        V.view_wrap(win, _update)
     end)
 end
 
