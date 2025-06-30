@@ -1,3 +1,17 @@
+--[[
+
+优化 DIFF 增量数据的计算与传输，考虑以下问题:
+- 服务器的缓存机制？同一个文件是否做长期存储，如何失效？
+- LSP 是单次服务，BUFFER 的每次修改都被传输
+- LSP 增量更新和补全是两个不同的接口，Fitten 服务器则只有一个
+- 如果要按照 LSP 的方式，在 nvim_buf_attach on_lines 时需要计算增量数据，并且完成补全存入 Cache 中
+- 当触发 TextChangeI 等事件时，查询是否创建了任务，如果有，则等待任务完成，进入Session交互模式
+
+现有问题：
+- 当大小超过阈值时，获取的片段在 DIFF 时，字符的边界可能会计算错误？
+
+--]]
+
 local MD5 = require('fittencode.fn.md5')
 local F = require('fittencode.fn.buf')
 local Position = require('fittencode.fn.position')
