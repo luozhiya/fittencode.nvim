@@ -12,7 +12,7 @@ local Diff = require('fittencode.fn.diff')
 ---@field hunks FittenCode.Diff.Hunk[]
 ---@field gap_common_hunks FittenCode.Diff.CommonHunk[]
 ---@field snapshot function
----@field accept function
+---@field accept fun(self: FittenCode.Inline.EditCompletion.Model, scope: FittenCode.Inline.EditAcceptScope)
 ---@field is_complete function
 ---@field revoke function
 local Model = {}

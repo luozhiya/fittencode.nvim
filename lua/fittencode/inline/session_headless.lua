@@ -125,7 +125,7 @@ function HeadlessSession:generate_one_stage_auth(completion_version, compressed_
     return res
 end
 
----@return FittenCode.Promise
+---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
 function HeadlessSession:send_completions()
     self:sync_session_event(SESSION_EVENT.REQUESTING)
     self:sync_completion_event(COMPLETION_EVENT.START)

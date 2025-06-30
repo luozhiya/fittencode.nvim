@@ -1,5 +1,7 @@
 --[[
 
+提供一组 API 用于 headless 生成数据
+
 --]]
 
 local Client = require('fittencode.client')
@@ -78,7 +80,14 @@ function M.request_chat_sync(payload, strict)
     return pro and pro.value
 end
 
----@return FittenCode.Promise, FittenCode.Inline.HeadlessSession?
+---@class FittenCode.Generate.RequestCompletionsOptions
+---@field filename? string
+
+---@param buf integer
+---@param row integer
+---@param col integer
+---@param options? FittenCode.Generate.RequestCompletionsOptions
+---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>, FittenCode.Inline.HeadlessSession?
 function M.request_completions(buf, row, col, options)
     options = options or {}
     local filename = options.filename or vim.api.nvim_buf_get_name(buf)
@@ -91,6 +100,11 @@ function M.request_completions(buf, row, col, options)
     return session:send_completions(), session
 end
 
+---@param buf integer
+---@param row integer
+---@param col integer
+---@param options? FittenCode.Generate.RequestCompletionsOptions
+---@return FittenCode.Inline.FimProtocol.ParseResult.Data?
 function M.request_completions_sync(buf, row, col, options)
     local res = M.request_completions(buf, row, col, options):wait()
     if res and res:is_fulfilled() then

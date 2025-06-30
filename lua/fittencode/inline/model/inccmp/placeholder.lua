@@ -60,10 +60,11 @@ local function generate_placeholder_ranges(buf, position, completion)
             col = position.col + col_delta - 1,
         }),
     })))
-    Log.debug("replaced_text = {}", replaced_text)
-    Log.debug("generated_text = {}", generated_text)
+    Log.debug('replaced_text = {}', replaced_text)
+    Log.debug('generated_text = {}', generated_text)
+    -- 相等的情况下，意味着有些字符被删除替换了，但在 IncrementalCompletion 中只能处理增量修改，因此将原有的字符都删掉
     if #replaced_text >= #generated_text then
-        Log.debug("no need to generate placeholder ranges, replaced_text is longer or equal than generated_text")
+        Log.debug('no need to generate placeholder ranges, replaced_text is longer or equal than generated_text')
         return placeholder_ranges
     end
     assert(#replaced_text < #generated_text)
@@ -71,8 +72,8 @@ local function generate_placeholder_ranges(buf, position, completion)
     local start, end_ = generated_text:find(replaced_text, 1, true)
     if start then
         -- 是否是完整的子串？
-        Log.debug("placeholder_range = {}-{}", start, end_)
-        Log.debug("placeholder_text = {}", generated_text:sub(start, end_))
+        Log.debug('placeholder_range = {}-{}', start, end_)
+        Log.debug('placeholder_text = {}', generated_text:sub(start, end_))
         placeholder_ranges[#placeholder_ranges + 1] = { start = start, end_ = end_ }
     else
         local ranges = {}
