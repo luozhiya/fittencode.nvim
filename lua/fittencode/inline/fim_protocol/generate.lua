@@ -194,11 +194,11 @@ end
 ---@param buf number
 ---@param position FittenCode.Position
 ---@param options FittenCode.Inline.FimProtocol.GenerateOptions
----@return FittenCode.Promise<FittenCode.Inline.PromptWithCacheData>
+---@return FittenCode.Inline.PromptWithCacheData?
 function M.generate(buf, position, options)
     local base, text, ciphertext = build_base_prompt(buf, position, options)
     if not base then
-        return Promise.rejected()
+        return
     end
     assert(text)
     assert(ciphertext)
@@ -207,7 +207,7 @@ function M.generate(buf, position, options)
         diff = build_diff_metadata(text, options.filename, options.version)
     end
     local edit = build_edit_metadata(options.mode)
-    return Promise.resolved({
+    return {
         prompt = {
             inputs = '',
             meta_datas = vim.tbl_deep_extend('force', base, diff, edit)
@@ -216,7 +216,7 @@ function M.generate(buf, position, options)
             text = text,
             ciphertext = ciphertext,
         }
-    })
+    }
 end
 
 ---@param filename string

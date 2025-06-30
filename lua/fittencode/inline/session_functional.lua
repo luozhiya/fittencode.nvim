@@ -31,12 +31,21 @@ function M.generate_prompt(options)
     local diff_required = options.diff_required == nil and true or options.diff_required
 
     Fn.check_call(on_before_generate_prompt)
-    return FimGenerate.generate(buf, position, {
-        filename = filename,
-        version = version,
-        mode = mode,
-        diff_required = diff_required,
-    })
+    return Promise.new(function(resolve, reject)
+        local prompt_with_cache_data = FimGenerate.generate(buf, position, {
+            filename = filename,
+            version = version,
+            mode = mode,
+            diff_required = diff_required,
+        })
+        if prompt_with_cache_data then
+            resolve(prompt_with_cache_data)
+        else
+            reject({
+                message = 'Failed to generate prompt',
+            })
+        end
+    end)
 end
 
 ---@class FittenCode.Inline.SessionFunctional.CompressPromptOptions

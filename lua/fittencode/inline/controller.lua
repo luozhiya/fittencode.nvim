@@ -36,8 +36,8 @@ local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
 local SESSION_EVENT = Definitions.SESSION_EVENT
 
 ---@class FittenCode.Inline.Controller
----@field observers table<number, FittenCode.Observer>
----@field sessions table<number, FittenCode.Inline.Session>
+---@field observers FittenCode.Observer[]
+---@field sessions FittenCode.Inline.Session[]
 ---@field filter_events table<string, boolean>
 ---@field status_observer FittenCode.Inline.Status
 ---@field keymaps table<number, any>
@@ -75,7 +75,11 @@ function Controller:_initialize(options)
         end
     end
 
-    local trigger_events = { 'TextChangedI', 'CompleteDone', 'CompleteChanged' }
+    local trigger_events = { 'TextChangedI' }
+    if not Config.inline_completion.disable_completion_when_pumcmp_changed then
+        trigger_events[#trigger_events + 1] = 'CompleteChanged'
+        trigger_events[#trigger_events + 1] = 'CompleteDone'
+    end
     if not Config.inline_completion.disable_completion_when_insert_enter then
         trigger_events[#trigger_events + 1] = 'InsertEnter'
     end
@@ -84,7 +88,7 @@ function Controller:_initialize(options)
         pattern = '*',
         callback = function(args)
             Log.debug('trigger_inline_suggestion_auto autocmd = {}, args = {}', args.event, args)
-            Fn.schedule_call(function() self:trigger_inline_suggestion_auto({ vimev = args, debounced = false }) end)
+            self:trigger_inline_suggestion_auto({ vimev = args, debounced = true })
         end,
     })
     vim.api.nvim_create_autocmd({ 'CursorMovedI', 'InsertLeave', 'BufLeave' }, {
@@ -92,7 +96,7 @@ function Controller:_initialize(options)
         pattern = '*',
         callback = function(args)
             Log.debug('edit_completion_cancel autocmd = {}, args = {}', args.event, args)
-            Fn.schedule_call(function() self:edit_completion_cancel({ vimev = args }) end)
+            self:edit_completion_cancel({ vimev = args })
         end,
     })
     vim.api.nvim_create_autocmd({ 'BufEnter', 'BufFilePost' }, {
@@ -145,21 +149,26 @@ function Controller:remove_observer(identifier)
     self.observers[id] = nil
 end
 
+---@param id string
 function Controller:get_observer(id)
     return self.observers[id]
 end
 
-function Controller:notify_observers(event_type, data)
+---@param event FittenCode.Inline.ControllerEvent
+---@param data? table
+function Controller:notify_observers(event, data)
     vim.tbl_map(function(observer)
-        observer:update(self, event_type, data)
+        observer:update(self, event, data)
     end, self.observers)
 end
 
+---@param event FittenCode.Inline.ControllerEvent
 ---@param data? table
 function Controller:_emit(event, data)
     self:notify_observers(event, data)
 end
 
+---@param options { vimev: vim.api.keyset.create_autocmd.callback_args }
 function Controller:_check_availability(options)
     assert(options)
     assert(options.vimev)
@@ -171,7 +180,7 @@ function Controller:_check_availability(options)
         Log.debug('Check availability failed, event_buf = {}, session_buf = {}', vimev.buf, session_buf)
         return
     end
-    if self.is_enabled(vimev.buf) then
+    if self:is_enabled(vimev.buf) then
         self:_emit(CONTROLLER_EVENT.INLINE_IDLE)
     else
         self:_emit(CONTROLLER_EVENT.INLINE_DISABLED)
@@ -191,6 +200,7 @@ function Controller:revoke()
     assert(self:get_active_session()):revoke()
 end
 
+---@param options { vimev: vim.api.keyset.create_autocmd.callback_args }
 function Controller:edit_completion_cancel(options)
     options = options or {}
     local current = self:get_active_session()
@@ -207,7 +217,7 @@ function Controller:edit_completion_cancel(options)
     self:terminate_sessions()
 end
 
----@param buf number
+---@param buf integer
 function Controller:is_ft_disabled(buf)
     local ft
     vim.api.nvim_buf_call(buf, function()
@@ -266,14 +276,23 @@ function Controller:_preflight_check(vimev, force)
     return buf, position
 end
 
-function Controller:_make_session(buf, position, mode)
-    Log.debug('Make session, buf = {}, position = {}, mode = {}', buf, position, mode)
+---@param buf integer
+---@param position FittenCode.Position
+---@param options FittenCode.Inline.TriggerInlineSuggestionOptions
+---@return FittenCode.Promise
+function Controller:_make_session(buf, position, options)
+    local buf_new, position_new = self:_preflight_check(options.vimev, options.force)
+    if not buf or not position or not buf_new or not position_new or buf_new ~= buf or not position_new:is_equal(position) then
+        return Promise.rejected({
+            message = 'Preflight check failed'
+        })
+    end
     self.selected_session_id = assert(Fn.generate_short_id(13))
     local session = Session.new({
         buf = buf,
         filename = F.filename(buf),
         position = position,
-        mode = mode,
+        mode = options.mode,
         id = self.selected_session_id,
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
         on_session_update_event = function(data) self:_emit(CONTROLLER_EVENT.SESSION_UPDATED, data) end,
@@ -293,7 +312,7 @@ end
 function Controller:trigger_inline_suggestion(options)
     Log.debug('trigger_inline_suggestion')
     options = options or {}
-    local mode = options.mode or 'inccmp'
+    options.mode = options.mode or 'inccmp'
     local debounced = options.debounced or false
     local buf, position = self:_preflight_check(options.vimev, options.force)
     if not buf or not position then
@@ -304,10 +323,10 @@ function Controller:trigger_inline_suggestion(options)
     self:terminate_sessions()
     if debounced then
         if not self.debounced_make_session then
-            self.debounced_make_session = Fn.debounce(function(...) return self:_make_session(...) end, 60)
+            self.debounced_make_session = Fn.debounce(function(...) return self:_make_session(...) end, 150)
         end
         return Promise.new(function(resolve, reject)
-            self.debounced_make_session(buf, position, mode, function(ret)
+            self.debounced_make_session(buf, position, options, function(ret)
                 if ret:is_rejected() then
                     reject(ret:get_reason())
                 elseif ret:is_resolved() then
@@ -316,7 +335,7 @@ function Controller:trigger_inline_suggestion(options)
             end)
         end)
     else
-        return self:_make_session(buf, position, mode)
+        return self:_make_session(buf, position, options)
     end
 end
 
@@ -326,7 +345,7 @@ function Controller:on_session_event(data)
         self:_emit(CONTROLLER_EVENT.SESSION_ADDED, { id = data.id })
     elseif data.session_event == SESSION_EVENT.TERMINATED then
         self:_emit(CONTROLLER_EVENT.SESSION_DELETED, { id = data.id })
-        self.sessions[data.id] = nil
+        -- self.sessions[data.id] = nil
         if not self.selected_session_id or self.selected_session_id == data.id then
             self.selected_session_id = nil
             Log.debug('selected_session_id is nil, emit inline_idle')
@@ -352,12 +371,14 @@ function Controller:get_current_session_id()
     return self.selected_session_id
 end
 
+---@param buf integer
 function Controller:is_enabled(buf)
     return Config.inline_completion.enable and F.is_filebuf(buf) == true and not self:is_ft_disabled(buf)
 end
 
 ---@param msg string
 ---@param timeout number
+---@param timestamp number
 function Controller:_show_no_more_suggestion(msg, timeout, timestamp)
     local buf = vim.api.nvim_get_current_buf()
     vim.api.nvim_buf_clear_namespace(buf, self.no_more_suggestion_ns, 0, -1)

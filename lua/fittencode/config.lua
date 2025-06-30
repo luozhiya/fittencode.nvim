@@ -85,9 +85,16 @@ local DEFAULTS = {
         disable_completion_when_delete = false,
         -- Disable auto completion when entering Insert mode `InsertEnter`.
         disable_completion_when_insert_enter = false,
+        -- Disable auto completion when the popup menu is changed `CompleteChanged` `CompleteDone`.
+        disable_completion_when_pumcmp_changed = false,
         -- Auto triggering completion
         ---@type boolean
         auto_triggering_completion = true,
+    },
+    lsp_server = {
+        -- Enable completion as an LSP server.
+        ---@type boolean
+        enable = false,
     },
     language_preference = {
         -- Language preference for display and responses in Fitten Code (excluding "Fitten Code - Document Code" function).

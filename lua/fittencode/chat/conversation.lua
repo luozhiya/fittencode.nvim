@@ -293,7 +293,7 @@ local function start_normal_chat(self)
     local message_metadata = {}
 
     -- streaming
-    res.stream:on('data', function(data)
+    res.stream:on('data', vim.schedule_wrap(function(data)
         local data_chunk = data.chunk
         self.update_status({ id = self.id, phase = PHASE.STREAMING })
         local v = vim.split(data_chunk, '\n', { trimempty = true })
@@ -322,7 +322,7 @@ local function start_normal_chat(self)
                 Log.debug('Invalid chunk: {} >> {}', line, chunk)
             end
         end
-    end)
+    end))
 
     res:async():forward(function(response)
         self:handle_completion(completion)

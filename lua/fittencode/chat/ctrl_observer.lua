@@ -59,26 +59,29 @@ end
 ---@param event_type string
 ---@param data any
 function ProgressIndicatorObserver:update(controller, event_type, data)
-    local selected_id = controller.model:get_selected_conversation_id()
-    if data.id ~= selected_id then
-        return
+    local function _update()
+        local selected_id = controller.model:get_selected_conversation_id()
+        if data.id ~= selected_id then
+            return
+        end
+        if event_type ~= CONTROLLER_EVENT.CONVERSATION_UPDATED or not controller.view:is_visible() then
+            self.pi:stop()
+            return
+        end
+        local is_busy = vim.tbl_contains({
+            CONVERSATION_PHASE.EVALUATE_TEMPLATE,
+            CONVERSATION_PHASE.MAKE_REQUEST,
+            CONVERSATION_PHASE.STREAMING
+        }, data.phase)
+        if data.phase == CONVERSATION_PHASE.START then
+            self.start_time[data.id] = vim.uv.hrtime()
+        elseif is_busy then
+            self.pi:start(self.start_time[data.id])
+        else
+            self.pi:stop()
+        end
     end
-    if event_type ~= CONTROLLER_EVENT.CONVERSATION_UPDATED or not controller.view:is_visible() then
-        self.pi:stop()
-        return
-    end
-    local is_busy = vim.tbl_contains({
-        CONVERSATION_PHASE.EVALUATE_TEMPLATE,
-        CONVERSATION_PHASE.MAKE_REQUEST,
-        CONVERSATION_PHASE.STREAMING
-    }, data.phase)
-    if data.phase == CONVERSATION_PHASE.START then
-        self.start_time[data.id] = vim.uv.hrtime()
-    elseif is_busy then
-        self.pi:start(self.start_time[data.id])
-    else
-        self.pi:stop()
-    end
+    vim.schedule(_update)
 end
 
 ---@class FittenCode.Chat.PhaseTiming
