@@ -99,6 +99,8 @@ local function _lsp_completion_list_from_fim(fim_completions)
         isIncomplete = false,
         items = items
     }
+
+    return completion_list
 end
 
 --- @param params lsp.CompletionParams
