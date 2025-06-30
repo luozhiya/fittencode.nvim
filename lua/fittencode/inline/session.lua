@@ -458,7 +458,7 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
         completion_version = completion_version,
         compressed_prompt_binary = compressed_prompt_binary,
         buf = self.buf,
-        position = self.position,
+        position = self.position:translate(0, -1),
         mode = self.mode,
     })
     if request then
