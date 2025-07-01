@@ -6,6 +6,8 @@ local Range = require('fittencode.fn.range')
 local V = require('fittencode.fn.view')
 local Color = require('fittencode.color')
 
+local EVENTIGNORES = table.concat({ 'TextChangedI', 'CursorMovedI' }, ',')
+
 ---@class FittenCode.Inline.IncrementalCompletion.View
 ---@field buf integer
 ---@field origin_pos FittenCode.Position
@@ -182,7 +184,7 @@ function View:update(state)
         -- 4. update position
         V.update_win_cursor(win, self.commit)
         V.move_to_center_vertical(#state.lines)
-    end)
+    end, EVENTIGNORES)
 end
 
 -- 对于存在 placeholder 的情况，需要将 cursor 移动到最末尾
@@ -193,7 +195,7 @@ function View:on_complete()
     V.ignoreevent_wrap(function()
         local win = vim.api.nvim_get_current_win()
         V.update_win_cursor(win, self.last_insert_pos)
-    end)
+    end, EVENTIGNORES)
 end
 
 local function _on_cancel(self)
@@ -207,7 +209,7 @@ local function _on_cancel(self)
     end
     V.ignoreevent_wrap(function()
         V.view_wrap(win, _update)
-    end)
+    end, EVENTIGNORES)
 end
 
 -- 没有任何 Accept，且没有任何 placeholder?，按 ESC 取消时恢复

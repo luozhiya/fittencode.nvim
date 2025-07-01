@@ -46,19 +46,22 @@ end
 
 ---@param fx? function
 ---@return any
-function M.ignoreevent_wrap(fx)
+function M.ignoreevent_wrap(fx, ignore, timeout)
+    ignore = ignore or 'all'
+    timeout = timeout or 10
+
     local eventignore = vim.o.eventignore
-    if eventignore == 'all' then
+    if eventignore == ignore then
         return Fn.check_call(fx)
     end
 
-    vim.o.eventignore = 'all'
+    vim.o.eventignore = ignore
 
     local ret = Fn.check_call(fx)
 
     vim.defer_fn(function()
         vim.o.eventignore = eventignore
-    end, 10)
+    end, timeout)
 
     return ret
 end
