@@ -1,6 +1,1 @@
-local Config = require('fittencode.config')
-local Controller = require('fittencode.inline.controller')
-
-local controller = Controller.new()
-
-return controller
+return require('fittencode.inline.controller').new()
