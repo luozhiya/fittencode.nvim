@@ -139,7 +139,9 @@ function Controller:_initialize(options)
             group = vim.api.nvim_create_augroup('FittenCode.Inline.LspServer', { clear = true }),
             callback = function(args)
                 Log.debug('LspServer attach = {}', args)
-                LspServer.attach(args.buf)
+                if F.is_filebuf(args.buf) then
+                    LspServer.attach(args.buf)
+                end
             end
         })
     end
@@ -206,6 +208,7 @@ end
 function Controller:_check_availability(options)
     options = options or {}
     local buf = vim.api.nvim_get_current_buf()
+    Log.debug('Check availability, buf = {}, is_enabled = {}', buf, self:is_enabled(buf))
     if options.vimev then
         local session_buf = self:get_current_session() and self:get_current_session().buf
         local vimev = options.vimev
@@ -506,6 +509,7 @@ end
 
 -- 这个比 VSCode 的情况更复杂，suffixes 支持多个（非当前 buf filetype 也可以）
 function Controller:set_suffix_permissions(enable, suffixes)
+    Log.debug('set_suffix_permissions, enable = {}, suffixes = {}', enable, suffixes)
     local suffix_map = {}
     for _, suffix in ipairs(Config.disable_specific_inline_completion.suffixes or {}) do
         suffix_map[suffix] = true
