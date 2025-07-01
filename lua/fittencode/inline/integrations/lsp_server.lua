@@ -84,7 +84,7 @@ local function lsp_pos_to_rowcol(buffer, position)
 end
 
 ---@param fim_completions FittenCode.Inline.IncrementalCompletion[]
-local function _lsp_completion_list_from_fim(position, fim_completions)
+local function _lsp_completion_list_from_fim(trigger_character, position, fim_completions)
     local fim_comletion = fim_completions[1]
     if fim_comletion == nil then
         return {}
@@ -100,7 +100,7 @@ local function _lsp_completion_list_from_fim(position, fim_completions)
     end_.character = end_.character + Unicode.byte_to_utfindex(generated_text, 'utf-16')
     ---@type lsp.CompletionItem
     local item = {
-        label = generated_text,
+        label = trigger_character .. generated_text,
         -- labelDetails = nil,
         -- kind = 1, -- Text
         -- tags = nil,
@@ -139,6 +139,17 @@ local function _lsp_completion_list_from_fim(position, fim_completions)
     return completion_list
 end
 
+local function get_prefix(bufnr, row, col)
+    local line = F.line_at(bufnr, row).text
+    local start_col = F.round_col_start(line, col) - 1
+    if start_col == 0 then
+        return line:sub(1, 1)
+    end
+    start_col = start_col - 1
+    local p1 = F.round_col_start(line, start_col + 1) - 1
+    return line:sub(p1 + 1, start_col + 1)
+end
+
 --- @param params lsp.CompletionParams
 --- @param callback function
 methods['textDocument/completion'] = function(params, callback)
@@ -148,6 +159,9 @@ methods['textDocument/completion'] = function(params, callback)
         return callback(nil, {})
     end
     local row, col = lsp_pos_to_rowcol(bufnr, params.position)
+    ---@type lsp.CompletionContext
+    local context = params.context
+    local trigger_character = context.triggerCharacter or get_prefix(bufnr, row, col)
     local res, request = Generate.request_completions(bufnr, row, col, { filename = params.textDocument.uri })
     if not request then
         return callback(nil, {})
@@ -158,7 +172,7 @@ methods['textDocument/completion'] = function(params, callback)
         if data == nil or data.completions == nil then
             return callback(nil, {})
         end
-        local completion_list = _lsp_completion_list_from_fim(params.position, data.completions)
+        local completion_list = _lsp_completion_list_from_fim(trigger_character, params.position, data.completions)
         return callback(nil, completion_list)
     end)
 end
