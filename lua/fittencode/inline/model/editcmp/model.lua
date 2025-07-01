@@ -77,16 +77,18 @@ function Model:is_scope_valid(scope)
 end
 
 ---@param scope FittenCode.Inline.EditAcceptScope
+---@return boolean
 function Model:accept(scope)
     if not self:is_scope_valid(scope) then
         Log.error('Invalid scope: ' .. scope)
-        return
+        return false
     end
     if scope == 'hunk' then
         self.commit_index = self.commit_index + 1
     elseif scope == 'all' then
         self.commit_index = #self.hunks
     end
+    return true
 end
 
 function Model:is_complete()

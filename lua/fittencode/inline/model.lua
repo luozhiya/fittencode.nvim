@@ -57,8 +57,9 @@ function Model:selected_completion()
 end
 
 ---@param scope FittenCode.Inline.AcceptScope
+---@return boolean
 function Model:accept(scope)
-    assert(self:selected_completion()):accept(scope)
+    return assert(self:selected_completion()):accept(scope)
 end
 
 function Model:revoke()

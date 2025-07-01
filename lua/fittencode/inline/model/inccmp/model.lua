@@ -173,9 +173,11 @@ function Model:is_scope_valid(scope)
 end
 
 ---@param scope FittenCode.Inline.IncAcceptScope
+---@return boolean
 function Model:accept(scope)
     if not self:is_scope_valid(scope) then
         Log.error('Invalid scope: ' .. scope)
+        return false
     end
     if scope == 'all' then
         local new_commit = vim.deepcopy(self.stage_ranges)
@@ -183,18 +185,19 @@ function Model:accept(scope)
         self.commit_ranges = Parse.merge_ranges(vim.list_extend(self.commit_ranges, new_commit))
         self.cursor = #self.source
         self:update_stage_ranges()
-        return
+        return true
     end
 
     local region = self:find_valid_region(scope)
     if not region then
-        return
+        return false
     end
     table.insert(self.commit_history, vim.deepcopy({ region }))
 
     self.commit_ranges = Parse.merge_ranges(vim.list_extend(self.commit_ranges, { region }))
     self.cursor = region.end_
     self:update_stage_ranges()
+    return true
 end
 
 function Model:revoke()

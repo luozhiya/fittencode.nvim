@@ -229,8 +229,9 @@ function Controller:has_completions()
 end
 
 ---@param scope FittenCode.Inline.AcceptScope
+---@return boolean
 function Controller:accept(scope)
-    assert(self:get_active_session()):accept(scope)
+    return assert(self:get_active_session()):accept(scope)
 end
 
 function Controller:revoke()

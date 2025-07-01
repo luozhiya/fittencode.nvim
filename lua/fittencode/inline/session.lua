@@ -177,13 +177,18 @@ end
 
 ---@param scope FittenCode.Inline.AcceptScope
 function Session:accept(scope)
-    self.model:accept(scope)
+    if not self.model:accept(scope) then
+        return false
+    end
     self:update_view()
     if self.model:is_complete() then
         self:terminate()
         self.view:on_complete()
         vim.defer_fn(function() self.trigger_inline_suggestion({ force = true, mode = self.mode }) end, 30)
     end
+    debug_log(self, 'Accept scope = {}', scope)
+    vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCodeInlineAccepted', modeline = false, data = { scope = scope } })
+    return true
 end
 
 function Session:revoke()
