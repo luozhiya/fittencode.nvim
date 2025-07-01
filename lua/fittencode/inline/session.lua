@@ -195,7 +195,7 @@ function Session:on_esc()
     local function _default_esc()
         return vim.api.nvim_replace_termcodes('<Esc>', true, false, true)
     end
-    if self.mode == 'editcmp' and self:is_interactive() then
+    if self:is_interactive() then
         self:terminate()
         return
     end
