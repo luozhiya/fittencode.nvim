@@ -187,7 +187,10 @@ function Session:accept(scope)
         vim.defer_fn(function() self.trigger_inline_suggestion({ force = true, mode = self.mode }) end, 30)
     end
     debug_log(self, 'Accept scope = {}', scope)
-    vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCodeInlineAccepted', modeline = false, data = { scope = scope } })
+    vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCodeInlineAccepted', data = { scope = scope } })
+    -- vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCodeInlineAccepted', data = { scope = scope } })
+    -- local autocmds = vim.api.nvim_get_autocmds({ event = 'User', pattern = 'FittenCodeInlineAccepted' })
+    -- debug_log(self, 'FittenCodeInlineAccepted autocmds = {}', autocmds)
     return true
 end
 
