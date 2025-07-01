@@ -4,11 +4,13 @@ References:
 - nvim/runtime/lua/vim/lsp.lua
 - https://github.com/neovim/neovim/pull/34009
 
-vim.lsp.buf_attach_client(bufnr, client_id)
-
-client_id = assert(
-    vim.lsp.start({ cmd = cmd, name = 'FittenCodeLSP', root_dir = vim.uv.cwd() }, { attach = false })
-)
+LSP 现有问题：
+- 只有 label/insertText 的话，blink/mini.completion 无法捕获这个 item ？一定要加 textEdit，需要进一步研究
+- textEdit 无法包含空格
+    - `nvim/runtime/lua/vim/lsp/completion.lua` get_completion_word
+    - https://github.com/neovim/neovim/pull/29122
+    - 这个里面过滤了 `return word:match('^(%S*)') or word`
+- b/c 不能支持 \n 等特殊字符
 
 --]]
 
@@ -17,14 +19,35 @@ local Position = require('fittencode.fn.position')
 local Generate = require('fittencode.generate')
 local Unicode = require('fittencode.fn.unicode')
 local F = require('fittencode.fn.buf')
+local Log = require('fittencode.log')
 
 local M = {}
 
+---@return string[]
+local function get_trigger_characters()
+    local chars = {}
+    if #chars == 0 then
+        for i = 32, 126 do
+            chars[#chars + 1] = string.char(i)
+        end
+        chars[#chars + 1] = ' '
+        chars[#chars + 1] = '\n'
+        chars[#chars + 1] = '\r'
+        chars[#chars + 1] = '\r\n'
+        chars[#chars + 1] = '\t'
+    end
+    return chars
+end
+
+---@type lsp.ServerCapabilities
 local capabilities = {
     -- textDocument/completion
-    completionProvider = true,
+    ---@type lsp.CompletionOptions
+    completionProvider = {
+        triggerCharacters = get_trigger_characters(),
+    },
     -- textDocument/inlineCompletion
-    inlineCompletionProvider = false,
+    -- inlineCompletionProvider = false,
 }
 --- @type table<string,function>
 local methods = {}
@@ -54,14 +77,14 @@ end
 ---@param position lsp.Position
 local function lsp_pos_to_rowcol(buffer, position)
     -- UTF-16
-    local row = position.line - 1
+    local row = position.line
     local line = F.line_at(buffer, row).text
     local col = Unicode.utf_to_byteindex(line, 'utf-16', position.character)
     return row, col
 end
 
 ---@param fim_completions FittenCode.Inline.IncrementalCompletion[]
-local function _lsp_completion_list_from_fim(fim_completions)
+local function _lsp_completion_list_from_fim(position, fim_completions)
     local fim_comletion = fim_completions[1]
     if fim_comletion == nil then
         return {}
@@ -71,23 +94,35 @@ local function _lsp_completion_list_from_fim(fim_completions)
         return {}
     end
     assert(fim_comletion.generated_text ~= nil)
+    local generated_text = fim_comletion.generated_text
+    local start = vim.deepcopy(position)
+    local end_ = vim.deepcopy(position)
+    end_.character = end_.character + Unicode.byte_to_utfindex(generated_text, 'utf-16')
     ---@type lsp.CompletionItem
     local item = {
-        label = fim_comletion.generated_text,
+        label = generated_text,
         -- labelDetails = nil,
-        kind = 1, -- Text
+        -- kind = 1, -- Text
         -- tags = nil,
         -- detail = nil,
-        documentation = nil,
+        documentation = 'FittenCode...',
         -- deprecated = nil,
         -- sortText = nil,
         -- filterText = nil,
-        insertText = fim_comletion.generated_text,
+        insertText = generated_text,
         insertTextFormat = 1, -- PlainText
         -- commitCharacters = nil,
         -- command = nil,
-        -- textEdit = {},
-        -- additionalTextEdits = {}
+        textEdit = {
+            range = { start = start, ['end'] = end_ },
+            newText = generated_text,
+        },
+        -- additionalTextEdits = {
+        --     {
+        --         range = { start = start, ['end'] = end_ },
+        --         newText = generated_text,
+        --     }
+        -- }
     }
 
     ---@type lsp.CompletionItem[]
@@ -99,6 +134,7 @@ local function _lsp_completion_list_from_fim(fim_completions)
         isIncomplete = false,
         items = items
     }
+    Log.debug('LSP Server generated completion_list = {}', completion_list)
 
     return completion_list
 end
@@ -106,6 +142,7 @@ end
 --- @param params lsp.CompletionParams
 --- @param callback function
 methods['textDocument/completion'] = function(params, callback)
+    Log.debug('LSP Server got completion request = {}', params)
     local bufnr = get_buffer_by_uri(params.textDocument.uri)
     if bufnr == nil then
         return callback(nil, {})
@@ -117,17 +154,18 @@ methods['textDocument/completion'] = function(params, callback)
     end
     ---@param data FittenCode.Inline.FimProtocol.ParseResult.Data
     res:forward(function(data)
-        if data.completions == nil then
+        Log.debug('LSP Server got completion data = {}', data)
+        if data == nil or data.completions == nil then
             return callback(nil, {})
         end
-        local completion_list = _lsp_completion_list_from_fim(data.completions)
+        local completion_list = _lsp_completion_list_from_fim(params.position, data.completions)
         return callback(nil, completion_list)
     end)
 end
 
 local dispatchers = {}
 
-M.cmd = function(disp)
+local cmd = function(disp)
     -- Store dispatchers to use for showing progress notifications
     dispatchers = disp
     local res, closing, request_id = {}, false, 0
@@ -157,6 +195,19 @@ M.cmd = function(disp)
     end
 
     return res
+end
+
+function M.attach(bufnr)
+    -- vim.lsp.buf_attach_client(bufnr, M.client_id())
+    vim.lsp.completion.enable(true, M.client_id(), bufnr, { autotrigger = true })
+end
+
+function M.client_id()
+    if not M._instance then
+        M._instance = assert(vim.lsp.start({ cmd = cmd, name = 'FittenCode' }, { attach = false }))
+        Log.debug('LSP Server started with client_id = {}', M._instance)
+    end
+    return M._instance
 end
 
 return M

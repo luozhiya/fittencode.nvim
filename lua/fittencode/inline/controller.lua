@@ -27,6 +27,7 @@ local CtrlObserver = require('fittencode.inline.ctrl_observer')
 local ProgressIndicator = require('fittencode.fn.progress_indicator')
 local Observer = require('fittencode.fn.observer')
 local Color = require('fittencode.color')
+local LspServer = require('fittencode.inline.integrations.lsp_server')
 
 local Status = CtrlObserver.Status
 local ProgressIndicatorObserver = CtrlObserver.ProgressIndicatorObserver
@@ -61,20 +62,19 @@ Controller.__index = Controller
 
 ---@class FittenCode.Inline.Controller.InitialOptions
 
----@param options FittenCode.Inline.Controller.InitialOptions
+---@param options? FittenCode.Inline.Controller.InitialOptions
 function Controller.new(options)
     local self = setmetatable({}, Controller)
     self:_initialize(options)
     return self
 end
 
----@param options FittenCode.Inline.Controller.InitialOptions
+---@param options? FittenCode.Inline.Controller.InitialOptions
 function Controller:_initialize(options)
     self.observers = {}
     self.sessions = {}
     self.filter_events = {}
     self.keymaps = {}
-    self:set_suffix_permissions(Config.inline_completion.enable)
     self.status_observer = Status.new()
     self:add_observer(self.status_observer)
     self.pi = ProgressIndicator.new()
@@ -133,6 +133,16 @@ function Controller:_initialize(options)
             self:_check_availability({ vimev = args })
         end,
     })
+    if Config.completion_integrations.lsp_server then
+        Log.debug('Completion integration: LSP server enabled')
+        vim.api.nvim_create_autocmd({ 'FileType' }, {
+            group = vim.api.nvim_create_augroup('FittenCode.Inline.LspServer', { clear = true }),
+            callback = function(args)
+                Log.debug('LspServer attach = {}', args)
+                LspServer.attach(args.buf)
+            end
+        })
+    end
 
     local filtered = {}
     vim.tbl_map(function(key)
@@ -192,19 +202,22 @@ function Controller:_emit(event)
     self:notify_observers(event)
 end
 
----@param options { vimev: vim.api.keyset.create_autocmd.callback_args }
+---@param options? { vimev: vim.api.keyset.create_autocmd.callback_args }
 function Controller:_check_availability(options)
-    assert(options)
-    assert(options.vimev)
-    local session_buf = self:get_current_session() and self:get_current_session().buf
-    local vimev = options.vimev
-    assert(vimev.buf)
-    if (vimev.buf ~= session_buf) and vimev.event == 'BufFilePost' then
-        -- 没有发生切换 buffer，不需要检查可用性
-        Log.debug('Check availability failed, event_buf = {}, session_buf = {}', vimev.buf, session_buf)
-        return
+    options = options or {}
+    local buf = vim.api.nvim_get_current_buf()
+    if options.vimev then
+        local session_buf = self:get_current_session() and self:get_current_session().buf
+        local vimev = options.vimev
+        buf = assert(vimev.buf)
+        if (vimev.buf ~= session_buf) and vimev.event == 'BufFilePost' then
+            -- 没有发生切换 buffer，不需要检查可用性
+            Log.debug('Check availability failed, event_buf = {}, session_buf = {}', vimev.buf, session_buf)
+            return
+        end
     end
-    if self:is_enabled(vimev.buf) then
+    if self:is_enabled(buf) then
+        self:terminate_sessions()
         self:_emit({ event = CONTROLLER_EVENT.INLINE_IDLE })
     else
         self:_emit({ event = CONTROLLER_EVENT.INLINE_DISABLED })
@@ -531,6 +544,7 @@ function Controller:set_suffix_permissions(enable, suffixes)
         end
     end
     Config.disable_specific_inline_completion.suffixes = vim.tbl_keys(suffix_map)
+    self:_check_availability()
 end
 
 ---@return FittenCode.Inline.Status

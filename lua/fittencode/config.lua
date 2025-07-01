@@ -93,10 +93,12 @@ local DEFAULTS = {
         ---@type boolean
         auto_triggering_completion = true,
     },
-    lsp_server = {
+    completion_integrations = {
         -- Enable completion as an LSP server.
         ---@type boolean
-        enable = false,
+        lsp_server = false,
+        -- Enable completion as an `blink.cmp` source
+        blink = false
     },
     language_preference = {
         -- Language preference for display and responses in Fitten Code (excluding "Fitten Code - Document Code" function).

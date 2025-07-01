@@ -13,7 +13,7 @@ function M.setup(options)
     -- Lazy loading
     require('fittencode.commands')
 
-    vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteChanged' }, {
+    vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteChanged', 'FileType' }, {
         group = vim.api.nvim_create_augroup('FittenCode.LazyLoading.Inline', { clear = true }),
         pattern = '*',
         callback = function(ev)
