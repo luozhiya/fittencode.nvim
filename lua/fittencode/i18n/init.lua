@@ -19,9 +19,9 @@ local locales = {
 function M.tr(msg, ...)
     local lang = M.display_preference()
     if lang == 'en' or not locales[lang] or not locales[lang][msg] then
-        return Format.nothrow_format(msg, ...)
+        return msg
     end
-    return Format.nothrow_format(locales[lang][msg], ...)
+    return locales[lang][msg]
 end
 
 return M

@@ -143,8 +143,7 @@ local function execute(input)
         require('fittencode.log').error('Command not executable: {}', commands[input.fargs[1]])
         return
     end
-    local args = vim.list_slice(input.fargs, 2, #input.fargs)
-    fn(unpack(args))
+    fn(vim.list_slice(input.fargs, 2, #input.fargs))
 end
 
 local function complete(arg_lead, cmd_line, cursor_pos)
