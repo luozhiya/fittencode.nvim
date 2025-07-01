@@ -402,7 +402,11 @@ end
 
 ---@param buf integer
 function Controller:is_enabled(buf)
-    return Config.inline_completion.enable and F.is_filebuf(buf) == true and not self:is_ft_disabled(buf)
+    local filebuf = true
+    if Config.inline_completion.disable_completion_when_nofile_buffer then
+        filebuf = F.is_filebuf(buf)
+    end
+    return Config.inline_completion.enable and filebuf and not self:is_ft_disabled(buf)
 end
 
 ---@param msg string

@@ -87,6 +87,8 @@ local DEFAULTS = {
         disable_completion_when_insert_enter = false,
         -- Disable auto completion when the popup menu is changed `CompleteChanged` `CompleteDone`.
         disable_completion_when_pumcmp_changed = false,
+        -- Disable auto completion when the buffer is not a file.
+        disable_completion_when_nofile_buffer = true,
         -- Auto triggering completion
         ---@type boolean
         auto_triggering_completion = true,
