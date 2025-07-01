@@ -212,8 +212,8 @@ local cmd = function(disp)
 end
 
 function M.attach(bufnr)
-    -- vim.lsp.buf_attach_client(bufnr, M.client_id())
-    vim.lsp.completion.enable(true, M.client_id(), bufnr, { autotrigger = true })
+    vim.lsp.buf_attach_client(bufnr, M.client_id())
+    -- vim.lsp.completion.enable(true, M.client_id(), bufnr, { autotrigger = true })
 end
 
 function M.client_id()
