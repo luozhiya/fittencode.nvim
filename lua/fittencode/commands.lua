@@ -3,7 +3,7 @@ local BASE = {
     register = { execute = function() require('fittencode.auth').register() end },
     login = { execute = function() require('fittencode.auth').login() end },
     login3rd = {
-        execute = function(source) require('fittencode.auth').login3rd(source) end,
+        execute = function(sources) require('fittencode.auth').login3rd(sources[1]) end,
         complete = function() return require('fittencode.auth').supported_login3rd_providers() end
     },
     logout = { execute = function() require('fittencode.auth').logout() end },
