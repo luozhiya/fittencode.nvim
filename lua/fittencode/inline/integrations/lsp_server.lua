@@ -96,6 +96,9 @@ local function _lsp_completion_list_from_fim(trigger_character, position, fim_co
     end
     assert(fim_comletion.generated_text ~= nil)
     local generated_text = fim_comletion.generated_text
+    local end_ = vim.deepcopy(position)
+    end_.character = end_.character + #generated_text
+    local start = vim.deepcopy(position)
     ---@type lsp.CompletionItem
     local item = {
         label = trigger_character .. generated_text,
@@ -112,7 +115,7 @@ local function _lsp_completion_list_from_fim(trigger_character, position, fim_co
         -- commitCharacters = nil,
         -- command = nil,
         textEdit = {
-            range = { start = position, ['end'] = position },
+            range = { start = start, ['end'] = end_ },
             newText = generated_text,
         },
         -- additionalTextEdits = {
