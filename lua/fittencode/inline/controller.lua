@@ -138,8 +138,8 @@ function Controller:_initialize(options)
         vim.api.nvim_create_autocmd({ 'FileType' }, {
             group = vim.api.nvim_create_augroup('FittenCode.Inline.LspServer', { clear = true }),
             callback = function(args)
-                Log.debug('LspServer attach = {}', args)
                 if F.is_filebuf(args.buf) then
+                    Log.debug('LspServer attach = {}', args)
                     LspServer.attach(args.buf)
                 end
             end

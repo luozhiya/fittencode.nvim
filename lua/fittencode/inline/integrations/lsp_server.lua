@@ -41,6 +41,7 @@ end
 
 ---@type lsp.ServerCapabilities
 local capabilities = {
+    positionEncoding = 'utf-8',
     -- textDocument/completion
     ---@type lsp.CompletionOptions
     completionProvider = {
@@ -95,9 +96,6 @@ local function _lsp_completion_list_from_fim(trigger_character, position, fim_co
     end
     assert(fim_comletion.generated_text ~= nil)
     local generated_text = fim_comletion.generated_text
-    local start = vim.deepcopy(position)
-    local end_ = vim.deepcopy(position)
-    end_.character = end_.character + Unicode.byte_to_utfindex(generated_text, 'utf-16')
     ---@type lsp.CompletionItem
     local item = {
         label = trigger_character .. generated_text,
@@ -114,7 +112,7 @@ local function _lsp_completion_list_from_fim(trigger_character, position, fim_co
         -- commitCharacters = nil,
         -- command = nil,
         textEdit = {
-            range = { start = start, ['end'] = end_ },
+            range = { start = position, ['end'] = position },
             newText = generated_text,
         },
         -- additionalTextEdits = {
@@ -139,7 +137,7 @@ local function _lsp_completion_list_from_fim(trigger_character, position, fim_co
     return completion_list
 end
 
-local function get_prefix(bufnr, row, col)
+local function get_prefix_char(bufnr, row, col)
     local line = F.line_at(bufnr, row).text
     local start_col = F.round_col_start(line, col) - 1
     if start_col == 0 then
@@ -158,10 +156,10 @@ methods['textDocument/completion'] = function(params, callback)
     if bufnr == nil then
         return callback(nil, {})
     end
-    local row, col = lsp_pos_to_rowcol(bufnr, params.position)
+    local row, col = params.position.line, params.position.character
     ---@type lsp.CompletionContext
     local context = params.context
-    local trigger_character = context.triggerCharacter or get_prefix(bufnr, row, col)
+    local trigger_character = context.triggerCharacter or get_prefix_char(bufnr, row, col)
     local res, request = Generate.request_completions(bufnr, row, col, { filename = params.textDocument.uri })
     if not request then
         return callback(nil, {})
