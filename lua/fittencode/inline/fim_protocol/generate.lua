@@ -127,7 +127,7 @@ end
 ---@param buf integer
 ---@param position FittenCode.Position
 ---@param options { filename: string }
----@return FittenCode.Inline.Prompt.MetaDatas?, string?, string?
+---@return FittenCode.Promise<{ base: FittenCode.Inline.Prompt.MetaDatas?, text: string, ciphertext: string}>
 local function build_base_prompt(buf, position, options)
     local charscount = F.wordcount(buf).chars
     local prefix
@@ -155,29 +155,24 @@ local function build_base_prompt(buf, position, options)
     suffix = clean_fim_markers(suffix)
 
     local text = prefix .. suffix
-    local ciphertext = MD5.compute(text):wait()
-    if not ciphertext or ciphertext:is_rejected() then
-        return
-    end
-    ciphertext = ciphertext.value
-
-    local base = {
-        cpos = Unicode.byte_to_utfindex(prefix, 'utf-16'),
-        bcpos = #prefix,
-        plen = 0,
-        slen = 0,
-        bplen = 0,
-        bslen = 0,
-        pmd5 = '',
-        nmd5 = ciphertext,
-        diff = text,
-        filename = options.filename,
-        pc_available = true,
-        pc_prompt = '',
-        pc_prompt_type = '0'
-    }
-
-    return base, text, ciphertext
+    return MD5.compute(text):forward(function(ciphertext)
+        local base = {
+            cpos = Unicode.byte_to_utfindex(prefix, 'utf-16'),
+            bcpos = #prefix,
+            plen = 0,
+            slen = 0,
+            bplen = 0,
+            bslen = 0,
+            pmd5 = '',
+            nmd5 = ciphertext,
+            diff = text,
+            filename = options.filename,
+            pc_available = true,
+            pc_prompt = '',
+            pc_prompt_type = '0'
+        }
+        return { base = base, text = text, ciphertext = ciphertext }
+    end)
 end
 
 ---@param mode FittenCode.Inline.CompletionMode
@@ -208,29 +203,25 @@ end
 ---@param buf number
 ---@param position FittenCode.Position
 ---@param options FittenCode.Inline.FimProtocol.GenerateOptions
----@return FittenCode.Inline.PromptWithCacheData?
+---@return FittenCode.Promise<FittenCode.Inline.PromptWithCacheData?>
 function M.generate(buf, position, options)
-    local base, text, ciphertext = build_base_prompt(buf, position, options)
-    if not base then
-        return
-    end
-    assert(text)
-    assert(ciphertext)
-    local diff = {}
-    if options.diff_required then
-        diff = build_diff_metadata(text, options.filename, options.version)
-    end
-    local edit = build_edit_metadata(options.mode)
-    return {
-        prompt = {
-            inputs = '',
-            meta_datas = vim.tbl_deep_extend('force', base, diff, edit)
-        },
-        cachedata = {
-            text = text,
-            ciphertext = ciphertext,
+    return build_base_prompt(buf, position, options):forward(function(_)
+        local diff = {}
+        if options.diff_required then
+            -- diff = build_diff_metadata(text, options.filename, options.version)
+        end
+        local edit = build_edit_metadata(options.mode)
+        return {
+            prompt = {
+                inputs = '',
+                meta_datas = vim.tbl_deep_extend('force', _.base, diff, edit)
+            },
+            cachedata = {
+                text = _.text,
+                ciphertext = _.ciphertext,
+            }
         }
-    }
+    end)
 end
 
 ---@param filename string
