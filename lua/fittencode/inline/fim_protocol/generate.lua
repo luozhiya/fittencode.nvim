@@ -208,7 +208,7 @@ function M.generate(buf, position, options)
     return build_base_prompt(buf, position, options):forward(function(_)
         local diff = {}
         if options.diff_required then
-            -- diff = build_diff_metadata(text, options.filename, options.version)
+            diff = build_diff_metadata(_.text, options.filename, options.version)
         end
         local edit = build_edit_metadata(options.mode)
         return {
