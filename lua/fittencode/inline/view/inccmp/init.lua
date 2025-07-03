@@ -76,7 +76,11 @@ function View:_delete_text(start_pos, end_pos)
     if start_pos:is_equal(end_pos) then
         return
     end
-    vim.api.nvim_buf_set_text(self.buf, start_pos.row, start_pos.col, end_pos.row, end_pos.col, {})
+    -- Invalid 'start_col': out of range (blink.cmp)
+    local _ = pcall(function() vim.api.nvim_buf_set_text(self.buf, start_pos.row, start_pos.col, end_pos.row, end_pos.col, {}) end)
+    if not _ then
+        Log.debug('delete_text error, start_pos = {}, end_pos = {}', start_pos, end_pos)
+    end
 end
 
 function View:_insert_text(pos, lines)
