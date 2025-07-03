@@ -1,16 +1,14 @@
 --[[
 
-对原有 nvim\runtime\lua\vim\filetype.lua 的修改：
-- 删除 function 映射
-- 简化逻辑，因为从 FittenCode 已经判断过一次类型了，以 FittenCode 类型为最大信度
+简化逻辑，因为从 FittenCode 已经判断过一次类型了，以 FittenCode 类型为最大信度
 
+对原有 nvim\runtime\lua\vim\filetype.lua 的修改：
 - `:%s/detect\.\([a-zA-z0-9])\+\)/'\1'/g`
 - 注释掉所有调用函数
 - 添加 m4/ts/rc 三个常用格式
 
 ]]
 
----@diagnostic disable: unused-local
 local extension = {
     -- BEGIN EXTENSION
     ['8th'] = '8th',
@@ -1610,16 +1608,16 @@ local filename = {
     ['/etc/pinforc'] = 'pinfo',
     ['/.pinforc'] = 'pinfo',
     ['.povrayrc'] = 'povini',
-    printcap = function(_path, _bufnr)
-        return 'ptcap', function(b)
-            vim.b[b].ptcap_type = 'print'
-        end
-    end,
-    termcap = function(_path, _bufnr)
-        return 'ptcap', function(b)
-            vim.b[b].ptcap_type = 'term'
-        end
-    end,
+    -- printcap = function(_path, _bufnr)
+    --     return 'ptcap', function(b)
+    --         vim.b[b].ptcap_type = 'print'
+    --     end
+    -- end,
+    -- termcap = function(_path, _bufnr)
+    --     return 'ptcap', function(b)
+    --         vim.b[b].ptcap_type = 'term'
+    --     end
+    -- end,
     ['.procmailrc'] = 'procmail',
     ['.procmail'] = 'procmail',
     -- ['indent.pro'] = detect_seq('proto', 'indent'),
