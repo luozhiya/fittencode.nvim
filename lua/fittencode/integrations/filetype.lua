@@ -11,21 +11,18 @@ local M = {}
 local debound_send_filetype
 local pre_request
 
-local function _check(buffer)
+local function check(buffer)
     local name = vim.api.nvim_buf_get_name(buffer)
-    local ext = vim.fn.fnamemodify(name, ':e')
-    if #name > 0 and #ext > 0 then
-        -- print(ext)
+    if #name > 0 then
         return false
     end
     local ipl = ''
-    local success, result = pcall(vim.api.nvim_buf_get_var, buffer, 'FittenCode.FileType')
-    if success and result and #result > 0 then
+    local _, result = pcall(vim.api.nvim_buf_get_var, buffer, 'FittenCode.FileType')
+    if _ and result and #result > 0 then
         ipl = result
     end
     local filetype = vim.api.nvim_get_option_value('filetype', { buf = buffer })
     if #filetype > 0 and #ipl == 0 then
-        -- print(filetype)
         return false
     end
     return true
@@ -36,7 +33,7 @@ local function send_filetype(buffer)
         pre_request:abort()
         pre_request = nil
     end
-    if not _check(buffer) then
+    if not check(buffer) then
         return
     end
     -- 前 100 行足够判断语言了?
@@ -47,7 +44,7 @@ local function send_filetype(buffer)
         return
     end
     res:forward(function(lang)
-        if not _check(buffer) then
+        if not check(buffer) then
             return
         end
         print(vim.inspect(lang))
@@ -69,7 +66,7 @@ end
 function M.setup()
     local function _()
         local buffer = vim.api.nvim_get_current_buf()
-        if not _check(buffer) then
+        if not check(buffer) then
             return
         end
         if not debound_send_filetype then
