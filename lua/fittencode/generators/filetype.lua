@@ -16,19 +16,23 @@ Please reply directly to the code without any explanation.
 Please do not use markdown when replying.
 <|end|>
 <|user|>
-请严格遵循以下步骤分析代码片段：
-1. **语法特征分析**：识别代码中的独特语法（如特殊符号、关键字、注释格式、结构特征）
-2. **环境线索提取**：检查是否存在环境声明（如shebang、@requires）或框架标识
+请严格按以下流程分析代码：
+1. **语法特征分析**：识别代码中的独特语法（ 如特殊符号、关键字、注释格式、结构特征 ）
+2. **环境线索提取**：检查是否存在环境声明（ 如shebang、@requires ）或框架标识
 3. **类型推理**：基于特征匹配常见文件类型，优先级：
-   - 编程语言（Python→py, C++→cpp）
-   - 配置文件（YAML→yaml, JSON→json）
-   - 脚本文件（Shell→sh, PowerShell→ps1）
-   - 标记语言（HTML→html, XML→xml）
+   - 编程语言（ Python→py, Rust→rs, Scheme→scm, Java→java, C++→cpp, Go→go, JavaScript→js, TypeScript→ts ）
+   - 配置文件（ YAML→yaml, JSON→json ）
+   - 脚本文件（ Shell→sh, PowerShell→ps1 ）
+   - 标记语言（ HTML→html, XML→xml ）
+   - 复合文档（ Markdown→md, RST→rst, txt→txt ）
 4. **后缀确定规则**：
-   - 优先采用最主流后缀（JavaScript用.js而非.cjs）
+   - 优先采用最主流后缀（JavaScript→js）
    - 有编译要求时区分扩展名（C→c, C++→cpp）
    - 配置文件带类型前缀（docker-compose.yml→yml）
-5. **返回格式**：仅返回后缀字符串（如 "java"，不带点），若无法确认则返回 "" 空字符串
+5. **输出规则**：
+   - 返回标准文件后缀名（ 不带点 ）
+   - 如果文件类型没有后缀时返回该文件名（ Dockerfile→Dockerfile ）
+   - 完全无法识别则返回空字符
 
 待分析代码：
 ```
