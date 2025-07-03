@@ -241,7 +241,7 @@ function Controller:revoke()
     assert(self:get_active_session()):revoke()
 end
 
----@param options { vimev: vim.api.keyset.create_autocmd.callback_args }
+---@param options? { vimev: vim.api.keyset.create_autocmd.callback_args }
 function Controller:edit_completion_cancel(options)
     options = options or {}
     local current = self:get_active_session()

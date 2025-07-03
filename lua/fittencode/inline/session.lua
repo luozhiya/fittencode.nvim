@@ -199,15 +199,12 @@ function Session:revoke()
     self:update_view()
 end
 
-function Session:on_esc()
-    local function _default_esc()
-        return vim.api.nvim_replace_termcodes('<Esc>', true, false, true)
-    end
+function Session:on_cancel()
     if self:is_interactive() then
         self:terminate()
         return
     end
-    return _default_esc()
+    return vim.api.nvim_replace_termcodes(Config.keymaps.inline['cancel'], true, false, true)
 end
 
 function Session:set_keymaps()
@@ -217,13 +214,14 @@ function Session:set_keymaps()
             { lhs = Config.keymaps.inline['accept_next_line'], rhs = function() self:accept('line') end },
             { lhs = Config.keymaps.inline['accept_next_word'], rhs = function() self:accept('word') end },
             { lhs = Config.keymaps.inline['revoke'],           rhs = function() self:revoke() end },
+            { lhs = Config.keymaps.inline['cancel'],           rhs = function() return self:on_cancel() end, options = { expr = true } }
         }
     elseif self.mode == 'editcmp' then
         self.keymaps = {
             { lhs = Config.keymaps.inline['accept_all'],       rhs = function() self:accept('all') end },
             { lhs = Config.keymaps.inline['accept_next_hunk'], rhs = function() self:accept('hunk') end },
             { lhs = Config.keymaps.inline['revoke'],           rhs = function() self:revoke() end },
-            { lhs = '<ESC>',                                   rhs = function() return self:on_esc() end, options = { expr = true } }
+            { lhs = Config.keymaps.inline['cancel'],           rhs = function() return self:on_cancel() end, options = { expr = true } }
         }
     end
     for _, v in ipairs(self.keymaps) do
