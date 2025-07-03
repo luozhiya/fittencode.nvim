@@ -560,6 +560,7 @@ local extension = {
     --     local pathl = path:lower()
     --     return not (pathl:find('html%.m4$') or pathl:find('fvwm2rc')) and 'm4' or nil
     -- end,
+    m4 = 'm4',
     eml = 'mail',
     mk = 'make',
     mak = 'make',
@@ -1101,6 +1102,7 @@ local extension = {
     tutor = 'tutor',
     twig = 'twig',
     -- ts = detect_line1('<%?xml', 'xml', 'typescript'),
+    ts = 'typescript',
     mts = 'typescript',
     cts = 'typescript',
     tsx = 'typescriptreact',
@@ -1261,6 +1263,7 @@ local extension = {
     reg = 'reg',
     ttl = 'ttl',
     -- rc = detect_rc,
+    rc = 'rc',
     -- rch = detect_rc,
     class = 'class',
     sgml = 'sgml',
