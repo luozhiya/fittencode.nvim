@@ -9,7 +9,6 @@
 ]]
 
 ---@diagnostic disable: unused-local
----@type vim.filetype.mapping
 local extension = {
     -- BEGIN EXTENSION
     ['8th'] = '8th',
@@ -35,12 +34,12 @@ local extension = {
     art = 'art',
     asciidoc = 'asciidoc',
     adoc = 'asciidoc',
-    asa = function(_path, _bufnr)
-        if vim.g.filetype_asa then
-            return vim.g.filetype_asa
-        end
-        return 'aspvbs'
-    end,
+    -- asa = function(_path, _bufnr)
+    --     if vim.g.filetype_asa then
+    --         return vim.g.filetype_asa
+    --     end
+    --     return 'aspvbs'
+    -- end,
     asm = 'asm',
     s = 'asm',
     S = 'asm',
@@ -72,7 +71,7 @@ local extension = {
     bdf = 'bdf',
     beancount = 'beancount',
     bib = 'bib',
-    com = detect_seq('bindzone', 'dcl'),
+    -- com = detect_seq('bindzone', 'dcl'),
     db = 'bindzone',
     bicep = 'bicep',
     bicepparam = 'bicep',
@@ -88,10 +87,10 @@ local extension = {
     bsd = 'bsdl',
     bsdl = 'bsdl',
     bst = 'bst',
-    btm = function(_path, _bufnr)
-        return (vim.g.dosbatch_syntax_for_btm and vim.g.dosbatch_syntax_for_btm ~= 0) and 'dosbatch'
-            or 'btm'
-    end,
+    -- btm = function(_path, _bufnr)
+    --     return (vim.g.dosbatch_syntax_for_btm and vim.g.dosbatch_syntax_for_btm ~= 0) and 'dosbatch'
+    --         or 'btm'
+    -- end,
     bzl = 'bzl',
     bazel = 'bzl',
     BUILD = 'bzl',
@@ -106,7 +105,7 @@ local extension = {
     capnp = 'capnp',
     cdc = 'cdc',
     cdl = 'cdl',
-    toc = detect_line1('\\contentsline', 'tex', 'cdrtoc'),
+    -- toc = detect_line1('\\contentsline', 'tex', 'cdrtoc'),
     cedar = 'cedar',
     cfc = 'cf',
     cfm = 'cf',
@@ -141,9 +140,9 @@ local extension = {
     atg = 'coco',
     recipe = 'conaryrecipe',
     ctags = 'conf',
-    hook = function(_path, bufnr)
-        return M._getline(bufnr, 1) == '[Trigger]' and 'confini' or nil
-    end,
+    -- hook = function(_path, bufnr)
+    --     return M._getline(bufnr, 1) == '[Trigger]' and 'confini' or nil
+    -- end,
     nmconnection = 'confini',
     mklx = 'context',
     mkiv = 'context',
@@ -208,7 +207,7 @@ local extension = {
     dcd = 'dcd',
     decl = 'decl',
     dec = 'decl',
-    dcl = detect_seq('decl', 'clean'),
+    -- dcl = detect_seq('decl', 'clean'),
     def = 'def',
     desc = 'desc',
     directory = 'desktop',
@@ -432,7 +431,7 @@ local extension = {
     ii = 'initng',
     inko = 'inko',
     inp = 'inp',
-    ms = detect_seq('nroff', 'xmath'),
+    -- ms = detect_seq('nroff', 'xmath'),
     ipkg = 'ipkg',
     iss = 'iss',
     mst = 'ist',
@@ -539,7 +538,7 @@ local extension = {
     LOG = 'log',
     lgt = 'logtalk',
     lotos = 'lotos',
-    lot = detect_line1('\\contentsline', 'tex', 'lotos'),
+    -- lot = detect_line1('\\contentsline', 'tex', 'lotos'),
     lout = 'lout',
     lou = 'lout',
     ulpc = 'lpc',
@@ -557,15 +556,15 @@ local extension = {
     at = 'm4',
     mc = 'mc',
     quake = 'm3quake',
-    m4 = function(path, _bufnr)
-        local pathl = path:lower()
-        return not (pathl:find('html%.m4$') or pathl:find('fvwm2rc')) and 'm4' or nil
-    end,
+    -- m4 = function(path, _bufnr)
+    --     local pathl = path:lower()
+    --     return not (pathl:find('html%.m4$') or pathl:find('fvwm2rc')) and 'm4' or nil
+    -- end,
     eml = 'mail',
     mk = 'make',
     mak = 'make',
     page = 'mallard',
-    map = detect_line1('^%*+$', 'lnkmap', 'map'),
+    -- map = detect_line1('^%*+$', 'lnkmap', 'map'),
     mws = 'maple',
     mpl = 'maple',
     mv = 'maple',
@@ -735,7 +734,7 @@ local extension = {
     papp = 'papp',
     pxml = 'papp',
     pas = 'pascal',
-    lpr = detect_line1('<%?xml', 'xml', 'pascal'),
+    -- lpr = detect_line1('<%?xml', 'xml', 'pascal'),
     dpr = 'pascal',
     txtpb = 'pbtxt',
     textproto = 'pbtxt',
@@ -1101,7 +1100,7 @@ local extension = {
     tsv = 'tsv',
     tutor = 'tutor',
     twig = 'twig',
-    ts = detect_line1('<%?xml', 'xml', 'typescript'),
+    -- ts = detect_line1('<%?xml', 'xml', 'typescript'),
     mts = 'typescript',
     cts = 'typescript',
     tsx = 'typescriptreact',
@@ -1194,7 +1193,7 @@ local extension = {
     xlc = 'xml',
     xba = 'xml',
     slnx = 'xml',
-    xpm = detect_line1('XPM2', 'xpm2', 'xpm'),
+    -- xpm = detect_line1('XPM2', 'xpm2', 'xpm'),
     xpm2 = 'xpm2',
     xqy = 'xquery',
     xqm = 'xquery',
@@ -1212,7 +1211,7 @@ local extension = {
     yaml = 'yaml',
     eyaml = 'yaml',
     mplstyle = 'yaml',
-    grc = detect_line1('<%?xml', 'xml', 'yaml'),
+    -- grc = detect_line1('<%?xml', 'xml', 'yaml'),
     yang = 'yang',
     yuck = 'yuck',
     z8a = 'z8a',
@@ -1233,16 +1232,16 @@ local extension = {
     i = 'i',
     w = 'progress_cweb',
     p = 'progress_pascal',
-    pro = detect_seq('proto', 'idlang'),
+    -- pro = detect_seq('proto', 'idlang'),
     patch = 'patch',
     r = 'r',
     rdf = 'redif',
     rules = 'rules',
     sc = 'sc',
     scd = 'scd',
-    tcsh = function(path, bufnr)
-        return require('vim.filetype.detect').shell(path, M._getlines(bufnr), 'tcsh')
-    end,
+    -- tcsh = function(path, bufnr)
+    --     return require('vim.filetype.detect').shell(path, M._getlines(bufnr), 'tcsh')
+    -- end,
     sql = 'sql',
     zsql = 'sql',
     tex = 'tex',
@@ -1252,43 +1251,42 @@ local extension = {
     y = 'y',
     cmd = 'cmd',
     rul = 'rul',
-    cpy = detect_line1('^##', 'python', 'cobol'),
-    dsl = detect_line1('^%s*<!', 'dsl', 'structurizr'),
-    smil = detect_line1('<%?%s*xml.*%?>', 'xml', 'smil'),
+    -- cpy = detect_line1('^##', 'python', 'cobol'),
+    -- dsl = detect_line1('^%s*<!', 'dsl', 'structurizr'),
+    -- smil = detect_line1('<%?%s*xml.*%?>', 'xml', 'smil'),
     smi = 'smi',
     install = 'install',
     pm = 'pm',
     me = 'me',
     reg = 'reg',
     ttl = 'ttl',
-    rc = detect_rc,
-    rch = detect_rc,
+    -- rc = detect_rc,
+    -- rch = detect_rc,
     class = 'class',
     sgml = 'sgml',
     sgm = 'sgml',
-    t = detect_seq('nroff', 'perl', 'tads'),
+    -- t = detect_seq('nroff', 'perl', 'tads'),
     -- Ignored extensions
-    bak = detect_noext,
-    ['dpkg-bak'] = detect_noext,
-    ['dpkg-dist'] = detect_noext,
-    ['dpkg-old'] = detect_noext,
-    ['dpkg-new'] = detect_noext,
-    ['in'] = function(path, bufnr)
-        if vim.fs.basename(path) ~= 'configure.in' then
-            return detect_noext(path, bufnr)
-        end
-    end,
-    new = detect_noext,
-    old = detect_noext,
-    orig = detect_noext,
-    pacsave = detect_noext,
-    pacnew = detect_noext,
-    rpmsave = detect_noext,
-    rmpnew = detect_noext,
+    -- bak = detect_noext,
+    -- ['dpkg-bak'] = detect_noext,
+    -- ['dpkg-dist'] = detect_noext,
+    -- ['dpkg-old'] = detect_noext,
+    -- ['dpkg-new'] = detect_noext,
+    -- ['in'] = function(path, bufnr)
+    --     if vim.fs.basename(path) ~= 'configure.in' then
+    --         return detect_noext(path, bufnr)
+    --     end
+    -- end,
+    -- new = detect_noext,
+    -- old = detect_noext,
+    -- orig = detect_noext,
+    -- pacsave = detect_noext,
+    -- pacnew = detect_noext,
+    -- rpmsave = detect_noext,
+    -- rmpnew = detect_noext,
     -- END EXTENSION
 }
 
----@type vim.filetype.mapping
 local filename = {
     -- BEGIN FILENAME
     ['a2psrc'] = 'a2ps',
@@ -1619,7 +1617,7 @@ local filename = {
     end,
     ['.procmailrc'] = 'procmail',
     ['.procmail'] = 'procmail',
-    ['indent.pro'] = detect_seq('proto', 'indent'),
+    -- ['indent.pro'] = detect_seq('proto', 'indent'),
     ['/etc/protocols'] = 'protocols',
     INDEX = 'psf',
     INFO = 'psf',
@@ -1708,7 +1706,7 @@ local filename = {
     ['.xsdbcmdhistory'] = 'tcl',
     ['texmf.cnf'] = 'texmf',
     COPYING = 'text',
-    README = detect_seq('haredoc', 'text'),
+    -- README = detect_seq('haredoc', 'text'),
     LICENSE = 'text',
     AUTHORS = 'text',
     tfrc = 'tf',
@@ -1724,7 +1722,7 @@ local filename = {
     ['Gopkg.lock'] = 'toml',
     ['uv.lock'] = 'toml',
     ['.black'] = 'toml',
-    black = detect_line1('tool%.black', 'toml', nil),
+    -- black = detect_line1('tool%.black', 'toml', nil),
     ['trustees.conf'] = 'trustees',
     ['.ts_node_repl_history'] = 'typescript',
     ['/etc/udev/udev.conf'] = 'udevconf',
