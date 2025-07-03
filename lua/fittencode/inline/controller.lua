@@ -27,7 +27,7 @@ local CtrlObserver = require('fittencode.inline.ctrl_observer')
 local ProgressIndicator = require('fittencode.fn.progress_indicator')
 local Observer = require('fittencode.fn.observer')
 local Color = require('fittencode.color')
-local LspServer = require('fittencode.inline.integrations.lsp_server')
+local LspServer = require('fittencode.integrations.completion.lsp_server')
 
 local Status = CtrlObserver.Status
 local ProgressIndicatorObserver = CtrlObserver.ProgressIndicatorObserver
@@ -133,7 +133,7 @@ function Controller:_initialize(options)
             self:_check_availability({ vimev = args })
         end,
     })
-    if Config.completion_integrations.lsp_server then
+    if Config.integrations.completion.lsp_server then
         Log.debug('Completion integration: LSP server enabled')
         vim.api.nvim_create_autocmd({ 'FileType' }, {
             group = vim.api.nvim_create_augroup('FittenCode.Inline.LspServer', { clear = true }),

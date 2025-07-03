@@ -77,6 +77,9 @@ local DEFAULTS = {
         -- Enable inline code completion.
         ---@type boolean
         enable = true,
+        -- Auto triggering completion
+        ---@type boolean
+        auto_triggering_completion = true,
         -- Disable auto completion when the cursor is within the line.
         ---@type boolean
         disable_completion_within_the_line = false,
@@ -84,21 +87,22 @@ local DEFAULTS = {
         ---@type boolean
         disable_completion_when_delete = false,
         -- Disable auto completion when entering Insert mode `InsertEnter`.
-        disable_completion_when_insert_enter = false,
+        disable_completion_when_insert_enter = true,
         -- Disable auto completion when the popup menu is changed `CompleteChanged` `CompleteDone`.
-        disable_completion_when_pumcmp_changed = false,
+        disable_completion_when_pumcmp_changed = true,
         -- Disable auto completion when the buffer is not a file.
         disable_completion_when_nofile_buffer = true,
-        -- Auto triggering completion
-        ---@type boolean
-        auto_triggering_completion = true,
     },
-    completion_integrations = {
-        -- Enable completion as an LSP server.
-        ---@type boolean
-        lsp_server = false,
-        -- Enable completion as an `blink.cmp` source
-        blink = false
+    integrations = {
+        completion = {
+            -- Enable completion as an LSP server.
+            ---@type boolean
+            lsp_server = false,
+            -- Enable completion as an `blink.cmp` source
+            blink = false
+        },
+        commit_message = false,
+        filetype = false,
     },
     language_preference = {
         -- Language preference for display and responses in Fitten Code (excluding "Fitten Code - Document Code" function).
