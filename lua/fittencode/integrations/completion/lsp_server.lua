@@ -33,7 +33,10 @@ local capabilities = {
         triggerCharacters = _Lsp.get_trigger_characters(),
     },
     -- textDocument/inlineCompletion
-    -- inlineCompletionProvider = false,
+    -- The server provides inline completions.
+    -- @since 3.18.0
+    -- inlineCompletionProvider?: boolean | InlineCompletionOptions;
+    inlineCompletionProvider = true,
 }
 --- @type table<string,function>
 local methods = {}
@@ -92,6 +95,36 @@ methods['textDocument/completion'] = function(params, callback)
     ---@type lsp.CompletionContext
     local context = params.context
     local trigger_character = context.triggerCharacter or get_prefix_char(bufnr, row, col)
+    local res, request = Generate.request_completions(bufnr, row, col, { filename = params.textDocument.uri })
+    if not request then
+        return callback(nil, {})
+    end
+    ---@param data FittenCode.Inline.FimProtocol.ParseResult.Data
+    res:forward(function(data)
+        Log.debug('LSP Server got completion data = {}', data)
+        if data == nil or data.completions == nil then
+            return callback(nil, {})
+        end
+        local completion_list = _Lsp.lsp_completion_list_from_fim(trigger_character, params.position, data.completions)
+        return callback(nil, completion_list)
+    end)
+end
+
+--- @param params lsp.InlineCompletionParams
+--- @param callback function
+methods['textDocument/inlineCompletion'] = function(params, callback)
+    Log.debug('LSP Server got completion request = {}', params)
+    local bufnr = get_buffer_by_uri(params.textDocument.uri)
+    if bufnr == nil then
+        return callback(nil, {})
+    end
+    -- TODO: 支持替换请求
+    -- 现在 FittenCode 只支持一个 position 发起的 FIM 不支持选区
+    if params.context.selectedCompletionInfo then
+        return callback(nil, {})
+    end
+    local row, col = params.position.line, params.position.character
+    local trigger_character = get_prefix_char(bufnr, row, col)
     local res, request = Generate.request_completions(bufnr, row, col, { filename = params.textDocument.uri })
     if not request then
         return callback(nil, {})
