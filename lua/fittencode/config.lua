@@ -209,7 +209,7 @@ local DEFAULTS = {
             ['accept_next_word'] = '<C-Right>',
             ['accept_next_hunk'] = '<C-Down>', -- Edit completion only
             ['revoke'] = { '<C-Left>', '<C-Up>' },
-            ['cancel'] = '<Esc>',
+            -- ['cancel'] = '<Esc>',
         },
         chat = {
             ['add_selection_context_to_input'] = 'A-X',
