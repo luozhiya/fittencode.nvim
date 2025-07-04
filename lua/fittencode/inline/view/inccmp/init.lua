@@ -32,7 +32,9 @@ function View:_initialize(options)
     self.last_insert_pos = self.origin_pos:translate(0, self.col_delta)
     if self.col_delta ~= 0 then
         self.replaced_text = F.get_lines(self.buf, Range.of(self.origin_pos, self.last_insert_pos))
+        self.saved_last_insert_pos = vim.deepcopy(self.last_insert_pos)
     end
+    Log.debug('View:_initialize, self = {}', self)
 end
 
 function View:_render_stage(pos, lines)
@@ -203,7 +205,7 @@ function View:on_complete()
 end
 
 local function _on_cancel(self)
-    if not self.replaced_text or self.commit:is_equal(self.last_insert_pos) then
+    if not self.replaced_text then
         return
     end
     local win = vim.api.nvim_get_current_win()
