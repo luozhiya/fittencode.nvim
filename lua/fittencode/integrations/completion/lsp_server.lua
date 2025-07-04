@@ -41,12 +41,12 @@ local capabilities = {
 --- @type table<string,function>
 local methods = {}
 
---- @param callback function
+--- @param callback fun(err?: lsp.ResponseError, result: any)
 function methods.initialize(_, callback)
     return callback(nil, { capabilities = capabilities })
 end
 
---- @param callback function
+--- @param callback fun(err?: lsp.ResponseError, result: any)
 function methods.shutdown(_, callback)
     return callback(nil, nil)
 end
@@ -84,7 +84,7 @@ local function get_prefix_char(bufnr, row, col)
 end
 
 --- @param params lsp.CompletionParams
---- @param callback function
+--- @param callback fun(err?: lsp.ResponseError, result: any)
 methods['textDocument/completion'] = function(params, callback)
     Log.debug('LSP Server got completion request = {}', params)
     local bufnr = get_buffer_by_uri(params.textDocument.uri)
@@ -111,7 +111,7 @@ methods['textDocument/completion'] = function(params, callback)
 end
 
 --- @param params lsp.InlineCompletionParams
---- @param callback function
+--- @param callback fun(err?: lsp.ResponseError, result: any)
 methods['textDocument/inlineCompletion'] = function(params, callback)
     Log.debug('LSP Server got completion request = {}', params)
     local bufnr = get_buffer_by_uri(params.textDocument.uri)
@@ -140,8 +140,11 @@ methods['textDocument/inlineCompletion'] = function(params, callback)
     end)
 end
 
+---@type vim.lsp.rpc.Dispatchers
+---@diagnostic disable-next-line: missing-fields
 local dispatchers = {}
 
+---@param disp vim.lsp.rpc.Dispatchers
 local cmd = function(disp)
     -- Store dispatchers to use for showing progress notifications
     dispatchers = disp
