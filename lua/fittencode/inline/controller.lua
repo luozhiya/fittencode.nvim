@@ -135,15 +135,16 @@ function Controller:_initialize(options)
     })
     if Config.integrations.completion.lsp_server then
         Log.debug('Completion integration: LSP server enabled')
-        vim.api.nvim_create_autocmd({ 'FileType' }, {
-            group = vim.api.nvim_create_augroup('FittenCode.Inline.LspServer', { clear = true }),
-            callback = function(args)
-                if F.is_filebuf(args.buf) then
-                    Log.debug('LspServer attach = {}', args)
-                    LspServer.attach(args.buf)
-                end
-            end
-        })
+        -- vim.lsp.enable('FittenCode')
+        -- vim.api.nvim_create_autocmd({ 'FileType' }, {
+        --     group = vim.api.nvim_create_augroup('FittenCode.Inline.LspServer', { clear = true }),
+        --     callback = function(args)
+        --         if F.is_filebuf(args.buf) then
+        --             Log.debug('LspServer attach = {}', args)
+        --             LspServer.attach(args.buf)
+        --         end
+        --     end
+        -- })
     end
 
     local filtered = {}

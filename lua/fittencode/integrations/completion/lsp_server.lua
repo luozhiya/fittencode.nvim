@@ -187,4 +187,10 @@ function M.client_id()
     return M._instance
 end
 
+function M.setup(options)
+    options = options or {}
+    vim.lsp.config['FittenCode'] = { cmd = cmd }
+    vim.lsp.enable('FittenCode')
+end
+
 return M
