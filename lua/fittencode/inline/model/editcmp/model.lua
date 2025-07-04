@@ -107,4 +107,8 @@ function Model:any_accepted()
     return self.commit_index > 0
 end
 
+function Model:overwritten()
+    return false
+end
+
 return Model

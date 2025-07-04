@@ -17,7 +17,7 @@ local M = {}
 ---@field context string
 
 ---@class FittenCode.Inline.FimProtocol.ParseResult
----@field status 'error'|'success'|'no_completion'
+---@field status 'error'|'success'|'no_completion'|'repeat_remaining'
 ---@field message? string
 ---@field data? FittenCode.Inline.FimProtocol.ParseResult.Data
 
@@ -35,7 +35,7 @@ local M = {}
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion
 ---@param buf integer
 ---@param position FittenCode.Position
----@return FittenCode.Inline.IncrementalCompletion[]?
+---@return FittenCode.Inline.IncrementalCompletion[]?, string?
 local function build_inccmp_items(response, buf, position)
     local clean_text = vim.fn.substitute(
         response.generated_text or '',
@@ -47,7 +47,7 @@ local function build_inccmp_items(response, buf, position)
     clean_text = clean_text:gsub('\r', '\n')
     local generated_text = clean_text .. (response.ex_msg or '')
     if generated_text == '' then
-        return
+        return nil, 'no_completion'
     end
 
     -- 1
@@ -67,6 +67,11 @@ local function build_inccmp_items(response, buf, position)
     })))
     Log.debug('line_remaining = {}', line_remaining)
 
+    if generated_text == line_remaining then
+        -- 有时会返回一样的字符串，需要过滤掉
+        return nil, 'repeat_remaining'
+    end
+
     local computed = {}
     for _, completion in ipairs(completions) do
         local col_delta = Unicode.utf_to_byteindex(line_remaining, 'utf-16', completion.character_delta)
@@ -84,19 +89,19 @@ local function build_inccmp_items(response, buf, position)
         ::continue::
     end
 
-    return computed
+    return computed, 'success'
 end
 
 ---@param response FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion
 ---@param buf integer
 ---@param position FittenCode.Position
----@return FittenCode.Inline.EditCompletion[]?
+---@return FittenCode.Inline.EditCompletion[]?, string?
 local function build_editcmp_items(response, buf, position)
     if not response.delete_offsets or not response.insert_offsets then
-        return
+        return nil, 'no_completion'
     end
     if #response.delete_offsets == 0 and #response.insert_offsets == 0 then
-        return
+        return nil, 'no_completion'
     end
     Log.debug('build_editcmp_items, response = {}', response)
 
@@ -113,7 +118,7 @@ local function build_editcmp_items(response, buf, position)
     local display_lines = vim.list_slice(all_lines, res_start_line + 1, res_end_line + 1)
 
     if #display_lines == 0 then
-        return
+        return nil, 'no_completion'
     end
 
     local completions = {}
@@ -127,7 +132,7 @@ local function build_editcmp_items(response, buf, position)
         item.end_line = position.row + ori_end_line
     end
     table.insert(completions, item)
-    return completions
+    return completions, 'success'
 end
 
 ---@class FittenCode.Inline.FimProtocol.ParseOptions
@@ -148,17 +153,17 @@ function M.parse(response, options)
         }
     end
 
-    local completions
+    local completions, status
     if options.mode == 'inccmp' then
         ---@diagnostic disable-next-line: param-type-mismatch
-        completions = build_inccmp_items(response, options.buf, options.position)
+        completions, status = build_inccmp_items(response, options.buf, options.position)
     else
         ---@diagnostic disable-next-line: param-type-mismatch
-        completions = build_editcmp_items(response, options.buf, options.position)
+        completions, status = build_editcmp_items(response, options.buf, options.position)
     end
     if not completions or #completions == 0 then
         return {
-            status = 'no_completion',
+            status = status,
         }
     end
 

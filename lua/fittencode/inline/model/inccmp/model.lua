@@ -299,4 +299,8 @@ function Model:any_accepted()
     return #self.commit_ranges > 0
 end
 
+function Model:overwritten()
+    return #self.placeholder_ranges == 0
+end
+
 return Model

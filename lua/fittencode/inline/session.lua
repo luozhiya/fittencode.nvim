@@ -279,11 +279,16 @@ end
 function Session:terminate()
     debug_log(self, 'Session terminated')
     if self.session_event == SESSION_EVENT.TERMINATED then
+        debug_log(self, 'Session is already terminated')
         return
     end
     self:abort_and_clear_requests()
     if self.session_event == SESSION_EVENT.INTERACTIVE then
-        if not self.model:any_accepted() then
+        -- 如果没有 placeholder，又没有任何 accept，那么当取消时，需要恢复原状
+        -- 但是 editcmp 没有 placeholder 概念
+        -- 在 inccmp 中，当生成的 generated_text 和 remaining_text 长度一样，且没有产生 placeholders 时，需要恢复原状
+        if not self.model:any_accepted() and self.model:overwritten() then
+            debug_log(self, 'No accepted completion, cancel inline completion')
             self.view:on_cancel()
         end
         self.view:clear()
@@ -415,7 +420,7 @@ function Session:send_completions()
             FimGenerate.update_last_version(self.filename, self.version, self.cachedata)
             debug_log(self, 'Updated FIM last version')
         end
-        if parse_result.status == 'no_completion' then
+        if parse_result.status == 'no_completion' or parse_result.status == 'repeat_remaining' then
             debug_log(self, 'No more suggestions')
             self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
             return Promise.resolved(nil)

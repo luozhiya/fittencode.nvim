@@ -118,4 +118,8 @@ function Model:any_accepted()
     return assert(self:selected_completion()):any_accepted()
 end
 
+function Model:overwritten()
+    return assert(self:selected_completion()):overwritten()
+end
+
 return Model
