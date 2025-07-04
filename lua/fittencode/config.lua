@@ -202,14 +202,21 @@ local DEFAULTS = {
     -- Default keymaps for Fitten Code.
     keymaps = {
         inline = {
-            ['inline_completion'] = '<A-\\>',
-            ['edit_completion'] = '<A-o>',
-            ['accept_all'] = '<Tab>',
-            ['accept_next_line'] = '<C-Down>',
-            ['accept_next_word'] = '<C-Right>',
-            ['accept_next_hunk'] = '<C-Down>', -- Edit completion only
-            ['revoke'] = { '<C-Left>', '<C-Up>' },
-            -- ['cancel'] = '<Esc>',
+            inccmp = {
+                ['inline_completion'] = '<A-\\>',
+                ['accept_all'] = '<Tab>',
+                ['accept_next_line'] = '<C-Down>',
+                ['accept_next_word'] = '<C-Right>',
+                ['revoke'] = { '<C-Left>', '<C-Up>' },
+                -- ['cancel'] = '<Esc>',
+            },
+            editcmp = {
+                ['edit_completion'] = '<A-o>',
+                ['accept_all'] = '<Tab>',
+                ['accept_next_hunk'] = '<C-Down>',
+                ['revoke'] = { '<C-Left>', '<C-Up>' },
+                ['cancel'] = '<Esc>',
+            }
         },
         chat = {
             ['add_selection_context_to_input'] = 'A-X',

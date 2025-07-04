@@ -204,24 +204,24 @@ function Session:on_cancel()
         self:terminate()
         return
     end
-    return vim.api.nvim_replace_termcodes(Config.keymaps.inline['cancel'], true, false, true)
+    return vim.api.nvim_replace_termcodes(Config.keymaps.inline[self.mode]['cancel'], true, false, true)
 end
 
 function Session:set_keymaps()
     if self.mode == 'inccmp' then
         self.keymaps = {
-            { lhs = Config.keymaps.inline['accept_all'],       rhs = function() self:accept('all') end },
-            { lhs = Config.keymaps.inline['accept_next_line'], rhs = function() self:accept('line') end },
-            { lhs = Config.keymaps.inline['accept_next_word'], rhs = function() self:accept('word') end },
-            { lhs = Config.keymaps.inline['revoke'],           rhs = function() self:revoke() end },
-            { lhs = Config.keymaps.inline['cancel'],           rhs = function() return self:on_cancel() end, options = { expr = true } }
+            { lhs = Config.keymaps.inline[self.mode]['accept_all'],       rhs = function() self:accept('all') end },
+            { lhs = Config.keymaps.inline[self.mode]['accept_next_line'], rhs = function() self:accept('line') end },
+            { lhs = Config.keymaps.inline[self.mode]['accept_next_word'], rhs = function() self:accept('word') end },
+            { lhs = Config.keymaps.inline[self.mode]['revoke'],           rhs = function() self:revoke() end },
+            { lhs = Config.keymaps.inline[self.mode]['cancel'],           rhs = function() return self:on_cancel() end, options = { expr = true } }
         }
     elseif self.mode == 'editcmp' then
         self.keymaps = {
-            { lhs = Config.keymaps.inline['accept_all'],       rhs = function() self:accept('all') end },
-            { lhs = Config.keymaps.inline['accept_next_hunk'], rhs = function() self:accept('hunk') end },
-            { lhs = Config.keymaps.inline['revoke'],           rhs = function() self:revoke() end },
-            { lhs = Config.keymaps.inline['cancel'],           rhs = function() return self:on_cancel() end, options = { expr = true } }
+            { lhs = Config.keymaps.inline[self.mode]['accept_all'],       rhs = function() self:accept('all') end },
+            { lhs = Config.keymaps.inline[self.mode]['accept_next_hunk'], rhs = function() self:accept('hunk') end },
+            { lhs = Config.keymaps.inline[self.mode]['revoke'],           rhs = function() self:revoke() end },
+            { lhs = Config.keymaps.inline[self.mode]['cancel'],           rhs = function() return self:on_cancel() end, options = { expr = true } }
         }
     end
     for _, v in ipairs(self.keymaps) do

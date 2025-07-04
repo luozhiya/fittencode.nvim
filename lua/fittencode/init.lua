@@ -35,7 +35,7 @@ function M.setup(options)
         end,
     })
 
-    local keys = { Config.keymaps.inline['inline_completion'], Config.keymaps.inline['edit_completion'] }
+    local keys = { Config.keymaps.inline.inccmp['inline_completion'], Config.keymaps.inline.editcmp['edit_completion'] }
     for _, lhs in ipairs(keys) do
         vim.keymap.set('i', lhs, function()
             pcall(vim.keymap.del, 'i', lhs)

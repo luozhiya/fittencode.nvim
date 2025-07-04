@@ -85,8 +85,8 @@ function Controller:_initialize(options)
     self.no_more_suggestion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
 
     self.keymaps = {
-        { lhs = Config.keymaps.inline['inline_completion'], rhs = function() self:trigger_inline_suggestion_by_shortcut() end },
-        { lhs = Config.keymaps.inline['edit_completion'],   rhs = function() self:trigger_edit_completion_by_shortcut() end },
+        { lhs = Config.keymaps.inline.inccmp['inline_completion'], rhs = function() self:trigger_inline_suggestion_by_shortcut() end },
+        { lhs = Config.keymaps.inline.editcmp['edit_completion'],  rhs = function() self:trigger_edit_completion_by_shortcut() end },
     }
     for _, v in ipairs(self.keymaps) do
         local lhs
