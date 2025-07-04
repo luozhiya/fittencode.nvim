@@ -1,6 +1,8 @@
 ---@type FittenCode.API | { setup : function }
 local M = {}
 
+local _initialized = false
+
 ---@param options? FittenCode.Config
 function M.setup(options)
     if vim.fn.has('nvim-0.11') == 0 then
@@ -13,12 +15,18 @@ function M.setup(options)
     -- Lazy loading
     require('fittencode.commands')
 
+    local function _loading()
+        require('fittencode.chat')
+        require('fittencode.inline')
+        require('fittencode.integrations')
+    end
+
     vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteChanged', 'FileType' }, {
-        group = vim.api.nvim_create_augroup('FittenCode.LazyLoading.Inline', { clear = true }),
+        group = vim.api.nvim_create_augroup('FittenCode.LazyLoading', { clear = true }),
         pattern = '*',
         callback = function(ev)
-            vim.api.nvim_del_augroup_by_name('FittenCode.LazyLoading.Inline')
-            require('fittencode.inline')
+            vim.api.nvim_del_augroup_by_name('FittenCode.LazyLoading')
+            _loading()
             vim.api.nvim_exec_autocmds(ev.event, {
                 buffer = ev.buf,
                 modeline = false,
@@ -31,15 +39,18 @@ function M.setup(options)
     for _, lhs in ipairs(keys) do
         vim.keymap.set('i', lhs, function()
             pcall(vim.keymap.del, 'i', lhs)
-            require('fittencode.inline')
+            _loading()
             local feed = vim.api.nvim_replace_termcodes('<Ignore>' .. lhs, true, true, true)
             vim.api.nvim_feedkeys(feed, 'i', false)
         end, { expr = true })
     end
+
+    _initialized = true
 end
 
 return setmetatable(M, {
     __index = function(_, key)
+        assert(_initialized, 'FittenCode is not initialized. Please call `require("fittencode").setup()` first.')
         return function(...)
             return require('fittencode.api')[key](...)
         end
