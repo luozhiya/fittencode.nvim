@@ -94,11 +94,15 @@ function Controller:_initialize(options)
             lhs = { v.lhs }
         elseif type(v.lhs) == 'table' then
             lhs = v.lhs
+        else
+            Log.error('Invalid keymap lhs = {}', v.lhs)
+            goto continue
         end
         ---@cast lhs string[]
         for _, key in ipairs(lhs) do
             vim.keymap.set('i', key, v.rhs, vim.tbl_deep_extend('force', { noremap = true, silent = true }, v.options or {}))
         end
+        ::continue::
     end
 
     local trigger_events = { 'TextChangedI' }
