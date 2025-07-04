@@ -7,6 +7,22 @@ local Log = require('fittencode.log')
 
 local M = {}
 
+---@return string[]
+function M.get_trigger_characters()
+    local chars = {}
+    if #chars == 0 then
+        for i = 32, 126 do
+            chars[#chars + 1] = string.char(i)
+        end
+        chars[#chars + 1] = ' '
+        chars[#chars + 1] = '\n'
+        chars[#chars + 1] = '\r'
+        chars[#chars + 1] = '\r\n'
+        chars[#chars + 1] = '\t'
+    end
+    return chars
+end
+
 ---@param fim_completions FittenCode.Inline.IncrementalCompletion[]
 function M.lsp_completion_list_from_fim(trigger_character, position, fim_completions)
     ---@type lsp.CompletionList
