@@ -145,7 +145,11 @@ local dispatchers = {}
 local cmd = function(disp)
     -- Store dispatchers to use for showing progress notifications
     dispatchers = disp
-    local res, closing, request_id = {}, false, 0
+
+    ---@type vim.lsp.rpc.PublicClient
+    ---@diagnostic disable-next-line: missing-fields
+    local res = {}
+    local closing, request_id = false, 0
 
     function res.request(method, params, callback)
         local method_impl = methods[method]
@@ -163,7 +167,7 @@ local cmd = function(disp)
         return false
     end
 
-    function res.is_closed()
+    function res.is_closing()
         return closing
     end
 
