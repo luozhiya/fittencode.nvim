@@ -204,7 +204,7 @@ function View:on_complete()
     end, EVENTIGNORES)
 end
 
-local function _on_cancel(self)
+local function _restore(self)
     if not self.replaced_text then
         return
     end
@@ -220,7 +220,7 @@ end
 
 -- 没有任何 Accept，且没有任何 placeholder?，按 ESC 取消时恢复
 function View:on_cancel()
-    vim.schedule(function() _on_cancel(self) end)
+    vim.schedule(function() _restore(self) end)
 end
 
 function View:register_message_receiver(receive_view_message)
