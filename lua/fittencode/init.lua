@@ -21,7 +21,7 @@ function M.setup(options)
         require('fittencode.integrations')
     end
 
-    vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteChanged', 'FileType' }, {
+    vim.api.nvim_create_autocmd({ 'TextChangedI', 'CompleteDone', 'FileType' }, {
         group = vim.api.nvim_create_augroup('FittenCode.LazyLoading', { clear = true }),
         pattern = '*',
         callback = function(ev)

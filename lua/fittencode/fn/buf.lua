@@ -197,7 +197,7 @@ function M.offset_at_u32(buf, position)
             return
         end
         vim.tbl_map(function(line)
-            local byte_counts = Unicode.utf8_position_index(line).byte_counts
+            local byte_counts = Unicode.utf8_layout(line).cumulative_units
             offset = offset + #byte_counts
         end, lines)
     end)
@@ -231,7 +231,7 @@ function M.position_at_u32(buf, offset)
                 })
                 break
             end
-            local byte_counts = Unicode.utf8_position_index(line).byte_counts
+            local byte_counts = Unicode.utf8_layout(line).cumulative_units
             if offset > #byte_counts then
                 index = index + 1
             else
@@ -349,7 +349,7 @@ function M.round_col_start(line, col)
         return 1
     end
 
-    local pos = Unicode.utf8_position_index(line).start_indices
+    local pos = Unicode.utf8_layout(line).utf8_starts
     for i = 1, #pos do
         if col >= pos[i] and (i == #pos or (i ~= #pos and col < pos[i + 1])) then
             col = pos[i]
@@ -366,7 +366,7 @@ function M.round_col_end(line, col)
     if col == -1 then
         return #line
     end
-    local pos = Unicode.utf8_position_index(line).start_indices
+    local pos = Unicode.utf8_layout(line).utf8_starts
     for i = 1, #pos do
         if i == #pos then
             col = #line
