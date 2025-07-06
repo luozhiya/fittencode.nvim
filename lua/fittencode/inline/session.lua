@@ -80,7 +80,7 @@ local function _is_ascii_only(text)
         end
         return true
     else
-        if #Unicode.utf8_position_index(text).byte_counts == #text then
+        if #Unicode.utf8_layout(text).cumulative_units == #text then
             return true
         end
     end
@@ -143,12 +143,14 @@ function Session:_new_view()
             buf = self.buf,
             position = self.position,
             col_delta = self.model:get_col_delta(),
+            session_id = self.id,
         })
     else
         ---@diagnostic disable-next-line: return-type-mismatch
         return EditView.new({
             buf = self.buf,
             position = self.position,
+            session_id = self.id,
         })
     end
 end
@@ -200,10 +202,13 @@ function Session:revoke()
 end
 
 function Session:on_cancel()
+    debug_log(self, 'Cancel inline completion')
     if self:is_interactive() then
+        debug_log(self, 'Cancel inline completion in interactive mode')
         self:terminate()
         return
     end
+    debug_log(self, 'Cancel inline completion in non-interactive mode, return EXPR cancel termcode')
     return vim.api.nvim_replace_termcodes(Config.keymaps.inline[self.mode]['cancel'], true, false, true)
 end
 
@@ -295,7 +300,7 @@ function Session:terminate()
             debug_log(self, 'No accepted completion, cancel inline completion')
             self.view:on_cancel()
         end
-        self.view:clear()
+        self.view:destroy()
         self:restore_keymaps()
         self:restore_onkey()
     end

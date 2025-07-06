@@ -25,10 +25,12 @@ end
 
 function View:_initialize(options)
     self.buf = options.buf
+    self.session_id = options.session_id
     self.origin_pos = options.position
     self.col_delta = options.col_delta
     self.commit = options.position
-    self.completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.IncrementalCompletion.View')
+    self.completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.IncrementalCompletion.View' .. '(' .. self.session_id .. ')')
+    -- assert(#vim.api.nvim_buf_get_extmarks(self.buf, self.completion_ns, 0, -1, {}) == 0)
     self.last_insert_pos = self.origin_pos:translate(0, self.col_delta)
     if self.col_delta ~= 0 then
         self.replaced_text = F.get_lines(self.buf, Range.of(self.origin_pos, self.last_insert_pos))
@@ -38,7 +40,7 @@ function View:_initialize(options)
 end
 
 function View:_render_stage(pos, lines)
-    -- Log.debug('View:render_stage, pos = {}, lines = {}', pos, lines)
+    Log.debug('View:render_stage, pos = {}, lines = {}', pos, lines)
 
     local virt_lines = {}
     for _, line in ipairs(lines) do
@@ -72,8 +74,13 @@ function View:clear()
     vim.api.nvim_buf_clear_namespace(self.buf, self.completion_ns, 0, -1)
 end
 
+function View:destroy()
+    Log.debug('view destroy, session_id = {}', self.session_id)
+    self:clear()
+end
+
 function View:_delete_text(start_pos, end_pos)
-    -- Log.debug('View:delete_text, start_pos = {}, end_pos = {}', start_pos, end_pos)
+    Log.debug('View:delete_text, start_pos = {}, end_pos = {}', start_pos, end_pos)
     -- Indexing is zero-based. Row indices are end-inclusive, and column indices are end-exclusive.
     if start_pos:is_equal(end_pos) then
         return
@@ -86,7 +93,7 @@ function View:_delete_text(start_pos, end_pos)
 end
 
 function View:_insert_text(pos, lines)
-    -- Log.debug('View:insert_text, pos = {}, lines = {}', pos, lines)
+    Log.debug('View:insert_text, pos = {}, lines = {}', pos, lines)
     if vim.tbl_isempty(lines) then
         return
     end
@@ -94,10 +101,9 @@ function View:_insert_text(pos, lines)
 end
 
 function View:update(state)
-    local win = vim.api.nvim_get_current_win()
-
     Log.debug('update view, state = {}', state)
 
+    local win = vim.api.nvim_get_current_win()
     local function _set_text(lines)
         local old_commit = vim.deepcopy(self.commit)
         self.commit = self.origin_pos

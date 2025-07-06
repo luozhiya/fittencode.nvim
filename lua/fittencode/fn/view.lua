@@ -57,11 +57,15 @@ function M.ignoreevent_wrap(fx, ignore, timeout)
 
     vim.o.eventignore = ignore
 
+    -- 这里必须是 check_call
     local ret = Fn.check_call(fx)
 
-    vim.defer_fn(function()
+    -- vim.defer_fn(function()
+    --     vim.o.eventignore = eventignore
+    -- end, timeout)
+    vim.schedule(function()
         vim.o.eventignore = eventignore
-    end, timeout)
+    end)
 
     return ret
 end

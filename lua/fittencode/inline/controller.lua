@@ -105,10 +105,9 @@ function Controller:_initialize(options)
         ::continue::
     end
 
-    local trigger_events = { 'TextChangedI' }
+    local trigger_events = { 'TextChangedI', 'CompleteDone' }
     if not Config.inline_completion.disable_completion_when_pumcmp_changed then
         trigger_events[#trigger_events + 1] = 'CompleteChanged'
-        trigger_events[#trigger_events + 1] = 'CompleteDone'
     end
     if not Config.inline_completion.disable_completion_when_insert_enter then
         trigger_events[#trigger_events + 1] = 'InsertEnter'
@@ -295,34 +294,35 @@ end
 
 ---@param vimev vim.api.keyset.create_autocmd.callback_args
 ---@param force boolean?
+---@return integer?, FittenCode.Position?, boolean
 function Controller:_preflight_check(vimev, force)
     local buf = vim.api.nvim_get_current_buf()
     if vim.api.nvim_get_mode().mode:sub(1, 1) ~= 'i' or not self:is_enabled(buf) then
         Log.debug('Preflight check failed, mode = {}, is_enabled = {}', vim.api.nvim_get_mode().mode, self:is_enabled(buf))
-        return
+        return nil, nil, true
     end
     local api_key_manager = Client.get_api_key_manager()
     if not api_key_manager:has_fitten_access_token() then
         Log.debug('Preflight check failed, has_fitten_access_token = {}', api_key_manager:has_fitten_access_token())
-        return
+        return nil, nil, true
     end
     if vimev and vim.tbl_contains(self.filter_events, vimev.event) then
         Log.debug('Preflight check failed, filter_events = {}', self.filter_events)
-        return
+        return nil, nil, true
     end
     local position = F.position(vim.api.nvim_get_current_win())
     assert(position)
     local within_the_line = is_within_the_line(position)
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
         Log.debug('Preflight check failed, within_the_line = {}', within_the_line)
-        return
+        return nil, nil, true
     end
     force = (force == nil) and false or force
     if not force and self:get_active_session() and self:get_active_session():is_match_commit_position(position) then
         Log.debug('Preflight check failed, is_match_commit_position = {}', self:get_active_session():is_match_commit_position(position))
-        return
+        return nil, nil, false
     end
-    return buf, position
+    return buf, position, true
 end
 
 ---@param buf integer
@@ -337,6 +337,7 @@ function Controller:_make_session(buf, position, version, options)
             message = 'Preflight check failed'
         })
     end
+    self:terminate_sessions()
     self.selected_session_id = assert(Fn.generate_short_id(13))
     local session = Session.new({
         buf = buf,
@@ -364,14 +365,17 @@ function Controller:trigger_inline_suggestion(options)
     options = options or {}
     options.mode = options.mode or 'inccmp'
     local debounced = options.debounced or false
-    local buf, position = self:_preflight_check(options.vimev, options.force)
+    -- 有时 Cancel 事件没有触发，反而触发了 Trigger 事件，这时也需要终止当前 Session，且模式为 n ? 不明原因
+    local buf, position, need_terminate = self:_preflight_check(options.vimev, options.force)
+    if need_terminate then
+        self:terminate_sessions()
+    end
     if not buf or not position then
         return Promise.rejected({
             message = 'Preflight check failed'
         })
     end
     local version = F.version(buf)
-    self:terminate_sessions()
     if debounced then
         if not self.debounced_make_session then
             self.debounced_make_session = Fn.debounce(function(...) return self:_make_session(...) end, 150)
@@ -396,6 +400,7 @@ function Controller:on_session_event(data)
         self:_emit({ event = CONTROLLER_EVENT.INLINE_RUNNING, data = { id = data.id } })
         self:_emit({ event = CONTROLLER_EVENT.SESSION_ADDED, data = { id = data.id } })
     elseif data.session_event == SESSION_EVENT.TERMINATED then
+        Log.debug('Controller received session terminated event, event session id = {}, selected_session_id = {}', data.id, self.selected_session_id)
         self:_emit({ event = CONTROLLER_EVENT.SESSION_DELETED, data = { id = data.id } })
         self.sessions[data.id] = nil
         if not self.selected_session_id or self.selected_session_id == data.id then

@@ -3,6 +3,7 @@
 ---@field meta_datas FittenCode.Inline.Prompt.MetaDatas
 
 -- 元信息
+-- UTF16 和 UTF8 是否只要填一个即可？
 ---@class FittenCode.Inline.Prompt.MetaDatas
 ---@field plen number 对比结果的相似前缀的长度 UTF-16
 ---@field slen number 对比结果的相似后缀的长度 UTF-16
@@ -35,6 +36,7 @@
 ---@field register_message_receiver function
 ---@field on_complete function
 ---@field on_cancel function
+---@field destroy function
 
 ---@alias FittenCode.Inline.IncAcceptScope 'all' | 'char' | 'word' | 'line'
 ---@alias FittenCode.Inline.EditAcceptScope 'all' | 'hunk'

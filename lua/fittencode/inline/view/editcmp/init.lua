@@ -27,13 +27,20 @@ function View.new(options)
 end
 
 function View:_initialize(options)
+    self.session_id = options.session_id
     self.buf = options.buf
-    self.completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.EditCompletion.View')
+    self.completion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.EditCompletion.View' .. '(' .. self.session_id .. ')')
+    assert(#vim.api.nvim_buf_get_extmarks(self.buf, self.completion_ns, 0, -1, {}) == 0)
     self:_setup_autocmds()
 end
 
 function View:clear()
     vim.api.nvim_buf_clear_namespace(self.buf, self.completion_ns, 0, -1)
+end
+
+function View:destroy()
+    Log.debug('view destroy, session_id = {}', self.session_id)
+    self:clear()
 end
 
 function View:_render_inserted(pos, lines, hlgroup)
