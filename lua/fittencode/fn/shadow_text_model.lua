@@ -13,15 +13,15 @@ References:
 local Unicode = require('fittencode.fn.unicode')
 local Position = require('fittencode.fn.position')
 
----@class FittenCode.MirrorTextModel
+---@class FittenCode.ShadowTextModel
 ---@field lines string[]
 ---@field eol string
 ---@field eol_length integer
----@field computed FittenCode.MirrorTextModel.Computed
-local MirrorTextModel = {}
-MirrorTextModel.__index = MirrorTextModel
+---@field computed FittenCode.ShadowTextModel.Computed
+local ShadowTextModel = {}
+ShadowTextModel.__index = ShadowTextModel
 
----@class FittenCode.MirrorTextModel.Computed
+---@class FittenCode.ShadowTextModel.Computed
 ---@field u16_line integer
 ---@field u16_indices table<integer, integer>
 ---@field sum_index integer
@@ -29,20 +29,20 @@ MirrorTextModel.__index = MirrorTextModel
 ---@field full_text? string
 ---@field layouts FittenCode.Unicode.MultiEncodingStringLayout[]
 
----@class FittenCode.MirrorTextModel.InitializeOptions
+---@class FittenCode.ShadowTextModel.InitializeOptions
 ---@field lines string[]
 ---@field eol string
 
----@param options FittenCode.MirrorTextModel.InitializeOptions
-function MirrorTextModel.new(options)
+---@param options FittenCode.ShadowTextModel.InitializeOptions
+function ShadowTextModel.new(options)
     assert(options)
-    local self = setmetatable({}, MirrorTextModel)
+    local self = setmetatable({}, ShadowTextModel)
     self:_initialize(options)
     return self
 end
 
----@param options FittenCode.MirrorTextModel.InitializeOptions
-function MirrorTextModel:_initialize(options)
+---@param options FittenCode.ShadowTextModel.InitializeOptions
+function ShadowTextModel:_initialize(options)
     assert(options and options.lines and options.eol and (options.eol == '\n' or options.eol == '\r' or options.eol == '\r\n'))
     self.lines = options.lines
     self.eol = options.eol
@@ -57,7 +57,7 @@ function MirrorTextModel:_initialize(options)
     }
 end
 
-function MirrorTextModel:_compute_lines(target_line)
+function ShadowTextModel:_compute_lines(target_line)
     if self.computed.u16_line >= target_line then
         return
     end
@@ -68,12 +68,12 @@ function MirrorTextModel:_compute_lines(target_line)
     self.computed.u16_line = target_line
 end
 
-function MirrorTextModel:_get_u16_index(line)
+function ShadowTextModel:_get_u16_index(line)
     self:_compute_lines(line)
     return assert(self.computed.u16_indices[line + 1])
 end
 
-function MirrorTextModel:_compute_prefix_sum(target_line)
+function ShadowTextModel:_compute_prefix_sum(target_line)
     if self.computed.sum_index >= target_line then
         return
     end
@@ -83,24 +83,24 @@ function MirrorTextModel:_compute_prefix_sum(target_line)
     self.computed.sum_index = target_line
 end
 
-function MirrorTextModel:_get_prefix_sum(line)
+function ShadowTextModel:_get_prefix_sum(line)
     self:_compute_prefix_sum(line)
     return self.computed.sum_prefix[line + 1 - 1] or 0
 end
 
 ---@param line integer 0-based
 ---@return string
-function MirrorTextModel:line_at(line)
+function ShadowTextModel:line_at(line)
     return self.lines[line + 1]
 end
 
-function MirrorTextModel:line_count()
+function ShadowTextModel:line_count()
     return #self.lines
 end
 
 ---@param vim_position FittenCode.Position
 ---@return lsp.Position
-function MirrorTextModel:to_lsp_position(vim_position)
+function ShadowTextModel:to_lsp_position(vim_position)
     local row = vim_position.row
     local pi = self:_get_layout(row)
     local col = Unicode.byte_to_utfindex_by_layout(pi, 'utf-16', vim_position.col + 1) - 1
@@ -109,7 +109,7 @@ end
 
 ---@param lsp_position lsp.Position
 ---@return FittenCode.Position
-function MirrorTextModel:to_vim_position(lsp_position)
+function ShadowTextModel:to_vim_position(lsp_position)
     local row = lsp_position.line
     local pi = self:_get_layout(row)
     local col = Unicode.utf_to_byteindex_by_layout(pi, 'utf-16', lsp_position.character + 1) - 1
@@ -118,7 +118,7 @@ end
 
 ---@param position lsp.Position
 ---@return lsp.Position
-function MirrorTextModel:_validate_position(position)
+function ShadowTextModel:_validate_position(position)
     if #self.lines == 0 then
         return { line = 0, character = 0 }
     end
@@ -140,7 +140,7 @@ function MirrorTextModel:_validate_position(position)
     return { line = line, character = character }
 end
 
-function MirrorTextModel:_validate_offset(offset)
+function ShadowTextModel:_validate_offset(offset)
     if offset < 0 then
         return 0
     elseif offset >= self:_get_prefix_sum(#self.lines - 1) then
@@ -151,7 +151,7 @@ end
 
 ---@param offset integer
 ---@return lsp.Position
-function MirrorTextModel:position_at(offset)
+function ShadowTextModel:position_at(offset)
     offset = self:_validate_offset(offset)
     local low = 0
     local high = #self.lines - 1
@@ -179,7 +179,7 @@ end
 -- Converts the position to a zero-based offset.
 ---@param position lsp.Position
 ---@return integer
-function MirrorTextModel:offset_at(position)
+function ShadowTextModel:offset_at(position)
     position = self:_validate_position(position)
     assert(position.line >= self.computed.u16_line)
     return self:_get_prefix_sum(position.line - 1) + position.character
@@ -187,7 +187,7 @@ end
 
 ---@param line integer
 ---@return FittenCode.Unicode.MultiEncodingStringLayout
-function MirrorTextModel:_get_layout(line)
+function ShadowTextModel:_get_layout(line)
     if not self.computed.layouts[line + 1] then
         self.computed.layouts[line + 1] = Unicode.multi_encoding_layout(self.lines[line + 1])
     end
@@ -196,7 +196,7 @@ end
 
 ---@param range? lsp.Range
 ---@return string
-function MirrorTextModel:get_text(range)
+function ShadowTextModel:get_text(range)
     if not range then
         if not self.computed.full_text then
             self.computed.full_text = table.concat(self.lines, self.eol)
@@ -228,7 +228,7 @@ end
 ---@param line integer
 ---@param character integer
 ---@return integer, integer
-function MirrorTextModel:round_start(encoding, line, character)
+function ShadowTextModel:round_start(encoding, line, character)
     local pi = self:_get_layout(line)
     local start = Unicode.round_start_by_layout(pi, encoding, character + 1) - 1
     return line, start
@@ -238,10 +238,10 @@ end
 ---@param line integer
 ---@param character integer
 ---@return integer, integer
-function MirrorTextModel:round_end(encoding, line, character)
+function ShadowTextModel:round_end(encoding, line, character)
     local pi = self:_get_layout(line)
     local end_ = Unicode.round_end_by_layout(pi, encoding, character + 1) - 1
     return line, end_
 end
 
-return MirrorTextModel
+return ShadowTextModel

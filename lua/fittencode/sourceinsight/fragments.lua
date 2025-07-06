@@ -1,14 +1,14 @@
-local MirrorDocument = require('fittencode.fn.mirror_document')
+local ShadowDocument = require('fittencode.fn.mirror_document')
 
 local M = {}
 
 ---@class FittenCode.SourceInsight.GetFragmentOptions
----@field document FittenCode.MirrorDocument
+---@field document FittenCode.ShadowDocument
 ---@field position FittenCode.Position
 ---@field threshold integer
 ---@field direction 'left' | 'right' | 'middle'
 
----@param document FittenCode.MirrorDocument
+---@param document FittenCode.ShadowDocument
 ---@param position FittenCode.Position
 ---@param threshold integer
 local function get_fragment_by_document(document, position, threshold)

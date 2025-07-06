@@ -1,71 +1,71 @@
-local MirrorTextModel = require('fittencode.fn.mirror_text_model')
+local ShadowTextModel = require('fittencode.fn.shadow_text_model')
 
----@class FittenCode.MirrorDocument
+---@class FittenCode.ShadowDocument
 ---@field buffer integer
 ---@field version integer
 ---@field lines string[]
-local MirrorDocument = {}
-MirrorDocument.__index = MirrorDocument
+local ShadowDocument = {}
+ShadowDocument.__index = ShadowDocument
 
----@class FittenCode.MirrorDocument.InitializeOptions
+---@class FittenCode.ShadowDocument.InitializeOptions
 ---@field buffer integer
 
----@param options FittenCode.MirrorDocument.InitializeOptions
-function MirrorDocument.new(options)
+---@param options FittenCode.ShadowDocument.InitializeOptions
+function ShadowDocument.new(options)
     assert(options)
-    local self = setmetatable({}, MirrorDocument)
+    local self = setmetatable({}, ShadowDocument)
     self:_initialize(options)
     return self
 end
 
----@param options FittenCode.MirrorDocument.InitializeOptions
-function MirrorDocument:_initialize(options)
+---@param options FittenCode.ShadowDocument.InitializeOptions
+function ShadowDocument:_initialize(options)
     assert(type(options.buffer) == 'number', 'buffer must be a number')
     assert(vim.api.nvim_buf_is_valid(options.buffer), 'buffer is not valid')
     self.buffer = options.buffer
     self.version = vim.api.nvim_buf_get_changedtick(self.buffer)
     self.lines = vim.api.nvim_buf_get_lines(self.buffer, 0, -1, false)
-    self.model = MirrorTextModel.new({ lines = self.lines, eol = '\n' })
+    self.model = ShadowTextModel.new({ lines = self.lines, eol = '\n' })
 end
 
 ---@param row integer 0-based
-function MirrorDocument:line_at(row)
+function ShadowDocument:line_at(row)
     return self.model:line_at(row)
 end
 
-function MirrorDocument:line_count()
+function ShadowDocument:line_count()
     return self.model:line_count()
 end
 
 ---@param vim_position FittenCode.Position
 ---@return lsp.Position
-function MirrorDocument:to_lsp_position(vim_position)
+function ShadowDocument:to_lsp_position(vim_position)
     return self.model:to_lsp_position(vim_position)
 end
 
 ---@param lsp_position lsp.Position
 ---@return FittenCode.Position
-function MirrorDocument:to_vim_position(lsp_position)
+function ShadowDocument:to_vim_position(lsp_position)
     return self.model:to_vim_position(lsp_position)
 end
 
 ---@param offset integer
 ---@return lsp.Position
-function MirrorDocument:position_at(offset)
+function ShadowDocument:position_at(offset)
     return self.model:position_at(offset)
 end
 
 -- Converts the position to a zero-based offset.
 ---@param position lsp.Position
 ---@return integer
-function MirrorDocument:offset_at(position)
+function ShadowDocument:offset_at(position)
     return self.model:offset_at(position)
 end
 
 ---@param range lsp.Range
 ---@return string
-function MirrorDocument:get_text(range)
+function ShadowDocument:get_text(range)
     return self.model:get_text(range)
 end
 
-return MirrorDocument
+return ShadowDocument
