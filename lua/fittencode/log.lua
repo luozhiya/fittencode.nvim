@@ -153,7 +153,7 @@ function M._async_log(options)
     local file_name = _filename(info)
     local line_number = info.currentline
     local func = info.name or ''
-    if Config.log.level <= LOG_LEVELS.DEBUG then
+    if Config.log.trace then
         func = table.concat(_func(debug.traceback('', stack)), '->')
     end
 

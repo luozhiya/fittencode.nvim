@@ -88,8 +88,8 @@ local DEFAULTS = {
         disable_completion_when_delete = false,
         -- Disable auto completion when entering Insert mode `InsertEnter`.
         disable_completion_when_insert_enter = true,
-        -- Disable auto completion when the popup menu is changed `CompleteChanged` `CompleteDone`.
-        disable_completion_when_pumcmp_changed = true,
+        -- Disable auto completion when the popup menu is changed `CompleteChanged`.
+        disable_completion_when_pumcmp_changed = false,
         -- Disable auto completion when the buffer is not a file.
         disable_completion_when_nofile_buffer = true,
     },
@@ -233,6 +233,7 @@ local DEFAULTS = {
         level = vim.log.levels.WARN,
         -- Notify when log errors occur.
         notify_on_errors = false,
+        trace = false,
     },
     colors = {
         -- { fg = '#ffffff', bg = '#000000', style = 'bold' }
