@@ -17,7 +17,7 @@ Inline
 local Client = require('fittencode.client')
 local Config = require('fittencode.config')
 local Fn = require('fittencode.fn')
-local F = require('fittencode.fn.buf')
+local F = require('fittencode.fn.docment_model')
 local Promise = require('fittencode.fn.promise')
 local Session = require('fittencode.inline.session')
 local i18n = require('fittencode.i18n')

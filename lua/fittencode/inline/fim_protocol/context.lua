@@ -1,5 +1,5 @@
 local MD5 = require('fittencode.fn.md5')
-local F = require('fittencode.fn.buf')
+local F = require('fittencode.fn.docment_model')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local Promise = require('fittencode.fn.promise')

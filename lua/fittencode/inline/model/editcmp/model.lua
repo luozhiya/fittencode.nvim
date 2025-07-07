@@ -1,5 +1,5 @@
 local Log = require('fittencode.log')
-local F = require('fittencode.fn.buf')
+local F = require('fittencode.fn.docment_model')
 local Diff = require('fittencode.fn.diff')
 
 ---@class FittenCode.Inline.EditCompletion.Model

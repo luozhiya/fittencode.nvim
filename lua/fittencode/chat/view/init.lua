@@ -1,5 +1,5 @@
 local Fn = require('fittencode.fn')
-local F = require('fittencode.fn.buf')
+local F = require('fittencode.fn.docment_model')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local Format = require('fittencode.fn.format')

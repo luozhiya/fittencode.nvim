@@ -1,4 +1,4 @@
-local F = require('fittencode.fn.buf')
+local F = require('fittencode.fn.docment_model')
 local Log = require('fittencode.log')
 local Range = require('fittencode.fn.range')
 local Color = require('fittencode.color')

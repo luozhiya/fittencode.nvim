@@ -7,7 +7,7 @@
 
 local Position = require('fittencode.fn.position')
 local Log = require('fittencode.log')
-local F = require('fittencode.fn.buf')
+local F = require('fittencode.fn.docment_model')
 local Format = require('fittencode.fn.format')
 local Fn = require('fittencode.fn')
 local Color = require('fittencode.color')

@@ -1,4 +1,4 @@
-local F = require('fittencode.fn.buf')
+local F = require('fittencode.fn.docment_model')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local Unicode = require('fittencode.fn.unicode')

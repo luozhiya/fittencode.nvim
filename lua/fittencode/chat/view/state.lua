@@ -6,7 +6,7 @@
 ]]
 
 local Fn = require('fittencode.fn')
-local F = require('fittencode.fn.buf')
+local F = require('fittencode.fn.docment_model')
 local Definitions = require('fittencode.chat.definitions')
 local VIEW_TYPE = Definitions.CONVERSATION_VIEW_TYPE
 
