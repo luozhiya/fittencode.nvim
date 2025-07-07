@@ -228,7 +228,7 @@ end
 ---@param index? integer
 ---@return integer[]
 function M.utf_to_byteindex(layout, encoding, index)
-    return M.conv_codeunit(layout, encoding, 'utf-8', index)
+    return M.get_equivalent_unit_range(layout, encoding, 'utf-8', index)
 end
 
 -- 给定 UTF-8 字符串 s，目标编码 encoding，以及在 UTF-8 编码中字节位置
@@ -240,10 +240,10 @@ end
 ---@param index? integer
 ---@return integer[]
 function M.byte_to_utfindex(layout, encoding, index)
-    return M.conv_codeunit(layout, 'utf-8', encoding, index)
+    return M.get_equivalent_unit_range(layout, 'utf-8', encoding, index)
 end
 
-function M.conv_codeunit(layout, from_encoding, to_encoding, index)
+function M.get_equivalent_unit_range(layout, from_encoding, to_encoding, index)
     local from_cumulative_units = layout.cumulative_units[from_encoding]
     local to_cumulative_units = layout.cumulative_units[to_encoding]
 
