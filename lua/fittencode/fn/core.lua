@@ -74,11 +74,6 @@ function M.random(length)
     return table.concat(result)
 end
 
--- "2025-03-08"
-function M.get_current_date()
-    return vim.fn.strftime('%Y-%m-%d')
-end
-
 function M.generate_short_id(length)
     length = length or 8
     return M.random(36):sub(2, 2 + length)
