@@ -318,7 +318,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
     end
     local switch = {
         ['context'] = function()
-            return { { name = vim.api.nvim_buf_get_name(buf), language = language_id(buf), content = DocumentModel.content(buf) } }
+            return { { name = vim.api.nvim_buf_get_name(buf), language = language_id(buf), content = DocumentModel.get_text(buf) } }
         end,
         ['constant'] = function()
             return variables.value

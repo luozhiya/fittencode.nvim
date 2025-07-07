@@ -6,26 +6,6 @@ local Fn = require('fittencode.fn')
 
 local M = {}
 
----@return string
-function M.filename(buf)
-    assert(buf)
-    local name
-    vim.api.nvim_buf_call(buf, function()
-        name = vim.api.nvim_buf_get_name(buf)
-    end)
-    return name
-end
-
-function M.is_dirty(buf)
-    assert(buf)
-    local dirty
-    vim.api.nvim_buf_call(buf, function()
-        local info = vim.fn.getbufinfo(buf)
-        dirty = info[1].changed
-    end)
-    return dirty
-end
-
 -- The version number of this document (it will strictly increase after each change, including undo/redo).
 ---@param buf integer
 ---@return number
@@ -65,24 +45,6 @@ function M.line_at(buf, row)
     return text
 end
 
----@return string[]?
-function M.content_lines(buf)
-    assert(buf)
-    local content
-    vim.api.nvim_buf_call(buf, function()
-        content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-    end)
-    return content
-end
-
-function M.content(buf)
-    local lines = M.content_lines(buf)
-    if not lines then
-        return
-    end
-    return table.concat(lines, '\n')
-end
-
 function M.workspace(buf)
     assert(buf)
     local ws
@@ -92,22 +54,11 @@ function M.workspace(buf)
     return ws
 end
 
-function M.is_valid_buf(buf)
-    local ok, r = pcall(vim.api.nvim_buf_is_valid, buf)
-    if not ok or not r then
-        return false
-    end
-    return true
-end
-
 -- 检测一个 buffer 是否是一个文件，并且可读
 -- 并在满足这个条件下返回该文件的路径 (路径是和平台相关的)
 ---@return boolean, string?
 function M.is_filebuf(buf)
-    if not M.is_valid_buf(buf) then
-        return false
-    end
-    if vim.api.nvim_buf_is_loaded(buf) and vim.fn.buflisted(buf) == 1 then
+    if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf) and vim.fn.buflisted(buf) == 1 then
         local path
         vim.api.nvim_buf_call(buf, function()
             path = vim.fn.expand('%:p')
