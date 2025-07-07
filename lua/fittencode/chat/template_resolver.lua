@@ -123,11 +123,32 @@ function TemplateResolver.load_from_file(e)
     return template
 end
 
+---@param path string
+---@param prename table
+---@return table
+local function fs_all_entries(path, prename)
+    local fs = vim.uv.fs_scandir(path)
+    local res = {}
+    if not fs then return res end
+    local name, fs_type = vim.uv.fs_scandir_next(fs)
+    while name do
+        res[#res + 1] = { fs_type = fs_type, prename = prename, name = name, path = path .. '/' .. name }
+        if fs_type == 'directory' then
+            local prename_next = vim.deepcopy(prename)
+            prename_next[#prename_next + 1] = name
+            local new = fs_all_entries(path .. '/' .. name, prename_next)
+            vim.list_extend(res, new)
+        end
+        name, fs_type = vim.uv.fs_scandir_next(fs)
+    end
+    return res
+end
+
 ---@param dir string
 function TemplateResolver.load_from_directory(dir)
     assert(dir)
     local templates = {}
-    local entries = Fn.fs_all_entries(dir, {})
+    local entries = fs_all_entries(dir, {})
     for _, entry in ipairs(entries) do
         if entry.fs_type == 'file' and entry.name:match('.+%.rdt%.md$') then
             local e = TemplateResolver.load_from_file(entry.path)
