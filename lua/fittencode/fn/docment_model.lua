@@ -66,7 +66,6 @@ function M.line_count(buf)
     return count
 end
 
--- 返回的 `range.end_.col` 指向末尾字节
 ---@param buf integer?
 ---@param row number A zero-based row value.
 ---@return string?
@@ -136,19 +135,6 @@ function M.is_filebuf(buf)
         end
     end
     return false
-end
-
--- Return the URI of the buffer.
----@param buf integer?
----@return table?
-function M.uri(buf)
-    local _, path = M.is_filebuf(buf)
-    if not _ then
-        return
-    end
-    return {
-        fs_path = path
-    }
 end
 
 -- Return the word count of the buffer.
