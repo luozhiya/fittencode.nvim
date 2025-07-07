@@ -1,9 +1,6 @@
 local F = require('fittencode.fn.buf')
-local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
-local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
-local V = require('fittencode.fn.view')
 local Color = require('fittencode.color')
 
 local EVENTIGNORES = table.concat({ 'TextChangedI', 'CursorMovedI' }, ',')
@@ -144,7 +141,7 @@ function View:update(state)
                 pre_packed = {}
                 if lstate.type == 'commit' or lstate.type == 'placeholder' then
                     self:_insert_text(self.last_insert_pos, packed)
-                    self.last_insert_pos = V.calculate_cursor_position_after_insertion(self.last_insert_pos, packed)
+                    self.last_insert_pos = F.calculate_cursor_position_after_insertion(self.last_insert_pos, packed)
                     if lstate.type == 'commit' then
                         self.commit = self.last_insert_pos
                     end
@@ -191,11 +188,11 @@ function View:update(state)
         _set_text(state.lines)
     end
 
-    V.ignoreevent_wrap(function()
-        V.view_wrap(win, _update)
+    F.ignoreevent_wrap(function()
+        F.view_wrap(win, _update)
         -- 4. update position
-        V.update_win_cursor(win, self.commit)
-        V.move_to_center_vertical(#state.lines)
+        F.update_win_cursor(win, self.commit)
+        F.move_to_center_vertical(#state.lines)
     end, EVENTIGNORES)
 end
 
@@ -204,9 +201,9 @@ function View:on_complete()
     if self.commit:is_equal(self.last_insert_pos) then
         return
     end
-    V.ignoreevent_wrap(function()
+    F.ignoreevent_wrap(function()
         local win = vim.api.nvim_get_current_win()
-        V.update_win_cursor(win, self.last_insert_pos)
+        F.update_win_cursor(win, self.last_insert_pos)
     end, EVENTIGNORES)
 end
 
@@ -219,8 +216,8 @@ local function _restore(self)
         self:clear()
         self:_insert_text(self.origin_pos, self.replaced_text)
     end
-    V.ignoreevent_wrap(function()
-        V.view_wrap(win, _update)
+    F.ignoreevent_wrap(function()
+        F.view_wrap(win, _update)
     end, EVENTIGNORES)
 end
 
