@@ -14,7 +14,7 @@ local EditView = require('fittencode.inline.view.editcmp')
 local EditViewState = require('fittencode.inline.view.editcmp.state')
 local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn')
-local F = require('fittencode.fn.docment_model')
+local DocumentModel = require('fittencode.fn.docment_model')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 local FimGenerate = require('fittencode.inline.fim_protocol.generate')
@@ -380,7 +380,7 @@ function Session:_preflight_check()
             message = 'Session is terminated',
         })
     end
-    local document_version = F.version(self.buf)
+    local document_version = DocumentModel.version(self.buf)
     if document_version == self.version then
         return Promise.resolved(true)
     else

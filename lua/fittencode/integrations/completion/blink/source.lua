@@ -2,7 +2,7 @@ local Promise = require('fittencode.fn.promise')
 local Position = require('fittencode.fn.position')
 local Generate = require('fittencode.generate')
 local Unicode = require('fittencode.fn.unicode')
-local F = require('fittencode.fn.docment_model')
+local DocumentModel = require('fittencode.fn.docment_model')
 local Log = require('fittencode.log')
 
 ---@return string[]
@@ -44,7 +44,7 @@ function source:get_trigger_characters() return get_trigger_characters() end
 function source:get_completions(ctx, callback)
     -- ctx (context) contains the current keyword, cursor position, bufnr, etc.
     local row, col = ctx.cursor[1], ctx.cursor[2]
-    local res, request = Generate.request_completions(ctx.bufnr, row, col, { filename = F.filename(ctx.bufnr) })
+    local res, request = Generate.request_completions(ctx.bufnr, row, col, { filename = DocumentModel.filename(ctx.bufnr) })
     if not request then
         callback()
     end

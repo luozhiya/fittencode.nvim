@@ -1,4 +1,4 @@
-local F = require('fittencode.fn.docment_model')
+local DocumentModel = require('fittencode.fn.docment_model')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local Unicode = require('fittencode.fn.unicode')
@@ -58,7 +58,7 @@ local function build_inccmp_items(response, buf, position)
     } }
 
     local snext = position:translate(0, 1)
-    local line_remaining = assert(F.get_text(buf, Range.new({
+    local line_remaining = assert(DocumentModel.get_text(buf, Range.new({
         start = snext,
         end_ = Position.new({
             row = snext.row,

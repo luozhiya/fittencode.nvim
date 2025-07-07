@@ -7,7 +7,7 @@
 
 local Position = require('fittencode.fn.position')
 local Log = require('fittencode.log')
-local F = require('fittencode.fn.docment_model')
+local DocumentModel = require('fittencode.fn.docment_model')
 local Format = require('fittencode.fn.format')
 local Fn = require('fittencode.fn')
 local Color = require('fittencode.color')
@@ -311,8 +311,8 @@ function View:_adjust_cursor_position_on_complete()
     else
         start_pos = Position.of(self.start_line, 0)
     end
-    local new_pos = F.calculate_cursor_position_after_insertion(start_pos, self.replacement_lines)
-    F.update_win_cursor(win, new_pos)
+    local new_pos = DocumentModel.calculate_cursor_position_after_insertion(start_pos, self.replacement_lines)
+    DocumentModel.update_win_cursor(win, new_pos)
 end
 
 function View:on_complete()

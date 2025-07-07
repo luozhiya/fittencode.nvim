@@ -1,4 +1,4 @@
-local F = require('fittencode.fn.docment_model')
+local DocumentModel = require('fittencode.fn.docment_model')
 local Log = require('fittencode.log')
 local Range = require('fittencode.fn.range')
 local Color = require('fittencode.color')
@@ -30,7 +30,7 @@ function View:_initialize(options)
     -- assert(#vim.api.nvim_buf_get_extmarks(self.buf, self.completion_ns, 0, -1, {}) == 0)
     self.last_insert_pos = self.origin_pos:translate(0, self.col_delta)
     if self.col_delta ~= 0 then
-        self.replaced_text = F.get_lines(self.buf, Range.of(self.origin_pos, self.last_insert_pos))
+        self.replaced_text = DocumentModel.get_lines(self.buf, Range.of(self.origin_pos, self.last_insert_pos))
         self.saved_last_insert_pos = vim.deepcopy(self.last_insert_pos)
     end
     Log.debug('View:_initialize, self = {}', self)
@@ -141,7 +141,7 @@ function View:update(state)
                 pre_packed = {}
                 if lstate.type == 'commit' or lstate.type == 'placeholder' then
                     self:_insert_text(self.last_insert_pos, packed)
-                    self.last_insert_pos = F.calculate_cursor_position_after_insertion(self.last_insert_pos, packed)
+                    self.last_insert_pos = DocumentModel.calculate_cursor_position_after_insertion(self.last_insert_pos, packed)
                     if lstate.type == 'commit' then
                         self.commit = self.last_insert_pos
                     end
@@ -188,11 +188,11 @@ function View:update(state)
         _set_text(state.lines)
     end
 
-    F.ignoreevent_wrap(function()
-        F.view_wrap(win, _update)
+    DocumentModel.ignoreevent_wrap(function()
+        DocumentModel.view_wrap(win, _update)
         -- 4. update position
-        F.update_win_cursor(win, self.commit)
-        F.move_to_center_vertical(#state.lines)
+        DocumentModel.update_win_cursor(win, self.commit)
+        DocumentModel.move_to_center_vertical(#state.lines)
     end, EVENTIGNORES)
 end
 
@@ -201,9 +201,9 @@ function View:on_complete()
     if self.commit:is_equal(self.last_insert_pos) then
         return
     end
-    F.ignoreevent_wrap(function()
+    DocumentModel.ignoreevent_wrap(function()
         local win = vim.api.nvim_get_current_win()
-        F.update_win_cursor(win, self.last_insert_pos)
+        DocumentModel.update_win_cursor(win, self.last_insert_pos)
     end, EVENTIGNORES)
 end
 
@@ -216,8 +216,8 @@ local function _restore(self)
         self:clear()
         self:_insert_text(self.origin_pos, self.replaced_text)
     end
-    F.ignoreevent_wrap(function()
-        F.view_wrap(win, _update)
+    DocumentModel.ignoreevent_wrap(function()
+        DocumentModel.view_wrap(win, _update)
     end, EVENTIGNORES)
 end
 

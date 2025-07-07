@@ -1,5 +1,5 @@
 local Log = require('fittencode.log')
-local F = require('fittencode.fn.docment_model')
+local DocumentModel = require('fittencode.fn.docment_model')
 local Diff = require('fittencode.fn.diff')
 
 ---@class FittenCode.Inline.EditCompletion.Model
@@ -40,7 +40,7 @@ function Model.new(options)
         self.merge_method = 'line_range'
         self.start_line = completion.start_line
         self.end_line = completion.end_line
-        local old_lines = F.get_lines_by_line_range(buf, self.start_line, self.end_line)
+        local old_lines = DocumentModel.get_lines_by_line_range(buf, self.start_line, self.end_line)
         self.hunks, self.gap_common_hunks = Diff.diff_block(old_lines, completion.lines)
     end
     self.commit_index = 0
