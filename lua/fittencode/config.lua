@@ -87,10 +87,13 @@ local DEFAULTS = {
         ---@type boolean
         disable_completion_when_delete = false,
         -- Disable auto completion when entering Insert mode `InsertEnter`.
+        ---@type boolean
         disable_completion_when_insert_enter = true,
         -- Disable auto completion when the popup menu is changed `CompleteChanged`.
-        disable_completion_when_pumcmp_changed = false,
+        ---@type boolean
+        disable_completion_when_pumcmp_changed = true,
         -- Disable auto completion when the buffer is not a file.
+        ---@type boolean
         disable_completion_when_nofile_buffer = true,
     },
     integrations = {
@@ -99,9 +102,12 @@ local DEFAULTS = {
             ---@type boolean
             lsp_server = false,
             -- Enable completion as an `blink.cmp` source
+            ---@type boolean
             blink = false
         },
+        ---@type boolean
         commit_message = false,
+        ---@type boolean
         filetype = false,
     },
     language_preference = {
