@@ -6,7 +6,7 @@
 ]]
 
 local Fn = require('fittencode.fn')
-local DocumentModel = require('fittencode.fn.docment_model')
+local Editor = require('fittencode.fn.editor')
 local Definitions = require('fittencode.chat.definitions')
 local VIEW_TYPE = Definitions.CONVERSATION_VIEW_TYPE
 
@@ -90,7 +90,7 @@ function State.get_state_from_model(model, selected_state)
             if conv.id == model.selected_conversation_id then
                 if conv.context.selection then
                     sc.reference = {
-                        select_text = DocumentModel.get_text(conv.context.buf, conv.context.selection.range),
+                        select_text = Editor.get_text(conv.context.buf, conv.context.selection.range),
                         select_range = {
                             name = vim.api.nvim_buf_get_name(conv.context.buf),
                             range = conv.context.selection.range

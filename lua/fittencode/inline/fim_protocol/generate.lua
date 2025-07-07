@@ -13,7 +13,7 @@
 --]]
 
 local MD5 = require('fittencode.fn.md5')
-local DocumentModel = require('fittencode.fn.docment_model')
+local Editor = require('fittencode.fn.editor')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local Promise = require('fittencode.fn.promise')
@@ -129,19 +129,19 @@ end
 ---@param options { filename: string }
 ---@return FittenCode.Promise<{ base: FittenCode.Inline.Prompt.MetaDatas?, text: string, ciphertext: string}>
 local function build_base_prompt(buf, position, options)
-    local charscount = DocumentModel.wordcount(buf).chars
+    local charscount = Editor.wordcount(buf).chars
     local prefix
     local suffix
 
     if charscount <= MAX_CHARS then
-        local current_line = assert(DocumentModel.line_at(buf, position.row))
-        local round_curr_col = DocumentModel.round_col_end(current_line, position.col + 1) - 1
+        local current_line = assert(Editor.line_at(buf, position.row))
+        local round_curr_col = Editor.round_col_end(current_line, position.col + 1) - 1
         local next_position = Position.new({ row = position.row, col = round_curr_col + 1 })
-        prefix = DocumentModel.get_text(buf, Range.new({
+        prefix = Editor.get_text(buf, Range.new({
             start = Position.new({ row = 0, col = 0 }),
             end_ = position
         }))
-        suffix = DocumentModel.get_text(buf, Range.new({
+        suffix = Editor.get_text(buf, Range.new({
             start = next_position,
             end_ = Position.new({ row = -1, col = -1 })
         }))

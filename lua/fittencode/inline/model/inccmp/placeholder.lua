@@ -1,5 +1,5 @@
 local Log = require('fittencode.log')
-local DocumentModel = require('fittencode.fn.docment_model')
+local Editor = require('fittencode.fn.editor')
 local Range = require('fittencode.fn.range')
 local Position = require('fittencode.fn.position')
 local Diff = require('fittencode.fn.diff')
@@ -50,7 +50,7 @@ local function generate_placeholder_ranges(buf, position, completion)
         return placeholder_ranges
     end
     -- 1. 获取 postion + col_delta 个字符 T0
-    local replaced_text = assert(DocumentModel.get_text(buf, Range.new({
+    local replaced_text = assert(Editor.get_text(buf, Range.new({
         start = Position.new({
             row = position.row,
             col = position.col,
