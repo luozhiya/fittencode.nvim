@@ -4,9 +4,6 @@ local Log = require('fittencode.log')
 local Unicode = require('fittencode.fn.unicode')
 local Fn = require('fittencode.fn')
 
--- 按字符位置偏移量
----@alias FittenCode.CharactersOffset number
-
 local M = {}
 
 ---@return string?
@@ -182,7 +179,7 @@ end
 -- - 行与行之间的换行符不计入
 ---@param buf integer?
 ---@param position FittenCode.Position UTF-8 序列
----@return FittenCode.CharactersOffset
+---@return integer
 function M.offset_at_u32(buf, position)
     assert(buf)
     local offset = 0
@@ -247,7 +244,7 @@ end
 -- 计算从文档开始到 Position 处的字符偏移量 (UTF-16) 有可能将代理对拆开？
 ---@param buf integer?
 ---@param position FittenCode.Position
----@return FittenCode.CharactersOffset
+---@return integer
 function M.offset_at(buf, position)
     assert(buf)
     local offset = 0
@@ -266,7 +263,7 @@ function M.offset_at(buf, position)
 end
 
 -- 返回的 position.col 是指向 UTF-8 序列的尾字节
----@param offset FittenCode.CharactersOffset 按 UTF-16 序列计算的偏移量 1
+---@param offset integer 按 UTF-16 序列计算的偏移量 1
 ---@return FittenCode.Position
 function M.position_at_lines(lines, offset)
     local pos
@@ -298,7 +295,7 @@ end
 
 -- 返回的 position.col 是指向 UTF-8 序列的尾字节
 ---@param buf integer?
----@param offset FittenCode.CharactersOffset 按 UTF-16 序列计算的偏移量 1
+---@param offset integer 按 UTF-16 序列计算的偏移量 1
 ---@return FittenCode.Position
 function M.position_at(buf, offset)
     assert(buf)
