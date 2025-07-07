@@ -219,6 +219,22 @@ function ShadowTextModel:get_text(encoding, range)
     return table.concat(result_lines, self.eol)
 end
 
+---@param src_encoding lsp.PositionEncodingKind
+---@param dest_encoding lsp.PositionEncodingKind
+---@param position FittenCode.Position
+---@return FittenCode.Position
+function ShadowTextModel:map(src_encoding, dest_encoding, position)
+    local row = position.row
+    local col = position.col
+    local pi = self:_get_layout(row)
+    if src_encoding == 'utf-8' then
+        col = Fn.byte_to_utfindex(pi, dest_encoding, position.col + 1)[1] - 1
+    else
+        col = Fn.utf_to_byteindex(pi, dest_encoding, position.col + 1)[1] - 1
+    end
+    return Position.of(row, col)
+end
+
 -- function M.normalize_range(buf, range)
 --     if range.start.col == 2147483647 then
 --         range.start.col = -1
