@@ -19,6 +19,24 @@ local TokenObserver = CtrlObserver.TokenObserver
 local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
 local CONVERSATION_PHASE = Definitions.CONVERSATION_PHASE
 
+---@return string?
+local function language_id(buf)
+    assert(buf)
+    local ft
+    vim.api.nvim_buf_call(buf, function()
+        ft = vim.api.nvim_get_option_value('filetype', { buf = buf })
+    end)
+    local mapping = {
+        [''] = 'plaintext',
+    }
+    setmetatable(mapping, {
+        __index = function(_, k)
+            return k
+        end
+    })
+    return mapping[ft]
+end
+
 ---@class FittenCode.Chat.Controller
 local Controller = {}
 Controller.__index = Controller
@@ -300,7 +318,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
     end
     local switch = {
         ['context'] = function()
-            return { { name = DocumentModel.filename(buf), language = DocumentModel.language_id(buf), content = DocumentModel.content(buf) } }
+            return { { name = DocumentModel.filename(buf), language = language_id(buf), content = DocumentModel.content(buf) } }
         end,
         ['constant'] = function()
             return variables.value
@@ -336,7 +354,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
             return DocumentModel.filename(buf)
         end,
         ['language'] = function()
-            return DocumentModel.language_id(buf)
+            return language_id(buf)
         end,
         ['comment-snippet'] = function()
             return Config.snippet.comment or ''
@@ -350,7 +368,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
                 tf['python'] = 'Python'
                 tf['javascript'] = 'JavaScript/TypeScript'
                 tf['typescript'] = tf['javascript']
-                return Config.unit_test_framework[tf[DocumentModel.language_id()]] or ''
+                return Config.unit_test_framework[tf[language_id()]] or ''
             end
             local s = _unit_test_framework()
             return s == 'Not specified' and '' or s
