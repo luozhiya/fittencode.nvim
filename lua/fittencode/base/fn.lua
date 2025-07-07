@@ -183,8 +183,6 @@ end
 
 ---@class FittenCode.EncodedStringLayout
 ---@field cumulative_units table<lsp.PositionEncodingKind, table<integer>>
----@field utf8_starts table<integer>
----@field utf8_ends table<integer>
 
 ---@param input string
 ---@return FittenCode.EncodedStringLayout
@@ -192,9 +190,6 @@ function M.encoded_layout(input)
     local u8_cumulative_units = {}
     local u16_cumulative_units = {}
     local u32_cumulative_units = {}
-
-    local utf8_starts = {}
-    local utf8_ends = {}
 
     local length = #input
     local position = 1
@@ -210,9 +205,6 @@ function M.encoded_layout(input)
         u16_cumulative_units[char_index] = (u16_cumulative_units[char_index - 1] or 0) + utf16_units
         u32_cumulative_units[char_index] = (u32_cumulative_units[char_index - 1] or 0) + 1
 
-        utf8_starts[char_index] = position
-        utf8_ends[char_index] = position + u8_byte_count - 1
-
         position = position + u8_byte_count
         char_index = char_index + 1
     end
@@ -223,8 +215,6 @@ function M.encoded_layout(input)
             ['utf-16'] = u16_cumulative_units,
             ['utf-32'] = u32_cumulative_units
         },
-        utf8_starts = utf8_starts,
-        utf8_ends = utf8_ends
     }
 end
 
@@ -238,24 +228,7 @@ end
 ---@param index? integer
 ---@return integer[]
 function M.utf_to_byteindex(layout, encoding, index)
-    local utf8_starts = layout.utf8_starts
-    local utf8_ends = layout.utf8_ends
-    local cumulative_units = layout.cumulative_units[encoding]
-
-    local cu
-    if index then
-        for i = 1, #cumulative_units do
-            if index <= cumulative_units[i] then
-                cu = i
-                break
-            end
-        end
-    end
-    if not cu then
-        cu = #cumulative_units
-    end
-
-    return { utf8_starts[cu], utf8_ends[cu] }
+    return M.conv_codeunit(layout, encoding, 'utf-8', index)
 end
 
 -- 给定 UTF-8 字符串 s，目标编码 encoding，以及在 UTF-8 编码中字节位置
@@ -267,25 +240,27 @@ end
 ---@param index? integer
 ---@return integer[]
 function M.byte_to_utfindex(layout, encoding, index)
-    local utf8_starts = layout.utf8_starts
-    local utf8_ends = layout.utf8_ends
-    local cumulative_units = layout.cumulative_units[encoding]
+    return M.conv_codeunit(layout, 'utf-8', encoding, index)
+end
+
+function M.conv_codeunit(layout, from_encoding, to_encoding, index)
+    local from_cumulative_units = layout.cumulative_units[from_encoding]
+    local to_cumulative_units = layout.cumulative_units[to_encoding]
 
     local cu
     if index then
-        for i = 1, #utf8_starts do
-            if index >= utf8_starts[i] and index <= utf8_ends[i] then
+        for i = 1, #from_cumulative_units do
+            if index <= from_cumulative_units[i] then
                 cu = i
                 break
             end
         end
     end
     if not cu then
-        cu = #cumulative_units
+        cu = #from_cumulative_units
     end
 
-    -- 为了方便统计数量，返回最末尾的位置，即大小
-    return { (cumulative_units[cu - 1] or 0) + 1, cumulative_units[cu] }
+    return { (to_cumulative_units[cu - 1] or 0) + 1, to_cumulative_units[cu] }
 end
 
 local function _round(layout, encoding, index, is_start)

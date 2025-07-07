@@ -18,6 +18,8 @@ local Fn = require('fittencode.base.fn')
 ---@field lines string[]
 ---@field eol string
 ---@field eol_length integer
+---@field version? number
+---@field buffer? integer
 ---@field computed FittenCode.ShadowTextModel.Computed
 local ShadowTextModel = {}
 ShadowTextModel.__index = ShadowTextModel
@@ -33,6 +35,8 @@ ShadowTextModel.__index = ShadowTextModel
 ---@class FittenCode.ShadowTextModel.InitializeOptions
 ---@field lines string[]
 ---@field eol string
+---@field version? number
+---@field buffer? integer
 
 ---@param options FittenCode.ShadowTextModel.InitializeOptions
 function ShadowTextModel.new(options)
@@ -48,6 +52,8 @@ function ShadowTextModel:_initialize(options)
     self.lines = options.lines
     self.eol = options.eol
     self.eol_length = #self.eol
+    self.version = options.version
+    self.buffer = options.buffer
     self.computed = {
         utf_line = { ['utf-8'] = -1, ['utf-16'] = -1, ['utf-32'] = -1 },
         utf_indices = { ['utf-8'] = {}, ['utf-16'] = {}, ['utf-32'] = {} },
@@ -56,6 +62,11 @@ function ShadowTextModel:_initialize(options)
         full_text = nil,
         layouts = {}
     }
+end
+
+function ShadowTextModel.from_buffer(buf)
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    return ShadowTextModel.new({ lines = lines, eol = vim.lsp._buf_get_line_ending(buf), buffer = buf, version = Fn.version(buf) })
 end
 
 ---@param encoding lsp.PositionEncodingKind
@@ -235,30 +246,18 @@ function ShadowTextModel:map(src_encoding, dest_encoding, position)
     return Position.of(row, col)
 end
 
--- function M.normalize_range(buf, range)
---     if range.start.col == 2147483647 then
---         range.start.col = -1
---     end
---     if range.end_.col == 2147483647 then
---         range.end_.col = -1
---     end
---     range:sort()
-
---     local start_line = M.line_at(buf, range.start.row)
---     if not start_line then
---         return
---     end
---     local end_line = M.line_at(buf, range.end_.row)
---     if not end_line then
---         return
---     end
---     if range.start.col > #start_line or range.end_.col > #end_line then
---         return
---     end
-
---     range.start = M.round_start(buf, range.start)
---     range.end_ = M.round_end(buf, range.end_)
---     return range
--- end
+-- 2147483647
+---@param encoding lsp.PositionEncodingKind
+---@param range FittenCode.Range
+function ShadowTextModel:normalize_range(encoding, range)
+    if range.start.col == -1 then
+        local pi = self:_get_layout(range.start.row)
+        -- range.start.col =
+    end
+    range.start.col = Fn.round_start(self:_get_layout(range.start.row), encoding, range.start.col + 1)
+    range.end_.col = Fn.round_end(self:_get_layout(range.start.row), encoding, range.end_.col + 1)
+    range:sort()
+    return range
+end
 
 return ShadowTextModel

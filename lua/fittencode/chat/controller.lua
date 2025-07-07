@@ -11,6 +11,8 @@ local Definitions = require('fittencode.chat.definitions')
 local Observer = require('fittencode.base.observer')
 local ProgressIndicator = require('fittencode.base.progress_indicator')
 local CtrlObserver = require('fittencode.chat.ctrl_observer')
+local ShadowTextModel = require('fittencode.base.shadow_text_model')
+
 local Status = CtrlObserver.Status
 local ProgressIndicatorObserver = CtrlObserver.ProgressIndicatorObserver
 local TimingObserver = CtrlObserver.TimingObserver
@@ -431,12 +433,12 @@ local function get_range_from_visual_selection(buf)
         if pos then
             local start = { pos[1][1][2], pos[1][1][3] }
             local end_ = { pos[#pos][2][2], pos[#pos][2][3] }
-            return Range.of(Position.of(start[1], start[2]), Position.of(end_[1], end_[2]))
+            return Range.of(Position.of(start[1], start[2]), Position.of(end_[1], end_[2] + 1)) -- 额外加 1
         end
     else
         local start = vim.api.nvim_buf_get_mark(buf, '<')
         local end_ = vim.api.nvim_buf_get_mark(buf, '>')
-        return Range.of(Position.of(start[1] - 1, start[2]), Position.of(end_[1] - 1, end_[2]))
+        return Range.of(Position.of(start[1] - 1, start[2]), Position.of(end_[1] - 1, end_[2] + 1))
     end
 end
 
@@ -453,9 +455,12 @@ function Controller:from_builtin_template_with_selection(type, mode)
         local buf = vim.api.nvim_get_current_buf()
         local win = vim.api.nvim_get_current_win()
         context.buf = buf
+        context.shadow_text_model = ShadowTextModel.from_buffer(buf)
         local selection = {}
         local range = get_range_from_visual_selection(buf)
-        selection.range = Fn.normalize_range(buf, range)
+        if range then
+            selection.range = context.shadow_text_model:normalize_range('utf-8', range)
+        end
         -- Log.debug('Get range from visual selection = {}', range)
         -- Log.debug('Selected range = {}', selection.range)
         local REQUIRES_SELECTION = {
