@@ -82,4 +82,31 @@ function M.generate_short_id_as_string(length)
     return '(' .. M.generate_short_id(length) .. ')'
 end
 
+function M.set_timeout(timeout, callback)
+    local timer = vim.uv.new_timer()
+    assert(timer)
+    timer:start(timeout, 0, function()
+        timer:stop()
+        timer:close()
+        callback()
+    end)
+    return timer
+end
+
+function M.set_interval(interval, callback)
+    local timer = vim.uv.new_timer()
+    assert(timer)
+    timer:start(interval, interval, function()
+        callback()
+    end)
+    return timer
+end
+
+function M.clear_interval(timer)
+    if timer then
+        timer:stop()
+        timer:close()
+    end
+end
+
 return M
