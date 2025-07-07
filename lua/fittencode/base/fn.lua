@@ -214,35 +214,29 @@ end
 ---@field utf8_starts table<integer>
 ---@field utf8_ends table<integer>
 
---[[
-
-UTF-32 没有必要计算
-
---]]
----@param s string
+---@param input string
 ---@return FittenCode.EncodedStringLayout
-function M.encoded_layout(s)
-    local u8_byte_counts = {}
-    local u16_cumulative_unitss = {}
+function M.encoded_layout(input)
+    local u8_cumulative_units = {}
+    local u16_cumulative_units = {}
+    local u32_cumulative_units = {}
 
     local utf8_starts = {}
     local utf8_ends = {}
 
-    local length = #s
+    local length = #input
     local position = 1
     local char_index = 1
 
     while position <= length do
-        local first_byte = string.byte(s, position)
-        local u8_byte_count
-
-        u8_byte_count = Unicode.utf8_bytes(first_byte)
-
+        local first_byte = string.byte(input, position)
+        local u8_byte_count = Unicode.utf8_bytes(first_byte)
         local is_supplementary = u8_byte_count == 4
         local utf16_units = is_supplementary and 2 or 1
 
-        u8_byte_counts[char_index] = u8_byte_count
-        u16_cumulative_unitss[char_index] = utf16_units
+        u8_cumulative_units[char_index] = (u8_cumulative_units[char_index - 1] or 0) + u8_byte_count
+        u16_cumulative_units[char_index] = (u16_cumulative_units[char_index - 1] or 0) + utf16_units
+        u32_cumulative_units[char_index] = (u32_cumulative_units[char_index - 1] or 0) + 1
 
         utf8_starts[char_index] = position
         utf8_ends[char_index] = position + u8_byte_count - 1
@@ -253,8 +247,9 @@ function M.encoded_layout(s)
 
     return {
         cumulative_units = {
-            ['utf-8'] = u8_byte_counts,
-            ['utf-16'] = u16_cumulative_unitss
+            ['utf-8'] = u8_cumulative_units,
+            ['utf-16'] = u16_cumulative_units,
+            ['utf-32'] = u32_cumulative_units
         },
         utf8_starts = utf8_starts,
         utf8_ends = utf8_ends
@@ -274,10 +269,6 @@ function M.utf_to_byteindex(layout, encoding, index)
     local utf8_starts = layout.utf8_starts
     local utf8_ends = layout.utf8_ends
     local cumulative_units = layout.cumulative_units[encoding]
-
-    if encoding ~= 'utf-16' then
-        error('Unsupported encoding: ' .. encoding)
-    end
 
     local cu
     if index then
@@ -308,10 +299,6 @@ function M.byte_to_utfindex(layout, encoding, index)
     local utf8_ends = layout.utf8_ends
     local cumulative_units = layout.cumulative_units[encoding]
 
-    if encoding ~= 'utf-16' then
-        error('Unsupported encoding: ' .. encoding)
-    end
-
     local cu
     if index then
         for i = 1, #utf8_starts do
@@ -324,7 +311,25 @@ function M.byte_to_utfindex(layout, encoding, index)
     if not cu then
         cu = #cumulative_units
     end
+
     return (cumulative_units[cu - 1] or 0) + 1
+end
+
+local function _round(layout, encoding, index, is_start)
+    local cumulative_units = layout.cumulative_units[encoding]
+    local cu
+    if index then
+        for i = 1, #cumulative_units do
+            if index <= cumulative_units[i] then
+                cu = i
+                break
+            end
+        end
+    end
+    if not cu then
+        cu = #cumulative_units
+    end
+    return is_start and ((cumulative_units[cu - 1] or 0) + 1) or (cumulative_units[cu])
 end
 
 --[[
@@ -337,28 +342,7 @@ end
 ---@param index? integer
 ---@return integer
 function M.round_start(layout, encoding, index)
-    local utf8_starts = layout.utf8_starts
-    local utf8_ends = layout.utf8_ends
-    local cumulative_units = layout.cumulative_units[encoding]
-
-    if encoding ~= 'utf-16' or encoding ~= 'utf-8' then
-        error('Unsupported encoding: ' .. encoding)
-    end
-
-    local cu
-    if index then
-        for i = 1, #cumulative_units do
-            if index <= cumulative_units[i] then
-                cu = i
-                break
-            end
-        end
-    end
-    if not cu then
-        cu = #cumulative_units
-    end
-
-    return (cumulative_units[cu - 1] or 0) + 1
+    return _round(layout, encoding, index, true)
 end
 
 ---@param layout FittenCode.EncodedStringLayout
@@ -366,28 +350,7 @@ end
 ---@param index? integer
 ---@return integer
 function M.round_end(layout, encoding, index)
-    local utf8_starts = layout.utf8_starts
-    local utf8_ends = layout.utf8_ends
-    local cumulative_units = layout.cumulative_units[encoding]
-
-    if encoding ~= 'utf-16' or encoding ~= 'utf-8' then
-        error('Unsupported encoding: ' .. encoding)
-    end
-
-    local cu
-    if index then
-        for i = 1, #cumulative_units do
-            if index <= cumulative_units[i] then
-                cu = i
-                break
-            end
-        end
-    end
-    if not cu then
-        cu = #cumulative_units
-    end
-
-    return cumulative_units[cu]
+    return _round(layout, encoding, index, false)
 end
 
 return M
