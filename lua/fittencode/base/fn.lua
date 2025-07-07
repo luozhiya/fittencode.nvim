@@ -209,4 +209,185 @@ function M.ignoreevent_wrap(fx, ignore, timeout)
     return ret
 end
 
+---@class FittenCode.EncodedStringLayout
+---@field cumulative_units table<lsp.PositionEncodingKind, table<integer>>
+---@field utf8_starts table<integer>
+---@field utf8_ends table<integer>
+
+--[[
+
+UTF-32 没有必要计算
+
+--]]
+---@param s string
+---@return FittenCode.EncodedStringLayout
+function M.encoded_layout(s)
+    local u8_byte_counts = {}
+    local u16_cumulative_unitss = {}
+
+    local utf8_starts = {}
+    local utf8_ends = {}
+
+    local length = #s
+    local position = 1
+    local char_index = 1
+
+    while position <= length do
+        local first_byte = string.byte(s, position)
+        local u8_byte_count
+
+        u8_byte_count = Unicode.utf8_bytes(first_byte)
+
+        local is_supplementary = u8_byte_count == 4
+        local utf16_units = is_supplementary and 2 or 1
+
+        u8_byte_counts[char_index] = u8_byte_count
+        u16_cumulative_unitss[char_index] = utf16_units
+
+        utf8_starts[char_index] = position
+        utf8_ends[char_index] = position + u8_byte_count - 1
+
+        position = position + u8_byte_count
+        char_index = char_index + 1
+    end
+
+    return {
+        cumulative_units = {
+            ['utf-8'] = u8_byte_counts,
+            ['utf-16'] = u16_cumulative_unitss
+        },
+        utf8_starts = utf8_starts,
+        utf8_ends = utf8_ends
+    }
+end
+
+--[[
+
+使用缓存计算 UTF-16 字节序列对应的 UTF-8 字节序列
+
+--]]
+---@param layout FittenCode.EncodedStringLayout
+---@param encoding lsp.PositionEncodingKind
+---@param index? integer
+---@return integer, integer?
+function M.utf_to_byteindex(layout, encoding, index)
+    local utf8_starts = layout.utf8_starts
+    local utf8_ends = layout.utf8_ends
+    local cumulative_units = layout.cumulative_units[encoding]
+
+    if encoding ~= 'utf-16' then
+        error('Unsupported encoding: ' .. encoding)
+    end
+
+    local cu
+    if index then
+        for i = 1, #cumulative_units do
+            if index <= cumulative_units[i] then
+                cu = i
+                break
+            end
+        end
+    end
+    if not cu then
+        cu = #cumulative_units
+    end
+
+    return utf8_starts[cu], utf8_ends[cu]
+end
+
+-- 给定 UTF-8 字符串 s，目标编码 encoding，以及在 UTF-8 编码中字节位置
+-- 返回在指定编码中该字节位置对应的索引 1-based
+-- 当 byte_index 为 nil 或者超出字符串长度时，返回对应编码的字符串长度
+-- 如果是 UTF-16 编码，则需要考虑 surrogate pairs，返回的索引是第一个 code unit 的索引
+---@param layout FittenCode.EncodedStringLayout
+---@param encoding lsp.PositionEncodingKind
+---@param index? integer
+---@return integer
+function M.byte_to_utfindex(layout, encoding, index)
+    local utf8_starts = layout.utf8_starts
+    local utf8_ends = layout.utf8_ends
+    local cumulative_units = layout.cumulative_units[encoding]
+
+    if encoding ~= 'utf-16' then
+        error('Unsupported encoding: ' .. encoding)
+    end
+
+    local cu
+    if index then
+        for i = 1, #utf8_starts do
+            if index >= utf8_starts[i] and index <= utf8_ends[i] then
+                cu = i
+                break
+            end
+        end
+    end
+    if not cu then
+        cu = #cumulative_units
+    end
+    return (cumulative_units[cu - 1] or 0) + 1
+end
+
+--[[
+
+返回 index 指向第一个 code unit 的位置
+
+--]]
+---@param layout FittenCode.EncodedStringLayout
+---@param encoding lsp.PositionEncodingKind
+---@param index? integer
+---@return integer
+function M.round_start(layout, encoding, index)
+    local utf8_starts = layout.utf8_starts
+    local utf8_ends = layout.utf8_ends
+    local cumulative_units = layout.cumulative_units[encoding]
+
+    if encoding ~= 'utf-16' or encoding ~= 'utf-8' then
+        error('Unsupported encoding: ' .. encoding)
+    end
+
+    local cu
+    if index then
+        for i = 1, #cumulative_units do
+            if index <= cumulative_units[i] then
+                cu = i
+                break
+            end
+        end
+    end
+    if not cu then
+        cu = #cumulative_units
+    end
+
+    return (cumulative_units[cu - 1] or 0) + 1
+end
+
+---@param layout FittenCode.EncodedStringLayout
+---@param encoding lsp.PositionEncodingKind
+---@param index? integer
+---@return integer
+function M.round_end(layout, encoding, index)
+    local utf8_starts = layout.utf8_starts
+    local utf8_ends = layout.utf8_ends
+    local cumulative_units = layout.cumulative_units[encoding]
+
+    if encoding ~= 'utf-16' or encoding ~= 'utf-8' then
+        error('Unsupported encoding: ' .. encoding)
+    end
+
+    local cu
+    if index then
+        for i = 1, #cumulative_units do
+            if index <= cumulative_units[i] then
+                cu = i
+                break
+            end
+        end
+    end
+    if not cu then
+        cu = #cumulative_units
+    end
+
+    return cumulative_units[cu]
+end
+
 return M
