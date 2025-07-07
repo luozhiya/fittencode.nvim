@@ -97,6 +97,25 @@ function View:_insert_text(pos, lines)
     vim.api.nvim_buf_set_text(self.buf, pos.row, pos.col, pos.row, pos.col, lines)
 end
 
+local function move_to_center_vertical(virt_height)
+    if virt_height == 0 then
+        return
+    end
+    local position = assert(Editor.position(vim.api.nvim_get_current_win()))
+    local row = position.row
+    local relative_row = row - vim.fn.line('w0')
+    local height = vim.api.nvim_win_get_height(0)
+    local center = math.ceil(height / 2)
+    height = height - vim.o.scrolloff
+    if relative_row + virt_height > height and math.abs(relative_row + 1 - center) > center / 2 and row > center then
+        vim.cmd([[norm! zz]])
+        -- [0, lnum, col, off, curswant]
+        -- local curswant = vim.fn.getcurpos()[5]
+        -- 1-based row
+        vim.fn.cursor({ row + 1, position.col + 1 })
+    end
+end
+
 function View:update(state)
     Log.debug('update view, state = {}', state)
 
@@ -191,8 +210,8 @@ function View:update(state)
     Editor.ignoreevent_wrap(function()
         Editor.view_wrap(win, _update)
         -- 4. update position
-        Editor.update_win_cursor(win, self.commit)
-        Editor.move_to_center_vertical(#state.lines)
+        vim.api.nvim_win_set_cursor(win, { self.commit.row + 1, self.commit.col })
+        move_to_center_vertical(#state.lines)
     end, EVENTIGNORES)
 end
 
@@ -203,7 +222,7 @@ function View:on_complete()
     end
     Editor.ignoreevent_wrap(function()
         local win = vim.api.nvim_get_current_win()
-        Editor.update_win_cursor(win, self.last_insert_pos)
+        vim.api.nvim_win_set_cursor(win, { self.last_insert_pos.row + 1, self.last_insert_pos.col })
     end, EVENTIGNORES)
 end
 
