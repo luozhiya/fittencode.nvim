@@ -1,5 +1,5 @@
 local Log = require('fittencode.log')
-local Format = require('fittencode.fn.format')
+local Format = require('fittencode.base.format')
 local Config = require('fittencode.config')
 
 local M = {}

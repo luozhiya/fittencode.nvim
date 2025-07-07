@@ -1,8 +1,8 @@
 local Log = require('fittencode.log')
 local Fn = require('fittencode.base.fn')
-local Range = require('fittencode.fn.range')
-local Position = require('fittencode.fn.position')
-local Diff = require('fittencode.fn.diff')
+local Range = require('fittencode.base.range')
+local Position = require('fittencode.base.position')
+local Diff = require('fittencode.base.diff')
 
 --[[
 (1+2*3

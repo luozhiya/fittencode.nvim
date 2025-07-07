@@ -1,7 +1,7 @@
-local Promise = require('fittencode.fn.promise')
-local Position = require('fittencode.fn.position')
+local Promise = require('fittencode.base.promise')
+local Position = require('fittencode.base.position')
 local Generate = require('fittencode.generate')
-local Unicode = require('fittencode.fn.unicode')
+local Unicode = require('fittencode.base.unicode')
 local Fn = require('fittencode.base.fn')
 local Log = require('fittencode.log')
 

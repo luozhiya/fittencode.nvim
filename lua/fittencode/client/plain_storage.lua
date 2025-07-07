@@ -1,5 +1,5 @@
 local Common = require('fittencode.base.common')
-local Path = require('fittencode.fn.path')
+local Path = require('fittencode.base.path')
 
 ---@class FittenCode.PlainStorage
 local PlainStorage = {}

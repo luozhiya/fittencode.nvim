@@ -1,6 +1,6 @@
 local Log = require('fittencode.log')
 local Fn = require('fittencode.base.fn')
-local Diff = require('fittencode.fn.diff')
+local Diff = require('fittencode.base.diff')
 
 ---@class FittenCode.Inline.EditCompletion.Model
 ---@field merge_method string

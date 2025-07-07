@@ -54,8 +54,8 @@ res:async().promise()
 
 ]]
 
-local Promise = require('fittencode.fn.promise')
-local Process = require('fittencode.fn.process')
+local Promise = require('fittencode.base.promise')
+local Process = require('fittencode.base.process')
 local Log = require('fittencode.log')
 local Config = require('fittencode.config')
 local Common = require('fittencode.base.common')

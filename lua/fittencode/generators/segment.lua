@@ -1,4 +1,4 @@
-local Promise = require('fittencode.fn.promise')
+local Promise = require('fittencode.base.promise')
 local Log = require('fittencode.log')
 local Generate = require('fittencode.generate')
 

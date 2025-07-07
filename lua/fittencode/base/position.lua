@@ -4,7 +4,7 @@
 --   * `vim.api.str_byteindex` 返回的 `col` 指向末尾字节
 -- * -1 是 row 和 col 的特殊值代表最后一行
 
-local Format = require('fittencode.fn.format')
+local Format = require('fittencode.base.format')
 
 ---@class FittenCode.Position
 ---@field row number A zero-based row value.

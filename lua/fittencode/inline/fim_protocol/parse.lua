@@ -1,7 +1,7 @@
 local Fn = require('fittencode.base.fn')
-local Position = require('fittencode.fn.position')
-local Range = require('fittencode.fn.range')
-local Unicode = require('fittencode.fn.unicode')
+local Position = require('fittencode.base.position')
+local Range = require('fittencode.base.range')
+local Unicode = require('fittencode.base.unicode')
 local Log = require('fittencode.log')
 local Context = require('fittencode.inline.fim_protocol.context')
 

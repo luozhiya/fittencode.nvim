@@ -1,4 +1,4 @@
-local Unicode = require('fittencode.fn.unicode')
+local Unicode = require('fittencode.base.unicode')
 
 ---@class FittenCode.Inline.IncrementalCompletion.Model.Char
 ---@field start number

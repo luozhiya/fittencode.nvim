@@ -1,6 +1,6 @@
 local Fn = require('fittencode.base.fn')
 local Log = require('fittencode.log')
-local Range = require('fittencode.fn.range')
+local Range = require('fittencode.base.range')
 local Color = require('fittencode.color')
 
 local EVENTIGNORES = table.concat({ 'TextChangedI', 'CursorMovedI' }, ',')

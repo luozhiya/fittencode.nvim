@@ -4,7 +4,7 @@ local i18n = require('fittencode.i18n')
 local Common = require('fittencode.base.common')
 local Client = require('fittencode.client')
 local Keyring = require('fittencode.client.keyring')
-local Promise = require('fittencode.fn.promise')
+local Promise = require('fittencode.base.promise')
 
 local M = {}
 

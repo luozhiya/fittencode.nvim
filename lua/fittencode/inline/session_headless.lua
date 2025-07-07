@@ -1,5 +1,5 @@
 local SessionFunctional = require('fittencode.inline.session_functional')
-local Promise = require('fittencode.fn.promise')
+local Promise = require('fittencode.base.promise')
 local Definitions = require('fittencode.inline.definitions')
 
 local SESSION_EVENT = Definitions.SESSION_EVENT

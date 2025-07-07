@@ -1,9 +1,9 @@
-local MD5 = require('fittencode.fn.md5')
+local MD5 = require('fittencode.base.md5')
 local Fn = require('fittencode.base.fn')
-local Position = require('fittencode.fn.position')
-local Range = require('fittencode.fn.range')
-local Promise = require('fittencode.fn.promise')
-local Unicode = require('fittencode.fn.unicode')
+local Position = require('fittencode.base.position')
+local Range = require('fittencode.base.range')
+local Promise = require('fittencode.base.promise')
+local Unicode = require('fittencode.base.unicode')
 local Log = require('fittencode.log')
 
 local M = {}

@@ -1,4 +1,4 @@
-local Observer = require('fittencode.fn.observer')
+local Observer = require('fittencode.base.observer')
 local Definitions = require('fittencode.inline.definitions')
 local Log = require('fittencode.log')
 local Common = require('fittencode.base.common')

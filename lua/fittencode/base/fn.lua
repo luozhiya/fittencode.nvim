@@ -4,10 +4,10 @@ src\vs\workbench\api\common\extHostDocumentData.ts
 
 ]]
 
-local Position = require('fittencode.fn.position')
-local Range = require('fittencode.fn.range')
+local Position = require('fittencode.base.position')
+local Range = require('fittencode.base.range')
 local Log = require('fittencode.log')
-local Unicode = require('fittencode.fn.unicode')
+local Unicode = require('fittencode.base.unicode')
 local Common = require('fittencode.base.common')
 
 local M = {}

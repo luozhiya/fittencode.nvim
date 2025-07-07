@@ -6,8 +6,8 @@
 
 local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
-local Promise = require('fittencode.fn.promise')
-local Position = require('fittencode.fn.position')
+local Promise = require('fittencode.base.promise')
+local Position = require('fittencode.base.position')
 local OPL = require('fittencode.opl')
 local Log = require('fittencode.log')
 

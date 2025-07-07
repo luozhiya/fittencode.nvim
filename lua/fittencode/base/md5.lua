@@ -1,5 +1,5 @@
-local Promise = require('fittencode.fn.promise')
-local Process = require('fittencode.fn.process')
+local Promise = require('fittencode.base.promise')
+local Process = require('fittencode.base.process')
 local Log = require('fittencode.log')
 
 local M = {}

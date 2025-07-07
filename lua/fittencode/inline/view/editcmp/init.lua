@@ -5,10 +5,10 @@
 
 ]]
 
-local Position = require('fittencode.fn.position')
+local Position = require('fittencode.base.position')
 local Log = require('fittencode.log')
 local Fn = require('fittencode.base.fn')
-local Format = require('fittencode.fn.format')
+local Format = require('fittencode.base.format')
 local Common = require('fittencode.base.common')
 local Color = require('fittencode.color')
 

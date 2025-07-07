@@ -1,4 +1,4 @@
-local ShadowDocument = require('fittencode.fn.mirror_document')
+local ShadowDocument = require('fittencode.base.mirror_document')
 
 local M = {}
 
