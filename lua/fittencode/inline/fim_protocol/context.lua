@@ -14,7 +14,7 @@ local M = {}
 ---@return { prefix: string, suffix: string }
 function M.retrieve_context_fragments(buf, position, threshold)
     local current_line = assert(F.line_at(buf, position.row))
-    local round_curr_col = F.round_col_end(current_line.text, position.col + 1) - 1
+    local round_curr_col = F.round_col_end(current_line, position.col + 1) - 1
     local next_position = Position.new({ row = position.row, col = round_curr_col + 1 })
     -- Log.debug('Retrieve context fragments, current position = {}, next position = {}', position, next_position)
 

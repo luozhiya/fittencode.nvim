@@ -1,6 +1,5 @@
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
-local TextLine = require('fittencode.fn.text_line')
 local Log = require('fittencode.log')
 local Unicode = require('fittencode.fn.unicode')
 local Fn = require('fittencode.fn')
@@ -73,7 +72,7 @@ end
 -- 返回的 `range.end_.col` 指向末尾字节
 ---@param buf integer?
 ---@param row number A zero-based row value.
----@return FittenCode.TextLine?
+---@return string?
 function M.line_at(buf, row)
     assert(buf)
     local line_count = M.line_count(buf)
@@ -85,11 +84,7 @@ function M.line_at(buf, row)
     vim.api.nvim_buf_call(buf, function()
         text = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
     end)
-    return TextLine.new({
-        text = text,
-        line_number = row,
-        range = Range.from_line(row, text),
-    })
+    return text
 end
 
 ---@return string[]?
@@ -485,19 +480,6 @@ function M.get_text(buf, range, strict)
     return table.concat(assert(M.get_lines(buf, range, strict)), '\n')
 end
 
--- Check if the given position is within the line.
----@param buf integer?
----@param position FittenCode.Position
----@return boolean
-function M.within_the_line(buf, position)
-    assert(buf)
-    local line = M.line_at(buf, position.row)
-    if not line then
-        return false
-    end
-    return line.range.end_.col > position.col
-end
-
 function M.normalize_range(buf, range)
     if range.start.col == 2147483647 then
         range.start.col = -1
@@ -515,7 +497,7 @@ function M.normalize_range(buf, range)
     if not end_line then
         return
     end
-    if range.start.col > #start_line.text or range.end_.col > #end_line.text then
+    if range.start.col > #start_line or range.end_.col > #end_line then
         return
     end
 

@@ -62,18 +62,8 @@ local function get_buffer_by_uri(uri)
     end
 end
 
----@param buffer integer
----@param position lsp.Position
-local function lsp_pos_to_rowcol(buffer, position)
-    -- UTF-16
-    local row = position.line
-    local line = F.line_at(buffer, row).text
-    local col = Unicode.utf_to_byteindex(line, 'utf-16', position.character)
-    return row, col
-end
-
 local function get_prefix_char(bufnr, row, col)
-    local line = F.line_at(bufnr, row).text
+    local line = F.line_at(bufnr, row)
     local start_col = F.round_col_start(line, col) - 1
     if start_col == 0 then
         return line:sub(1, 1)
