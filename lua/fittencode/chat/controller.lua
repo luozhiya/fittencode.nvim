@@ -318,7 +318,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
     end
     local switch = {
         ['context'] = function()
-            return { { name = DocumentModel.filename(buf), language = language_id(buf), content = DocumentModel.content(buf) } }
+            return { { name = vim.api.nvim_buf_get_name(buf), language = language_id(buf), content = DocumentModel.content(buf) } }
         end,
         ['constant'] = function()
             return variables.value
@@ -351,7 +351,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
             Log.error('Not implemented for selected-location-text')
         end,
         ['filename'] = function()
-            return DocumentModel.filename(buf)
+            return vim.api.nvim_buf_get_name(buf)
         end,
         ['language'] = function()
             return language_id(buf)

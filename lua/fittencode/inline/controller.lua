@@ -341,7 +341,7 @@ function Controller:_make_session(buf, position, version, options)
     self.selected_session_id = assert(Fn.generate_short_id(13))
     local session = Session.new({
         buf = buf,
-        filename = DocumentModel.filename(buf),
+        filename = vim.api.nvim_buf_get_name(buf),
         position = position,
         mode = options.mode,
         id = self.selected_session_id,

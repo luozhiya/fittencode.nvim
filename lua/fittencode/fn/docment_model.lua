@@ -6,24 +6,6 @@ local Fn = require('fittencode.fn')
 
 local M = {}
 
----@return string?
-function M.language_id(buf)
-    assert(buf)
-    local ft
-    vim.api.nvim_buf_call(buf, function()
-        ft = vim.api.nvim_get_option_value('filetype', { buf = buf })
-    end)
-    local mapping = {
-        [''] = 'plaintext',
-    }
-    setmetatable(mapping, {
-        __index = function(_, k)
-            return k
-        end
-    })
-    return mapping[ft]
-end
-
 ---@return string
 function M.filename(buf)
     assert(buf)

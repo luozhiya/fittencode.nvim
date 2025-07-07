@@ -92,7 +92,7 @@ function State.get_state_from_model(model, selected_state)
                     sc.reference = {
                         select_text = DocumentModel.get_text(conv.context.buf, conv.context.selection.range),
                         select_range = {
-                            name = DocumentModel.filename(conv.context.buf),
+                            name = vim.api.nvim_buf_get_name(conv.context.buf),
                             range = conv.context.selection.range
                         }
                     }
