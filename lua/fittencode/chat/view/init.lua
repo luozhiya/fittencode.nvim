@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn.core')
+local Fn = require('fittencode.fn')
 local F = require('fittencode.fn.buf')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')

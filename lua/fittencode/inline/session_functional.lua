@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn.core')
+local Fn = require('fittencode.fn')
 local FimGenerate = require('fittencode.inline.fim_protocol.generate')
 local FimParse = require('fittencode.inline.fim_protocol.parse')
 local Promise = require('fittencode.fn.promise')

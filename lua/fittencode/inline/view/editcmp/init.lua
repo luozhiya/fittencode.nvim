@@ -10,7 +10,7 @@ local Log = require('fittencode.log')
 local F = require('fittencode.fn.buf')
 local V = require('fittencode.fn.view')
 local Format = require('fittencode.fn.format')
-local Fn = require('fittencode.fn.core')
+local Fn = require('fittencode.fn')
 local Color = require('fittencode.color')
 
 ---@class FittenCode.Inline.EditCompletion.View

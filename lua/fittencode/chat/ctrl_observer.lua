@@ -1,7 +1,7 @@
 local Observer = require('fittencode.fn.observer')
 local Definitions = require('fittencode.chat.definitions')
 local Log = require('fittencode.log')
-local Fn = require('fittencode.fn.core')
+local Fn = require('fittencode.fn')
 
 local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
 local CONVERSATION_PHASE = Definitions.CONVERSATION_PHASE

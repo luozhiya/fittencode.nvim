@@ -1,5 +1,5 @@
 local F = require('fittencode.fn.buf')
-local Fn = require('fittencode.fn.core')
+local Fn = require('fittencode.fn')
 local Log = require('fittencode.log')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')

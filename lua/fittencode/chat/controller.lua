@@ -1,6 +1,6 @@
 local Log = require('fittencode.log')
 local State = require('fittencode.chat.view.state')
-local Fn = require('fittencode.fn.core')
+local Fn = require('fittencode.fn')
 local F = require('fittencode.fn.buf')
 local Config = require('fittencode.config')
 local i18n = require('fittencode.i18n')

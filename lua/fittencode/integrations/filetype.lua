@@ -70,7 +70,7 @@ function M.setup()
             return
         end
         if not debound_send_filetype then
-            debound_send_filetype = require('fittencode.fn.core').debounce(send_filetype, 300)
+            debound_send_filetype = require('fittencode.fn').debounce(send_filetype, 300)
         end
         debound_send_filetype(buffer)
     end

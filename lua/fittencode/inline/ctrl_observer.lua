@@ -1,7 +1,7 @@
 local Observer = require('fittencode.fn.observer')
 local Definitions = require('fittencode.inline.definitions')
 local Log = require('fittencode.log')
-local Fn = require('fittencode.fn.core')
+local Fn = require('fittencode.fn')
 
 local INLINE_EVENT = Definitions.INLINE_EVENT
 local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
