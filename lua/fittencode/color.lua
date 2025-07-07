@@ -30,8 +30,25 @@ local PRESET_THEME = {
     },
 }
 
+local function is_dark_colorscheme()
+    -- 获取 Normal 组的背景色
+    local normal_hl = vim.api.nvim_get_hl(0, { name = 'Normal' })
+    local bg_color = normal_hl.bg or 0 -- 默认为黑色 (0)
+
+    -- 提取 RGB 分量
+    local r = bit.rshift(bit.band(bg_color, 0xff0000), 16)
+    local g = bit.rshift(bit.band(bg_color, 0x00ff00), 8)
+    local b = bit.band(bg_color, 0x0000ff)
+
+    -- 计算相对亮度 (公式: ITU-R BT.709)
+    local luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+
+    -- 判断亮度阈值
+    return luminance < 0.5 -- < 0.5 为深色
+end
+
 local function update()
-    local theme = PRESET_THEME[Fn.is_dark_colorscheme() and 'dark' or 'light']
+    local theme = PRESET_THEME[is_dark_colorscheme() and 'dark' or 'light']
     for name, color in pairs(theme) do
         local _ = Config.colors[name] or {}
         if not vim.tbl_isempty(_) then

@@ -56,10 +56,9 @@ function M.startswith(s, prefix)
 end
 
 function M.uuid()
-    local random = math.random
     local template = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
     return string.gsub(template, '[xy]', function(c)
-        local v = (c == 'x') and random(0, 0xf) or random(8, 0xb)
+        local v = (c == 'x') and math.random(0, 0xf) or math.random(8, 0xb)
         return string.format('%x', v)
     end)
 end
@@ -81,23 +80,6 @@ end
 
 function M.generate_short_id_as_string(length)
     return '(' .. M.generate_short_id(length) .. ')'
-end
-
-function M.is_dark_colorscheme()
-    -- 获取 Normal 组的背景色
-    local normal_hl = vim.api.nvim_get_hl(0, { name = 'Normal' })
-    local bg_color = normal_hl.bg or 0 -- 默认为黑色 (0)
-
-    -- 提取 RGB 分量
-    local r = bit.rshift(bit.band(bg_color, 0xff0000), 16)
-    local g = bit.rshift(bit.band(bg_color, 0x00ff00), 8)
-    local b = bit.band(bg_color, 0x0000ff)
-
-    -- 计算相对亮度 (公式: ITU-R BT.709)
-    local luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-
-    -- 判断亮度阈值
-    return luminance < 0.5 -- < 0.5 为深色
 end
 
 return M
