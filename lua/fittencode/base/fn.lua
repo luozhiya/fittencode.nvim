@@ -1,7 +1,5 @@
 --[[
 
-src\vs\workbench\api\common\extHostDocumentData.ts
-
 ]]
 
 local Position = require('fittencode.base.position')
@@ -108,32 +106,6 @@ function M.position(win)
         row = row - 1,
         col = col,
     })
-end
-
-function M.normalize_range(buf, range)
-    if range.start.col == 2147483647 then
-        range.start.col = -1
-    end
-    if range.end_.col == 2147483647 then
-        range.end_.col = -1
-    end
-    range:sort()
-
-    local start_line = M.line_at(buf, range.start.row)
-    if not start_line then
-        return
-    end
-    local end_line = M.line_at(buf, range.end_.row)
-    if not end_line then
-        return
-    end
-    if range.start.col > #start_line or range.end_.col > #end_line then
-        return
-    end
-
-    range.start = M.round_start(buf, range.start)
-    range.end_ = M.round_end(buf, range.end_)
-    return range
 end
 
 -- 检查当前 buffer 的最后一行是否在当前 window 中可见
@@ -312,7 +284,9 @@ function M.byte_to_utfindex(layout, encoding, index)
         cu = #cumulative_units
     end
 
-    return (cumulative_units[cu - 1] or 0) + 1
+    -- return (cumulative_units[cu - 1] or 0) + 1
+    -- 为了方便统计数量，返回最末尾的位置，即大小
+    return cumulative_units[cu]
 end
 
 local function _round(layout, encoding, index, is_start)

@@ -7,11 +7,12 @@
 References:
 - src/vscode/extensions/markdown-language-features/node_modules/vscode-languageserver-textdocument/lib/umd/main.js
 - resources/app/out/vs/workbench/api/node/extensionHostProcess.js
+- src/vs/workbench/api/common/extHostDocumentData.ts
 
 --]]
 
-local Unicode = require('fittencode.base.unicode')
 local Position = require('fittencode.base.position')
+local Fn = require('fittencode.base.fn')
 
 ---@class FittenCode.ShadowTextModel
 ---@field lines string[]
@@ -22,10 +23,10 @@ local ShadowTextModel = {}
 ShadowTextModel.__index = ShadowTextModel
 
 ---@class FittenCode.ShadowTextModel.Computed
----@field u16_line integer
----@field u16_indices table<integer, integer>
----@field sum_index integer
----@field sum_prefix table<integer, integer>
+---@field utf_line table<lsp.PositionEncodingKind, integer>
+---@field utf_indices table<lsp.PositionEncodingKind, table<integer, integer>>
+---@field sum_index table<lsp.PositionEncodingKind, integer>
+---@field sum_prefix table<lsp.PositionEncodingKind, table<integer, integer>>
 ---@field full_text? string
 ---@field layouts FittenCode.EncodedStringLayout[]
 
@@ -48,44 +49,53 @@ function ShadowTextModel:_initialize(options)
     self.eol = options.eol
     self.eol_length = #self.eol
     self.computed = {
-        u16_line = -1,
-        u16_indices = {},
-        sum_index = -1,
-        sum_prefix = {},
+        utf_line = { ['utf-8'] = -1, ['utf-16'] = -1, ['utf-32'] = -1 },
+        utf_indices = { ['utf-8'] = {}, ['utf-16'] = {}, ['utf-32'] = {} },
+        sum_index = { ['utf-8'] = -1, ['utf-16'] = -1, ['utf-32'] = -1 },
+        sum_prefix = { ['utf-8'] = {}, ['utf-16'] = {}, ['utf-32'] = {} },
         full_text = nil,
         layouts = {}
     }
 end
 
-function ShadowTextModel:_compute_lines(target_line)
-    if self.computed.u16_line >= target_line then
+---@param encoding lsp.PositionEncodingKind
+---@param line integer
+function ShadowTextModel:_compute_lines(encoding, line)
+    if self.computed.utf_line[encoding] >= line then
         return
     end
-    for i = self.computed.u16_line + 1, target_line do
+    for i = self.computed.utf_line[encoding] + 1, line do
         local pi = self:_get_layout(i)
-        self.computed.u16_indices[i + 1] = Unicode.byte_to_utfindex_by_layout(pi, 'utf-16')
+        self.computed.utf_indices[encoding][i + 1] = Fn.byte_to_utfindex(pi, encoding)
     end
-    self.computed.u16_line = target_line
+    self.computed.utf_line[encoding] = line
 end
 
-function ShadowTextModel:_get_u16_index(line)
-    self:_compute_lines(line)
-    return assert(self.computed.u16_indices[line + 1])
+---@param encoding lsp.PositionEncodingKind
+---@param line integer
+---@return integer
+function ShadowTextModel:_get_utf_index(encoding, line)
+    self:_compute_lines(encoding, line)
+    return assert(self.computed.utf_indices[encoding][line + 1])
 end
 
-function ShadowTextModel:_compute_prefix_sum(target_line)
-    if self.computed.sum_index >= target_line then
+---@param encoding lsp.PositionEncodingKind
+---@param line integer
+function ShadowTextModel:_compute_prefix_sum(encoding, line)
+    if self.computed.sum_index[encoding] >= line then
         return
     end
-    for i = self.computed.sum_index + 1, target_line do
-        self.computed.sum_prefix[i + 1] = (self.computed.sum_prefix[i] or 0) + self:_get_u16_index(i) + self.eol_length
+    for i = self.computed.sum_index[encoding] + 1, line do
+        self.computed.sum_prefix[encoding][i + 1] = (self.computed.sum_prefix[encoding][i] or 0) + self:_get_utf_index(encoding, i) + self.eol_length
     end
-    self.computed.sum_index = target_line
+    self.computed.sum_index[encoding] = line
 end
 
-function ShadowTextModel:_get_prefix_sum(line)
-    self:_compute_prefix_sum(line)
-    return self.computed.sum_prefix[line + 1 - 1] or 0
+---@param encoding lsp.PositionEncodingKind
+---@param line integer
+function ShadowTextModel:_get_prefix_sum(encoding, line)
+    self:_compute_prefix_sum(encoding, line)
+    return self.computed.sum_prefix[encoding][line + 1 - 1] or 0
 end
 
 ---@param line integer 0-based
@@ -98,61 +108,48 @@ function ShadowTextModel:line_count()
     return #self.lines
 end
 
----@param vim_position FittenCode.Position
----@return lsp.Position
-function ShadowTextModel:to_lsp_position(vim_position)
-    local row = vim_position.row
-    local pi = self:_get_layout(row)
-    local col = Unicode.byte_to_utfindex_by_layout(pi, 'utf-16', vim_position.col + 1) - 1
-    return { line = row, character = col }
-end
-
----@param lsp_position lsp.Position
+---@param encoding lsp.PositionEncodingKind
+---@param position FittenCode.Position
 ---@return FittenCode.Position
-function ShadowTextModel:to_vim_position(lsp_position)
-    local row = lsp_position.line
-    local pi = self:_get_layout(row)
-    local col = Unicode.utf_to_byteindex_by_layout(pi, 'utf-16', lsp_position.character + 1) - 1
-    return Position.of(row, col)
-end
-
----@param position lsp.Position
----@return lsp.Position
-function ShadowTextModel:_validate_position(position)
+function ShadowTextModel:_validate_position(encoding, position)
     if #self.lines == 0 then
-        return { line = 0, character = 0 }
+        return Position.of(0, 0)
     end
-    local line, character = position.line, position.character
+    local line, character = position.row, position.col
     if line < 0 then
         line = 0
         character = 0
     elseif line >= #self.lines then
         line = #self.lines - 1
-        character = self:_get_u16_index(line)
+        character = self:_get_utf_index(encoding, line)
     else
-        local max_character = self:_get_u16_index(line)
+        local max_character = self:_get_utf_index(encoding, line)
         if character < 0 then
             character = 0
         elseif character > max_character then
             character = max_character
         end
     end
-    return { line = line, character = character }
+    return Position.of(line, character)
 end
 
-function ShadowTextModel:_validate_offset(offset)
+---@param encoding lsp.PositionEncodingKind
+---@param offset integer
+---@return integer
+function ShadowTextModel:_validate_offset(encoding, offset)
     if offset < 0 then
         return 0
-    elseif offset >= self:_get_prefix_sum(#self.lines - 1) then
-        return self:_get_prefix_sum(#self.lines - 1)
+    elseif offset >= self:_get_prefix_sum(encoding, #self.lines - 1) then
+        return self:_get_prefix_sum(encoding, #self.lines - 1)
     end
     return offset
 end
 
+---@param encoding lsp.PositionEncodingKind
 ---@param offset integer
----@return lsp.Position
-function ShadowTextModel:position_at(offset)
-    offset = self:_validate_offset(offset)
+---@return FittenCode.Position
+function ShadowTextModel:position_at(encoding, offset)
+    offset = self:_validate_offset(encoding, offset)
     local low = 0
     local high = #self.lines - 1
     local mid = 0
@@ -160,8 +157,8 @@ function ShadowTextModel:position_at(offset)
     local mid_start = 0
     while low < high do
         mid = low + (high - low + 1) / 2
-        mid_stop = self:_get_prefix_sum(mid)
-        mid_start = mid_stop - self:_get_u16_index(mid)
+        mid_stop = self:_get_prefix_sum(encoding, mid)
+        mid_start = mid_stop - self:_get_utf_index(encoding, mid)
         if offset < mid_start then
             high = mid - 1
         elseif offset >= mid_stop then
@@ -172,76 +169,83 @@ function ShadowTextModel:position_at(offset)
     end
     local index = mid
     local remainder = offset - mid_start
-    local line_length = self:_get_u16_index(index)
-    return { line = index, character = math.min(line_length, remainder) }
+    local line_length = self:_get_utf_index(encoding, index)
+    return Position.of(index, math.min(line_length, remainder))
 end
 
--- Converts the position to a zero-based offset.
----@param position lsp.Position
+---@param encoding lsp.PositionEncodingKind
+---@param position FittenCode.Position
 ---@return integer
-function ShadowTextModel:offset_at(position)
-    position = self:_validate_position(position)
-    assert(position.line >= self.computed.u16_line)
-    return self:_get_prefix_sum(position.line - 1) + position.character
+function ShadowTextModel:offset_at(encoding, position)
+    position = self:_validate_position(encoding, position)
+    return self:_get_prefix_sum(encoding, position.row - 1) + position.col
 end
 
 ---@param line integer
 ---@return FittenCode.EncodedStringLayout
 function ShadowTextModel:_get_layout(line)
     if not self.computed.layouts[line + 1] then
-        self.computed.layouts[line + 1] = Unicode.multi_encoding_layout(self.lines[line + 1])
+        self.computed.layouts[line + 1] = Fn.encoded_layout(self.lines[line + 1])
     end
     return self.computed.layouts[line + 1]
 end
 
----@param range? lsp.Range
+---@param encoding? lsp.PositionEncodingKind
+---@param range? FittenCode.Range
 ---@return string
-function ShadowTextModel:get_text(range)
+function ShadowTextModel:get_text(encoding, range)
     if not range then
         if not self.computed.full_text then
             self.computed.full_text = table.concat(self.lines, self.eol)
         end
         return self.computed.full_text
     end
+    assert(encoding)
     local result_lines = {}
     -- part 1
-    local start_pi = self:_get_layout(range.start.line)
-    local start_byte_index = Unicode.utf_to_byteindex_by_layout(start_pi, 'utf-16', range.start.character + 1) - 1
-    local remaning = self:line_at(range.start.line):sub(start_byte_index)
+    local start_pi = self:_get_layout(range.start.row)
+    local start_byte_index = Fn.utf_to_byteindex(start_pi, encoding, range.start.col + 1) - 1
+    local remaning = self:line_at(range.start.row):sub(start_byte_index)
     result_lines[#result_lines + 1] = remaning
     -- part 2
-    for i = range.start.line + 1, range['end'].line - 1 do
+    for i = range.start.row + 1, range.end_.row - 1 do
         result_lines[#result_lines + 1] = self.lines[i + 1]
     end
     -- part 3
-    local end_pi = self:_get_layout(range['end'].line)
-    local end_byte_index = Unicode.utf_to_byteindex_by_layout(end_pi, 'utf-16', range['end'].character + 1) - 1
+    local end_pi = self:_get_layout(range.end_.row)
+    local end_byte_index = Fn.utf_to_byteindex(end_pi, encoding, range.end_.col + 1) - 1
     end_byte_index = end_byte_index - 1
     if end_byte_index ~= -1 then
-        remaning = self:line_at(range['end'].line):sub(1, end_byte_index)
+        remaning = self:line_at(range.end_.row):sub(1, end_byte_index)
         result_lines[#result_lines + 1] = remaning
     end
     return table.concat(result_lines, self.eol)
 end
 
----@param encoding lsp.PositionEncodingKind
----@param line integer
----@param character integer
----@return integer, integer
-function ShadowTextModel:round_start(encoding, line, character)
-    local pi = self:_get_layout(line)
-    local start = Unicode.round_start_by_layout(pi, encoding, character + 1) - 1
-    return line, start
-end
+-- function M.normalize_range(buf, range)
+--     if range.start.col == 2147483647 then
+--         range.start.col = -1
+--     end
+--     if range.end_.col == 2147483647 then
+--         range.end_.col = -1
+--     end
+--     range:sort()
 
----@param encoding lsp.PositionEncodingKind
----@param line integer
----@param character integer
----@return integer, integer
-function ShadowTextModel:round_end(encoding, line, character)
-    local pi = self:_get_layout(line)
-    local end_ = Unicode.round_end_by_layout(pi, encoding, character + 1) - 1
-    return line, end_
-end
+--     local start_line = M.line_at(buf, range.start.row)
+--     if not start_line then
+--         return
+--     end
+--     local end_line = M.line_at(buf, range.end_.row)
+--     if not end_line then
+--         return
+--     end
+--     if range.start.col > #start_line or range.end_.col > #end_line then
+--         return
+--     end
+
+--     range.start = M.round_start(buf, range.start)
+--     range.end_ = M.round_end(buf, range.end_)
+--     return range
+-- end
 
 return ShadowTextModel
