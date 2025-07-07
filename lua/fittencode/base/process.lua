@@ -18,7 +18,7 @@ p:run()
 --]]
 
 local Log = require('fittencode.log')
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 
 local M = {}
 
@@ -195,13 +195,13 @@ local function new(command, args, options)
             local cbs = self._callbacks[event]
             if cbs then
                 for _, cb in ipairs(cbs) do
-                    Fn.check_call(cb, ...)
+                    Common.check_call(cb, ...)
                 end
             end
         end,
         -- async 方法用于异步启动进程
         async = function(self)
-            Fn.check_call(run, self)
+            Common.check_call(run, self)
         end,
     }
 end

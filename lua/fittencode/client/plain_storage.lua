@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 local Path = require('fittencode.fn.path')
 
 ---@class FittenCode.PlainStorage
@@ -36,7 +36,7 @@ local function operate_data(self, operation)
         vim.uv.fs_close(fd)
         if not content then return false, 'Read failed: ' .. read_err end
 
-        if not Fn.startswith(content, file_header) then
+        if not Common.startswith(content, file_header) then
             return false, 'Invalid file format'
         end
         data = vim.json.decode(content:sub(#file_header + 1)) or {}

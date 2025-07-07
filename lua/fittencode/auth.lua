@@ -1,7 +1,7 @@
 local Protocol = require('fittencode.client.protocol')
 local Log = require('fittencode.log')
 local i18n = require('fittencode.i18n')
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 local Client = require('fittencode.client')
 local Keyring = require('fittencode.client.keyring')
 local Promise = require('fittencode.fn.promise')
@@ -35,7 +35,7 @@ local function abort_all_operations()
     end
 
     if login3rd.check_timer then
-        Fn.clear_interval(login3rd.check_timer)
+        Common.clear_interval(login3rd.check_timer)
         login3rd.check_timer = nil
     end
 
@@ -158,7 +158,7 @@ function M.login3rd(source, options)
         return
     end
 
-    local client_token = Fn.uuid_v4()
+    local client_token = Common.uuid_v4()
     if not client_token then
         Log.error('Failed to generate client token')
         return
@@ -215,7 +215,7 @@ function M.login3rd(source, options)
     end
 
     -- 启动定时检查
-    login3rd.check_timer = Fn.set_interval(login3rd.time_delta * 1000, _check_login)
+    login3rd.check_timer = Common.set_interval(login3rd.time_delta * 1000, _check_login)
 end
 
 function M.logout()

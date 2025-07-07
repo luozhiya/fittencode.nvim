@@ -1,7 +1,7 @@
 local Log = require('fittencode.log')
 local State = require('fittencode.chat.view.state')
-local Fn = require('fittencode.fn')
-local Editor = require('fittencode.fn.editor')
+local Common = require('fittencode.base.common')
+local Fn = require('fittencode.base.fn')
 local Config = require('fittencode.config')
 local i18n = require('fittencode.i18n')
 local Position = require('fittencode.fn.position')
@@ -77,7 +77,7 @@ end
 ---@param observer FittenCode.Observer
 function Controller:add_observer(observer)
     if type(observer) == 'function' then
-        local id = 'callback_observer' .. Fn.generate_short_id_as_string()
+        local id = 'callback_observer' .. Common.generate_short_id_as_string()
         observer = setmetatable({
             id = id,
             update = function(_, ctrl, event, data)
@@ -117,7 +117,7 @@ end
 
 ---@return string
 function Controller:generate_conversation_id()
-    return Fn.generate_short_id(8)
+    return Common.generate_short_id(8)
 end
 
 ---@param options? { force?: boolean, clean_canvas?: boolean, skip_welcome_msg?: boolean }
@@ -318,7 +318,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
     end
     local switch = {
         ['context'] = function()
-            return { { name = vim.api.nvim_buf_get_name(buf), language = language_id(buf), content = Editor.get_text(buf) } }
+            return { { name = vim.api.nvim_buf_get_name(buf), language = language_id(buf), content = Fn.get_text(buf) } }
         end,
         ['constant'] = function()
             return variables.value
@@ -344,7 +344,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
             end
         end,
         ['selected-text'] = function()
-            return Editor.get_text(buf, context.selection.range)
+            return Fn.get_text(buf, context.selection.range)
         end,
         ['selected-location-text'] = function()
             -- TODO
@@ -455,7 +455,7 @@ function Controller:from_builtin_template_with_selection(type, mode)
         context.buf = buf
         local selection = {}
         local range = get_range_from_visual_selection(buf)
-        selection.range = Editor.normalize_range(buf, range)
+        selection.range = Fn.normalize_range(buf, range)
         -- Log.debug('Get range from visual selection = {}', range)
         -- Log.debug('Selected range = {}', selection.range)
         local REQUIRES_SELECTION = {
@@ -469,9 +469,9 @@ function Controller:from_builtin_template_with_selection(type, mode)
         if vim.tbl_contains(REQUIRES_SELECTION, type) and not selection.range then
             if type == TEMPLATE_CATEGORIES.EDIT_CODE then
                 -- TODO: Tree-sitter supported
-                -- Editor.expand_range_ts(buf, curpos, 'function') -- 'class'
-                -- local curpos = Editor.position(win)
-                -- selection.range = Editor.expand_range(buf, curpos, 20)
+                -- Fn.expand_range_ts(buf, curpos, 'function') -- 'class'
+                -- local curpos = Fn.position(win)
+                -- selection.range = Fn.expand_range(buf, curpos, 20)
             else
                 Log.notify_error('Please select the code in the editor.')
                 return

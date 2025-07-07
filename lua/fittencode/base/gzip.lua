@@ -4,18 +4,18 @@ local Log = require('fittencode.log')
 
 local M = {}
 
----@class FittenCode.Fn.GzipCompressOptions
+---@class FittenCode.Base.GzipCompressOptions
 ---@field source string Input file (file path or stdin data)
 ---@field level? number [optional] Compression level 1-9 (default 6)
 ---@field force? boolean [optional] Overwrite existing file
 ---@field keep? boolean [optional] Keep (don't delete) input files
 
----@class FittenCode.Fn.GzipCompressResult
+---@class FittenCode.Base.GzipCompressResult
 ---@field is_file boolean
 ---@field output string Output file (file path or stdout data)
 
----@param options FittenCode.Fn.GzipCompressOptions
----@return FittenCode.Promise<FittenCode.Fn.GzipCompressResult>
+---@param options FittenCode.Base.GzipCompressOptions
+---@return FittenCode.Promise<FittenCode.Base.GzipCompressResult>
 function M.compress(options)
     options = options or {}
     return Promise.new(function(resolve, reject)

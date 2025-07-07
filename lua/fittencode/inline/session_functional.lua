@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 local FimGenerate = require('fittencode.inline.fim_protocol.generate')
 local FimParse = require('fittencode.inline.fim_protocol.parse')
 local Promise = require('fittencode.fn.promise')
@@ -30,7 +30,7 @@ function M.generate_prompt(options)
     local mode = assert(options.mode)
     local diff_required = options.diff_required == nil and true or options.diff_required
 
-    Fn.check_call(on_before_generate_prompt)
+    Common.check_call(on_before_generate_prompt)
     return FimGenerate.generate(buf, position, {
         filename = filename,
         version = version,
@@ -50,7 +50,7 @@ function M.async_compress_prompt(options)
     local on_before_compress_prompt = options.on_before_compress_prompt
     local prompt = assert(options.prompt)
 
-    Fn.check_call(on_before_compress_prompt)
+    Common.check_call(on_before_compress_prompt)
     local _, data = pcall(vim.fn.json_encode, prompt)
     if not _ then
         return Promise.rejected({
@@ -75,7 +75,7 @@ function M.get_completion_version(options)
     assert(options)
     local on_before_get_completion_version = options.on_before_get_completion_version
 
-    Fn.check_call(on_before_get_completion_version)
+    Common.check_call(on_before_get_completion_version)
     local request = Client.make_request(Protocol.Methods.get_completion_version)
     if not request then
         return Promise.rejected({
@@ -121,7 +121,7 @@ function M.generate_one_stage_auth(options)
     local buf = assert(options.buf)
     local mode = assert(options.mode)
 
-    Fn.check_call(on_before_generate_one_stage_auth)
+    Common.check_call(on_before_generate_one_stage_auth)
     local vu = {
         ['0'] = '',
         ['1'] = '2_1',

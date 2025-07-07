@@ -1,5 +1,5 @@
 local Log = require('fittencode.log')
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 local Config = require('fittencode.config')
 local Client = require('fittencode.client')
 local OPL = require('fittencode.opl')
@@ -228,9 +228,9 @@ local function is_rag_chat(self)
         return false
     end
     local content = last_message.content
-    local workspace = Fn.startswith(content, '@workspace')
-    local _workspace = Fn.startswith(content, '@_workspace')
-    local enterprise_workspace = (Fn.startswith(content, '@_workspace(') or Fn.startswith(content, '@workspace(')) and Config.server.fitten_version == 'enterprise'
+    local workspace = Common.startswith(content, '@workspace')
+    local _workspace = Common.startswith(content, '@_workspace')
+    local enterprise_workspace = (Common.startswith(content, '@_workspace(') or Common.startswith(content, '@workspace(')) and Config.server.fitten_version == 'enterprise'
 
     if Config.server.fitten_version == 'default' then
         workspace = false

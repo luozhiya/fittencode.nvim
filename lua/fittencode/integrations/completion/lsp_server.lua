@@ -18,7 +18,7 @@ local Promise = require('fittencode.fn.promise')
 local Position = require('fittencode.fn.position')
 local Generate = require('fittencode.generate')
 local Unicode = require('fittencode.fn.unicode')
-local Editor = require('fittencode.fn.editor')
+local Fn = require('fittencode.base.fn')
 local Log = require('fittencode.log')
 local _Lsp = require('fittencode.integrations.completion._lsp')
 
@@ -63,13 +63,13 @@ local function get_buffer_by_uri(uri)
 end
 
 local function get_prefix_char(bufnr, row, col)
-    local line = Editor.line_at(bufnr, row)
-    local start_col = Editor.round_col_start(line, col) - 1
+    local line = Fn.line_at(bufnr, row)
+    local start_col = Fn.round_col_start(line, col) - 1
     if start_col == 0 then
         return line:sub(1, 1)
     end
     start_col = start_col - 1
-    local p1 = Editor.round_col_start(line, start_col + 1) - 1
+    local p1 = Fn.round_col_start(line, start_col + 1) - 1
     return line:sub(p1 + 1, start_col + 1)
 end
 

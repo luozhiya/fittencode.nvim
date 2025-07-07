@@ -1,5 +1,5 @@
 local MD5 = require('fittencode.fn.md5')
-local Editor = require('fittencode.fn.editor')
+local Fn = require('fittencode.base.fn')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local Promise = require('fittencode.fn.promise')
@@ -13,23 +13,23 @@ local M = {}
 ---@param threshold number
 ---@return { prefix: string, suffix: string }
 function M.retrieve_context_fragments(buf, position, threshold)
-    local current_line = assert(Editor.line_at(buf, position.row))
-    local round_curr_col = Editor.round_col_end(current_line, position.col + 1) - 1
+    local current_line = assert(Fn.line_at(buf, position.row))
+    local round_curr_col = Fn.round_col_end(current_line, position.col + 1) - 1
     local next_position = Position.new({ row = position.row, col = round_curr_col + 1 })
     -- Log.debug('Retrieve context fragments, current position = {}, next position = {}', position, next_position)
 
-    local current_chars_off = Editor.offset_at_u32(buf, position)
+    local current_chars_off = Fn.offset_at_u32(buf, position)
     local start_chars_off = math.max(0, math.floor(current_chars_off - threshold - 1))
-    local start_pos = Editor.position_at_u32(buf, start_chars_off) or Position.new({ row = 0, col = 0 })
-    local end_chars_off = math.min(Editor.wordcount(buf).chars, math.floor(current_chars_off + threshold - 1))
+    local start_pos = Fn.position_at_u32(buf, start_chars_off) or Position.new({ row = 0, col = 0 })
+    local end_chars_off = math.min(Fn.wordcount(buf).chars, math.floor(current_chars_off + threshold - 1))
     -- Log.debug('Retrieve context fragments, start chars offset = {}, end chars offset = {}', start_chars_off, end_chars_off)
-    local end_pos = Editor.position_at_u32(buf, end_chars_off) or Position.new({ row = -1, col = -1 })
+    local end_pos = Fn.position_at_u32(buf, end_chars_off) or Position.new({ row = -1, col = -1 })
     -- Log.debug('Retrieve context fragments, start position = {}, end position = {}', start_pos, end_pos)
-    local prefix = Editor.get_text(buf, Range.new({
+    local prefix = Fn.get_text(buf, Range.new({
         start = start_pos,
         end_ = position
     }))
-    local suffix = Editor.get_text(buf, Range.new({
+    local suffix = Fn.get_text(buf, Range.new({
         start = next_position,
         end_ = end_pos
     }))

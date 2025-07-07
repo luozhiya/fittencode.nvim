@@ -16,8 +16,8 @@ Inline
 
 local Client = require('fittencode.client')
 local Config = require('fittencode.config')
-local Fn = require('fittencode.fn')
-local Editor = require('fittencode.fn.editor')
+local Common = require('fittencode.base.common')
+local Fn = require('fittencode.base.fn')
 local Promise = require('fittencode.fn.promise')
 local Session = require('fittencode.inline.session')
 local i18n = require('fittencode.i18n')
@@ -142,7 +142,7 @@ function Controller:_initialize(options)
         -- vim.api.nvim_create_autocmd({ 'FileType' }, {
         --     group = vim.api.nvim_create_augroup('FittenCode.Inline.LspServer', { clear = true }),
         --     callback = function(args)
-        --         if Editor.is_filebuf(args.buf) then
+        --         if Fn.is_filebuf(args.buf) then
         --             Log.debug('LspServer attach = {}', args)
         --             LspServer.attach(args.buf)
         --         end
@@ -173,7 +173,7 @@ end
 ---@param observer FittenCode.Observer | function
 function Controller:add_observer(observer)
     if type(observer) == 'function' then
-        local id = 'callback_observer' .. Fn.generate_short_id_as_string()
+        local id = 'callback_observer' .. Common.generate_short_id_as_string()
         observer = setmetatable({
             id = id,
             update = function(_, ctrl, event)
@@ -251,7 +251,7 @@ function Controller:edit_completion_cancel(options)
     local current = self:get_active_session()
     if options.vimev and options.vimev.event == 'CursorMovedI' and current then
         if current.mode == 'inccmp' then
-            local match = current:is_match_commit_position(Editor.position(vim.api.nvim_get_current_win()))
+            local match = current:is_match_commit_position(Fn.position(vim.api.nvim_get_current_win()))
             if vim.tbl_contains(self.filter_events, options.vimev.event) or match then
                 return
             end
@@ -310,7 +310,7 @@ function Controller:_preflight_check(vimev, force)
         Log.debug('Preflight check failed, filter_events = {}', self.filter_events)
         return nil, nil, true
     end
-    local position = Editor.position(vim.api.nvim_get_current_win())
+    local position = Fn.position(vim.api.nvim_get_current_win())
     assert(position)
     local within_the_line = is_within_the_line(position)
     if Config.inline_completion.disable_completion_within_the_line and within_the_line then
@@ -332,13 +332,13 @@ end
 ---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
 function Controller:_make_session(buf, position, version, options)
     local buf_new, position_new = self:_preflight_check(options.vimev, options.force)
-    if not (buf and position and buf_new and position_new and buf_new == buf and position_new:is_equal(position) and Editor.version(buf_new) == version) then
+    if not (buf and position and buf_new and position_new and buf_new == buf and position_new:is_equal(position) and Fn.version(buf_new) == version) then
         return Promise.rejected({
             message = 'Preflight check failed'
         })
     end
     self:terminate_sessions()
-    self.selected_session_id = assert(Fn.generate_short_id(13))
+    self.selected_session_id = assert(Common.generate_short_id(13))
     local session = Session.new({
         buf = buf,
         filename = vim.api.nvim_buf_get_name(buf),
@@ -348,7 +348,7 @@ function Controller:_make_session(buf, position, version, options)
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
         on_session_update_event = function(data) self:_emit({ event = CONTROLLER_EVENT.SESSION_UPDATED, data = data }) end,
         on_session_event = function(data) self:on_session_event(data) end,
-        version = Editor.version(buf)
+        version = Fn.version(buf)
     })
     self.sessions[session.id] = session
 
@@ -375,10 +375,10 @@ function Controller:trigger_inline_suggestion(options)
             message = 'Preflight check failed'
         })
     end
-    local version = Editor.version(buf)
+    local version = Fn.version(buf)
     if debounced then
         if not self.debounced_make_session then
-            self.debounced_make_session = Fn.debounce(function(...) return self:_make_session(...) end, 150)
+            self.debounced_make_session = Common.debounce(function(...) return self:_make_session(...) end, 150)
         end
         return Promise.new(function(resolve, reject)
             self.debounced_make_session(buf, position, version, options, function(ret)
@@ -431,7 +431,7 @@ end
 function Controller:is_enabled(buf)
     local filebuf = true
     if Config.inline_completion.disable_completion_when_nofile_buffer then
-        filebuf = Editor.is_filebuf(buf)
+        filebuf = Fn.is_filebuf(buf)
     end
     return Config.inline_completion.enable and filebuf and not self:is_ft_disabled(buf)
 end
@@ -442,7 +442,7 @@ end
 function Controller:_show_no_more_suggestion(msg, timeout, timestamp)
     local buf = vim.api.nvim_get_current_buf()
     vim.api.nvim_buf_clear_namespace(buf, self.no_more_suggestion_ns, 0, -1)
-    local position = assert(Editor.position(vim.api.nvim_get_current_win()))
+    local position = assert(Fn.position(vim.api.nvim_get_current_win()))
     vim.api.nvim_buf_set_extmark(
         buf,
         self.no_more_suggestion_ns,

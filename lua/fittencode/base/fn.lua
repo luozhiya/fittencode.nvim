@@ -8,7 +8,7 @@ local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local Log = require('fittencode.log')
 local Unicode = require('fittencode.fn.unicode')
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 
 local M = {}
 
@@ -191,13 +191,13 @@ function M.ignoreevent_wrap(fx, ignore, timeout)
 
     local eventignore = vim.o.eventignore
     if eventignore == ignore then
-        return Fn.check_call(fx)
+        return Common.check_call(fx)
     end
 
     vim.o.eventignore = ignore
 
     -- 这里必须是 check_call
-    local ret = Fn.check_call(fx)
+    local ret = Common.check_call(fx)
 
     -- vim.defer_fn(function()
     --     vim.o.eventignore = eventignore

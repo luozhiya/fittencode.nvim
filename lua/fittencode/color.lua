@@ -1,5 +1,5 @@
 local Config = require('fittencode.config')
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 
 --[[
 Suggestion

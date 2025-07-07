@@ -5,8 +5,8 @@
 
 ]]
 
-local Fn = require('fittencode.fn')
-local Editor = require('fittencode.fn.editor')
+local Common = require('fittencode.base.common')
+local Fn = require('fittencode.base.fn')
 local Definitions = require('fittencode.chat.definitions')
 local VIEW_TYPE = Definitions.CONVERSATION_VIEW_TYPE
 
@@ -71,7 +71,7 @@ local function to_state(conversation)
         cs.content.state = conversation.state
         cs.content.reference = conversation.reference
         cs.content.error = conversation.error
-        -- cs.content.messages = conversation:is_title_message() and Fn.slice(conversation.messages, 2) or conversation.messages
+        -- cs.content.messages = conversation:is_title_message() and Common.slice(conversation.messages, 2) or conversation.messages
         cs.content.messages = conversation.messages
     end
     return cs
@@ -90,7 +90,7 @@ function State.get_state_from_model(model, selected_state)
             if conv.id == model.selected_conversation_id then
                 if conv.context.selection then
                     sc.reference = {
-                        select_text = Editor.get_text(conv.context.buf, conv.context.selection.range),
+                        select_text = Fn.get_text(conv.context.buf, conv.context.selection.range),
                         select_range = {
                             name = vim.api.nvim_buf_get_name(conv.context.buf),
                             range = conv.context.selection.range

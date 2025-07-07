@@ -1,4 +1,4 @@
-local Editor = require('fittencode.fn.editor')
+local Fn = require('fittencode.base.fn')
 local Position = require('fittencode.fn.position')
 local Range = require('fittencode.fn.range')
 local Unicode = require('fittencode.fn.unicode')
@@ -58,7 +58,7 @@ local function build_inccmp_items(response, buf, position)
     } }
 
     local snext = position:translate(0, 1)
-    local line_remaining = assert(Editor.get_text(buf, Range.new({
+    local line_remaining = assert(Fn.get_text(buf, Range.new({
         start = snext,
         end_ = Position.new({
             row = snext.row,

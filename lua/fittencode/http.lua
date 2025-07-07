@@ -58,7 +58,7 @@ local Promise = require('fittencode.fn.promise')
 local Process = require('fittencode.fn.process')
 local Log = require('fittencode.log')
 local Config = require('fittencode.config')
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 
 local M = {}
 
@@ -287,7 +287,7 @@ function M.fetch(url, options)
 
     local stdin_data
     -- Vim:E976: Using a Blob as a String
-    if Fn.filereadable(options.payload) == 1 then
+    if Common.filereadable(options.payload) == 1 then
         table.insert(args, '--data-binary')
         table.insert(args, '@' .. options.payload)
     else

@@ -2,7 +2,7 @@ local Promise = require('fittencode.fn.promise')
 local Position = require('fittencode.fn.position')
 local Generate = require('fittencode.generate')
 local Unicode = require('fittencode.fn.unicode')
-local Editor = require('fittencode.fn.editor')
+local Fn = require('fittencode.base.fn')
 local Log = require('fittencode.log')
 
 local M = {}

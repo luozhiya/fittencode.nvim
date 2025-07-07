@@ -1,7 +1,7 @@
 local Observer = require('fittencode.fn.observer')
 local Definitions = require('fittencode.inline.definitions')
 local Log = require('fittencode.log')
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 
 local INLINE_EVENT = Definitions.INLINE_EVENT
 local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
@@ -20,7 +20,7 @@ function Status.new(options)
     options = options or {}
     ---@type FittenCode.Inline.Status
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new({ id = options.id or ('status_observer' .. Fn.generate_short_id_as_string()) })
+    local self = Observer.new({ id = options.id or ('status_observer' .. Common.generate_short_id_as_string()) })
     setmetatable(self, Status)
     self.inline = ''
     self.completion = ''
@@ -67,7 +67,7 @@ function ProgressIndicatorObserver.new(options)
     assert(options.pi)
     ---@type FittenCode.Inline.ProgressIndicatorObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new({ id = options.id or ('progress_indicator_observer' .. Fn.generate_short_id_as_string()) })
+    local self = Observer.new({ id = options.id or ('progress_indicator_observer' .. Common.generate_short_id_as_string()) })
     setmetatable(self, ProgressIndicatorObserver)
     self.pi = options.pi
     self.start_time = {}
@@ -124,7 +124,7 @@ function ProgressIndicatorObserver:update(controller, event_args)
             self.pi:stop()
         end
     end
-    Fn.schedule_call(_update)
+    Common.schedule_call(_update)
 end
 
 ---@class FittenCode.Inline.StatisticObserver : FittenCode.Observer
@@ -136,7 +136,7 @@ function StatisticObserver.new(options)
     options = options or {}
     ---@type FittenCode.Inline.StatisticObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new({ id = options.id or ('statistic_observer' .. Fn.generate_short_id_as_string()) })
+    local self = Observer.new({ id = options.id or ('statistic_observer' .. Common.generate_short_id_as_string()) })
     setmetatable(self, StatisticObserver)
     return self
 end
@@ -155,7 +155,7 @@ function TimingObserver.new(options)
     options = options or {}
     ---@type FittenCode.Inline.TimingObserver
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local self = Observer.new({ id = options.id or ('timing_observer' .. Fn.generate_short_id_as_string()) })
+    local self = Observer.new({ id = options.id or ('timing_observer' .. Common.generate_short_id_as_string()) })
     setmetatable(self, TimingObserver)
     return self
 end

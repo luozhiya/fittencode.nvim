@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 
 ---@class FittenCode.Observer
 ---@field id string
@@ -10,7 +10,7 @@ Observer.__index = Observer
 function Observer.new(options)
     options = options or {}
     local self = setmetatable({}, Observer)
-    self.id = options.id or ('observer' .. Fn.generate_short_id_as_string())
+    self.id = options.id or ('observer' .. Common.generate_short_id_as_string())
     return self
 end
 

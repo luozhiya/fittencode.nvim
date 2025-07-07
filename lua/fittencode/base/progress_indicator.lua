@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 
 ---@class FittenCode.View.ProgressIndicator
 local ProgressIndicator = {}
@@ -37,7 +37,7 @@ function ProgressIndicator:_initialize(options)
     self.progress_win = nil
     self.progress_buf = nil
     self.progress_start_time = nil
-    self.ns = vim.api.nvim_create_namespace('FittenCode.View.ProgressIndicator' .. Fn.generate_short_id_as_string())
+    self.ns = vim.api.nvim_create_namespace('FittenCode.View.ProgressIndicator' .. Common.generate_short_id_as_string())
 end
 
 function ProgressIndicator:update_progress()

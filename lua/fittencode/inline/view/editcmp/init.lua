@@ -7,9 +7,9 @@
 
 local Position = require('fittencode.fn.position')
 local Log = require('fittencode.log')
-local Editor = require('fittencode.fn.editor')
+local Fn = require('fittencode.base.fn')
 local Format = require('fittencode.fn.format')
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 local Color = require('fittencode.color')
 
 ---@class FittenCode.Inline.EditCompletion.View
@@ -181,7 +181,7 @@ function View:_setup_autocmds()
                 return
             end
             if not self.debounced_redraw then
-                self.debounced_redraw = Fn.debounce(function()
+                self.debounced_redraw = Common.debounce(function()
                     self:_redraw()
                 end, 30)
             end
@@ -311,7 +311,7 @@ function View:_adjust_cursor_position_on_complete()
     else
         start_pos = Position.of(self.start_line, 0)
     end
-    local new_pos = Editor.calculate_cursor_position_after_insertion(start_pos, self.replacement_lines)
+    local new_pos = Fn.calculate_cursor_position_after_insertion(start_pos, self.replacement_lines)
     vim.api.nvim_win_set_cursor(win, { new_pos.row + 1, new_pos.col })
 end
 

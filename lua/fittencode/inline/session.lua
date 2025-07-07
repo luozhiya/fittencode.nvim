@@ -13,8 +13,8 @@ local IncViewState = require('fittencode.inline.view.inccmp.state')
 local EditView = require('fittencode.inline.view.editcmp')
 local EditViewState = require('fittencode.inline.view.editcmp.state')
 local Promise = require('fittencode.fn.promise')
-local Fn = require('fittencode.fn')
-local Editor = require('fittencode.fn.editor')
+local Common = require('fittencode.base.common')
+local Fn = require('fittencode.base.fn')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 local FimGenerate = require('fittencode.inline.fim_protocol.generate')
@@ -53,12 +53,12 @@ function Session:_initialize(options)
     self.keymaps = {}
     self.filename = options.filename
     self.version = options.version
-    self.trigger_inline_suggestion = function(...) Fn.check_call(options.trigger_inline_suggestion(...)) end
-    self.on_completion_event = function() Fn.check_call(options.on_session_update_event, { id = self.id, completion_event = self.completion_event, }) end
-    self.on_session_event = function() Fn.check_call(options.on_session_event, { id = self.id, session_event = self.session_event, }) end
-    self.on_session_task_event = function() Fn.check_call(options.on_session_update_event, { id = self.id, session_task_event = self.session_task_event, }) end
+    self.trigger_inline_suggestion = function(...) Common.check_call(options.trigger_inline_suggestion(...)) end
+    self.on_completion_event = function() Common.check_call(options.on_session_update_event, { id = self.id, completion_event = self.completion_event, }) end
+    self.on_session_event = function() Common.check_call(options.on_session_event, { id = self.id, session_event = self.session_event, }) end
+    self.on_session_task_event = function() Common.check_call(options.on_session_update_event, { id = self.id, session_task_event = self.session_task_event, }) end
     self:sync_session_event(SESSION_EVENT.CREATED)
-    self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey' .. Fn.generate_short_id_as_string())
+    self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey' .. Common.generate_short_id_as_string())
 end
 
 ---@param self FittenCode.Inline.Session
@@ -380,7 +380,7 @@ function Session:_preflight_check()
             message = 'Session is terminated',
         })
     end
-    local document_version = Editor.version(self.buf)
+    local document_version = Fn.version(self.buf)
     if document_version == self.version then
         return Promise.resolved(true)
     else

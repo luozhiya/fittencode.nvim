@@ -1,4 +1,4 @@
-local Fn = require('fittencode.fn')
+local Common = require('fittencode.base.common')
 
 ---@class FittenCode.Chat.TemplateResolver
 local TemplateResolver = {}

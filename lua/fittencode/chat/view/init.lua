@@ -1,5 +1,5 @@
-local Fn = require('fittencode.fn')
-local Editor = require('fittencode.fn.editor')
+local Common = require('fittencode.base.common')
+local Fn = require('fittencode.base.fn')
 local Client = require('fittencode.client')
 local Log = require('fittencode.log')
 local Format = require('fittencode.fn.format')
@@ -231,7 +231,7 @@ function View:render_conversation(conversation, clean_canvas, skip_welcome_msg)
         local cursor = vim.api.nvim_win_get_cursor(self.messages_exchange.win)
         -- local height = vim.api.nvim_win_get_height(self.messages_exchange.win)
         -- cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) - height/5
-        if cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) or Editor.is_last_line_visible(self.messages_exchange.win) then
+        if cursor[1] >= vim.api.nvim_buf_line_count(self.messages_exchange.buf) or Fn.is_last_line_visible(self.messages_exchange.win) then
             needs_scrolling = true
         end
     end
@@ -326,7 +326,7 @@ function View:_setup_autoclose(self, win_id)
     vim.api.nvim_create_autocmd('WinClosed', {
         pattern = tostring(win_id),
         callback = function()
-            Fn.schedule_call(function() self:hide() end)
+            Common.schedule_call(function() self:hide() end)
         end,
         once = true,
     })
@@ -443,7 +443,7 @@ end
 
 function View:send_message(msg)
     if type(msg) == 'table' then
-        Fn.check_call(self.receive_view_message, msg)
+        Common.check_call(self.receive_view_message, msg)
     end
 end
 
