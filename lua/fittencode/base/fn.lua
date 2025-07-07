@@ -236,7 +236,7 @@ end
 ---@param layout FittenCode.EncodedStringLayout
 ---@param encoding lsp.PositionEncodingKind
 ---@param index? integer
----@return integer, integer?
+---@return integer[]
 function M.utf_to_byteindex(layout, encoding, index)
     local utf8_starts = layout.utf8_starts
     local utf8_ends = layout.utf8_ends
@@ -255,7 +255,7 @@ function M.utf_to_byteindex(layout, encoding, index)
         cu = #cumulative_units
     end
 
-    return utf8_starts[cu], utf8_ends[cu]
+    return { utf8_starts[cu], utf8_ends[cu] }
 end
 
 -- 给定 UTF-8 字符串 s，目标编码 encoding，以及在 UTF-8 编码中字节位置
@@ -265,7 +265,7 @@ end
 ---@param layout FittenCode.EncodedStringLayout
 ---@param encoding lsp.PositionEncodingKind
 ---@param index? integer
----@return integer
+---@return integer[]
 function M.byte_to_utfindex(layout, encoding, index)
     local utf8_starts = layout.utf8_starts
     local utf8_ends = layout.utf8_ends
@@ -284,9 +284,8 @@ function M.byte_to_utfindex(layout, encoding, index)
         cu = #cumulative_units
     end
 
-    -- return (cumulative_units[cu - 1] or 0) + 1
     -- 为了方便统计数量，返回最末尾的位置，即大小
-    return cumulative_units[cu]
+    return { (cumulative_units[cu - 1] or 0) + 1, cumulative_units[cu] }
 end
 
 local function _round(layout, encoding, index, is_start)

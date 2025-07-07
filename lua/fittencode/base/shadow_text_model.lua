@@ -66,7 +66,7 @@ function ShadowTextModel:_compute_lines(encoding, line)
     end
     for i = self.computed.utf_line[encoding] + 1, line do
         local pi = self:_get_layout(i)
-        self.computed.utf_indices[encoding][i + 1] = Fn.byte_to_utfindex(pi, encoding)
+        self.computed.utf_indices[encoding][i + 1] = Fn.byte_to_utfindex(pi, encoding)[2]
     end
     self.computed.utf_line[encoding] = line
 end
@@ -204,7 +204,7 @@ function ShadowTextModel:get_text(encoding, range)
     local result_lines = {}
     -- part 1
     local start_pi = self:_get_layout(range.start.row)
-    local start_byte_index = Fn.utf_to_byteindex(start_pi, encoding, range.start.col + 1) - 1
+    local start_byte_index = Fn.utf_to_byteindex(start_pi, encoding, range.start.col + 1)[1]
     local remaning = self:line_at(range.start.row):sub(start_byte_index)
     result_lines[#result_lines + 1] = remaning
     -- part 2
@@ -213,12 +213,9 @@ function ShadowTextModel:get_text(encoding, range)
     end
     -- part 3
     local end_pi = self:_get_layout(range.end_.row)
-    local end_byte_index = Fn.utf_to_byteindex(end_pi, encoding, range.end_.col + 1) - 1
-    end_byte_index = end_byte_index - 1
-    if end_byte_index ~= -1 then
-        remaning = self:line_at(range.end_.row):sub(1, end_byte_index)
-        result_lines[#result_lines + 1] = remaning
-    end
+    local end_byte_index = Fn.utf_to_byteindex(end_pi, encoding, range.end_.col + 1)[2]
+    remaning = self:line_at(range.end_.row):sub(1, end_byte_index)
+    result_lines[#result_lines + 1] = remaning
     return table.concat(result_lines, self.eol)
 end
 
