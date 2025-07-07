@@ -3,6 +3,7 @@ local Range = require('fittencode.fn.range')
 local TextLine = require('fittencode.fn.text_line')
 local Log = require('fittencode.log')
 local Unicode = require('fittencode.fn.unicode')
+local Fn = require('fittencode.fn')
 
 -- 按字符位置偏移量
 ---@alias FittenCode.CharactersOffset number
