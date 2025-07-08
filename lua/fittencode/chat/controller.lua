@@ -206,6 +206,7 @@ end
 ---@param template_id string
 ---@param show boolean
 ---@param mode string
+---@param context FittenCode.Chat.Context
 function Controller:create_conversation(template_id, show, mode, context)
     show = show or true
     mode = mode or 'chat'
@@ -309,7 +310,7 @@ function Controller:get_status()
     return self.status_observer
 end
 
----@param context { buf: number, selection: { range: FittenCode.Range } }
+---@param context FittenCode.Chat.Context
 ---@param variables table
 ---@param msgpack { messages: table }
 ---@return any
@@ -320,7 +321,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
     end
     local switch = {
         ['context'] = function()
-            return { { name = vim.api.nvim_buf_get_name(buf), language = language_id(buf), content = Fn.get_text(buf) } }
+            return { { name = vim.api.nvim_buf_get_name(buf), language = language_id(buf), content = context.shadow_text_model:get_text('utf-8') } }
         end,
         ['constant'] = function()
             return variables.value
@@ -346,7 +347,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
             end
         end,
         ['selected-text'] = function()
-            return Fn.get_text(buf, context.selection.range)
+            return context.shadow_text_model:get_text('utf-8', context.selection.range)
         end,
         ['selected-location-text'] = function()
             -- TODO
@@ -398,7 +399,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
     return switch[variables.type]()
 end
 
----@param context { buf: number, selection: { range: FittenCode.Range } }
+---@param context FittenCode.Chat.Context
 ---@param variables table
 ---@param event { messages: table, time: string }
 ---@return table
@@ -447,19 +448,20 @@ end
 function Controller:from_builtin_template_with_selection(type, mode)
     mode = mode or 'chat'
 
+    ---@type FittenCode.Chat.Context
+    ---@diagnostic disable-next-line: missing-fields
     local context = {}
     if mode == 'chat' then
         -- chat 和 edit-code 对选区没有严格要求
         -- 如果没有选区，edit-code 则使用当前位置作为范围
         --             chat 则保持
         local buf = vim.api.nvim_get_current_buf()
-        local win = vim.api.nvim_get_current_win()
         context.buf = buf
         context.shadow_text_model = ShadowTextModel.from_buffer(buf)
         local selection = {}
         local range = get_range_from_visual_selection(buf)
         if range then
-            selection.range = context.shadow_text_model:normalize_range('utf-8', range)
+            selection.range = context.shadow_text_model:normalize('utf-8', range)
         end
         -- Log.debug('Get range from visual selection = {}', range)
         -- Log.debug('Selected range = {}', selection.range)

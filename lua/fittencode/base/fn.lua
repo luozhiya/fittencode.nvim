@@ -134,7 +134,7 @@ end
 
 --- 计算插入文本后的光标位置，并可选择移动光标 {row, col} (0-based)
 ---@param inserted_lines string[] 插入的文本行
----@return table
+---@return FittenCode.Position
 function M.calculate_cursor_position_after_insertion(start_pos, inserted_lines)
     local cursor = Position.new()
     local line_count = #inserted_lines
@@ -157,9 +157,8 @@ end
 
 ---@param fx? function
 ---@return any
-function M.ignoreevent_wrap(fx, ignore, timeout)
+function M.ignoreevent_wrap(fx, ignore)
     ignore = ignore or 'all'
-    timeout = timeout or 10
 
     local eventignore = vim.o.eventignore
     if eventignore == ignore then
@@ -171,9 +170,6 @@ function M.ignoreevent_wrap(fx, ignore, timeout)
     -- 这里必须是 check_call
     local ret = Common.check_call(fx)
 
-    -- vim.defer_fn(function()
-    --     vim.o.eventignore = eventignore
-    -- end, timeout)
     vim.schedule(function()
         vim.o.eventignore = eventignore
     end)
@@ -228,22 +224,27 @@ end
 ---@param index? integer
 ---@return integer[]
 function M.utf_to_byteindex(layout, encoding, index)
-    return M.get_equivalent_unit_range(layout, encoding, 'utf-8', index)
+    return M.equivalent_unit_range(layout, encoding, 'utf-8', index)
 end
 
 -- 给定 UTF-8 字符串 s，目标编码 encoding，以及在 UTF-8 编码中字节位置
 -- 返回在指定编码中该字节位置对应的索引 1-based
--- 当 byte_index 为 nil 或者超出字符串长度时，返回对应编码的字符串长度
--- 如果是 UTF-16 编码，则需要考虑 surrogate pairs，返回的索引是第一个 code unit 的索引
 ---@param layout FittenCode.EncodedStringLayout
 ---@param encoding lsp.PositionEncodingKind
 ---@param index? integer
 ---@return integer[]
 function M.byte_to_utfindex(layout, encoding, index)
-    return M.get_equivalent_unit_range(layout, 'utf-8', encoding, index)
+    return M.equivalent_unit_range(layout, 'utf-8', encoding, index)
 end
 
-function M.get_equivalent_unit_range(layout, from_encoding, to_encoding, index)
+-- 1-based
+-- 当 layout 为空字符时，返回 { 0, 0 }
+---@param layout FittenCode.EncodedStringLayout
+---@param from_encoding lsp.PositionEncodingKind
+---@param to_encoding lsp.PositionEncodingKind
+---@param index? integer
+---@return integer[]
+function M.equivalent_unit_range(layout, from_encoding, to_encoding, index)
     local from_cumulative_units = layout.cumulative_units[from_encoding]
     local to_cumulative_units = layout.cumulative_units[to_encoding]
 
@@ -260,24 +261,18 @@ function M.get_equivalent_unit_range(layout, from_encoding, to_encoding, index)
         cu = #from_cumulative_units
     end
 
+    if cu == 0 then
+        return { 0, 0 }
+    end
     return { (to_cumulative_units[cu - 1] or 0) + 1, to_cumulative_units[cu] }
 end
 
-local function _round(layout, encoding, index, is_start)
-    local cumulative_units = layout.cumulative_units[encoding]
-    local cu
-    if index then
-        for i = 1, #cumulative_units do
-            if index <= cumulative_units[i] then
-                cu = i
-                break
-            end
-        end
-    end
-    if not cu then
-        cu = #cumulative_units
-    end
-    return is_start and ((cumulative_units[cu - 1] or 0) + 1) or (cumulative_units[cu])
+---@param layout FittenCode.EncodedStringLayout
+---@param encoding lsp.PositionEncodingKind
+---@param index? integer
+---@return integer[]
+function M.round(layout, encoding, index)
+    return M.equivalent_unit_range(layout, encoding, encoding, index)
 end
 
 --[[
@@ -290,7 +285,7 @@ end
 ---@param index? integer
 ---@return integer
 function M.round_start(layout, encoding, index)
-    return _round(layout, encoding, index, true)
+    return M.round(layout, encoding, index)[1]
 end
 
 ---@param layout FittenCode.EncodedStringLayout
@@ -298,7 +293,7 @@ end
 ---@param index? integer
 ---@return integer
 function M.round_end(layout, encoding, index)
-    return _round(layout, encoding, index, false)
+    return M.round(layout, encoding, index)[2]
 end
 
 return M

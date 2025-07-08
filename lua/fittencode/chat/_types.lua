@@ -161,3 +161,8 @@
 ---@field conversations table<FittenCode.Chat.Conversation>
 ---@field selected_conversation_id string
 ---@field fcps boolean
+
+---@class FittenCode.Chat.Context
+---@field buf integer
+---@field selection { range: FittenCode.Range }
+---@field shadow_text_model FittenCode.ShadowTextModel

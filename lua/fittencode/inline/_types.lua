@@ -69,3 +69,7 @@
 ---@field model FittenCode.Inline.Model
 ---@field version number
 ---@field headless boolean
+
+---@class FittenCode.Inline.Context
+---@field buf integer
+---@field shadow_text_model FittenCode.ShadowTextModel
