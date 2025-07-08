@@ -23,6 +23,7 @@ local Format = require('fittencode.base.format')
 local Segment = require('fittencode.inline.segment')
 local Config = require('fittencode.config')
 local SessionFunctional = require('fittencode.inline.session_functional')
+local ShadowTextModel = require('fittencode.base.shadow_text_model')
 
 local SESSION_EVENT = Definitions.SESSION_EVENT
 local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
@@ -43,6 +44,7 @@ end
 ---@param options FittenCode.Inline.Session.InitialOptions
 function Session:_initialize(options)
     self.buf = options.buf
+    self.shadow = ShadowTextModel.from_buffer(self.buf)
     self.position = options.position
     self.commit_position = options.position
     self.mode = options.mode

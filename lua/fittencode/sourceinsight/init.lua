@@ -40,13 +40,16 @@ function M.init()
     })
 end
 
-function M.get_change(bufnr, changedtick)
+function M.get_change(options)
+    return require('fittencode.sourceinsight.change').get_change(options)
 end
 
-function M.get_snapshot(bufnr, changedtick)
+function M.get_snapshot(options)
+    return require('fittencode.sourceinsight.snapshot').get_snapshot(options)
 end
 
-function M.get_fragment(bufnr, position, threshold)
+function M.get_fragment(options)
+    return require('fittencode.sourceinsight.frgments').get_fragment(options)
 end
 
 return M

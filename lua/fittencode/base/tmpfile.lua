@@ -2,7 +2,7 @@ local Promise = require('fittencode.base.promise')
 
 local M = {}
 
-function M.with_tmpfile(data, callback, ...)
+function M.with(data, callback, ...)
     local path
     local args = { ... }
     return Promise.promisify(vim.uv.fs_mkstemp)(vim.fn.tempname() .. '.FittenCode_TEMP_XXXXXX'):forward(function(handle)
