@@ -17,6 +17,31 @@
 --       urn:example:animal:ferret:nose
 -- ```
 
+--[[
+
+-- 测试用例
+local test_uris = {
+    'mailto:john.doe@example.com',
+    'file:///C:/Users/%E6%96%87%E6%A1%A3/test.txt',
+    'ftp://user:password@[2001:db8::1]:2121/path/to/file',
+    'urn:isbn:0451450523',
+    'http://example.com/path/../to/resource?q=test#section'
+}
+
+for _, uri in ipairs(test_uris) do
+    print('\nParsing URI:', uri)
+    local parsed = M.parse(uri)
+    print('Scheme:', parsed.scheme)
+    print('Authority:', parsed.authority)
+    print('Path:', parsed.path)
+    print('Query:', parsed.query)
+    print('Fragment:', parsed.fragment)
+    print('Host:', parsed.host)
+    print('Port:', parsed.port)
+end
+
+]]
+
 local M = {}
 
 -- RFC 3986 定义组件字符集
@@ -108,7 +133,6 @@ function URI:_validate_path()
     end
 
     -- 检测未编码的非法字符
-    print(self.path)
     local pos = self.path:find("[^%%%w%-%.%_%~%!%$%&'%(%)%*%+,;=%:@/]")
     if pos then
         error('Invalid characters in path: ' .. pos)
@@ -298,21 +322,17 @@ function URI:to_string()
     if authority ~= '' then
         table.insert(parts, '//' .. authority)
     elseif self.scheme == 'file' then
-        table.insert(parts, '//')
+        table.insert(parts, '///')
     end
 
     -- Path 处理
     local path = self.path
     if path ~= '' then
-        if authority ~= '' and path:sub(1, 1) ~= '/' then
-            path = '/' .. path
-        end
         local encoded_segments = {}
         for seg in path:gmatch('[^/]+') do
-            table.insert(encoded_segments, encode.path_segment(seg))
+            encoded_segments[#encoded_segments + 1] = encode.path_segment(seg)
         end
         path = table.concat(encoded_segments, '/')
-        if path:sub(1, 1) == '/' then path = '/' .. path end
         table.insert(parts, path)
     end
 
@@ -378,25 +398,61 @@ function M.build(options)
     return uri
 end
 
--- 测试用例
-local test_uris = {
-    'mailto:john.doe@example.com',
-    'file:///C:/Users/%E6%96%87%E6%A1%A3/test.txt',
-    'ftp://user:password@[2001:db8::1]:2121/path/to/file',
-    'urn:isbn:0451450523',
-    'http://example.com/path/../to/resource?q=test#section'
-}
+function M.from_file_path(filepath)
+    local normalized_path = filepath:gsub('\\', '/')
 
-for _, uri in ipairs(test_uris) do
-    print('\nParsing URI:', uri)
-    local parsed = M.parse(uri)
-    print('Scheme:', parsed.scheme)
-    print('Authority:', parsed.authority)
-    print('Path:', parsed.path)
-    print('Query:', parsed.query)
-    print('Fragment:', parsed.fragment)
-    print('Host:', parsed.host)
-    print('Port:', parsed.port)
+    -- 处理 Windows 驱动器路径 (如 C:/path)
+    local drive_letter = normalized_path:match('^([A-Za-z]):/')
+    local is_windows_path = drive_letter ~= nil
+
+    -- 构建 URI 组件
+    local components = {
+        scheme = 'file',
+        path = '',
+        authority = ''
+    }
+
+    if is_windows_path then
+        -- Windows 路径处理
+        components.path = '/' .. normalized_path
+        components.authority = '' -- Windows 本地文件通常没有 authority
+    else
+        -- Unix 路径处理
+        if normalized_path:sub(1, 2) == '//' then
+            -- 处理 UNC 路径 (如 //server/share)
+            local unc_rest = normalized_path:sub(3)
+            local server, share = unc_rest:match('^([^/]+)/([^/]*)')
+            if server then
+                components.authority = server
+                components.path = '/' .. (share or '')
+                if #unc_rest > #server + #(share or '') + 1 then
+                    components.path = components.path .. unc_rest:sub(#server + #(share or '') + 2)
+                end
+            end
+        else
+            -- 普通 Unix 路径
+            components.path = normalized_path
+        end
+    end
+
+    -- 创建 URI 对象
+    local uri = setmetatable({}, URI)
+    uri.scheme = components.scheme
+    uri.authority = components.authority
+    uri.path = uri:_normalize_path(components.path)
+    uri.query = ''
+    uri.fragment = ''
+
+    -- 解析 authority 部分
+    uri:_parse_authority()
+
+    return uri
 end
+
+-- -- 测试 from_path 函数
+-- -- local test_path =     'C:\\Users\\文档\\test.txt'  -- Windows 路径
+-- local test_path =     '/usr/local/bin/test.txt'  -- Windows 路径
+-- local uri = M.from_file_path(test_path):to_string()
+-- print(uri) -- file:///C:/Users/%E6%96%87%E6%A1%A3/test.txt
 
 return M

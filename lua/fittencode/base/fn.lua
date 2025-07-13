@@ -7,8 +7,27 @@ local Range = require('fittencode.base.range')
 local Log = require('fittencode.log')
 local Unicode = require('fittencode.base.unicode')
 local Common = require('fittencode.base.common')
+local URI = require('fittencode.base.uri')
 
 local M = {}
+
+-- 将 buffer 转换为 URI，如果 buffer 没有名字，则返回一个虚拟的 URI
+-- 虚拟的 URI 格式为 `nvim://noname/buf`
+---@param buf integer
+---@return string
+function M.uri(buf)
+    assert(buf)
+    local uri
+    vim.api.nvim_buf_call(buf, function()
+        uri = vim.api.nvim_buf_get_name(buf)
+        if uri == '' then
+            uri = 'nvim://noname/' .. buf
+        else
+            uri = URI.from_file_path(uri):to_string()
+        end
+    end)
+    return uri
+end
 
 -- The version number of this document (it will strictly increase after each change, including undo/redo).
 ---@param buf integer
@@ -239,6 +258,8 @@ end
 
 -- 1-based
 -- 当 layout 为空字符时，返回 { 0, 0 }
+-- 当 index 为 0 时，返回 { 0, 0 }
+-- 当 index 为 nil 或者大于最大索引时，返回最后一个 code unit 的位置
 ---@param layout FittenCode.EncodedStringLayout
 ---@param from_encoding lsp.PositionEncodingKind
 ---@param to_encoding lsp.PositionEncodingKind
@@ -247,6 +268,10 @@ end
 function M.equivalent_unit_range(layout, from_encoding, to_encoding, index)
     local from_cumulative_units = layout.cumulative_units[from_encoding]
     local to_cumulative_units = layout.cumulative_units[to_encoding]
+
+    if index and index == 0 then
+        return { 0, 0 }
+    end
 
     local cu
     if index then
