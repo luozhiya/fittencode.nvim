@@ -186,7 +186,7 @@ function M.ignoreevent_wrap(fx, ignore)
 
     vim.o.eventignore = ignore
 
-    -- 这里必须是 check_call
+    -- 这里必须是 check_call，且 fx 里不应有 schedule
     local ret = Common.check_call(fx)
 
     vim.schedule(function()

@@ -4,6 +4,11 @@
 ---@field cause? FittenCode.Error @错误原因
 ---@field metadata? table<string, any> @附加信息
 
+---@alias FittenCode.Encoding
+---| "utf-8" # UTF8
+---| "utf-16" # UTF16
+---| "utf-32" # UTF32
+
 ---@class FittenCode.HTTP.RequestOptions
 ---@field method? string @HTTP 方法 (默认: 'GET')
 ---@field headers? table<string, string> @请求头

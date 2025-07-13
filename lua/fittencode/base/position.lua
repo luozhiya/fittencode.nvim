@@ -1,12 +1,19 @@
 --[[
 
+与显示无关的抽象位置对象。
+cu
+- UTF-8  8-bit byte
+- UTF-16 16-bit
+- UTF-32 32-bit
+
 ]]
 
 local Format = require('fittencode.base.format')
 
 ---@class FittenCode.Position
----@field line number A zero-based row value.
----@field cu number A zero-based column value.
+---@field line number A zero-based line value.
+---@field cu number A zero-based codeunit value.
+---@field encoding? FittenCode.Encoding
 local Position = {}
 Position.__index = Position
 
@@ -22,7 +29,8 @@ function Position.new(options)
 end
 
 function Position:__tostring()
-    return Format.nothrow_format('Position<{}:{}>', self.line, self.cu)
+    return Format.nothrow_format('({},{})', self.line, self.cu)
+    -- return Format.nothrow_format('Position[line:{} cu:{}]', self.line, self.cu)
 end
 
 -- Check if this position is equal to `other`.
@@ -86,9 +94,9 @@ function Position:compare_to(other)
 end
 
 -- Create a new position relative to this position.
----@param line_delta? number The number of rows to move.
----@param cu_delta? number The number of columns to move.
----@return FittenCode.Position The new position.
+---@param line_delta? number The number of lines to move.
+---@param cu_delta? number The number of codeunits to move.
+---@return FittenCode.Position
 function Position:translate(line_delta, cu_delta)
     return Position.new({
         line = self.line + (line_delta or 0),
@@ -97,9 +105,9 @@ function Position:translate(line_delta, cu_delta)
 end
 
 -- Create a new position derived from this position.
----@param line? number The new row value.
----@param cu? number The new column value.
----@return FittenCode.Position The new position.
+---@param line? number The new line value.
+---@param cu? number The new codeunit value.
+---@return FittenCode.Position
 function Position:with(line, cu)
     return Position.new({
         line = line or self.line,
@@ -108,7 +116,7 @@ function Position:with(line, cu)
 end
 
 -- Create a copy of this position.
----@return FittenCode.Position The new position.
+---@return FittenCode.Position
 function Position:clone()
     return Position.new({
         line = self.line,
@@ -130,6 +138,9 @@ function Position:rel_lastline()
     return self.line == -1
 end
 
+---@param line number The new line value.
+---@param cu number The new codeunit value.
+---@return FittenCode.Position
 function Position.of(line, cu)
     return Position.new({
         line = line,
