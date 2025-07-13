@@ -196,18 +196,31 @@ function M.ignoreevent_wrap(fx, ignore)
     return ret
 end
 
----@class FittenCode.EncodedStringLayout
----@field cumulative_units table<lsp.PositionEncodingKind, table<integer>>
+--[[
 
----@param input string
----@return FittenCode.EncodedStringLayout
+计算字符串在不同 Unicode 编码下的累积单位数
+- 返回一个包含 UTF-8、UTF-16 和 UTF-32 编码累积单位数的表
+
+例如：
+```lua
+    local result = M.encoded_layout("你好")
+    -- result.cumulative_units['utf-8'] 会是 {3, 6}
+    -- 因为"你"占3字节，"好"占3字节，累计3和6
+    -- result.cumulative_units['utf-16'] 会是 {1, 2}
+    -- 因为每个中文字符在UTF-16中都占1个代码单元
+    -- result.cumulative_units['utf-32'] 会是 {1, 2}
+    -- 因为每个字符在UTF-32中都占1个代码点
+```
+]]
+---@param input string 输入的 UTF-8 字符串
+---@return FittenCode.EncodedStringLayout layout 返回包含三种编码累积单位数的表
 function M.encoded_layout(input)
     local u8_cumulative_units = {}
     local u16_cumulative_units = {}
     local u32_cumulative_units = {}
 
     local length = #input
-    local position = 1
+    local position = 1 -- 当前处理的字节位置
     local char_index = 1
 
     while position <= length do
@@ -216,8 +229,11 @@ function M.encoded_layout(input)
         local is_supplementary = u8_byte_count == 4
         local utf16_units = is_supplementary and 2 or 1
 
+        -- UTF-8: 累加当前字符的字节数
         u8_cumulative_units[char_index] = (u8_cumulative_units[char_index - 1] or 0) + u8_byte_count
+        -- UTF-16: 累加当前字符的代码单元数
         u16_cumulative_units[char_index] = (u16_cumulative_units[char_index - 1] or 0) + utf16_units
+        -- UTF-32: 每个字符总是1个代码点
         u32_cumulative_units[char_index] = (u32_cumulative_units[char_index - 1] or 0) + 1
 
         position = position + u8_byte_count
@@ -235,43 +251,26 @@ end
 
 --[[
 
-使用缓存计算 UTF-16 字节序列对应的 UTF-8 字节序列
+将一种编码的位置转换为另一种编码的等效位置范围，position 无关，只是字符串 Index 的转换
+- 1-based
+- 当 layout 为空字符时，返回 { 0, 0 }
+- 当 index 为 0 时，返回 { 0, 0 }
+- 当 index 为 nil 或者大于最大索引时，返回最后一个 code unit 的位置
 
---]]
----@param layout FittenCode.EncodedStringLayout
----@param encoding lsp.PositionEncodingKind
----@param index? integer
----@return integer[]
-function M.utf_to_byteindex(layout, encoding, index)
-    return M.equivalent_unit_range(layout, encoding, 'utf-8', index)
-end
-
--- 给定 UTF-8 字符串 s，目标编码 encoding，以及在 UTF-8 编码中字节位置
--- 返回在指定编码中该字节位置对应的索引 1-based
----@param layout FittenCode.EncodedStringLayout
----@param encoding lsp.PositionEncodingKind
----@param index? integer
----@return integer[]
-function M.byte_to_utfindex(layout, encoding, index)
-    return M.equivalent_unit_range(layout, 'utf-8', encoding, index)
-end
-
--- 1-based
--- 当 layout 为空字符时，返回 { 0, 0 }
--- 当 index 为 0 时，返回 { 0, 0 }
--- 当 index 为 nil 或者大于最大索引时，返回最后一个 code unit 的位置
----@param layout FittenCode.EncodedStringLayout
----@param from_encoding lsp.PositionEncodingKind
----@param to_encoding lsp.PositionEncodingKind
----@param index? integer
----@return integer[]
+]]
+---@param layout FittenCode.EncodedStringLayout 编码布局数据，包含各编码的累积单位数
+---@param from_encoding FittenCode.Encoding 源编码类型
+---@param to_encoding FittenCode.Encoding 目标编码类型
+---@param index? integer 可选，源编码中的位置索引(1-based)
+---@return integer[] range 返回目标编码中的位置范围 `[start, end]`
 function M.equivalent_unit_range(layout, from_encoding, to_encoding, index)
     local from_cumulative_units = layout.cumulative_units[from_encoding]
     local to_cumulative_units = layout.cumulative_units[to_encoding]
 
-    if index and index == 0 then
-        return { 0, 0 }
-    end
+    assert(not index or (index and index > 0), 'index must be positive or nil')
+    -- if index and index == 0 then
+    --     return { 0, 0 }
+    -- end
 
     local cu
     if index then
@@ -292,11 +291,17 @@ function M.equivalent_unit_range(layout, from_encoding, to_encoding, index)
     return { (to_cumulative_units[cu - 1] or 0) + 1, to_cumulative_units[cu] }
 end
 
----@param layout FittenCode.EncodedStringLayout
----@param encoding lsp.PositionEncodingKind
----@param index? integer
----@return integer[]
+--[[
+
+给出目标 index 在 encoding 中的位置范围
+
+]]
+---@param layout FittenCode.EncodedStringLayout 编码布局数据，包含各编码的累积单位数
+---@param encoding FittenCode.Encoding 目标编码类型
+---@param index? integer 目标编码中的位置索引(1-based)
+---@return integer[] range 返回目标编码中的位置范围 `[start, end]`
 function M.round(layout, encoding, index)
+    assert(not index or (index and index > 0), 'index must be positive or nil')
     return M.equivalent_unit_range(layout, encoding, encoding, index)
 end
 
@@ -304,21 +309,53 @@ end
 
 返回 index 指向第一个 code unit 的位置
 
---]]
----@param layout FittenCode.EncodedStringLayout
----@param encoding lsp.PositionEncodingKind
----@param index? integer
----@return integer
+]]
+---@param layout FittenCode.EncodedStringLayout 编码布局数据，包含各编码的累积单位数
+---@param encoding FittenCode.Encoding 目标编码类型
+---@param index? integer 目标编码中的位置索引(1-based)
+---@return integer start 返回目标编码中的起始位置
 function M.round_start(layout, encoding, index)
+    assert(not index or (index and index > 0), 'index must be positive or nil')
     return M.round(layout, encoding, index)[1]
 end
 
----@param layout FittenCode.EncodedStringLayout
----@param encoding lsp.PositionEncodingKind
----@param index? integer
----@return integer
+--[[
+
+返回 index 指向最后一个 code unit 的位置
+
+]]
+---@param layout FittenCode.EncodedStringLayout 编码布局数据，包含各编码的累积单位数
+---@param encoding FittenCode.Encoding 目标编码类型
+---@param index? integer 目标编码中的位置索引(1-based)
+---@return integer end 返回目标编码中的结束位置
 function M.round_end(layout, encoding, index)
+    assert(not index or (index and index > 0), 'index must be positive or nil')
     return M.round(layout, encoding, index)[2]
+end
+
+--[[
+
+使用缓存计算 UTF-16 字节序列对应的 UTF-8 字节序列
+
+--]]
+---@param layout FittenCode.EncodedStringLayout 编码布局数据，包含各编码的累积单位数
+---@param encoding FittenCode.Encoding 源编码类型
+---@param index? integer 源编码中的位置索引(1-based)
+---@return integer[] range 返回 UTF-8 编码中的位置范围 `[start, end]`
+function M.utf_to_byteindex(layout, encoding, index)
+    assert(not index or (index and index > 0), 'index must be positive or nil')
+    return M.equivalent_unit_range(layout, encoding, 'utf-8', index)
+end
+
+-- 给定 UTF-8 字符串 s，目标编码 encoding，以及在 UTF-8 编码中字节位置
+-- 返回在指定编码中该字节位置对应的索引 1-based
+---@param layout FittenCode.EncodedStringLayout 编码布局数据，包含各编码的累积单位数
+---@param encoding FittenCode.Encoding 目标编码类型
+---@param index? integer UTF-8 编码中的位置索引(1-based)
+---@return integer[] range 返回目标编码中的位置范围 `[start, end]`
+function M.byte_to_utfindex(layout, encoding, index)
+    assert(not index or (index and index > 0), 'index must be positive or nil')
+    return M.equivalent_unit_range(layout, 'utf-8', encoding, index)
 end
 
 return M

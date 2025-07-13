@@ -9,6 +9,9 @@
 ---| "utf-16" # UTF16
 ---| "utf-32" # UTF32
 
+---@class FittenCode.EncodedStringLayout
+---@field cumulative_units table<FittenCode.Encoding, table<integer>>
+
 ---@class FittenCode.HTTP.RequestOptions
 ---@field method? string @HTTP 方法 (默认: 'GET')
 ---@field headers? table<string, string> @请求头
