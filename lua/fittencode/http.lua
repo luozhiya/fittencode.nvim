@@ -286,8 +286,7 @@ function M.fetch(url, options)
     end
 
     local stdin_data
-    -- Vim:E976: Using a Blob as a String
-    if Common.filereadable(options.payload) == 1 then
+    if Common.filereadable(options.payload) then
         table.insert(args, '--data-binary')
         table.insert(args, '@' .. options.payload)
     else

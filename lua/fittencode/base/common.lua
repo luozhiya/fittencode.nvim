@@ -109,4 +109,13 @@ function M.clear_interval(timer)
     end
 end
 
+-- Vim:E976: Using a Blob as a String
+function M.filereadable(path)
+    local ok, res = pcall(vim.fn.filereadable, path)
+    if not ok then
+        return false
+    end
+    return res == 1
+end
+
 return M
