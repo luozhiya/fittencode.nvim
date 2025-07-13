@@ -1,4 +1,4 @@
-local Diff = require('fittencode.fn.diff')
+local Diff = require('fittencode.base.diff')
 
 describe('fn.diff', function()
     -- it('diff', function()
@@ -66,7 +66,7 @@ describe('fn.diff', function()
             ' \\ ',
         }
 
-        local hunks = Diff.diff_lines2(old_text, new_text)
-        print(vim.inspect(vim.json.encode(hunks)))
+        -- local hunks = Diff.diff_lines2(old_text, new_text)
+        -- print(vim.inspect(vim.json.encode(hunks)))
     end)
 end)
