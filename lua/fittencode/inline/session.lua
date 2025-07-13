@@ -17,13 +17,16 @@ local Common = require('fittencode.base.common')
 local Fn = require('fittencode.base.fn')
 local Unicode = require('fittencode.base.unicode')
 local Log = require('fittencode.log')
-local FimGenerate = require('fittencode.inline.fim_protocol.generate')
 local Definitions = require('fittencode.inline.definitions')
 local Format = require('fittencode.base.format')
 local Segment = require('fittencode.inline.segment')
 local Config = require('fittencode.config')
-local SessionFunctional = require('fittencode.inline.session_functional')
 local ShadowTextModel = require('fittencode.base.shadow_text_model')
+local FimRequest = require('fittencode.inline.fim_protocol.request')
+local FimResponse = require('fittencode.inline.fim_protocol.response')
+local Zip = require('fittencode.base.gzip')
+local Client = require('fittencode.client')
+local Protocol = require('fittencode.client.protocol')
 
 local SESSION_EVENT = Definitions.SESSION_EVENT
 local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
@@ -53,7 +56,7 @@ function Session:_initialize(options)
     self.id = options.id
     self.requests = {}
     self.keymaps = {}
-    self.filename = options.filename
+    self.uri = options.uri
     self.version = options.version
     self.trigger_inline_suggestion = function(...) Common.check_call(options.trigger_inline_suggestion(...)) end
     self.on_completion_event = function() Common.check_call(options.on_session_update_event, { id = self.id, completion_event = self.completion_event, }) end
@@ -82,7 +85,7 @@ local function _is_ascii_only(text)
         end
         return true
     else
-        if #Unicode.utf8_layout(text).cumulative_units == #text then
+        if #Fn.encoded_layout(text).cumulative_units['utf-8'] == #text then
             return true
         end
     end
@@ -349,30 +352,41 @@ function Session:_add_request(handle)
     self.requests[#self.requests + 1] = handle
 end
 
----@return FittenCode.Promise
+---@return FittenCode.Promise<FittenCode.Inline.Prompt, FittenCode.Error>
 function Session:generate_prompt()
     local check = self:_preflight_check()
     if check:is_rejected() then
         return check
     end
-    return SessionFunctional.generate_prompt({
-        on_before_generate_prompt = function()
-            self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
-        end,
-        buf = self.buf,
-        position = self.position:translate(0, -1),
+    self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
+    return FimRequest.generate({
+        shadow = self.shadow,
+        position = self.position,
         mode = self.mode,
-        version = self.version,
-        filename = self.filename,
+        filename = self.uri,
     })
 end
 
----@param prompt string
----@return FittenCode.Promise
+---@param prompt FittenCode.Inline.Prompt
+---@return FittenCode.Promise<string, FittenCode.Error>
 function Session:async_compress_prompt(prompt)
-    return SessionFunctional.async_compress_prompt({
-        prompt = prompt,
-    })
+    local check = self:_preflight_check()
+    if check:is_rejected() then
+        return check
+    end
+    local _, data = pcall(vim.fn.json_encode, prompt)
+    if not _ then
+        return Promise.rejected({
+            message = 'Failed to encode prompt to JSON',
+            metadata = {
+                prompt = prompt,
+            }
+        })
+    end
+    assert(data)
+    return Zip.compress({ source = data }):forward(function(_)
+        return _.output
+    end)
 end
 
 ---@return FittenCode.Promise
@@ -399,21 +413,21 @@ end
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
 -- * resolve 包含 suggestions_ready / no_more_suggestions
 -- * reject 包含 error
----@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
+---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.Response.Data?, FittenCode.Error>
 function Session:send_completions()
     self:sync_session_event(SESSION_EVENT.REQUESTING)
     self:sync_completion_event(COMPLETION_EVENT.START)
 
     return Promise.all({
-        self:generate_prompt():forward(function(res)
-            debug_log(self, 'Prompt generated')
-            self.cachedata = res.cachedata
-            return self:async_compress_prompt(res.prompt)
+        self:generate_prompt():forward(function(prompt) ---@param prompt FittenCode.Inline.Prompt
+            debug_log(self, 'Generated prompt: {}', prompt)
+            return self:async_compress_prompt(prompt)
+            -- return Promise.rejected()
         end),
         self:get_completion_version()
     }):forward(function(_)
-        local compressed_prompt_binary = _[1]
-        local completion_version = _[2]
+        local compressed_prompt_binary = _[1] ---@type string?
+        local completion_version = _[2] ---@type string?
         debug_log(self, 'Got completion version: {}', completion_version)
         debug_log(self, 'Compressed prompt length: {}', #compressed_prompt_binary)
         if not compressed_prompt_binary or not completion_version then
@@ -422,71 +436,116 @@ function Session:send_completions()
             })
         end
         return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
-        ---@param parse_result FittenCode.Inline.FimProtocol.ParseResult
-    end):forward(function(parse_result)
+    end):forward(function(fim_response) ---@param fim_response FittenCode.Inline.FimProtocol.Response
         local check = self:_preflight_check()
         if check:is_rejected() then
             return check
-        else
-            FimGenerate.update_last_version(self.filename, self.version, self.cachedata)
-            debug_log(self, 'Updated FIM last version')
         end
-        if parse_result.status == 'no_completion' or parse_result.status == 'repeat_remaining' then
+        if fim_response.status == 'no_completion' or fim_response.status == 'repeat_remaining' then
             debug_log(self, 'No more suggestions')
             self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
             return Promise.resolved(nil)
         end
-        debug_log(self, 'Got completion: {}', parse_result.data.completions)
-        self:set_model(parse_result.data.completions)
+        debug_log(self, 'Got completion: {}', fim_response.data.completions)
+        self:set_model(fim_response.data.completions)
         self:set_interactive()
-        return Promise.resolved(parse_result.data)
+        return Promise.resolved(fim_response.data)
     end):catch(function(_)
-        self:sync_completion_event(COMPLETION_EVENT.ERROR)
         debug_log(self, 'Failed to send completions: {}', _)
+        self:sync_completion_event(COMPLETION_EVENT.ERROR)
         return Promise.rejected(_)
     end)
 end
 
 -- 获取补全版本号
----@return FittenCode.Promise
+---@return FittenCode.Promise<string, FittenCode.Error>
 function Session:get_completion_version()
     local check = self:_preflight_check()
     if check:is_rejected() then
         return check
     end
-    local res, request = SessionFunctional.get_completion_version({
-        on_before_get_completion_version = function()
-            self:sync_completion_event(COMPLETION_EVENT.GETTING_COMPLETION_VERSION)
-        end,
-    })
-    if request then
-        self:_add_request(request)
+    self:sync_completion_event(COMPLETION_EVENT.GETTING_COMPLETION_VERSION)
+    local request = Client.make_request(Protocol.Methods.get_completion_version)
+    if not request then
+        return Promise.rejected({
+            message = 'Failed to make get_completion_version request',
+        })
     end
-    return res
+    self:_add_request(request)
+    ---@param _ FittenCode.HTTP.Request.Stream.EndEvent
+    return request:async():forward(function(_)
+        ---@type FittenCode.Protocol.Methods.GetCompletionVersion.Response
+        local response = _.json()
+        if not response then
+            return Promise.rejected({
+                message = 'Failed to decode completion version response',
+                metadata = {
+                    response = _,
+                }
+            })
+        else
+            return response
+        end
+    end):catch(function(_)
+        return Promise.rejected(_)
+    end)
 end
 
 ---@param completion_version string
 ---@param compressed_prompt_binary string
----@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult, FittenCode.Error>
+---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.Response, FittenCode.Error>
 function Session:generate_one_stage_auth(completion_version, compressed_prompt_binary)
     local check = self:_preflight_check()
     if check:is_rejected() then
         return check
     end
-    local res, request = SessionFunctional.generate_one_stage_auth({
-        on_before_generate_one_stage_auth = function()
-            self:sync_completion_event(COMPLETION_EVENT.GENERATE_ONE_STAGE)
-        end,
-        completion_version = completion_version,
-        compressed_prompt_binary = compressed_prompt_binary,
-        buf = self.buf,
-        position = self.position:translate(0, -1),
-        mode = self.mode,
+    self:sync_completion_event(COMPLETION_EVENT.GENERATE_ONE_STAGE)
+    local vu = {
+        ['0'] = '',
+        ['1'] = '2_1',
+        ['2'] = '2_2',
+        ['3'] = '2_3',
+    }
+    local request = Client.make_request_auth(Protocol.Methods.generate_one_stage_auth, {
+        variables = {
+            completion_version = vu[completion_version],
+        },
+        payload = compressed_prompt_binary,
     })
-    if request then
-        self:_add_request(request)
+    if not request then
+        return Promise.rejected({
+            message = 'Failed to make generate_one_stage_auth request',
+        })
     end
-    return res
+    self:_add_request(request)
+
+    ---@param _ FittenCode.HTTP.Request.Stream.EndEvent
+    return request:async():forward(function(_)
+        debug_log(self, 'Got one-stage auth response: {}', _)
+        ---@type FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
+        local response = _.json()
+        if not response then
+            return Promise.rejected({
+                message = 'Failed to decode completion response',
+                metadata = {
+                    response = _,
+                }
+            })
+        end
+        local parse_result = FimResponse.parse(response, {
+            shadow = self.shadow,
+            position = self.position,
+            mode = self.mode
+        })
+        if parse_result.status == 'error' then
+            return Promise.rejected({
+                message = parse_result.message or 'Parsed completion response error',
+            })
+        end
+        return parse_result
+    end):catch(function(_)
+        return Promise.rejected(_)
+    end)
 end
 
 function Session:is_match_commit_position(position)

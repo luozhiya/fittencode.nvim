@@ -3,7 +3,6 @@
 ---@field meta_datas FittenCode.Inline.Prompt.MetaDatas
 
 -- 元信息
--- UTF16 和 UTF8 是否只要填一个即可？
 ---@class FittenCode.Inline.Prompt.MetaDatas
 ---@field plen number 对比结果的相似前缀的长度 UTF-16
 ---@field slen number 对比结果的相似后缀的长度 UTF-16
@@ -47,7 +46,7 @@
 ---@field position FittenCode.Position
 ---@field mode? FittenCode.Inline.Session.Mode
 ---@field id? string
----@field filename? string
+---@field uri? string
 ---@field version? number
 ---@field headless? boolean
 ---@field trigger_inline_suggestion? function
@@ -61,7 +60,7 @@
 ---@field position FittenCode.Position
 ---@field commit_position FittenCode.Position
 ---@field id string
----@field filename string
+---@field uri string
 ---@field mode FittenCode.Inline.Session.Mode
 ---@field requests FittenCode.HTTP.Request[]
 ---@field keymaps FittenCode.Keymap[]
@@ -69,6 +68,7 @@
 ---@field model FittenCode.Inline.Model
 ---@field version number
 ---@field headless boolean
+---@field shadow FittenCode.ShadowTextModel
 
 ---@class FittenCode.Inline.Context
 ---@field buf integer

@@ -48,7 +48,7 @@ function source:get_completions(ctx, callback)
     if not request then
         callback()
     end
-    ---@param data FittenCode.Inline.FimProtocol.ParseResult.Data
+    ---@param data FittenCode.Inline.FimProtocol.Response.Data
     res:forward(function(data)
         Log.debug('LSP Server got completion data = {}', data)
         if data == nil or data.completions == nil then

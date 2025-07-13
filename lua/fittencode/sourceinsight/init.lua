@@ -49,7 +49,7 @@ function M.get_snapshot(options)
 end
 
 function M.get_fragment(options)
-    return require('fittencode.sourceinsight.frgments').get_fragment(options)
+    return require('fittencode.sourceinsight.fragments').get_fragment(options)
 end
 
 return M

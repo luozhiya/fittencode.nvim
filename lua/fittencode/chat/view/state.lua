@@ -90,7 +90,7 @@ function State.get_state_from_model(model, selected_state)
             if conv.id == model.selected_conversation_id then
                 if conv.context.selection then
                     sc.reference = {
-                        select_text = Fn.get_text(conv.context.buf, conv.context.selection.range),
+                        select_text = conv.context.shadow_text_model:get_text({ range = conv.context.selection.range, encoding = 'utf-8' }),
                         select_range = {
                             name = vim.api.nvim_buf_get_name(conv.context.buf),
                             range = conv.context.selection.range

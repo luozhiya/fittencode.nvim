@@ -329,7 +329,7 @@ end
 ---@param position FittenCode.Position
 ---@param version integer
 ---@param options FittenCode.Inline.TriggerInlineSuggestionOptions
----@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
+---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.Response.Data?, FittenCode.Error>
 function Controller:_make_session(buf, position, version, options)
     local buf_new, position_new = self:_preflight_check(options.vimev, options.force)
     if not (buf and position and buf_new and position_new and buf_new == buf and position_new:is_equal(position) and Fn.version(buf_new) == version) then
@@ -338,19 +338,20 @@ function Controller:_make_session(buf, position, version, options)
         })
     end
     self:terminate_sessions()
-    self.selected_session_id = assert(Common.generate_short_id(13))
+    local id = assert(Common.generate_short_id(13))
     local session = Session.new({
         buf = buf,
-        filename = vim.api.nvim_buf_get_name(buf),
+        uri = Fn.uri(buf),
         position = position,
         mode = options.mode,
-        id = self.selected_session_id,
+        id = id,
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
         on_session_update_event = function(data) self:_emit({ event = CONTROLLER_EVENT.SESSION_UPDATED, data = data }) end,
         on_session_event = function(data) self:on_session_event(data) end,
         version = Fn.version(buf)
     })
     self.sessions[session.id] = session
+    self.selected_session_id = id
 
     return session:send_completions()
 end
@@ -359,7 +360,7 @@ end
 -- * resolve 没有补全或者成功时返回补全列表
 -- * reject 出错了
 ---@param options? FittenCode.Inline.TriggerInlineSuggestionOptions
----@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
+---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.Response.Data?, FittenCode.Error>
 function Controller:trigger_inline_suggestion(options)
     Log.debug('trigger_inline_suggestion')
     options = options or {}

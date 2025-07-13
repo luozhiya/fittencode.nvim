@@ -321,7 +321,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
     end
     local switch = {
         ['context'] = function()
-            return { { name = vim.api.nvim_buf_get_name(buf), language = language_id(buf), content = context.shadow_text_model:get_text('utf-8') } }
+            return { { name = vim.api.nvim_buf_get_name(buf), language = language_id(buf), content = context.shadow_text_model:get_text({ encoding = 'utf-8' }) } }
         end,
         ['constant'] = function()
             return variables.value
@@ -347,7 +347,7 @@ function Controller:_resolve_variables_internal(context, variables, msgpack)
             end
         end,
         ['selected-text'] = function()
-            return context.shadow_text_model:get_text('utf-8', context.selection.range)
+            return context.shadow_text_model:get_text({ range = context.selection.range, encoding = 'utf-8' })
         end,
         ['selected-location-text'] = function()
             -- TODO
@@ -461,7 +461,7 @@ function Controller:from_builtin_template_with_selection(type, mode)
         local selection = {}
         local range = get_range_from_visual_selection(buf)
         if range then
-            selection.range = context.shadow_text_model:normalize('utf-8', range)
+            selection.range = context.shadow_text_model:normalize(range, 'utf-8')
         end
         -- Log.debug('Get range from visual selection = {}', range)
         -- Log.debug('Selected range = {}', selection.range)

@@ -105,7 +105,7 @@ function Model:user_can_reply(id)
 end
 
 -- 获取 Conversation 列表
----@return { selected_conversation_id: string?, conversations: { id: string, title: string, is_favorited: boolean }[] }
+---@return { selected_conversation_id: string?, conversations: { id: string, title: string, is_favorited: boolean, phase : string }[] }
 function Model:list_conversations()
     local result = {
         selected_conversation_id = self.selected_conversation_id,

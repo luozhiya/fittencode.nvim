@@ -89,7 +89,7 @@ methods['textDocument/completion'] = function(params, callback)
     if not request then
         return callback(nil, {})
     end
-    ---@param data FittenCode.Inline.FimProtocol.ParseResult.Data
+    ---@param data FittenCode.Inline.FimProtocol.Response.Data
     res:forward(function(data)
         Log.debug('LSP Server got completion data = {}', data)
         if data == nil or data.completions == nil then
@@ -119,7 +119,7 @@ methods['textDocument/inlineCompletion'] = function(params, callback)
     if not request then
         return callback(nil, {})
     end
-    ---@param data FittenCode.Inline.FimProtocol.ParseResult.Data
+    ---@param data FittenCode.Inline.FimProtocol.Response.Data
     res:forward(function(data)
         Log.debug('LSP Server got completion data = {}', data)
         if data == nil or data.completions == nil then

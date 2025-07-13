@@ -13,6 +13,33 @@ References:
 
 local Position = require('fittencode.base.position')
 local Fn = require('fittencode.base.fn')
+local Log = require('fittencode.log')
+
+-- substring in js
+-- 包含 start 不包含 finish
+-- 0-based
+local function substring(str, start, finish)
+    -- Convert to 1-based indexing (Lua's default)
+    local start_pos = start + 1
+    local finish_pos = finish or #str -- default to end of string if finish is nil
+
+    -- Handle negative values (JavaScript treats them as 0)
+    if start_pos < 1 then start_pos = 1 end
+    if finish_pos < 1 then finish_pos = 1 end
+
+    -- Handle cases where start > finish (JavaScript swaps them)
+    if start_pos > finish_pos then
+        start_pos, finish_pos = finish_pos, start_pos
+    end
+
+    -- Ensure positions don't exceed string length
+    if start_pos > #str + 1 then start_pos = #str + 1 end
+    if finish_pos > #str + 1 then finish_pos = #str + 1 end
+
+    Log.notify_debug('substring, str = {}, start_pos = {}, finish_pos = {}', str, start_pos, finish_pos)
+
+    return string.sub(str, start_pos, finish_pos)
+end
 
 ---@class FittenCode.ShadowTextModel
 ---@field lines string[]
@@ -70,7 +97,13 @@ end
 
 function ShadowTextModel.from_buffer(buf)
     local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-    return ShadowTextModel.new({ lines = lines, eol = vim.lsp._buf_get_line_ending(buf), buffer = buf, version = Fn.version(buf) })
+    return ShadowTextModel.new({
+        lines = lines,
+        -- eol = vim.lsp._buf_get_line_ending(buf),
+        eol = '\n', -- TODO: 这里应该根据文件类型自动判断，目前为了简化逻辑使用统一的换行符
+        buffer = buf,
+        version = Fn.version(buf)
+    })
 end
 
 ---@param encoding lsp.PositionEncodingKind
@@ -226,10 +259,22 @@ function ShadowTextModel:_get_layout(line)
     return self.computed.layouts[line + 1]
 end
 
--- 获取 encoding 指定的 range 范围内的文本内容
+--[[
+
+获取 encoding 指定的 range 范围内的文本内容
+
+- 从 0 开始计数
+- 如果 range 为空，返回全部文本内容
+- range 可以是 -1, 2147483647 这样的值，这里将其解析成最大值
+- 包含 range 的 start
+- 不包含 range 的 end
+- range.start == range.end_ 表示空 range, 返回空字符串
+
+]]
 ---@param options? { encoding?: lsp.PositionEncodingKind, range?: FittenCode.Range}
 ---@return string
 function ShadowTextModel:get_text(options)
+    Log.notify_debug('get_text = {}', options)
     local range = options and options.range
     if not range then
         if not self.computed.full_text then
@@ -240,18 +285,33 @@ function ShadowTextModel:get_text(options)
     local encoding = options and options.encoding or self.context_encoding
     assert(encoding)
     range = self:normalize(range, encoding)
+    Log.notify_debug('range = {}', range)
+    if range:is_empty() then
+        Log.notify_debug('empty range')
+        return ''
+    end
+    if range:is_single_line() then
+        local start_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.start.row), encoding, range.start.col + 1)[1] - 1
+        local end_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.end_.row), encoding, range.end_.col + 1)[1] - 1
+        Log.notify_debug('start_byte_index = {}, end_byte_index = {}', start_byte_index, end_byte_index)
+        return substring(self:line_at(range.start.row), start_byte_index, end_byte_index)
+    end
     local result_lines = {}
     -- part 1
-    local start_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.start.row), encoding, range.start.col)[1]
-    local remaning = self:line_at(range.start.row):sub(start_byte_index)
+    local start_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.start.row), encoding, range.start.col + 1)[1] - 1
+    -- local remaning = self:line_at(range.start.row):sub(start_byte_index)
+    local remaning = substring(self:line_at(range.start.row), start_byte_index)
+    Log.notify_debug('start_byte_index = {}, remaning = {}', start_byte_index, remaning)
     result_lines[#result_lines + 1] = remaning
     -- part 2
     for i = range.start.row + 1, range.end_.row - 1 do
         result_lines[#result_lines + 1] = self.lines[i + 1]
     end
     -- part 3
-    local end_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.end_.row), encoding, range.end_.col)[2]
-    remaning = self:line_at(range.end_.row):sub(1, end_byte_index)
+    local end_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.end_.row), encoding, range.end_.col + 1)[2] - 1
+    -- remaning = self:line_at(range.end_.row):sub(1, end_byte_index)
+    remaning = substring(self:line_at(range.end_.row), 0, end_byte_index)
+    Log.notify_debug('end_byte_index = {}, remaning = {}', end_byte_index, remaning)
     result_lines[#result_lines + 1] = remaning
     return table.concat(result_lines, self.eol)
 end
@@ -271,23 +331,35 @@ end
 ---@param position FittenCode.Position
 ---@param encoding? lsp.PositionEncodingKind
 ---@return FittenCode.Position
-function ShadowTextModel:forward(position, encoding)
+function ShadowTextModel:shift_right(position, encoding)
     encoding = encoding or self.context_encoding
     assert(encoding)
-    local max_col = self:_get_utf_index(encoding, position.row)
     local col = Fn.round_end(self:_get_layout(position.row), encoding, position.col)
-    return Position.of(position.row, col < max_col and col + 1 or max_col)
+    -- local col_next = Fn.round_end(self:_get_layout(position.row), encoding, col + 1)
+    return Position.of(position.row, col + 1)
 end
 
 -- 向后移动一个 character，返回的 position 指向后一个字符的最末 codeunit
 ---@param encoding lsp.PositionEncodingKind
 ---@param position FittenCode.Position
 ---@return FittenCode.Position
-function ShadowTextModel:backward(position, encoding)
+function ShadowTextModel:shift_left(position, encoding)
     encoding = encoding or self.context_encoding
     assert(encoding)
     local col = Fn.round_start(self:_get_layout(position.row), encoding, position.col)
     return Position.of(position.row, col > 0 and col - 1 or 0)
+end
+
+function ShadowTextModel:round_start(position, encoding)
+    encoding = encoding or self.context_encoding
+    assert(encoding)
+    return Position.of(position.row, Fn.round_start(self:_get_layout(position.row), encoding, position.col))
+end
+
+function ShadowTextModel:round_end(position, encoding)
+    encoding = encoding or self.context_encoding
+    assert(encoding)
+    return Position.of(position.row, Fn.round_end(self:_get_layout(position.row), encoding, position.col))
 end
 
 -- 正则化指定 encoding 的 range
@@ -314,6 +386,11 @@ function ShadowTextModel:normalize(range, encoding)
     range.start.col = Fn.round_start(self:_get_layout(range.start.row), encoding, range.start.col)
     range.end_.col = Fn.round_end(self:_get_layout(range.end_.row), encoding, range.end_.col)
     return range
+end
+
+function ShadowTextModel:wordcount()
+    assert(self.buffer)
+    return Fn.wordcount(self.buffer)
 end
 
 return ShadowTextModel

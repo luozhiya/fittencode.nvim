@@ -26,7 +26,7 @@ function M.get_fragment(options)
         local end_offset = offset + half
         local start_pos = shadow:position_at(start_offset)
         local end_pos = shadow:position_at(end_offset)
-        local next = shadow:forward(curr)
+        local next = shadow:shift_right(curr)
         prefix = shadow:get_text({ range = Range.of(start_pos, next) })
         suffix = shadow:get_text({ range = Range.of(next, end_pos) })
     end)

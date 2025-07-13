@@ -92,6 +92,7 @@
 ---@field update_view function?
 ---@field update_status function?
 ---@field resolve_variables function?
+---@field context FittenCode.Chat.Context?
 
 ---@class FittenCode.Chat.Conversation.State
 ---@field type 'user_can_reply' | 'waiting_for_bot_answer' | 'bot_answer_streaming'
@@ -158,7 +159,7 @@
 ---@field delete_conversation function
 ---@field delete_all_conversations function
 ---@field change_favorited function
----@field conversations table<FittenCode.Chat.Conversation>
+---@field conversations table<string, FittenCode.Chat.Conversation>
 ---@field selected_conversation_id string
 ---@field fcps boolean
 
