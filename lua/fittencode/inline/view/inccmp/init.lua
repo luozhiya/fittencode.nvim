@@ -102,7 +102,7 @@ local function move_to_center_vertical(virt_height)
         return
     end
     local position = assert(Fn.position(vim.api.nvim_get_current_win()))
-    local row = position.row
+    local row = position.line
     local relative_row = row - vim.fn.line('w0')
     local height = vim.api.nvim_win_get_height(0)
     local center = math.ceil(height / 2)
@@ -112,7 +112,7 @@ local function move_to_center_vertical(virt_height)
         -- [0, lnum, col, off, curswant]
         -- local curswant = vim.fn.getcurpos()[5]
         -- 1-based row
-        vim.fn.cursor({ row + 1, position.col + 1 })
+        vim.fn.cursor({ row + 1, position.cu + 1 })
     end
 end
 
@@ -210,7 +210,7 @@ function View:update(state)
     Fn.ignoreevent_wrap(function()
         Fn.view_wrap(win, _update)
         -- 4. update position
-        vim.api.nvim_win_set_cursor(win, { self.commit.row + 1, self.commit.col })
+        vim.api.nvim_win_set_cursor(win, { self.commit.line + 1, self.commit.cu })
         move_to_center_vertical(#state.lines)
     end, EVENTIGNORES)
 end
@@ -222,7 +222,7 @@ function View:on_complete()
     end
     Fn.ignoreevent_wrap(function()
         local win = vim.api.nvim_get_current_win()
-        vim.api.nvim_win_set_cursor(win, { self.last_insert_pos.row + 1, self.last_insert_pos.col })
+        vim.api.nvim_win_set_cursor(win, { self.last_insert_pos.line + 1, self.last_insert_pos.cu })
     end, EVENTIGNORES)
 end
 

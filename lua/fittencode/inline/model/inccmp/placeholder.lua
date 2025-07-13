@@ -52,12 +52,12 @@ local function generate_placeholder_ranges(buf, position, completion)
     -- 1. 获取 postion + col_delta 个字符 T0
     local replaced_text = assert(Fn.get_text(buf, Range.new({
         start = Position.new({
-            row = position.row,
-            col = position.col,
+            row = position.line,
+            col = position.cu,
         }),
         end_ = Position.new({
-            row = position.row,
-            col = position.col + col_delta - 1,
+            row = position.line,
+            col = position.cu + col_delta - 1,
         }),
     })))
     Log.debug('replaced_text = {}', replaced_text)

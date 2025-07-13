@@ -37,10 +37,10 @@ function M.build(response, shadow, position)
         lines = display_lines,
     }
     if ori_start_line > ori_end_line then
-        item.after_line = position.row + ori_end_line
+        item.after_line = position.line + ori_end_line
     else
-        item.start_line = position.row + ori_start_line
-        item.end_line = position.row + ori_end_line
+        item.start_line = position.line + ori_start_line
+        item.end_line = position.line + ori_end_line
     end
     table.insert(completions, item)
     return completions, 'success'

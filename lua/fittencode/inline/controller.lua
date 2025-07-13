@@ -284,7 +284,7 @@ end
 ---@param position FittenCode.Position
 local function is_within_the_line(position)
     local line = vim.api.nvim_get_current_line()
-    local col = position.col
+    local col = position.cu
     -- [0, #line]
     if col == 0 or col == #line then
         return false
@@ -447,8 +447,8 @@ function Controller:_show_no_more_suggestion(msg, timeout, timestamp)
     vim.api.nvim_buf_set_extmark(
         buf,
         self.no_more_suggestion_ns,
-        position.row,
-        position.col,
+        position.line,
+        position.cu,
         {
             virt_text = { { msg, Color.FittenCodeInfo } },
             virt_text_pos = 'inline',

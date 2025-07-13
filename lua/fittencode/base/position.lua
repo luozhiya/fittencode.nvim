@@ -1,14 +1,12 @@
--- 抽象的位置类，用于表示文件中的位置
--- * 在 `UTF-8` 序列中， `col` 可能指向首字节，也可能指向末尾字节，要根据具体的上下文环境来加以判断
---   * `vim.api.nvim_win_get_cursor` 返回的 `col` 指向首字节
---   * `vim.api.str_byteindex` 返回的 `col` 指向末尾字节
--- * -1 是 row 和 col 的特殊值代表最后一行
+--[[
+
+]]
 
 local Format = require('fittencode.base.format')
 
 ---@class FittenCode.Position
----@field row number A zero-based row value.
----@field col number A zero-based column value.
+---@field line number A zero-based row value.
+---@field cu number A zero-based column value.
 local Position = {}
 Position.__index = Position
 
@@ -16,22 +14,22 @@ Position.__index = Position
 function Position.new(options)
     options = options or {}
     local self = {
-        row = options.row or 0,
-        col = options.col or 0,
+        line = options.line or 0,
+        cu = options.cu or 0,
     }
     setmetatable(self, Position)
     return self
 end
 
 function Position:__tostring()
-    return Format.nothrow_format('Position<{}:{}>', self.row, self.col)
+    return Format.nothrow_format('Position<{}:{}>', self.line, self.cu)
 end
 
 -- Check if this position is equal to `other`.
 ---@param other FittenCode.Position
 ---@return boolean
 function Position:is_equal(other)
-    return self.row == other.row and self.col == other.col
+    return self.line == other.line and self.cu == other.cu
 end
 
 -- Check if this position is before `other`.
@@ -72,7 +70,7 @@ function Position:compare_to(other)
         return 1
     elseif other:rel_eof() then
         return -1
-    elseif self.row == other.row then
+    elseif self.line == other.line then
         if self:rel_eol() and self:rel_eol() then
             return 0
         elseif self:rel_eol() then
@@ -80,32 +78,32 @@ function Position:compare_to(other)
         elseif other:rel_eol() then
             return -1
         else
-            return self.col - other.col
+            return self.cu - other.cu
         end
     else
-        return self.row - other.row
+        return self.line - other.line
     end
 end
 
 -- Create a new position relative to this position.
----@param row_delta? number The number of rows to move.
----@param col_delta? number The number of columns to move.
+---@param line_delta? number The number of rows to move.
+---@param cu_delta? number The number of columns to move.
 ---@return FittenCode.Position The new position.
-function Position:translate(row_delta, col_delta)
+function Position:translate(line_delta, cu_delta)
     return Position.new({
-        row = self.row + (row_delta or 0),
-        col = self.col + (col_delta or 0),
+        line = self.line + (line_delta or 0),
+        cu = self.cu + (cu_delta or 0),
     })
 end
 
 -- Create a new position derived from this position.
----@param row? number The new row value.
----@param col? number The new column value.
+---@param line? number The new row value.
+---@param cu? number The new column value.
 ---@return FittenCode.Position The new position.
-function Position:with(row, col)
+function Position:with(line, cu)
     return Position.new({
-        row = row or self.row,
-        col = col or self.col,
+        line = line or self.line,
+        cu = cu or self.cu,
     })
 end
 
@@ -113,29 +111,29 @@ end
 ---@return FittenCode.Position The new position.
 function Position:clone()
     return Position.new({
-        row = self.row,
-        col = self.col,
+        line = self.line,
+        cu = self.cu,
     })
 end
 
 -- Check if this position is at the end of file.
 ---@return boolean
 function Position:rel_eof()
-    return self.row == -1 and self.col == -1
+    return self.line == -1 and self.cu == -1
 end
 
 function Position:rel_eol()
-    return self.col == -1
+    return self.cu == -1
 end
 
 function Position:rel_lastline()
-    return self.row == -1
+    return self.line == -1
 end
 
-function Position.of(row, col)
+function Position.of(line, cu)
     return Position.new({
-        row = row,
-        col = col,
+        line = line,
+        cu = cu,
     })
 end
 

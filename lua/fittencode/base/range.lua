@@ -50,7 +50,7 @@ end
 -- Returns true if the range is a single line, i.e., start and end_ are on the same line
 ---@return boolean
 function Range:is_single_line()
-    return self.start.row == self.end_.row
+    return self.start.line == self.end_.line
 end
 
 -- Returns true if the range contains the given position or range
@@ -87,12 +87,12 @@ function Range:intersects(other)
     end
     return Range.new({
         start = Position.new({
-            row = math.max(self.start.row, other.start.row),
-            col = math.max(self.start.col, other.start.col),
+            row = math.max(self.start.line, other.start.line),
+            col = math.max(self.start.cu, other.start.cu),
         }),
         end_ = Position.new({
-            row = math.min(self.end_.row, other.end_.row),
-            col = math.min(self.end_.col, other.end_.col),
+            row = math.min(self.end_.line, other.end_.line),
+            col = math.min(self.end_.cu, other.end_.cu),
         }),
     })
 end
@@ -103,12 +103,12 @@ end
 function Range:union(other)
     return Range.new({
         start = Position.new({
-            row = math.min(self.start.row, other.start.row),
-            col = math.min(self.start.col, other.start.col),
+            row = math.min(self.start.line, other.start.line),
+            col = math.min(self.start.cu, other.start.cu),
         }),
         end_ = Position.new({
-            row = math.max(self.end_.row, other.end_.row),
-            col = math.max(self.end_.col, other.end_.col),
+            row = math.max(self.end_.line, other.end_.line),
+            col = math.max(self.end_.cu, other.end_.cu),
         }),
     })
 end

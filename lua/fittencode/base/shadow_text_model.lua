@@ -178,7 +178,7 @@ end
 ---@param position FittenCode.Position
 ---@return FittenCode.Position
 function ShadowTextModel:_validate_position(encoding, position)
-    local line, character = position.row, position.col
+    local line, character = position.line, position.cu
     if line < 0 then
         line = 0
         character = 0
@@ -247,7 +247,7 @@ function ShadowTextModel:offset_at(position, encoding)
     encoding = encoding or self.context_encoding
     assert(encoding)
     position = self:_validate_position(encoding, position)
-    return self:_get_prefix_sum(encoding, position.row - 1) + position.col
+    return self:_get_prefix_sum(encoding, position.line - 1) + position.cu
 end
 
 ---@param line integer
@@ -291,26 +291,26 @@ function ShadowTextModel:get_text(options)
         return ''
     end
     if range:is_single_line() then
-        local start_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.start.row), encoding, range.start.col + 1)[1] - 1
-        local end_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.end_.row), encoding, range.end_.col + 1)[1] - 1
+        local start_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.start.line), encoding, range.start.cu + 1)[1] - 1
+        local end_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.end_.line), encoding, range.end_.cu + 1)[1] - 1
         Log.notify_debug('start_byte_index = {}, end_byte_index = {}', start_byte_index, end_byte_index)
-        return substring(self:line_at(range.start.row), start_byte_index, end_byte_index)
+        return substring(self:line_at(range.start.line), start_byte_index, end_byte_index)
     end
     local result_lines = {}
     -- part 1
-    local start_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.start.row), encoding, range.start.col + 1)[1] - 1
+    local start_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.start.line), encoding, range.start.cu + 1)[1] - 1
     -- local remaning = self:line_at(range.start.row):sub(start_byte_index)
-    local remaning = substring(self:line_at(range.start.row), start_byte_index)
+    local remaning = substring(self:line_at(range.start.line), start_byte_index)
     Log.notify_debug('start_byte_index = {}, remaning = {}', start_byte_index, remaning)
     result_lines[#result_lines + 1] = remaning
     -- part 2
-    for i = range.start.row + 1, range.end_.row - 1 do
+    for i = range.start.line + 1, range.end_.line - 1 do
         result_lines[#result_lines + 1] = self.lines[i + 1]
     end
     -- part 3
-    local end_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.end_.row), encoding, range.end_.col + 1)[2] - 1
+    local end_byte_index = Fn.utf_to_byteindex(self:_get_layout(range.end_.line), encoding, range.end_.cu + 1)[2] - 1
     -- remaning = self:line_at(range.end_.row):sub(1, end_byte_index)
-    remaning = substring(self:line_at(range.end_.row), 0, end_byte_index)
+    remaning = substring(self:line_at(range.end_.line), 0, end_byte_index)
     Log.notify_debug('end_byte_index = {}, remaning = {}', end_byte_index, remaning)
     result_lines[#result_lines + 1] = remaning
     return table.concat(result_lines, self.eol)
@@ -322,8 +322,8 @@ end
 ---@param position FittenCode.Position
 ---@return FittenCode.Position
 function ShadowTextModel:map(from_encoding, to_encoding, position)
-    local row = position.row
-    local col = Fn.equivalent_unit_range(self:_get_layout(row), from_encoding, to_encoding, position.col)[1]
+    local row = position.line
+    local col = Fn.equivalent_unit_range(self:_get_layout(row), from_encoding, to_encoding, position.cu)[1]
     return Position.of(row, col)
 end
 
@@ -334,9 +334,9 @@ end
 function ShadowTextModel:shift_right(position, encoding)
     encoding = encoding or self.context_encoding
     assert(encoding)
-    local col = Fn.round_end(self:_get_layout(position.row), encoding, position.col)
+    local col = Fn.round_end(self:_get_layout(position.line), encoding, position.cu)
     -- local col_next = Fn.round_end(self:_get_layout(position.row), encoding, col + 1)
-    return Position.of(position.row, col + 1)
+    return Position.of(position.line, col + 1)
 end
 
 -- 向后移动一个 character，返回的 position 指向后一个字符的最末 codeunit
@@ -346,8 +346,8 @@ end
 function ShadowTextModel:shift_left(position, encoding)
     encoding = encoding or self.context_encoding
     assert(encoding)
-    local col = Fn.round_start(self:_get_layout(position.row), encoding, position.col)
-    return Position.of(position.row, col > 0 and col - 1 or 0)
+    local col = Fn.round_start(self:_get_layout(position.line), encoding, position.cu)
+    return Position.of(position.line, col > 0 and col - 1 or 0)
 end
 
 function ShadowTextModel:round_start(position, encoding)
@@ -370,21 +370,21 @@ end
 function ShadowTextModel:normalize(range, encoding)
     encoding = encoding or self.context_encoding
     assert(encoding)
-    if range.start.row == -1 then
-        range.start.row = #self.lines - 1
+    if range.start.line == -1 then
+        range.start.line = #self.lines - 1
     end
-    if range.end_.row == -1 then
-        range.end_.row = #self.lines - 1
+    if range.end_.line == -1 then
+        range.end_.line = #self.lines - 1
     end
-    if range.start.col == -1 or range.start.col == 2147483647 then
-        range.start.col = Fn.byte_to_utfindex(self:_get_layout(range.start.row), encoding)[2]
+    if range.start.cu == -1 or range.start.cu == 2147483647 then
+        range.start.cu = Fn.byte_to_utfindex(self:_get_layout(range.start.line), encoding)[2]
     end
-    if range.end_.col == -1 or range.end_.col == 2147483647 then
-        range.end_.col = Fn.byte_to_utfindex(self:_get_layout(range.end_.row), encoding)[2]
+    if range.end_.cu == -1 or range.end_.cu == 2147483647 then
+        range.end_.cu = Fn.byte_to_utfindex(self:_get_layout(range.end_.line), encoding)[2]
     end
     range:sort()
-    range.start.col = Fn.round_start(self:_get_layout(range.start.row), encoding, range.start.col)
-    range.end_.col = Fn.round_end(self:_get_layout(range.end_.row), encoding, range.end_.col)
+    range.start.cu = Fn.round_start(self:_get_layout(range.start.line), encoding, range.start.cu)
+    range.end_.cu = Fn.round_end(self:_get_layout(range.end_.line), encoding, range.end_.cu)
     return range
 end
 

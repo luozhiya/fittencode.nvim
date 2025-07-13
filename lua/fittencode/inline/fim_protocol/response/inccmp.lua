@@ -49,8 +49,8 @@ function M.build(response, shadow, position)
                 range = Range.new({
                     start = u16next,
                     end_ = Position.new({
-                        row = u16next.row,
-                        col = u16next_end.col + completion.character_delta + 1,
+                        row = u16next.line,
+                        col = u16next_end.cu + completion.character_delta + 1,
                     })
                 }),
                 encoding = 'utf-16'
@@ -61,8 +61,8 @@ function M.build(response, shadow, position)
                 range = Range.new({
                     start = u8next,
                     end_ = Position.new({
-                        row = u8next.row,
-                        col = u8next_end.col + #completion.generated_text + 1,
+                        row = u8next.line,
+                        col = u8next_end.cu + #completion.generated_text + 1,
                     })
                 }),
                 encoding = 'utf-8'

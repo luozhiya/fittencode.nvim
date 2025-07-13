@@ -312,7 +312,7 @@ function View:_adjust_cursor_position_on_complete()
         start_pos = Position.of(self.start_line, 0)
     end
     local new_pos = Fn.calculate_cursor_position_after_insertion(start_pos, self.replacement_lines)
-    vim.api.nvim_win_set_cursor(win, { new_pos.row + 1, new_pos.col })
+    vim.api.nvim_win_set_cursor(win, { new_pos.line + 1, new_pos.cu })
 end
 
 function View:on_complete()
