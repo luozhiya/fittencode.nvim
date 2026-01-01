@@ -11,11 +11,24 @@ local blink = {}
 -- https://github.com/hrsh7th/nvim-cmp/pull/2002
 ---@param suggestions string[]
 ---@return lsp.CompletionResponse?
-local function convert_to_lsp_completion_response(line, character, suggestions)
+local function convert_to_lsp_completion_response(context, suggestions)
   local LABEL_LIMIT = 80
-  local text = character .. table.concat(suggestions, '\n')
-  local first = character .. suggestions[1]
-  local label = (#first > LABEL_LIMIT or #suggestions > 1) and string.sub(first, 1, LABEL_LIMIT - 3) .. '...' or first
+  local line = context.line
+  local bounds = context.bounds or {}
+  local base_cursor = {Base.get_cursor()}
+  local fallback_col = (base_cursor[2] or 0) + 1  -- fallback to cursor col (1-based)
+  local start_col = (bounds.start_col or fallback_col) - 1   -- Lua 1-based to 0-based for LSP
+  local end_col = (bounds.end_col or fallback_col) - 1
+  local row
+  if context.row then
+    row = context.row - 1
+  else
+    row = base_cursor[1] or 0
+  end
+  local text = suggestions[1]
+  local label = (#text > LABEL_LIMIT or #suggestions > 1) and string.sub(text, 1, LABEL_LIMIT - 3) .. '...' or text
+
+
   local items = {}
   table.insert(items, {
     kind = 'FittenCode',
@@ -23,6 +36,13 @@ local function convert_to_lsp_completion_response(line, character, suggestions)
     insertTextFormat = vim.lsp.protocol.InsertTextFormat.PlainText,
     insertText = text,
     description = '```' .. vim.bo.ft .. '\n' .. text .. '\n```',
+    textEdit = {
+      newText = text,
+      range = {
+        start = { line = row, character = start_col },
+        ['end'] = { line = row, character = end_col }
+      }
+    }
   })
   return { items = items, is_incomplete_forward = false, is_incomplete_backward = false }
 end
@@ -47,7 +67,10 @@ function blink:get_completions(context, callback)
       return
     end
     local line = context.line
-    local character = line:sub(context.bounds.start_col, context.bounds.end_col)
+    local bounds = context.bounds or {}
+    local base_cursor = {Base.get_cursor()}
+    local fallback_col = (base_cursor[2] or 0) + 1
+    local character = line:sub(bounds.start_col or fallback_col, bounds.end_col or fallback_col)
     -- local info = {
     --   triggerCharacter = context.trigger.character,
     --   line = line,
@@ -55,7 +78,7 @@ function blink:get_completions(context, callback)
     --   -- reason = request.option.reason,
     -- }
     -- Log.debug('Source(blink) request: {}', info)
-    local response = convert_to_lsp_completion_response(line, character, suggestions)
+    local response = convert_to_lsp_completion_response(context, suggestions)
     -- Log.debug('LSP CompletionResponse: {}', response)
     callback(response)
     -- callback()
