@@ -16,7 +16,6 @@ function M.setup(options)
     require('fittencode.commands')
 
     local function _loading()
-        require('fittencode.chat')
         require('fittencode.inline')
         require('fittencode.integrations')
     end
