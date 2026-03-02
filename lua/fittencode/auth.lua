@@ -62,10 +62,10 @@ end
 
 local function handle_http_errors(err)
     if err then
-        if err.type == 'HTTP_USER_ABORT' then
+        if err.type == 'user_abort' then
             Log.info('User abort')
-        elseif err.type == 'HTTP_PROCESS_ERROR' then
-            if err.cause.type == 'PROCESS_SPAWN_ERROR' then
+        elseif err.type == 'process_error' then
+            if err.cause.type == 'spawn_error' then
                 if vim.fn.filereadable(err.cause.metadata.command) ~= 1 then
                     Log.notify_error(i18n.tr('CURL not found, please check your installation.'))
                 else
@@ -74,9 +74,9 @@ local function handle_http_errors(err)
             else
                 Log.notify_error(i18n.tr('Process unexpectedly exited.'))
             end
-        elseif err.type == 'HTTP_CURL_ERROR' then
+        elseif err.type == 'curl_error' then
             Log.notify_error(i18n.tr('CURL internal error.'))
-        elseif err.type == 'AUTH_RESPONSE_ERROR' then
+        elseif err.type == 'auth_error' then
             Log.notify_error(err.message)
         end
     end
@@ -133,7 +133,7 @@ function M.login(username, password)
                 error_msg = re.msg
             end
             return Promise.rejected({
-                type = 'AUTH_RESPONSE_ERROR',
+                type = 'auth_error',
                 message = error_msg
             })
         end

@@ -72,7 +72,7 @@ local function run(process)
         kill(signal or 'sigterm')
     end
 
-    Log.debug('Starting process, command = {}', command)
+    Log.debug('Starting process, command = {}, args = {}', command, args)
 
     ---@diagnostic disable-next-line: missing-fields
     state.uv_process, state.pid = vim.uv.spawn(command, {
@@ -99,7 +99,7 @@ local function run(process)
     if not state.uv_process then
         ---@type FittenCode.Error
         local _ = {
-            type = 'PROCESS_SPAWN_ERROR',
+            type = 'spawn_error',
             message = 'Failed to spawn process',
             metadata = {
                 command = command,
@@ -146,7 +146,7 @@ local function run(process)
             if vim.uv.is_active(state.uv_process) then
                 ---@type FittenCode.Error
                 local _ = {
-                    type = 'PROCESS_TIMEOUT_ERROR',
+                    type = 'timeout',
                     message = 'Process timeout',
                     metadata = {
                         timeout = options.timeout,

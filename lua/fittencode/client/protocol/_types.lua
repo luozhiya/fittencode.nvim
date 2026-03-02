@@ -178,6 +178,11 @@
 ---@field refresh_token "Not expired" | string
 ---@field refresh_token_expires string
 
+---@class FittenCode.Protocol.Methods.RefreshRefreshToken.Error
+---@field data string
+---@field status_code number
+---@field msg string
+
 ------------------------------------------------
 -- RefreshAccessToken
 ------------------------------------------------

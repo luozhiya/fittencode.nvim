@@ -243,10 +243,13 @@ local function refresh_refresh_token(last_refresh_token)
         return Promise.rejected()
     end
     return req:async():forward(function(response) ---@param response FittenCode.HTTP.Request.Stream.EndEvent
-        ---@type FittenCode.Protocol.Methods.RefreshRefreshToken.Response?
+        ---@type FittenCode.Protocol.Methods.RefreshRefreshToken.Response|FittenCode.Protocol.Methods.RefreshRefreshToken.Error?
         local data = response:json()
-        if not data or not data.refresh_token or not data.refresh_token_expires then
-            return Promise.rejected()
+        if not data then
+            return Promise.rejected({ message = 'refresh_refresh_token has no response' })
+        end
+        if not data.refresh_token or not data.refresh_token_expires then
+            return Promise.rejected({ message = data.msg or 'refresh_refresh_token has no valid fields in response'})
         end
         return data
     end)
