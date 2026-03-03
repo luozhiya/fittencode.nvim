@@ -69,6 +69,14 @@ local function debug_log(self, msg, ...)
     Log._async_log({ stack = 3, level = vim.log.levels.DEBUG, message = meta .. Format.nothrow_format(msg, ...) })
 end
 
+---@param self FittenCode.Inline.Session
+---@param msg string
+---@param... any
+local function error_log(self, msg, ...)
+    local meta = Format.nothrow_format('Session id = {}, version = {}, session_event = {}, completion_event = {} --> ', self.id, self.version, self.session_event, self.completion_event)
+    Log._async_log({ stack = 3, level = vim.log.levels.ERROR, message = meta .. Format.nothrow_format(msg, ...) })
+end
+
 ---@param text string|string[]
 local function _is_ascii_only(text)
     assert(text)
@@ -440,7 +448,7 @@ function Session:send_completions()
         return Promise.resolved(parse_result.data)
     end):catch(function(_)
         self:sync_completion_event(COMPLETION_EVENT.ERROR)
-        debug_log(self, 'Failed to send completions: {}', _)
+        error_log(self, 'Failed to send completions: {}', _)
         return Promise.rejected(_)
     end)
 end
