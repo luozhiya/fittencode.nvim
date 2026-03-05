@@ -1,12 +1,12 @@
-local CONTROLLER_EVENT = {
-    SESSION_ADDED   = 'session_added',
-    SESSION_DELETED = 'session_deleted',
-    SESSION_UPDATED = 'session_updated',
-    INLINE_DISABLED = 'inline_disabled',
-    INLINE_RUNNING  = 'inline_running',
-    INLINE_IDLE     = 'inline_idle',
-}
----@alias FittenCode.Inline.ControllerEvent.Type 'session_added' |'session_deleted' |'session_updated' | 'inline_disabled' | 'inline_running' | 'inline_idle'
+-- local CONTROLLER_EVENT = {
+--     SESSION_ADDED   = 'session_added',
+--     SESSION_DELETED = 'session_deleted',
+--     SESSION_UPDATED = 'session_updated',
+--     INLINE_DISABLED = 'inline_disabled',
+--     INLINE_RUNNING  = 'inline_running',
+--     INLINE_IDLE     = 'inline_idle',
+-- }
+-- ---@alias FittenCode.Inline.ControllerEvent.Type 'session_added' |'session_deleted' |'session_updated' | 'inline_disabled' | 'inline_running' | 'inline_idle'
 
 local INLINE_EVENT = {
     IDLE     = 'idle',
@@ -43,6 +43,23 @@ local SESSION_EVENT = {
     TERMINATED  = 'terminated',  -- 会话永久结束，资源已释放（如网络请求取消、用户关闭补全）。
 }
 ---@alias FittenCode.Inline.SessionEvent.Type 'created' |'requesting' |'model_ready' | 'interactive' | 'terminated'
+
+---@class FittenCode.Inline.Event.Type
+---@field controller FittenCode.Inline.ControllerEvent.Type
+---@field inline FittenCode.Inline.InlineEvent.Type
+---@field completion FittenCode.Inline.CompletionEvent.Type
+---@field session FittenCode.Inline.SessionEvent.Type
+---@field session_task FittenCode.Inline.SessionTaskEvent.Type
+
+---@class FittenCode.Inline.Event.Data
+---@field id? string
+---@field completion_event? string
+---@field session_event? string
+---@field session_task_event? string
+
+---@class FittenCode.Inline.Event
+---@field type FittenCode.Inline.ControllerEvent.Type
+---@field data? FittenCode.Inline.Event.Data
 
 return {
     CONTROLLER_EVENT = CONTROLLER_EVENT,

@@ -249,7 +249,7 @@ local function refresh_refresh_token(last_refresh_token)
             return Promise.rejected({ message = 'refresh_refresh_token has no response' })
         end
         if not data.refresh_token or not data.refresh_token_expires then
-            return Promise.rejected({ message = data.msg or 'refresh_refresh_token has no valid fields in response'})
+            return Promise.rejected({ message = data.msg or 'refresh_refresh_token has no valid fields in response' })
         end
         return data
     end)

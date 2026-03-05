@@ -29,27 +29,14 @@ local Observer = require('fittencode.fn.observer')
 local Color = require('fittencode.color')
 local LspServer = require('fittencode.integrations.completion.lsp_server')
 
-local Status = CtrlObserver.Status
-local ProgressIndicatorObserver = CtrlObserver.ProgressIndicatorObserver
-local TimingObserver = CtrlObserver.TimingObserver
-
-local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
-local SESSION_EVENT = Definitions.SESSION_EVENT
+-- local Status = CtrlObserver.Status
+-- local ProgressIndicatorObserver = CtrlObserver.ProgressIndicatorObserver
+-- local TimingObserver = CtrlObserver.TimingObserver
 
 ---@class FittenCode.Keymap
 ---@field lhs string|string[]
 ---@field rhs function
 ---@field options? table<string, any>
-
----@class FittenCode.Inline.Event.Data
----@field id? string
----@field completion_event? string
----@field session_event? string
----@field session_task_event? string
-
----@class FittenCode.Inline.Event
----@field event FittenCode.Inline.ControllerEvent.Type
----@field data? FittenCode.Inline.Event.Data
 
 ---@class FittenCode.Inline.Controller
 ---@field observers FittenCode.Observer[]
@@ -73,15 +60,16 @@ end
 function Controller:_initialize(options)
     self.observers = {}
     self.sessions = {}
+    self.current_session = nil
     self.filter_events = {}
     self.keymaps = {}
-    self.status_observer = Status.new()
-    self:add_observer(self.status_observer)
-    self.pi = ProgressIndicator.new()
-    self.progress_observer = ProgressIndicatorObserver.new({ pi = self.pi })
-    self:add_observer(self.progress_observer)
-    self.timing_observer = TimingObserver.new()
-    self:add_observer(self.timing_observer)
+    -- self.status_observer = Status.new()
+    -- self:add_observer(self.status_observer)
+    -- self.pi = ProgressIndicator.new()
+    -- self.progress_observer = ProgressIndicatorObserver.new({ pi = self.pi })
+    -- self:add_observer(self.progress_observer)
+    -- self.timing_observer = TimingObserver.new()
+    -- self:add_observer(self.timing_observer)
     self.no_more_suggestion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
 
     self.keymaps = {
@@ -126,14 +114,6 @@ function Controller:_initialize(options)
         callback = function(args)
             Log.debug('edit_completion_cancel autocmd = {}, args = {}', args.event, args)
             self:edit_completion_cancel({ vimev = args })
-        end,
-    })
-    vim.api.nvim_create_autocmd({ 'BufEnter', 'BufFilePost' }, {
-        group = vim.api.nvim_create_augroup('FittenCode.Inline.CheckAvailability', { clear = true }),
-        pattern = '*',
-        callback = function(args)
-            Log.debug('check_availability autocmd = {}, args = {}', args.event, args)
-            self:_check_availability({ vimev = args })
         end,
     })
     if Config.integrations.completion.lsp_server then
@@ -208,29 +188,6 @@ function Controller:_emit(event)
     self:notify_observers(event)
 end
 
----@param options? { vimev: vim.api.keyset.create_autocmd.callback_args }
-function Controller:_check_availability(options)
-    options = options or {}
-    local buf = vim.api.nvim_get_current_buf()
-    Log.debug('Check availability, buf = {}, is_enabled = {}', buf, self:is_enabled(buf))
-    if options.vimev then
-        local session_buf = self:get_current_session() and self:get_current_session().buf
-        local vimev = options.vimev
-        buf = assert(vimev.buf)
-        if (vimev.buf ~= session_buf) and vimev.event == 'BufFilePost' then
-            -- 没有发生切换 buffer，不需要检查可用性
-            Log.debug('Check availability failed, event_buf = {}, session_buf = {}', vimev.buf, session_buf)
-            return
-        end
-    end
-    if self:is_enabled(buf) then
-        self:terminate_sessions()
-        self:_emit({ event = CONTROLLER_EVENT.INLINE_IDLE })
-    else
-        self:_emit({ event = CONTROLLER_EVENT.INLINE_DISABLED })
-    end
-end
-
 function Controller:has_completions()
     return self:get_active_session() ~= nil
 end
@@ -259,7 +216,7 @@ function Controller:edit_completion_cancel(options)
             return
         end
     end
-    self:terminate_sessions()
+    self:terminate_session()
 end
 
 ---@param buf integer
@@ -271,18 +228,16 @@ function Controller:is_ft_disabled(buf)
     return vim.tbl_contains(Config.disable_specific_inline_completion.suffixes, ft)
 end
 
-function Controller:terminate_sessions()
-    Log.debug('Terminate all sessions, sessions count = {}, selected_session_id = {}', #vim.tbl_keys(self.sessions), self.selected_session_id)
-    ---@param session FittenCode.Inline.Session
-    vim.tbl_map(function(session)
-        session:terminate()
-    end, self.sessions)
-    self.selected_session_id = nil
+function Controller:terminate_session()
+    if self.current_session ~= nil then
+        self.current_session:terminate()
+        self.current_session = nil
+    end
 end
 
 -- position 0-based
 ---@param position FittenCode.Position
-local function is_within_the_line(position)
+local function check_is_within_the_line(position)
     local line = vim.api.nvim_get_current_line()
     local col = position.col
     -- [0, #line]
@@ -290,69 +245,6 @@ local function is_within_the_line(position)
         return false
     end
     return true
-end
-
----@param vimev vim.api.keyset.create_autocmd.callback_args
----@param force boolean?
----@return integer?, FittenCode.Position?, boolean
-function Controller:_preflight_check(vimev, force)
-    local buf = vim.api.nvim_get_current_buf()
-    if vim.api.nvim_get_mode().mode:sub(1, 1) ~= 'i' or not self:is_enabled(buf) then
-        Log.debug('Preflight check failed, mode = {}, is_enabled = {}', vim.api.nvim_get_mode().mode, self:is_enabled(buf))
-        return nil, nil, true
-    end
-    local api_key_manager = Client.get_api_key_manager()
-    if not api_key_manager:has_fitten_access_token() then
-        Log.debug('Preflight check failed, has_fitten_access_token = {}', api_key_manager:has_fitten_access_token())
-        return nil, nil, true
-    end
-    if vimev and vim.tbl_contains(self.filter_events, vimev.event) then
-        Log.debug('Preflight check failed, filter_events = {}', self.filter_events)
-        return nil, nil, true
-    end
-    local position = F.position(vim.api.nvim_get_current_win())
-    assert(position)
-    local within_the_line = is_within_the_line(position)
-    if Config.inline_completion.disable_completion_within_the_line and within_the_line then
-        Log.debug('Preflight check failed, within_the_line = {}', within_the_line)
-        return nil, nil, true
-    end
-    force = (force == nil) and false or force
-    if not force and self:get_active_session() and self:get_active_session():is_match_commit_position(position) then
-        Log.debug('Preflight check failed, is_match_commit_position = {}', self:get_active_session():is_match_commit_position(position))
-        return nil, nil, false
-    end
-    return buf, position, true
-end
-
----@param buf integer
----@param position FittenCode.Position
----@param version integer
----@param options FittenCode.Inline.TriggerInlineSuggestionOptions
----@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
-function Controller:_make_session(buf, position, version, options)
-    local buf_new, position_new = self:_preflight_check(options.vimev, options.force)
-    if not (buf and position and buf_new and position_new and buf_new == buf and position_new:is_equal(position) and F.version(buf_new) == version) then
-        return Promise.rejected({
-            message = 'Preflight check failed'
-        })
-    end
-    self:terminate_sessions()
-    self.selected_session_id = assert(Fn.generate_short_id(13))
-    local session = Session.new({
-        buf = buf,
-        filename = F.filename(buf),
-        position = position,
-        mode = options.mode,
-        id = self.selected_session_id,
-        trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
-        on_session_update_event = function(data) self:_emit({ event = CONTROLLER_EVENT.SESSION_UPDATED, data = data }) end,
-        on_session_event = function(data) self:on_session_event(data) end,
-        version = F.version(buf)
-    })
-    self.sessions[session.id] = session
-
-    return session:send_completions()
 end
 
 -- 触发补全
@@ -364,67 +256,75 @@ function Controller:trigger_inline_suggestion(options)
     Log.debug('trigger_inline_suggestion')
     options = options or {}
     options.mode = options.mode or 'inccmp'
-    local debounced = options.debounced or false
-    -- 有时 Cancel 事件没有触发，反而触发了 Trigger 事件，这时也需要终止当前 Session，且模式为 n ? 不明原因
-    local buf, position, need_terminate = self:_preflight_check(options.vimev, options.force)
-    if need_terminate then
-        self:terminate_sessions()
+
+    local buf = vim.api.nvim_get_current_buf()
+    local api_key_manager = Client.get_api_key_manager()
+    local position = F.position(vim.api.nvim_get_current_win())
+    assert(position)
+    local force = (options.force == nil) and false or options.force
+
+    local is_insert_mode = vim.api.nvim_get_mode().mode:sub(1, 1) == 'i'
+    local is_enabled = self:is_enabled(buf)
+    local has_access_token = api_key_manager:has_fitten_access_token()
+    local is_filtered_event = options.vimev and vim.tbl_contains(self.filter_events, options.vimev.event)
+    local is_within_the_line = Config.inline_completion.disable_completion_within_the_line and check_is_within_the_line(position)
+    local is_active_session_match = self:get_active_session() and self:get_active_session():is_match_commit_position(position)
+
+    if not is_insert_mode or not is_enabled or not has_access_token or is_filtered_event or is_within_the_line then
+        self:terminate_session()
+        return Promise.rejected()
     end
-    if not buf or not position then
-        return Promise.rejected({
-            message = 'Preflight check failed'
-        })
+    if not force and is_active_session_match then
+        return Promise.rejected()
     end
-    local version = F.version(buf)
-    if debounced then
-        if not self.debounced_make_session then
-            self.debounced_make_session = Fn.debounce(function(...) return self:_make_session(...) end, 150)
+
+    self.current_session = Session.new({
+        buf = buf,
+        filename = F.filename(buf),
+        version = F.version(buf),
+        position = position,
+        mode = options.mode,
+        id = assert(Fn.generate_short_id(13)),
+        trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
+        is_outdated = function(s)
+            if s.id ~= self.current_session.id then
+                Log.debug('latest_session id = {}, other id = {}', self.current_session.id, s.id)
+                return true
+            end
+            return false
         end
-        return Promise.new(function(resolve, reject)
-            self.debounced_make_session(buf, position, version, options, function(ret)
-                if ret:is_rejected() then
-                    reject(ret:get_reason())
-                elseif ret:is_resolved() then
-                    resolve(ret:get_value())
-                end
-            end)
-        end)
-    else
-        return self:_make_session(buf, position, version, options)
-    end
+    })
+
+    return self.current_session:send_completions()
 end
 
----@param data FittenCode.Inline.Event.Data
-function Controller:on_session_event(data)
-    if data.session_event == SESSION_EVENT.CREATED then
-        self:_emit({ event = CONTROLLER_EVENT.INLINE_RUNNING, data = { id = data.id } })
-        self:_emit({ event = CONTROLLER_EVENT.SESSION_ADDED, data = { id = data.id } })
-    elseif data.session_event == SESSION_EVENT.TERMINATED then
-        Log.debug('Controller received session terminated event, event session id = {}, selected_session_id = {}', data.id, self.selected_session_id)
-        self:_emit({ event = CONTROLLER_EVENT.SESSION_DELETED, data = { id = data.id } })
-        self.sessions[data.id] = nil
-        if not self.selected_session_id or self.selected_session_id == data.id then
-            self.selected_session_id = nil
-            self:_emit({ event = CONTROLLER_EVENT.INLINE_IDLE, data = { id = data.id } })
-        end
-    end
-end
+-- ---@param data FittenCode.Inline.Event.Data
+-- function Controller:on_session_event(data)
+--     if data.session_event == SESSION_EVENT.CREATED then
+--         self:_emit({ event = CONTROLLER_EVENT.INLINE_RUNNING, data = { id = data.id } })
+--         self:_emit({ event = CONTROLLER_EVENT.SESSION_ADDED, data = { id = data.id } })
+--     elseif data.session_event == SESSION_EVENT.TERMINATED then
+--         Log.debug('Controller received session terminated event, event session id = {}, selected_session_id = {}', data.id, self.selected_session_id)
+--         self:_emit({ event = CONTROLLER_EVENT.SESSION_DELETED, data = { id = data.id } })
+--         self.sessions[data.id] = nil
+--         if not self.selected_session_id or self.selected_session_id == data.id then
+--             self.selected_session_id = nil
+--             self:_emit({ event = CONTROLLER_EVENT.INLINE_IDLE, data = { id = data.id } })
+--         end
+--     end
+-- end
 
 ---@return FittenCode.Inline.Session?
 function Controller:get_active_session()
     local session = self:get_current_session()
-    if session and not session:is_terminated() and session:is_interactive() then
+    if session and session:is_interactive() then
         return session
     end
 end
 
 ---@return FittenCode.Inline.Session
 function Controller:get_current_session()
-    return self.sessions[self.selected_session_id]
-end
-
-function Controller:get_current_session_id()
-    return self.selected_session_id
+    return self.current_session
 end
 
 ---@param buf integer
@@ -559,7 +459,6 @@ function Controller:set_suffix_permissions(enable, suffixes)
         end
     end
     Config.disable_specific_inline_completion.suffixes = vim.tbl_keys(suffix_map)
-    self:_check_availability()
 end
 
 ---@return FittenCode.Inline.Status

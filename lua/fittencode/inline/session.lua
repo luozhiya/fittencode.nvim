@@ -24,10 +24,6 @@ local Segment = require('fittencode.inline.segment')
 local Config = require('fittencode.config')
 local SessionFunctional = require('fittencode.inline.session_functional')
 
-local SESSION_EVENT = Definitions.SESSION_EVENT
-local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
-local SESSION_TASK_EVENT = Definitions.SESSION_TASK_EVENT
-
 ---@class FittenCode.Inline.Session
 local Session = {}
 Session.__index = Session
@@ -47,34 +43,16 @@ function Session:_initialize(options)
     self.commit_position = options.position
     self.mode = options.mode
     assert(self.mode == 'inccmp' or self.mode == 'editcmp')
-    self.StateClass = self.mode == 'inccmp' and IncViewState or EditViewState
+    self.ViewState = self.mode == 'inccmp' and IncViewState or EditViewState
     self.id = options.id
     self.requests = {}
     self.keymaps = {}
     self.filename = options.filename
     self.version = options.version
-    self.trigger_inline_suggestion = function(...) Fn.check_call(options.trigger_inline_suggestion(...)) end
-    self.on_completion_event = function() Fn.check_call(options.on_session_update_event, { id = self.id, completion_event = self.completion_event, }) end
-    self.on_session_event = function() Fn.check_call(options.on_session_event, { id = self.id, session_event = self.session_event, }) end
-    self.on_session_task_event = function() Fn.check_call(options.on_session_update_event, { id = self.id, session_task_event = self.session_task_event, }) end
-    self:sync_session_event(SESSION_EVENT.CREATED)
+    self.trigger_inline_suggestion = options.trigger_inline_suggestion
+    self.is_outdated = options.is_outdated
     self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey' .. Fn.generate_short_id_as_string())
-end
-
----@param self FittenCode.Inline.Session
----@param msg string
----@param... any
-local function debug_log(self, msg, ...)
-    local meta = Format.nothrow_format('Session id = {}, version = {}, session_event = {}, completion_event = {} --> ', self.id, self.version, self.session_event, self.completion_event)
-    Log._async_log({ stack = 3, level = vim.log.levels.DEBUG, message = meta .. Format.nothrow_format(msg, ...) })
-end
-
----@param self FittenCode.Inline.Session
----@param msg string
----@param... any
-local function error_log(self, msg, ...)
-    local meta = Format.nothrow_format('Session id = {}, version = {}, session_event = {}, completion_event = {} --> ', self.id, self.version, self.session_event, self.completion_event)
-    Log._async_log({ stack = 3, level = vim.log.levels.ERROR, message = meta .. Format.nothrow_format(msg, ...) })
+    self.stage = 'created'
 end
 
 ---@param text string|string[]
@@ -117,20 +95,18 @@ end
 
 ---@param completions FittenCode.Inline.IncrementalCompletion[] | FittenCode.Inline.EditCompletion[]
 function Session:set_model(completions)
-    if self.session_event == SESSION_EVENT.REQUESTING then
+    if self.stage == 'requesting' then
         self.model = Model.new({
             buf = self.buf,
             position = self.position,
             completions = completions,
             mode = self.mode,
         })
-        self:sync_session_event(SESSION_EVENT.MODEL_READY)
-        self:sync_completion_event(COMPLETION_EVENT.SUGGESTIONS_READY)
-
+        self.stage = 'model_ready'
         if self.mode == 'inccmp' then
-            self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_PRE)
+            --
             self:_segments():finally(function()
-                self:sync_session_task_event(SESSION_TASK_EVENT.SEMANTIC_SEGMENT_POST)
+                --
             end)
         end
     end
@@ -164,25 +140,32 @@ function Session:_new_view()
 end
 
 function Session:set_interactive()
-    if self.session_event == SESSION_EVENT.MODEL_READY then
+    if self:is_outdated(self) then
+        Log.debug('Outdated, skip interactive mode')
+        return false
+    end
+    Log.debug('stage = {}', self.stage)
+    if self.stage == 'model_ready' then
         self.view = self:_new_view()
         self.view:register_message_receiver(function(...) self:receive_view_message(...) end)
         self:set_keymaps()
         self:set_onkey()
         self:update_view()
-        self:sync_session_event(SESSION_EVENT.INTERACTIVE)
+        self.stage = 'interactive'
+        return true
     end
+    return false
 end
 
 function Session:is_interactive()
-    return self.session_event == SESSION_EVENT.INTERACTIVE
+    return self.stage == 'interactive'
 end
 
 function Session:update_view()
     if self:is_terminated() then
         return
     end
-    self.view:update(self.StateClass.get_state_from_model(self.model:snapshot()))
+    self.view:update(self.ViewState.get_state_from_model(self.model:snapshot()))
 end
 
 ---@param scope FittenCode.Inline.AcceptScope
@@ -196,11 +179,11 @@ function Session:accept(scope)
         self.view:on_complete()
         vim.defer_fn(function() self.trigger_inline_suggestion({ force = true, mode = self.mode }) end, 30)
     end
-    debug_log(self, 'Accept scope = {}', scope)
-    vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCodeInlineAccepted', data = { scope = scope } })
+    Log.debug('Accept scope = {}', scope)
+    -- vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCodeInlineAccepted', data = { scope = scope } })
     -- vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCodeInlineAccepted', data = { scope = scope } })
     -- local autocmds = vim.api.nvim_get_autocmds({ event = 'User', pattern = 'FittenCodeInlineAccepted' })
-    -- debug_log(self, 'FittenCodeInlineAccepted autocmds = {}', autocmds)
+    -- Log.debug('FittenCodeInlineAccepted autocmds = {}', autocmds)
     return true
 end
 
@@ -210,13 +193,13 @@ function Session:revoke()
 end
 
 function Session:on_cancel()
-    debug_log(self, 'Cancel inline completion')
+    Log.debug('Cancel inline completion')
     if self:is_interactive() then
-        debug_log(self, 'Cancel inline completion in interactive mode')
+        Log.debug('Cancel inline completion in interactive mode')
         self:terminate()
         return
     end
-    debug_log(self, 'Cancel inline completion in non-interactive mode, return EXPR cancel termcode')
+    Log.debug('Cancel inline completion in non-interactive mode, return EXPR cancel termcode')
     return vim.api.nvim_replace_termcodes(Config.keymaps.inline[self.mode]['cancel'], true, false, true)
 end
 
@@ -294,25 +277,22 @@ function Session:abort_and_clear_requests()
 end
 
 function Session:terminate()
-    debug_log(self, 'Session terminated')
-    if self.session_event == SESSION_EVENT.TERMINATED then
-        debug_log(self, 'Session is already terminated')
-        return
-    end
+    local stage = self.stage
+    self.stage = 'terminated'
+
     self:abort_and_clear_requests()
-    if self.session_event == SESSION_EVENT.INTERACTIVE then
+    if stage == 'interactive' then
         -- 如果没有 placeholder，又没有任何 accept，那么当取消时，需要恢复原状
         -- 但是 editcmp 没有 placeholder 概念
         -- 在 inccmp 中，当生成的 generated_text 和 remaining_text 长度一样，且没有产生 placeholders 时，需要恢复原状
         if not self.model:any_accepted() and self.model:overwritten() then
-            debug_log(self, 'No accepted completion, cancel inline completion')
+            Log.debug('No accepted completion, cancel inline completion')
             self.view:on_cancel()
         end
         self.view:destroy()
         self:restore_keymaps()
         self:restore_onkey()
     end
-    self:sync_session_event(SESSION_EVENT.TERMINATED)
 end
 
 ---@param key string
@@ -329,25 +309,7 @@ end
 -- * 判断是否已经终止
 -- * 跳出 Promise
 function Session:is_terminated()
-    return self.session_event == SESSION_EVENT.TERMINATED
-end
-
----@param event FittenCode.Inline.SessionEvent.Type
-function Session:sync_session_event(event)
-    self.session_event = event
-    self.on_session_event()
-end
-
----@param event FittenCode.Inline.CompletionEvent.Type
-function Session:sync_completion_event(event)
-    self.completion_event = event
-    self.on_completion_event()
-end
-
----@param event FittenCode.Inline.SessionTaskEvent.Type
-function Session:sync_session_task_event(event)
-    self.session_task_event = event
-    self.on_session_task_event()
+    return self.stage == 'terminated'
 end
 
 ---@param handle FittenCode.HTTP.Request
@@ -357,14 +319,7 @@ end
 
 ---@return FittenCode.Promise
 function Session:generate_prompt()
-    local check = self:_preflight_check()
-    if check:is_rejected() then
-        return check
-    end
     return SessionFunctional.generate_prompt({
-        on_before_generate_prompt = function()
-            self:sync_completion_event(COMPLETION_EVENT.GENERATING_PROMPT)
-        end,
         buf = self.buf,
         position = self.position:translate(0, -1),
         mode = self.mode,
@@ -381,38 +336,15 @@ function Session:async_compress_prompt(prompt)
     })
 end
 
----@return FittenCode.Promise
-function Session:_preflight_check()
-    if self:is_terminated() then
-        return Promise.rejected({
-            message = 'Session is terminated',
-        })
-    end
-    local document_version = F.version(self.buf)
-    if document_version == self.version then
-        return Promise.resolved(true)
-    else
-        return Promise.rejected({
-            message = 'Session version is outdated',
-            metadata = {
-                session_version = self.version,
-                document_version = document_version,
-            }
-        })
-    end
-end
-
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
 -- * resolve 包含 suggestions_ready / no_more_suggestions
 -- * reject 包含 error
 ---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
 function Session:send_completions()
-    self:sync_session_event(SESSION_EVENT.REQUESTING)
-    self:sync_completion_event(COMPLETION_EVENT.START)
-
+    self.stage = 'requesting'
     return Promise.all({
         self:generate_prompt():forward(function(res)
-            debug_log(self, 'Prompt generated')
+            Log.debug('Prompt generated')
             self.cachedata = res.cachedata
             return self:async_compress_prompt(res.prompt)
         end),
@@ -420,8 +352,8 @@ function Session:send_completions()
     }):forward(function(_)
         local compressed_prompt_binary = _[1]
         local completion_version = _[2]
-        debug_log(self, 'Got completion version: {}', completion_version)
-        debug_log(self, 'Compressed prompt length: {}', #compressed_prompt_binary)
+        Log.debug('Got completion version: {}', completion_version)
+        Log.debug('Compressed prompt length: {}', #compressed_prompt_binary)
         if not compressed_prompt_binary or not completion_version then
             return Promise.rejected({
                 message = 'Failed to generate prompt or get completion version',
@@ -430,25 +362,21 @@ function Session:send_completions()
         return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
         ---@param parse_result FittenCode.Inline.FimProtocol.ParseResult
     end):forward(function(parse_result)
-        local check = self:_preflight_check()
-        if check:is_rejected() then
-            return check
-        else
-            FimGenerate.update_last_version(self.filename, self.version, self.cachedata)
-            debug_log(self, 'Updated FIM last version')
-        end
+        -- Todo 重做 Fim 缓存机制
+        -- FimGenerate.update_last_version(self.filename, self.version, self.cachedata)
         if parse_result.status == 'no_completion' or parse_result.status == 'repeat_remaining' then
-            debug_log(self, 'No more suggestions')
-            self:sync_completion_event(COMPLETION_EVENT.NO_MORE_SUGGESTIONS)
+            Log.debug('No more suggestions')
             return Promise.resolved(nil)
         end
-        debug_log(self, 'Got completion: {}', parse_result.data.completions)
+        Log.debug('Got completion: {}', parse_result.data.completions)
         self:set_model(parse_result.data.completions)
-        self:set_interactive()
-        return Promise.resolved(parse_result.data)
+        if self:set_interactive() then
+            return Promise.resolved(parse_result.data)
+        else
+            return Promise.rejected()
+        end
     end):catch(function(_)
-        self:sync_completion_event(COMPLETION_EVENT.ERROR)
-        error_log(self, 'Failed to send completions: {}', _)
+        Log.error('Failed to send completions: {}', _)
         return Promise.rejected(_)
     end)
 end
@@ -456,14 +384,7 @@ end
 -- 获取补全版本号
 ---@return FittenCode.Promise
 function Session:get_completion_version()
-    local check = self:_preflight_check()
-    if check:is_rejected() then
-        return check
-    end
     local res, request = SessionFunctional.get_completion_version({
-        on_before_get_completion_version = function()
-            self:sync_completion_event(COMPLETION_EVENT.GETTING_COMPLETION_VERSION)
-        end,
     })
     if request then
         self:_add_request(request)
@@ -475,14 +396,7 @@ end
 ---@param compressed_prompt_binary string
 ---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult, FittenCode.Error>
 function Session:generate_one_stage_auth(completion_version, compressed_prompt_binary)
-    local check = self:_preflight_check()
-    if check:is_rejected() then
-        return check
-    end
     local res, request = SessionFunctional.generate_one_stage_auth({
-        on_before_generate_one_stage_auth = function()
-            self:sync_completion_event(COMPLETION_EVENT.GENERATE_ONE_STAGE)
-        end,
         completion_version = completion_version,
         compressed_prompt_binary = compressed_prompt_binary,
         buf = self.buf,
