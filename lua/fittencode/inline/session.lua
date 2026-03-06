@@ -26,6 +26,7 @@ local SessionFunctional = require('fittencode.inline.session_functional')
 local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
 local FimParse = require('fittencode.inline.fim_protocol.parse')
+local Zip = require('fittencode.fn.gzip')
 
 ---@class FittenCode.Inline.Session
 local Session = {}
@@ -322,21 +323,30 @@ end
 
 ---@return FittenCode.Promise
 function Session:generate_prompt()
-    return SessionFunctional.generate_prompt({
-        buf = self.buf,
-        position = self.position:translate(0, -1),
-        mode = self.mode,
-        version = self.version,
+    return FimGenerate.generate(self.buf, self.position:translate(0, -1), {
         filename = self.filename,
-    })
+        version = self.version,
+        mode = self.mode,
+        diff_required = true,
+    })    
 end
 
 ---@param prompt string
 ---@return FittenCode.Promise
 function Session:async_compress_prompt(prompt)
-    return SessionFunctional.async_compress_prompt({
-        prompt = prompt,
-    })
+    local _, data = pcall(vim.fn.json_encode, prompt)
+    if not _ then
+        return Promise.rejected({
+            message = 'Failed to encode prompt to JSON',
+            metadata = {
+                prompt = prompt,
+            }
+        })
+    end
+    assert(data)
+    return Zip.compress({ source = data }):forward(function(_)
+        return _.output
+    end)
 end
 
 -- 根据当前编辑器状态生成 Prompt，并发送补全请求
