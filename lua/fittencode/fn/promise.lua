@@ -136,15 +136,38 @@ function Promise:get_value()
 end
 
 -- 创建一个延时 Promise
----@param time number
+-- If timeout is zero, the callback fires on the next event loop iteration.
+---@param timeout number
 ---@param value any
-function Promise.delay(time, value)
-    return Promise.new(function(resolve)
-        vim.defer_fn(function()
-            resolve(value)
-        end, time)
+function Promise.delay(timeout, value)
+    timeout = tonumber(timeout) or 0
+    if timeout < 0 then timeout = 0 end
+
+    return Promise.new(function(resolve, reject)
+        local function on_timeout()
+            local final_value = value
+            if type(value) == 'function' then
+                local ok, result = pcall(value)
+                if not ok then
+                    return reject(result)
+                end
+                final_value = result
+            end
+            -- 如果最终值是一个 Promise，则等待它解决或拒绝
+            if Promise.is_promise(final_value) then
+                final_value:forward(resolve, reject)
+            else
+                resolve(final_value)
+            end
+        end
+        if timeout == 0 then
+            on_timeout()
+        else
+            vim.defer_fn(on_timeout, timeout)
+        end
     end)
 end
+
 
 -- 获取原始唯一标识符的方法
 local function get_unique_identifier(tbl)
