@@ -29,16 +29,16 @@ local function get_level_name(level)
     return LOG_LEVEL_NAMES[level + 1] or 'UNKNOWN'
 end
 
-local function get_ns_time()
+local function get_milliseconds()
     local sec, usec = vim.uv.gettimeofday()
     if sec == nil then
-        usec = 0
+        return 0
     end
-    return usec * 1000
+    return math.floor(usec / 1000)
 end
 
 local function format_timestamp()
-    local ns = string.format('%09d', get_ns_time())
+    local ns = string.format('%03d', get_milliseconds())
     local date = os.date('%Y-%m-%dT%H:%M:%S')
     -- +0800 -> +08:00
     local timezone = tostring(os.date('%z'))
