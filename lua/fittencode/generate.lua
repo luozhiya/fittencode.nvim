@@ -87,11 +87,11 @@ end
 ---@param row integer
 ---@param col integer
 ---@param options? FittenCode.Generate.RequestCompletionsOptions
----@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>, FittenCode.Inline.HeadlessSession?
+---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>, FittenCode.Inline.Session?
 function M.request_completions(buf, row, col, options)
     options = options or {}
     local filename = options.filename or vim.api.nvim_buf_get_name(buf)
-    local session = require('fittencode.inline.session_headless').new({
+    local session = require('fittencode.inline.session').new({
         buf = buf,
         position = Position.of(row, col),
         mode = 'inccmp',
