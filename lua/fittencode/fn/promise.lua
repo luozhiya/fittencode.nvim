@@ -168,7 +168,6 @@ function Promise.delay(timeout, value)
     end)
 end
 
-
 -- 获取原始唯一标识符的方法
 local function get_unique_identifier(tbl)
     if type(tbl) ~= 'table' then

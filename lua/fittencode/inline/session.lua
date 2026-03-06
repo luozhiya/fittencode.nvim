@@ -328,7 +328,7 @@ function Session:generate_prompt()
         version = self.version,
         mode = self.mode,
         diff_required = true,
-    })    
+    })
 end
 
 ---@param prompt string
