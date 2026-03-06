@@ -23,6 +23,8 @@ local Format = require('fittencode.fn.format')
 local Segment = require('fittencode.inline.segment')
 local Config = require('fittencode.config')
 local SessionFunctional = require('fittencode.inline.session_functional')
+local Client = require('fittencode.client')
+local Protocol = require('fittencode.client.protocol')
 
 ---@class FittenCode.Inline.Session
 local Session = {}
@@ -387,12 +389,31 @@ end
 -- 获取补全版本号
 ---@return FittenCode.Promise
 function Session:get_completion_version()
-    local res, request = SessionFunctional.get_completion_version({
-    })
-    if request then
-        self:_add_request(request)
+    local request = Client.make_request(Protocol.Methods.get_completion_version)
+    if not request then
+        return Promise.rejected({
+            message = 'Failed to make get_completion_version request',
+        })
     end
-    return res
+    self:_add_request(request)
+
+    ---@param _ FittenCode.HTTP.Request.Stream.EndEvent
+    return request:async():forward(function(_)
+        ---@type FittenCode.Protocol.Methods.GetCompletionVersion.Response
+        local response = _.json()
+        if not response then
+            return Promise.rejected({
+                message = 'Failed to decode completion version response',
+                metadata = {
+                    response = _,
+                }
+            })
+        else
+            return response
+        end
+    end):catch(function(_)
+        return Promise.rejected(_)
+    end)
 end
 
 ---@param completion_version string
