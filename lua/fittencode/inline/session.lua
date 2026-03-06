@@ -25,6 +25,7 @@ local Config = require('fittencode.config')
 local SessionFunctional = require('fittencode.inline.session_functional')
 local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
+local FimParse = require('fittencode.inline.fim_protocol.parse')
 
 ---@class FittenCode.Inline.Session
 local Session = {}
@@ -420,17 +421,51 @@ end
 ---@param compressed_prompt_binary string
 ---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult, FittenCode.Error>
 function Session:generate_one_stage_auth(completion_version, compressed_prompt_binary)
-    local res, request = SessionFunctional.generate_one_stage_auth({
-        completion_version = completion_version,
-        compressed_prompt_binary = compressed_prompt_binary,
-        buf = self.buf,
-        position = self.position:translate(0, -1),
-        mode = self.mode,
+    local vu = {
+        ['0'] = '',
+        ['1'] = '2_1',
+        ['2'] = '2_2',
+        ['3'] = '2_3',
+    }
+    local request = Client.make_request_auth(Protocol.Methods.generate_one_stage_auth, {
+        variables = {
+            completion_version = vu[completion_version],
+        },
+        payload = compressed_prompt_binary,
     })
-    if request then
-        self:_add_request(request)
+    if not request then
+        return Promise.rejected({
+            message = 'Failed to make generate_one_stage_auth request',
+        })
     end
-    return res
+    self:_add_request(request)
+
+    ---@param _ FittenCode.HTTP.Request.Stream.EndEvent
+    return request:async():forward(function(_)
+        ---@type FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.EditCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.IncrementalCompletion | FittenCode.Protocol.Methods.GenerateOneStageAuth.Response.Error
+        local response = _.json()
+        if not response then
+            return Promise.rejected({
+                message = 'Failed to decode completion response',
+                metadata = {
+                    response = _,
+                }
+            })
+        end
+        local parse_result = FimParse.parse(response, {
+            buf = self.buf,
+            position = self.position:translate(0, -1),
+            mode = self.mode
+        })
+        if parse_result.status == 'error' then
+            return Promise.rejected({
+                message = parse_result.message or 'Parsed completion response error',
+            })
+        end
+        return parse_result
+    end):catch(function(_)
+        return Promise.rejected(_)
+    end)
 end
 
 function Session:is_match_commit_position(position)
