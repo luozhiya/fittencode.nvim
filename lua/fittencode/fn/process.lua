@@ -112,6 +112,7 @@ local function run(process)
     end
 
     stdout:read_start(function(err, chunk)
+        -- Log.debug('chunk = {}', chunk)
         if err then
             error(err)
         end

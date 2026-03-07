@@ -276,7 +276,7 @@ local function handle_unauthorized(protocol, option, req)
             return new_req:async()
         end)
     else
-        return Promise.rejected()
+        return Promise.rejected({ message = '' })
     end
 end
 
@@ -293,8 +293,11 @@ function M.make_request_auth(protocol, options)
         return req:_async():forward(function(response)
             return response
         end):catch(function(err) ---@param err FittenCode.Error
+            -- Log.error('make_request_auth err = {}', err)
             if err.metadata and err.metadata.status and err.metadata.status[#err.metadata.status] == 401 then
                 return handle_unauthorized(protocol, options, req)
+            else
+                return Promise.rejected(err)
             end
         end)
     end
