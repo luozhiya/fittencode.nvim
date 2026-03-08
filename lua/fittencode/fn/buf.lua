@@ -126,7 +126,7 @@ function M.is_valid_buf(buf)
     return true
 end
 
--- 检测一个 buffer 是否是一个文件，并且可读
+-- 检测一个 buffer 是否是一个文件
 -- 并在满足这个条件下返回该文件的路径 (路径是和平台相关的)
 ---@return boolean, string?
 function M.is_filebuf(buf)
@@ -134,12 +134,13 @@ function M.is_filebuf(buf)
         return false
     end
     if vim.api.nvim_buf_is_loaded(buf) and vim.fn.buflisted(buf) == 1 then
-        local path
-        vim.api.nvim_buf_call(buf, function()
-            path = vim.fn.expand('%:p')
-        end)
-        if vim.api.nvim_buf_get_name(buf) ~= '' and path and vim.fn.filereadable(path) == 1 then
-            return true, path
+        local bufname = vim.api.nvim_buf_get_name(buf)
+        if bufname == '' then
+            return false
+        end
+        local stat = vim.uv.fs_stat(bufname)
+        if stat and stat.type == 'file' then
+            return true, bufname
         end
     end
     return false

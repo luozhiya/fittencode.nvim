@@ -1,59 +1,42 @@
--- local Observer = require('fittencode.fn.observer')
--- local Definitions = require('fittencode.inline.definitions')
--- local Log = require('fittencode.log')
--- local Fn = require('fittencode.fn.core')
+local Log = require('fittencode.log')
+local Fn = require('fittencode.fn.core')
 
--- local INLINE_EVENT = Definitions.INLINE_EVENT
--- local COMPLETION_EVENT = Definitions.COMPLETION_EVENT
--- local CONTROLLER_EVENT = Definitions.CONTROLLER_EVENT
--- local SESSION_TASK_EVENT = Definitions.SESSION_TASK_EVENT
+---@class FittenCode.Inline.Status
+---@field ctrl string
+---@field session string
+local Status = {}
+Status.__index = Status
 
--- ---@class FittenCode.Inline.Status : FittenCode.Observer
--- ---@field inline string
--- ---@field completion string
--- local Status = {}
--- Status.__index = Status
+---@return FittenCode.Inline.Status
+function Status.new()
+    ---@type FittenCode.Inline.Status
+    local self = {
+        ctrl = '',
+        session = ''
+    }
+    setmetatable(self, Status)
+    return self
+end
 
--- ---@param options? { id?: string }
--- ---@return FittenCode.Inline.Status
--- function Status.new(options)
---     options = options or {}
---     ---@type FittenCode.Inline.Status
---     ---@diagnostic disable-next-line: assign-type-mismatch
---     local self = Observer.new({ id = options.id or ('status_observer' .. Fn.generate_short_id_as_string()) })
---     setmetatable(self, Status)
---     self.inline = ''
---     self.completion = ''
---     return self
--- end
+-- -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
+function Status:update(data)
+    if data.ctrl then
+        self.ctrl = data.ctrl
+    end
+    if data.session and data.current_session_id == data.session.id then
+        self.session = data.session.state.to
+    elseif self.ctrl ~= 'running' then
+        self.session = ''
+    end
+    Log.debug('Status update, ctrl = {}, session = {}', self.ctrl, self.session)
+end
 
--- -- -- 每一个 Session 都有自己的状态，这里只返回当前 Session 的状态
--- ---@param controller FittenCode.Inline.Controller
--- ---@param event_args FittenCode.Inline.Event
--- function Status:update(controller, event_args)
---     local event = assert(event_args.event)
---     local data = event_args.data
---     if data and data.id == controller.selected_session_id then
---         if event == CONTROLLER_EVENT.SESSION_ADDED then
---             self.completion = COMPLETION_EVENT.CREATED
---         elseif event == CONTROLLER_EVENT.SESSION_DELETED then
---             self.completion = ''
---         elseif event == CONTROLLER_EVENT.SESSION_UPDATED then
---             assert(self.inline == INLINE_EVENT.RUNNING, 'Inline status should be running when session updated, inline = ' .. self.inline)
---             -- 有些 Completion 插件会导致写入其他 buf，此时 Inline 状态被设置为 DISABLED
---             self.completion = data.completion_event
---         end
---     end
---     if event == CONTROLLER_EVENT.INLINE_IDLE then
---         self.inline = INLINE_EVENT.IDLE
---         self.completion = ''
---     elseif event == CONTROLLER_EVENT.INLINE_DISABLED then
---         self.inline = INLINE_EVENT.DISABLED
---         self.completion = ''
---     elseif event == CONTROLLER_EVENT.INLINE_RUNNING then
---         self.inline = INLINE_EVENT.RUNNING
---     end
--- end
+function Status:get_snapshot()
+    return {
+        inline = self.ctrl,
+        completion = self.session
+    }
+end
 
 -- ---@class FittenCode.Inline.ProgressIndicatorObserver : FittenCode.Observer
 -- ---@field start_time table<string, table>?
@@ -165,9 +148,9 @@
 -- function TimingObserver:update(controller, event_args)
 -- end
 
--- return {
---     Status = Status,
---     ProgressIndicatorObserver = ProgressIndicatorObserver,
---     StatisticObserver = StatisticObserver,
---     TimingObserver = TimingObserver,
--- }
+return {
+    Status = Status,
+    -- ProgressIndicatorObserver = ProgressIndicatorObserver,
+    -- StatisticObserver = StatisticObserver,
+    -- TimingObserver = TimingObserver,
+}

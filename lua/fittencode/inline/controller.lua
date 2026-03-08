@@ -22,14 +22,13 @@ local Promise = require('fittencode.fn.promise')
 local Session = require('fittencode.inline.session')
 local i18n = require('fittencode.i18n')
 local Log = require('fittencode.log')
-local Definitions = require('fittencode.inline.definitions')
 local CtrlObserver = require('fittencode.inline.ctrl_observer')
 local ProgressIndicator = require('fittencode.fn.progress_indicator')
-local Observer = require('fittencode.fn.observer')
 local Color = require('fittencode.color')
 local LspServer = require('fittencode.integrations.completion.lsp_server')
+local StateMachine = require('fittencode.fn.state_machine')
 
--- local Status = CtrlObserver.Status
+local Status = CtrlObserver.Status
 -- local ProgressIndicatorObserver = CtrlObserver.ProgressIndicatorObserver
 -- local TimingObserver = CtrlObserver.TimingObserver
 
@@ -38,11 +37,13 @@ local LspServer = require('fittencode.integrations.completion.lsp_server')
 ---@field rhs function
 ---@field options? table<string, any>
 
+---@class FittenCode.Observer
+---@field update function
+
 ---@class FittenCode.Inline.Controller
 ---@field observers FittenCode.Observer[]
 ---@field sessions FittenCode.Inline.Session[]
 ---@field filter_events table<string, boolean>
----@field status_observer FittenCode.Inline.Status
 ---@field keymaps FittenCode.Keymap[]
 local Controller = {}
 Controller.__index = Controller
@@ -63,8 +64,8 @@ function Controller:_initialize(options)
     self.current_session = nil
     self.filter_events = {}
     self.keymaps = {}
-    -- self.status_observer = Status.new()
-    -- self:add_observer(self.status_observer)
+    self.status_observer = Status.new()
+    self:on(self.status_observer)
     -- self.pi = ProgressIndicator.new()
     -- self.progress_observer = ProgressIndicatorObserver.new({ pi = self.pi })
     -- self:add_observer(self.progress_observer)
@@ -116,6 +117,13 @@ function Controller:_initialize(options)
             self:edit_completion_cancel({ vimev = args })
         end,
     })
+    vim.api.nvim_create_autocmd({ 'BufEnter', 'BufFilePost', 'FileType' }, {
+        group = vim.api.nvim_create_augroup('FittenCode.Inline.ServiceUpdate', { clear = true }),
+        pattern = '*',
+        callback = function(args)
+            self:sync_state()
+        end,
+    })
     if Config.integrations.completion.lsp_server then
         Log.debug('Completion integration: LSP server enabled')
         -- vim.lsp.enable('FittenCode')
@@ -139,53 +147,53 @@ function Controller:_initialize(options)
     })
     -- If {fn} returns an empty string, {key} is discarded/ignored.
     vim.on_key(function(key)
-        local buf = vim.api.nvim_get_current_buf()
         self.filter_events = {}
-        if vim.api.nvim_get_mode().mode:sub(1, 1) == 'i' and self:is_enabled(buf) then
+        if vim.api.nvim_get_mode().mode:sub(1, 1) == 'i' and not self.state:is('disabled') then
             if vim.tbl_contains(filtered, key) and Config.inline_completion.disable_completion_when_delete then
                 self.filter_events = { 'CursorMovedI', 'TextChangedI', }
                 return
             end
         end
     end)
+
+    -- 进入buffer检测类型或手动更改类型，决定 disabled/enabled
+    -- current_session.id == source.id { != terminated } running/idle
+    self.state = StateMachine.new({
+        initial = 'idle',
+        transitions = {
+            idle     = { 'running', 'disabled' },
+            running  = { 'idle', 'disabled' },
+            disabled = { 'idle', 'running' },
+        },
+    })
+    self.state:subscribe(function(value)
+        self:emit({
+            ctrl = value.to,
+        })
+    end)
 end
 
----@param observer FittenCode.Observer | function
-function Controller:add_observer(observer)
-    if type(observer) == 'function' then
-        local id = 'callback_observer' .. Fn.generate_short_id_as_string()
-        observer = setmetatable({
-            id = id,
-            update = function(_, ctrl, event)
-                observer(ctrl, event)
-            end
-        }, { __index = Observer })
+function Controller:on(observer)
+    table.insert(self.observers, observer)
+end
+
+function Controller:off(observer)
+    for i, obs in ipairs(self.observers) do
+        if obs == observer then
+            table.remove(self.observers, i)
+            break
+        end
     end
-    self.observers[observer.id] = observer
-    return observer
 end
 
----@param identifier string | FittenCode.Observer
-function Controller:remove_observer(identifier)
-    local id = type(identifier) == 'string' and identifier or identifier.id
-    self.observers[id] = nil
-end
-
----@param id string
-function Controller:get_observer(id)
-    return self.observers[id]
-end
-
----@param event FittenCode.Inline.Event
-function Controller:notify_observers(event)
-    vim.tbl_map(function(observer)
-        observer:update(self, event)
-    end, self.observers)
-end
-
----@param event FittenCode.Inline.Event
-function Controller:_emit(event)
-    self:notify_observers(event)
+function Controller:emit(...)
+    for _, observer in ipairs(self.observers) do
+        if type(observer) == 'function' then
+            observer(...)
+        elseif observer.update then
+            observer:update(...)
+        end
+    end
 end
 
 function Controller:has_completions()
@@ -264,7 +272,7 @@ function Controller:trigger_inline_suggestion(options)
     local force = (options.force == nil) and false or options.force
 
     local is_insert_mode = vim.api.nvim_get_mode().mode:sub(1, 1) == 'i'
-    local is_enabled = self:is_enabled(buf)
+    local is_enabled = not self.state:is('disabled')
     local has_access_token = api_key_manager:has_fitten_access_token()
     local is_filtered_event = options.vimev and vim.tbl_contains(self.filter_events, options.vimev.event)
     local is_within_the_line = Config.inline_completion.disable_completion_within_the_line and check_is_within_the_line(position)
@@ -287,32 +295,31 @@ function Controller:trigger_inline_suggestion(options)
         id = assert(Fn.generate_short_id(13)),
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
         is_outdated = function(s)
-            if s.id ~= self.current_session.id then
+            if not self.current_session or s.id ~= self.current_session.id then
                 Log.debug('latest_session id = {}, other id = {}', self.current_session.id, s.id)
                 return true
             end
             return false
         end
     })
+    self.current_session:on(function(value)
+        local id = (self.current_session and not self.current_session:is_terminated()) and self.current_session.id
+        if not self.state:is('disabled') then
+            if not id then
+                self.state:transition('idle')
+            elseif id == value.id then
+                self.state:transition('running')
+            end
+        end
+        self:emit({
+            ctrl = self.state:state(),
+            current_session_id = id,
+            session = value
+        })
+    end)
 
     return self.current_session:send_completions()
 end
-
--- ---@param data FittenCode.Inline.Event.Data
--- function Controller:on_session_event(data)
---     if data.session_event == SESSION_EVENT.CREATED then
---         self:_emit({ event = CONTROLLER_EVENT.INLINE_RUNNING, data = { id = data.id } })
---         self:_emit({ event = CONTROLLER_EVENT.SESSION_ADDED, data = { id = data.id } })
---     elseif data.session_event == SESSION_EVENT.TERMINATED then
---         Log.debug('Controller received session terminated event, event session id = {}, selected_session_id = {}', data.id, self.selected_session_id)
---         self:_emit({ event = CONTROLLER_EVENT.SESSION_DELETED, data = { id = data.id } })
---         self.sessions[data.id] = nil
---         if not self.selected_session_id or self.selected_session_id == data.id then
---             self.selected_session_id = nil
---             self:_emit({ event = CONTROLLER_EVENT.INLINE_IDLE, data = { id = data.id } })
---         end
---     end
--- end
 
 ---@return FittenCode.Inline.Session?
 function Controller:get_active_session()
@@ -327,13 +334,28 @@ function Controller:get_current_session()
     return self.current_session
 end
 
----@param buf integer
-function Controller:is_enabled(buf)
+---@param buf integer?
+function Controller:should_enable(buf)
+    if buf == nil then
+        buf = vim.api.nvim_get_current_buf()
+    end
     local filebuf = true
     if Config.inline_completion.disable_completion_when_nofile_buffer then
         filebuf = F.is_filebuf(buf)
     end
     return Config.inline_completion.enable and filebuf and not self:is_ft_disabled(buf)
+end
+
+function Controller:sync_state()
+    if self:should_enable() then
+        if self.current_session and not self.current_session:is_terminated() then
+            self.state:transition('running')
+        else
+            self.state:transition('idle')
+        end
+    else
+        self.state:transition('disabled')
+    end
 end
 
 ---@param msg string
@@ -459,11 +481,19 @@ function Controller:set_suffix_permissions(enable, suffixes)
         end
     end
     Config.disable_specific_inline_completion.suffixes = vim.tbl_keys(suffix_map)
+    self:sync_state()
 end
 
----@return FittenCode.Inline.Status
 function Controller:get_status()
-    return self.status_observer
+    return self.status_observer:get_snapshot()
+    -- if self:is_enabled() then
+    --     if self.current_session and not self.current_session:is_terminated() then
+    --         return 'running'
+    --     end
+    --     return 'idle'
+    -- else
+    --     return 'disabled'
+    -- end
 end
 
 return Controller

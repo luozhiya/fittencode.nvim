@@ -69,3 +69,20 @@
 ---@field model FittenCode.Inline.Model
 ---@field version number
 ---@field headless boolean
+
+--[[
+    'start',                      -- 创建了 Session，COMPLETION
+    'generating_prompt',          -- 正在构建补全请求的提示词（如代码片段、自然语言问题）。
+    'getting_completion_version', -- 正在获取补全服务版本。
+    'generate_one_stage',         -- 向补全服务发送请求（如 HTTP 请求），等待响应。
+    'suggestions_ready',          -- 成功获取补全建议，可渲染到 UI。
+    'no_more_suggestions',        -- 补全服务返回无结果。
+    'error',                      -- 补全流程失败（如网络错误、参数无效）。
+]]
+---@alias FittenCode.Inline.CompletionEvent.Type 'start' | 'generating_prompt' | 'getting_completion_version' | 'generate_one_stage' |'suggestions_ready' | 'no_more_suggestions' | 'error'
+
+--[[
+    'semantic_segment_pre',  -- 开始语义分割（如中文分词）
+    'semantic_segment_post', -- 完成语义分割
+]]
+---@alias FittenCode.Inline.SessionTaskEvent.Type'semantic_segment_pre' |'semantic_segment_post'

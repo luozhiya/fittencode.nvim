@@ -23,6 +23,7 @@ local Client = require('fittencode.client')
 local Protocol = require('fittencode.client.protocol')
 local FimParse = require('fittencode.inline.fim_protocol.parse')
 local Zip = require('fittencode.fn.gzip')
+local StateMachine = require('fittencode.fn.state_machine')
 
 ---@class FittenCode.Inline.Session
 local Session = {}
@@ -52,7 +53,32 @@ function Session:_initialize(options)
     self.trigger_inline_suggestion = options.trigger_inline_suggestion
     self.is_outdated = options.is_outdated
     self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey' .. Fn.generate_short_id_as_string())
-    self.stage = 'created'
+    --[[
+        'created',     -- 调用 Session.new() 后立即进入，仅完成实例化，未初始化任何资源。
+        'requesting',  -- 正在请求补全服务，等待响应。
+        'model_ready', -- 完成 Model 初始化
+        'interactive', -- 会话正在处理补全或用户交互（对应补全流程中的活跃状态）。
+        'terminated',  -- 会话永久结束，资源已释放（如网络请求取消、用户关闭补全）。
+    ]]
+    self.state = StateMachine.new({
+        initial = 'created',
+        transitions = {
+            created     = { 'requesting', 'terminated' },
+            requesting  = { 'model_ready', 'terminated' },
+            model_ready = { 'interactive', 'terminated' },
+            interactive = { 'terminated' },
+            terminated  = {},
+        },
+    })
+end
+
+function Session:on(func)
+    self.state:subscribe(function(value)
+        func({
+            id = self.id,
+            state = value
+        })
+    end)
 end
 
 ---@param text string|string[]
@@ -95,14 +121,14 @@ end
 
 ---@param completions FittenCode.Inline.IncrementalCompletion[] | FittenCode.Inline.EditCompletion[]
 function Session:set_model(completions)
-    if self.stage == 'requesting' then
+    if self.state:is('requesting') then
         self.model = Model.new({
             buf = self.buf,
             position = self.position,
             completions = completions,
             mode = self.mode,
         })
-        self.stage = 'model_ready'
+        self.state:transition('model_ready')
         if self.mode == 'inccmp' then
             --
             self:_segments():finally(function()
@@ -144,21 +170,21 @@ function Session:set_interactive()
         Log.debug('Outdated, skip interactive mode')
         return false
     end
-    Log.debug('stage = {}', self.stage)
-    if self.stage == 'model_ready' then
+    Log.debug('stage = {}', self.state)
+    if self.state:is('model_ready') then
         self.view = self:_new_view()
         self.view:register_message_receiver(function(...) self:receive_view_message(...) end)
         self:set_keymaps()
         self:set_onkey()
         self:update_view()
-        self.stage = 'interactive'
+        self.state:transition('interactive')
         return true
     end
     return false
 end
 
 function Session:is_interactive()
-    return self.stage == 'interactive'
+    self.state:is('interactive')
 end
 
 function Session:update_view()
@@ -277,11 +303,8 @@ function Session:abort_and_clear_requests()
 end
 
 function Session:terminate()
-    local stage = self.stage
-    self.stage = 'terminated'
-
     self:abort_and_clear_requests()
-    if stage == 'interactive' then
+    if self.state:is('interactive') then
         -- 如果没有 placeholder，又没有任何 accept，那么当取消时，需要恢复原状
         -- 但是 editcmp 没有 placeholder 概念
         -- 在 inccmp 中，当生成的 generated_text 和 remaining_text 长度一样，且没有产生 placeholders 时，需要恢复原状
@@ -293,6 +316,7 @@ function Session:terminate()
         self:restore_keymaps()
         self:restore_onkey()
     end
+    self.state:transition('terminated')
 end
 
 ---@param key string
@@ -309,7 +333,7 @@ end
 -- * 判断是否已经终止
 -- * 跳出 Promise
 function Session:is_terminated()
-    return self.stage == 'terminated'
+    return self.state:is('terminated')
 end
 
 ---@param handle FittenCode.HTTP.Request
@@ -350,7 +374,7 @@ end
 -- * reject 包含 error
 ---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
 function Session:send_completions()
-    self.stage = 'requesting'
+    self.state:transition('requesting')
     return Promise.all({
         self:generate_prompt():forward(function(res)
             Log.debug('Prompt generated')
