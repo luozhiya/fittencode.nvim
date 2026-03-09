@@ -106,7 +106,7 @@ function M.get_server_url()
     local is_standard = Config.server.fitten_version == 'standard'
     local raw_url = Config.server.server_url
 
-    local final_url = 'https://fc.fittenlab.cn'
+    local final_url = 'https://api.fittentech.com'
 
     -- 仅在企业版/标准版时尝试自定义URL
     if (is_enterprise or is_standard) and raw_url and #raw_url > 0 then
