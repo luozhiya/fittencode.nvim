@@ -184,7 +184,7 @@ function Session:set_interactive()
 end
 
 function Session:is_interactive()
-    self.state:is('interactive')
+    return self.state:is('interactive')
 end
 
 function Session:update_view()
