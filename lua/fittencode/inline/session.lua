@@ -54,31 +54,31 @@ function Session:_initialize(options)
     self.is_outdated = options.is_outdated
     self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey' .. Fn.generate_short_id_as_string())
     --[[
-        'created',     -- 调用 Session.new() 后立即进入，仅完成实例化，未初始化任何资源。
+        'start',       -- 初始状态，未开始处理补全。
         'requesting',  -- 正在请求补全服务，等待响应。
         'model_ready', -- 完成 Model 初始化
         'interactive', -- 会话正在处理补全或用户交互（对应补全流程中的活跃状态）。
         'terminated',  -- 会话永久结束，资源已释放（如网络请求取消、用户关闭补全）。
     ]]
     self.state = StateMachine.new({
-        initial = 'created',
         transitions = {
-            created     = { 'requesting', 'terminated' },
+            start       = { 'requesting', 'terminated' },
             requesting  = { 'model_ready', 'terminated' },
             model_ready = { 'interactive', 'terminated' },
             interactive = { 'terminated' },
             terminated  = {},
         },
     })
-end
-
-function Session:on(func)
-    self.state:subscribe(function(value)
-        func({
+    self.state:subscribe(function(state)
+        options.on({
             id = self.id,
-            state = value
+            state = state
         })
     end)
+end
+
+function Session:start()
+    self.state:transition('start')
 end
 
 ---@param text string|string[]
@@ -167,10 +167,9 @@ end
 
 function Session:set_interactive()
     if self:is_outdated(self) then
-        Log.debug('Outdated, skip interactive mode')
+        Log.debug('Session {} is outdated, skip interactive mode, will be terminated soon', self.id)
         return false
     end
-    Log.debug('stage = {}', self.state)
     if self.state:is('model_ready') then
         self.view = self:_new_view()
         self.view:register_message_receiver(function(...) self:receive_view_message(...) end)
@@ -303,6 +302,9 @@ function Session:abort_and_clear_requests()
 end
 
 function Session:terminate()
+    if self.state:is('terminated') then
+        return
+    end
     self:abort_and_clear_requests()
     if self.state:is('interactive') then
         -- 如果没有 placeholder，又没有任何 accept，那么当取消时，需要恢复原状
@@ -399,7 +401,7 @@ function Session:send_completions()
         -- FimGenerate.update_last_version(self.filename, self.version, self.cachedata)
         if parse_result.status == 'no_completion' or parse_result.status == 'repeat_remaining' then
             Log.debug('No more suggestions')
-            return Promise.resolved(nil)
+            return Promise.rejected()
         end
         Log.debug('Got completion: {}', parse_result.data.completions)
         self:set_model(parse_result.data.completions)

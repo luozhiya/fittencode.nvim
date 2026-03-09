@@ -28,8 +28,8 @@ local Color = require('fittencode.color')
 local LspServer = require('fittencode.integrations.completion.lsp_server')
 local StateMachine = require('fittencode.fn.state_machine')
 
-local Status = CtrlObserver.Status
--- local ProgressIndicatorObserver = CtrlObserver.ProgressIndicatorObserver
+local StatusObserver = CtrlObserver.StatusObserver
+local ProgressIndicatorObserver = CtrlObserver.ProgressIndicatorObserver
 -- local TimingObserver = CtrlObserver.TimingObserver
 
 ---@class FittenCode.Keymap
@@ -64,11 +64,11 @@ function Controller:_initialize(options)
     self.current_session = nil
     self.filter_events = {}
     self.keymaps = {}
-    self.status_observer = Status.new()
+    self.status_observer = StatusObserver.new()
     self:on(self.status_observer)
-    -- self.pi = ProgressIndicator.new()
-    -- self.progress_observer = ProgressIndicatorObserver.new({ pi = self.pi })
-    -- self:add_observer(self.progress_observer)
+    self.pi = ProgressIndicator.new()
+    self.progress_observer = ProgressIndicatorObserver.new({ pi = self.pi })
+    self:on(self.progress_observer)
     -- self.timing_observer = TimingObserver.new()
     -- self:add_observer(self.timing_observer)
     self.no_more_suggestion_ns = vim.api.nvim_create_namespace('Fittencode.Inline.NoMoreSuggestion')
@@ -156,8 +156,6 @@ function Controller:_initialize(options)
         end
     end)
 
-    -- 进入buffer检测类型或手动更改类型，决定 disabled/enabled
-    -- current_session.id == source.id { != terminated } running/idle
     self.state = StateMachine.new({
         initial = 'idle',
         transitions = {
@@ -186,12 +184,12 @@ function Controller:off(observer)
     end
 end
 
-function Controller:emit(...)
+function Controller:emit(v)
     for _, observer in ipairs(self.observers) do
         if type(observer) == 'function' then
-            observer(...)
+            observer(v)
         elseif observer.update then
-            observer:update(...)
+            observer:update(v)
         end
     end
 end
@@ -294,29 +292,39 @@ function Controller:trigger_inline_suggestion(options)
         mode = options.mode,
         id = assert(Fn.generate_short_id(13)),
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
-        is_outdated = function(s)
-            if not self.current_session or s.id ~= self.current_session.id then
-                Log.debug('latest_session id = {}, other id = {}', self.current_session.id, s.id)
+        is_outdated = function(target)
+            -- 1. If the current session (target) is terminated
+            -- 2. If the current session's id is different from the target's id
+            if not self.current_session or target.id ~= self.current_session.id then
                 return true
             end
             return false
-        end
-    })
-    self.current_session:on(function(value)
-        local id = (self.current_session and not self.current_session:is_terminated()) and self.current_session.id
-        if not self.state:is('disabled') then
-            if not id then
-                self.state:transition('idle')
-            elseif id == value.id then
-                self.state:transition('running')
+        end,
+        on = function(data)
+            local id = self.current_session and self.current_session.id
+            -- 1. If the target session's id matches the current session's id, update the controller's state to running
+            if not self.state:is('disabled') then
+                if id and id == data.id then
+                    self.state:transition('running')
+                end
+            end
+            -- 2. Emit the session data to the controller's observers (include outdated session)
+            self:emit({
+                ctrl = self.state:state(),
+                current_session_id = id,
+                session = data
+            })
+            -- 3. Roll back the controller state to idle if the current session is terminated
+            if not self.state:is('disabled') then
+                if not id or (id and id == data.id and self.current_session:is_terminated()) then
+                    self.state:transition('idle')
+                end
             end
         end
-        self:emit({
-            ctrl = self.state:state(),
-            current_session_id = id,
-            session = value
-        })
-    end)
+    })
+
+    -- Ready Go!
+    self.current_session:start()
 
     return self.current_session:send_completions()
 end

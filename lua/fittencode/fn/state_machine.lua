@@ -8,14 +8,12 @@ local StateMachine = {}
 StateMachine.__index = StateMachine
 
 ---@class FittenCode.StateMachine.Options
----@field initial string
 ---@field transitions table<string, string[]>
 
 ---@param options FittenCode.StateMachine.Options
 ---@return FittenCode.StateMachine
 function StateMachine.new(options)
     local self = setmetatable({}, StateMachine)
-    self.current = options.initial
     self.transitions = options.transitions
     self.subscribers = {}
     return self
