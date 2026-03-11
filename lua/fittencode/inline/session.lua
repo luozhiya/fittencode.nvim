@@ -40,6 +40,7 @@ end
 ---@param options FittenCode.Inline.Session.InitialOptions
 function Session:_initialize(options)
     self.buf = options.buf
+    self.headless = options.headless
     self.position = options.position
     self.commit_position = options.position
     self.mode = options.mode
@@ -70,10 +71,12 @@ function Session:_initialize(options)
         },
     })
     self.state:subscribe(function(state)
-        options.on({
-            id = self.id,
-            state = state
-        })
+        if options.on then
+            options.on({
+                id = self.id,
+                state = state
+            })
+        end
     end)
 end
 
@@ -129,7 +132,7 @@ function Session:set_model(completions)
             mode = self.mode,
         })
         self.state:transition('model_ready')
-        if self.mode == 'inccmp' then
+        if self.mode == 'inccmp' and not self.headless then
             --
             self:_segments():finally(function()
                 --
@@ -349,7 +352,7 @@ function Session:generate_prompt()
         filename = self.filename,
         version = self.version,
         mode = self.mode,
-        diff_required = true,
+        diff_required = false,
     })
 end
 
@@ -406,7 +409,7 @@ function Session:send_completions()
         Log.debug('Got completion: {}', parse_result.data.completions)
         self:set_model(parse_result.data.completions)
         return Promise.delay(Config.delay_completion.delaytime, function()
-            if self:set_interactive() then
+            if self.headless or self:set_interactive() then
                 return Promise.resolved(parse_result.data)
             else
                 return Promise.rejected()

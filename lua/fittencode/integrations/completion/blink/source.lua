@@ -1,129 +1,107 @@
-local Promise = require('fittencode.fn.promise')
-local Position = require('fittencode.fn.position')
+-- https://github.com/milanglacier/minuet-ai.nvim/blob/main/lua/minuet/blink.lua
+
 local Generate = require('fittencode.generate')
-local Unicode = require('fittencode.fn.unicode')
 local F = require('fittencode.fn.buf')
 local Log = require('fittencode.log')
 
----@return string[]
-local function get_trigger_characters()
-    local chars = {}
-    if #chars == 0 then
-        for i = 32, 126 do
-            chars[#chars + 1] = string.char(i)
-        end
-        chars[#chars + 1] = ' '
-        chars[#chars + 1] = '\n'
-        chars[#chars + 1] = '\r'
-        chars[#chars + 1] = '\r\n'
-        chars[#chars + 1] = '\t'
-    end
-    return chars
+if vim.tbl_isempty(vim.api.nvim_get_hl(0, { name = 'BlinkCmpItemKindFittenCode' })) then
+    vim.api.nvim_set_hl(0, 'BlinkCmpItemKindFittenCode', { link = 'FittenCodeSuggestion' })
 end
 
---- @module 'blink.cmp'
 --- @class blink.cmp.Source
 local source = {}
 
--- `opts` table comes from `sources.providers.your_provider.opts`
--- You may also accept a second argument `config`, to get the full
--- `sources.providers.your_provider` table
 function source.new(opts)
     local self = setmetatable({}, { __index = source })
     self.opts = opts
     return self
 end
 
--- (Optional) Enable the source in specific contexts only
 function source:enabled() return true end
 
--- (Optional) Non-alphanumeric characters that trigger the source
-function source:get_trigger_characters() return get_trigger_characters() end
+function source.get_trigger_characters()
+    return { '@', '.', '(', '[', ':', '{' }
+end
+
+--- If the last word of b is not a substring of the first word of a,
+--- And it there are no trailing spaces for b and no leading spaces for a,
+--- prepend the last word of b to a.
+---@param a string?
+---@param b string?
+---@return string?
+local function prepend_to_complete_word(a, b)
+    if not a or not b then
+        return a
+    end
+
+    local last_word_b = b:match '[%w_-]+$'
+    local first_word_a = a:match '^[%w_-]+'
+
+    if last_word_b and first_word_a and not first_word_a:find(last_word_b, 1, true) then
+        a = last_word_b .. a
+    end
+
+    return a
+end
 
 ---@param ctx blink.cmp.Context
 function source:get_completions(ctx, callback)
     -- ctx (context) contains the current keyword, cursor position, bufnr, etc.
     local row, col = ctx.cursor[1], ctx.cursor[2]
-    local res, request = Generate.request_completions(ctx.bufnr, row, col, { filename = F.filename(ctx.bufnr) })
+    local res, request = Generate.request_completions(ctx.bufnr, row - 1, col, { filename = F.filename(ctx.bufnr) })
     if not request then
         callback()
     end
     ---@param data FittenCode.Inline.FimProtocol.ParseResult.Data
     res:forward(function(data)
-        Log.debug('LSP Server got completion data = {}', data)
         if data == nil or data.completions == nil then
             callback()
             return
         end
-        local position = {
-            line = row,
-            character = col,
-        }
-        local items = require('fittencode.integrations.completion._lsp').lsp_completion_items_from_fim(ctx.trigger, position, data.completions)
-        ---@diagnostic disable-next-line: param-type-mismatch
-        -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#completionItem
-        -- The callback _MUST_ be called at least once. The first time it's called,
-        -- blink.cmp will show the results in the completion menu. Subsequent calls
-        -- will append the results to the menu to support streaming results.
-        return callback({
-            items = items,
-            -- Whether blink.cmp should request items when deleting characters
-            -- from the keyword (i.e. "foo|" -> "fo|")
-            -- Note that any non-alphanumeric characters will always request
-            -- new items (excluding `-` and `_`)
-            is_incomplete_backward = false,
-            -- Whether blink.cmp should request items when adding characters
-            -- to the keyword (i.e. "fo|" -> "foo|")
-            -- Note that any non-alphanumeric characters will always request
-            -- new items (excluding `-` and `_`)
+        local generated_text = require('fittencode.integrations.completion._lsp').lsp_completion_items_from_fim2(data.completions)
+        if #generated_text == 0 then
+            callback()
+            return
+        end
+
+        generated_text = vim.tbl_map(function(item)
+            return prepend_to_complete_word(item, ctx.lines_before)
+        end, generated_text)
+
+        local max_label_width = 60
+        local multi_lines_indicators = ' ⏎'
+
+        local items = {}
+        for _, result in ipairs(generated_text) do
+            local item_lines = vim.split(result, '\n')
+            local item_label
+
+            if #item_lines == 1 then
+                item_label = result
+            else
+                item_label = vim.fn.strcharpart(item_lines[1], 0, max_label_width - #multi_lines_indicators)
+                    .. multi_lines_indicators
+            end
+
+            table.insert(items, {
+                label = item_label,
+                insertText = result,
+                kind_name = 'FittenCode',
+                kind_hl = 'BlinkCmpItemKindFittenCode',
+                documentation = {
+                    kind = 'markdown',
+                    value = '```' .. (vim.bo.ft or '') .. '\n' .. result .. '\n```',
+                },
+            })
+        end
+        callback {
             is_incomplete_forward = false,
-        })
+            is_incomplete_backward = false,
+            items = items,
+        }
     end)
 
-    -- (Optional) Return a function which cancels the request
-    -- If you have long running requests, it's essential you support cancellation
-    ---@diagnostic disable-next-line: return-type-mismatch
     return function() end
-end
-
--- (Optional) Before accepting the item or showing documentation, blink.cmp will call this function
--- so you may avoid calculating expensive fields (i.e. documentation) for only when they're actually needed
--- Note only some fields may be resolved lazily. You may check the LSP capabilities for a complete list:
--- `textDocument.completion.completionItem.resolveSupport`
--- At the time of writing: 'documentation', 'detail', 'additionalTextEdits', 'command', 'data'
-function source:resolve(item, callback)
-    item = vim.deepcopy(item)
-
-    -- Shown in the documentation window (<C-space> when menu open by default)
-    item.documentation = {
-        kind = 'markdown',
-        value = '# Foo\n\nBar',
-    }
-
-    -- Additional edits to make to the document, such as for auto-imports
-    item.additionalTextEdits = {
-        {
-            newText = 'foo',
-            range = {
-                start = { line = 0, character = 0 },
-                ['end'] = { line = 0, character = 0 },
-            },
-        },
-    }
-
-    callback(item)
-end
-
--- (Optional) Called immediately after applying the item's textEdit/insertText
--- Only useful when you want to customize how items are accepted,
--- beyond what's possible with `textEdit` and `additionalTextEdits`
-function source:execute(ctx, item, callback, default_implementation)
-    -- When you provide an `execute` function, your source must handle the execution
-    -- of the item itself, but you may use the default implementation at any time
-    default_implementation()
-
-    -- The callback _MUST_ be called once
-    callback()
 end
 
 return source

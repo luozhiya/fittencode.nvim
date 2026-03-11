@@ -96,6 +96,7 @@ function M.request_completions(buf, row, col, options)
         position = Position.of(row, col),
         mode = 'inccmp',
         filename = filename,
+        headless = true,
     })
     return session:send_completions(), session
 end
