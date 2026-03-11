@@ -67,7 +67,7 @@ function M.lsp_completion_items_from_fim(trigger_character, position, fim_comple
     local item = {
         label = trigger_character .. generated_text,
         -- labelDetails = nil,
-        -- kind = 1, -- Text
+        kind = 1, -- Text
         -- tags = nil,
         -- detail = nil,
         documentation = 'FittenCode...',

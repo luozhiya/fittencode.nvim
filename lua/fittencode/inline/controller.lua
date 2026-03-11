@@ -25,7 +25,6 @@ local Log = require('fittencode.log')
 local CtrlObserver = require('fittencode.inline.ctrl_observer')
 local ProgressIndicator = require('fittencode.fn.progress_indicator')
 local Color = require('fittencode.color')
-local LspServer = require('fittencode.integrations.completion.lsp_server')
 local StateMachine = require('fittencode.fn.state_machine')
 
 local StatusObserver = CtrlObserver.StatusObserver
@@ -124,19 +123,6 @@ function Controller:_initialize(options)
             self:sync_state()
         end,
     })
-    if Config.integrations.completion.lsp_server then
-        Log.debug('Completion integration: LSP server enabled')
-        -- vim.lsp.enable('FittenCode')
-        -- vim.api.nvim_create_autocmd({ 'FileType' }, {
-        --     group = vim.api.nvim_create_augroup('FittenCode.Inline.LspServer', { clear = true }),
-        --     callback = function(args)
-        --         if F.is_filebuf(args.buf) then
-        --             Log.debug('LspServer attach = {}', args)
-        --             LspServer.attach(args.buf)
-        --         end
-        --     end
-        -- })
-    end
 
     local filtered = {}
     vim.tbl_map(function(key)
