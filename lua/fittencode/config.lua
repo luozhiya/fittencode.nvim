@@ -248,7 +248,7 @@ function M.init(options)
     options = options or {}
     current_configuation = vim.tbl_deep_extend('force', DEFAULTS, options)
     if options.use_default_keymaps == false then
-        current_configuation.keymaps.inline = {}
+        current_configuation.keymaps.inline = { inccmp = {}, editcmp = {} }
         current_configuation.keymaps.chat = {}
     end
 end
