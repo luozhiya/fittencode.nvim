@@ -47,7 +47,6 @@ local function send_filetype(buffer)
         if not check(buffer) then
             return
         end
-        print(vim.inspect(lang))
         lang = require('fittencode.integrations.filetype.extension').quick_match(lang)
         if #lang == 0 then
             return
