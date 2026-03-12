@@ -102,6 +102,7 @@ local DEFAULTS = {
             blink = false
         },
         commit_message = false,
+        -- Detect filetype.
         filetype = false,
     },
     language_preference = {

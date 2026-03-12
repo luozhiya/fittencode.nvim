@@ -20,3 +20,7 @@ end
 if Config.integrations.completion.blink then
     require('fittencode.integrations.completion.blink').setup()
 end
+
+if Config.integrations.filetype then
+    require('fittencode.integrations.filetype').setup()
+end

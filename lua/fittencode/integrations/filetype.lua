@@ -49,7 +49,6 @@ local function send_filetype(buffer)
         end
         print(vim.inspect(lang))
         lang = require('fittencode.integrations.filetype.extension').quick_match(lang)
-        print(vim.inspect(lang))
         if #lang == 0 then
             return
         end
@@ -76,13 +75,6 @@ function M.setup()
     end
     vim.api.nvim_create_autocmd({ 'TextChangedI', 'BufReadPost' }, {
         pattern = '*',
-        callback = function()
-            _()
-        end,
-        desc = 'FittenCode filetype integration',
-    })
-    vim.api.nvim_create_autocmd({ 'User' }, {
-        pattern = 'FittenCodeInlineAccepted',
         callback = function()
             _()
         end,
