@@ -267,7 +267,7 @@ local function handle_unauthorized(protocol, option, req)
             if _.access_token ~= 'Not expired' then
                 api_key_manager:update_fitten_access_token(_.access_token)
             end
-            option.variables = vim.tbl_deep_extend('force', option.variables, { access_token = api_key_manager:get_fitten_refresh_token() })
+            option.variables = vim.tbl_deep_extend('force', option.variables or {}, { access_token = api_key_manager:get_fitten_refresh_token() })
             local new_req = M.make_request(protocol, option)
             if not new_req then
                 return Promise.rejected()
