@@ -156,6 +156,7 @@ function Controller:_initialize(options)
             ctrl = value.to,
         })
     end)
+    self:sync_state()
 end
 
 function Controller:on(observer)
