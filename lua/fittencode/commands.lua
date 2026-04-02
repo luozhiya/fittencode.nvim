@@ -8,6 +8,7 @@ local BASE = {
     },
     logout = { execute = function() require('fittencode.auth').logout() end },
     -- Help
+    log = { execute = function() require('fittencode.log').open_log_file() end },
     ask_question = { execute = function() require('fittencode.auth').question() end },
     user_guide = { execute = function() require('fittencode.auth').tutor() end },
 }

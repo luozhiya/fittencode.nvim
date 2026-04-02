@@ -25,6 +25,10 @@ local MAX_LOG_SIZE = 2 * 1024 * 1024 -- 2MB
 local needs_preface = true
 local developer_mode = true
 
+function M.open_log_file()
+    vim.cmd.edit({ LOG_FILE })
+end
+
 local function get_level_name(level)
     return LOG_LEVEL_NAMES[level + 1] or 'UNKNOWN'
 end
