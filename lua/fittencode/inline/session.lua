@@ -132,7 +132,7 @@ function Session:set_model(completions)
             mode = self.mode,
         })
         self.state:transition('model_ready')
-        if self.mode == 'inccmp' and not self.headless then
+        if self.mode == 'inccmp' then
             --
             self:_segments():finally(function()
                 --
@@ -407,14 +407,18 @@ function Session:send_completions()
             return Promise.rejected()
         end
         Log.debug('Got completion: {}', parse_result.data.completions)
-        self:set_model(parse_result.data.completions)
-        return Promise.delay(Config.delay_completion.delaytime, function()
-            if self.headless or self:set_interactive() then
-                return Promise.resolved(parse_result.data)
-            else
-                return Promise.rejected()
-            end
-        end)
+        if self.headless then
+            return Promise.resolved(parse_result.data)
+        else
+            self:set_model(parse_result.data.completions)
+            return Promise.delay(Config.delay_completion.delaytime, function()
+                if self:set_interactive() then
+                    return Promise.resolved(parse_result.data)
+                else
+                    return Promise.rejected()
+                end
+            end)
+        end
     end):catch(function(_)
         Log.error('Failed to send completions: {}', _)
         self:terminate()
