@@ -205,7 +205,8 @@ function Session:accept(scope)
     if self.model:is_complete() then
         self:terminate()
         self.view:on_complete()
-        vim.defer_fn(function() self.trigger_inline_suggestion({ force = true, mode = self.mode }) end, 30)
+        -- Accept 之后会触发 TextChangedI，这时会自动 trigger_inline_suggestion
+        -- vim.defer_fn(function() self.trigger_inline_suggestion({ force = true, mode = self.mode }) end, 30)
     end
     Log.debug('Accept scope = {}', scope)
     -- vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCodeInlineAccepted', data = { scope = scope } })
