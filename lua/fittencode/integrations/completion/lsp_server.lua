@@ -16,7 +16,7 @@ LSP 现有问题：
 
 local Promise = require('fittencode.fn.promise')
 local Position = require('fittencode.fn.position')
-local Generate = require('fittencode.generate')
+local Headless = require('fittencode.headless')
 local Unicode = require('fittencode.fn.unicode')
 local F = require('fittencode.fn.buf')
 local Log = require('fittencode.log')
@@ -95,7 +95,7 @@ methods['textDocument/completion'] = function(params, callback)
     ---@type lsp.CompletionContext
     local context = params.context
     local trigger_character = context.triggerCharacter or get_prefix_char(bufnr, row, col)
-    local res, request = Generate.request_completions(bufnr, row, col, { filename = params.textDocument.uri })
+    local res, request = Headless.request_completions(bufnr, row, col, { filename = params.textDocument.uri })
     if not request then
         return callback(nil, {})
     end
@@ -125,7 +125,7 @@ methods['textDocument/inlineCompletion'] = function(params, callback)
     end
     local row, col = params.position.line, params.position.character
     local trigger_character = get_prefix_char(bufnr, row, col)
-    local res, request = Generate.request_completions(bufnr, row, col, { filename = params.textDocument.uri })
+    local res, request = Headless.request_completions(bufnr, row, col, { filename = params.textDocument.uri })
     if not request then
         return callback(nil, {})
     end

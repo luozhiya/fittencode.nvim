@@ -1,6 +1,6 @@
 -- https://github.com/milanglacier/minuet-ai.nvim/blob/main/lua/minuet/blink.lua
 
-local Generate = require('fittencode.generate')
+local Headless = require('fittencode.headless')
 local F = require('fittencode.fn.buf')
 local Log = require('fittencode.log')
 
@@ -136,7 +136,7 @@ end
 function source:get_completions(ctx, callback)
     -- ctx (context) contains the current keyword, cursor position, bufnr, etc.
     local row, col = ctx.cursor[1], ctx.cursor[2]
-    local res, request = Generate.request_completions(ctx.bufnr, row - 1, col, { filename = F.filename(ctx.bufnr) })
+    local res, request = Headless.request_completions(ctx.bufnr, row - 1, col, { filename = F.filename(ctx.bufnr) })
     if not request then
         callback()
     end

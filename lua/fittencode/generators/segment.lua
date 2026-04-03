@@ -1,6 +1,6 @@
 local Promise = require('fittencode.fn.promise')
 local Log = require('fittencode.log')
-local Generate = require('fittencode.generate')
+local Headless = require('fittencode.headless')
 
 local M = {}
 
@@ -100,14 +100,14 @@ local function build_request_payload(text)
     local env = {
         messages = messages,
     }
-    return Generate.build_request_chat_payload(env, template)
+    return Headless.build_request_chat_payload(env, template)
 end
 
 -- 高级分词
 ---@param text string|string[]
 ---@return FittenCode.Promise<FittenCode.Inline.Segments, FittenCode.Error>, FittenCode.HTTP.Request?
 function M.send_segments(text)
-    local res, request = Generate.request_chat(build_request_payload(text))
+    local res, request = Headless.request_chat(build_request_payload(text))
     if not request then
         return Promise.rejected()
     end

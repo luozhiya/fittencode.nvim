@@ -5,7 +5,7 @@
 
 ]]
 
-local Generate = require('fittencode.generate')
+local Headless = require('fittencode.headless')
 local Promise = require('fittencode.fn.promise')
 local Log = require('fittencode.log')
 
@@ -48,13 +48,13 @@ local function build_request_payload(text)
     local env = {
         code = text,
     }
-    return Generate.build_request_chat_payload(env, template)
+    return Headless.build_request_chat_payload(env, template)
 end
 
 ---@param text string
 ---@return FittenCode.Promise<string, FittenCode.Error>, FittenCode.HTTP.Request?
 function M.send_filetype(text)
-    local res, request = Generate.request_chat(build_request_payload(text))
+    local res, request = Headless.request_chat(build_request_payload(text))
     if not request then
         return Promise.rejected()
     end
