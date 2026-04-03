@@ -265,7 +265,7 @@ local function build_base_prompt(buf, position, options)
             nmd5 = ciphertext,
             diff = text,
             filename = options.filename,
-            pc_available = true,
+            pc_available = false,
             pc_prompt = '',
             pc_prompt_type = '0'
         }
@@ -288,11 +288,15 @@ local function build_edit_metadata(mode)
     }
 end
 
+local function build_pc_metadata()
+end
+
 ---@class FittenCode.Inline.FimProtocol.GenerateOptions
 ---@field mode FittenCode.Inline.CompletionMode
 ---@field filename string
 ---@field version? number
 ---@field diff_required? boolean
+---@field pc? boolean
 
 ---@class FittenCode.Inline.PromptWithCacheData
 ---@field prompt FittenCode.Inline.Prompt
@@ -302,17 +306,21 @@ end
 ---@param position FittenCode.Position
 ---@param options FittenCode.Inline.FimProtocol.GenerateOptions
 ---@return FittenCode.Promise<FittenCode.Inline.PromptWithCacheData?>
-function M.generate(buf, position, options)
+function M.build(buf, position, options)
     return build_base_prompt(buf, position, options):forward(function(_)
         local diff = {}
         if _.is_full_source and options.diff_required then
             diff = build_diff_metadata_op(_.text, options.filename, options.version)
         end
+        local pc = {}
+        if options.pc then
+            pc = build_pc_metadata()
+        end
         local edit = build_edit_metadata(options.mode)
         return {
             prompt = {
                 inputs = '',
-                meta_datas = vim.tbl_deep_extend('force', _.base, diff, edit)
+                meta_datas = vim.tbl_deep_extend('force', _.base, diff, pc, edit)
             },
             cachedata = {
                 text = _.text,

@@ -16,7 +16,7 @@ local Promise = require('fittencode.fn.promise')
 local Fn = require('fittencode.fn.core')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
-local FimGenerate = require('fittencode.inline.fim_protocol.generate')
+local PromptBuilder = require('fittencode.inline.fim_protocol.prompt')
 local Segment = require('fittencode.inline.segment')
 local Config = require('fittencode.config')
 local Client = require('fittencode.client')
@@ -351,7 +351,7 @@ end
 
 ---@return FittenCode.Promise
 function Session:generate_prompt()
-    return FimGenerate.generate(self.buf, self.position:translate(0, -1), {
+    return PromptBuilder.build(self.buf, self.position:translate(0, -1), {
         filename = self.filename,
         version = self.version,
         mode = self.mode,
@@ -406,7 +406,7 @@ function Session:send_completions()
         ---@param parse_result FittenCode.Inline.FimProtocol.ParseResult
     end):forward(function(parse_result)
         if self.diff_required then
-            FimGenerate.update_last_version(self.filename, self.version, self.cachedata)
+            PromptBuilder.update_last_version(self.filename, self.version, self.cachedata)
         end
         if parse_result.status == 'no_completion' or parse_result.status == 'repeat_remaining' then
             Log.debug('No more suggestions')
