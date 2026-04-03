@@ -216,7 +216,7 @@ local builtin = {
                 ['accept_all'] = '<Tab>',
                 ['accept_next_hunk'] = '<C-Down>',
                 ['revoke'] = { '<C-Left>', '<C-Up>' },
-                ['cancel'] = '<Esc>',
+                -- ['cancel'] = '<Esc>',
             }
         },
         chat = {
@@ -235,6 +235,7 @@ local builtin = {
         -- Notify when log errors occur.
         notify_on_errors = false,
         trace = false,
+        async = false,
     },
     colors = {
         -- { fg = '#ffffff', bg = '#000000', style = 'bold' }

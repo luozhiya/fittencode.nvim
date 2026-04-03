@@ -161,7 +161,7 @@ function M._async_log(options)
         func = table.concat(_func(debug.traceback('', stack)), '->')
     end
 
-    vim.schedule(function()
+    local function _write()
         if needs_preface then
             ensure_log_directory()
             rotate_log_if_needed()
@@ -177,7 +177,13 @@ function M._async_log(options)
             message
         )
         write_to_log(log_entry)
-    end)
+    end
+
+    if Config.log.async then
+        vim.schedule(_write)
+    else
+        _write()
+    end
 end
 
 function M.set_level(level)
