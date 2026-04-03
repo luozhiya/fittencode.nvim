@@ -119,6 +119,103 @@ local function build_diff_metadata(current_text, filename, version)
     return diff_meta
 end
 
+---@param current_text string
+---@param filename string
+---@param version number
+---@return FittenCode.Inline.Prompt.MetaDatas
+local function build_diff_metadata_op(current_text, filename, version)
+    if filename ~= M.last.filename or version <= M.last.version or not M.last.once then
+        Log.debug('Skip computing diff metadata, last version = {}, current version = {}', M.last.version, version)
+        return {
+            pmd5 = '',
+            diff = current_text
+        }
+    end
+    M.last.once = false
+
+    local current_bytes = current_text
+    local last_bytes = M.last.text
+    local current_len = #current_bytes
+    local last_len = #last_bytes
+
+    -- 1. 计算公共前缀字节数
+    local plen_bytes = 0
+    local min_len = math.min(current_len, last_len)
+    for i = 1, min_len do
+        if current_bytes:byte(i) == last_bytes:byte(i) then
+            plen_bytes = plen_bytes + 1
+        else
+            break
+        end
+    end
+
+    -- 2. 计算公共后缀字节数
+    local slen_bytes = 0
+    for i = 1, min_len - plen_bytes do
+        local current_idx = current_len - i + 1
+        local last_idx = last_len - i + 1
+        if current_bytes:byte(current_idx) == last_bytes:byte(last_idx) then
+            slen_bytes = slen_bytes + 1
+        else
+            break
+        end
+    end
+
+    Log.debug('Prefix bytes = {}', plen_bytes)
+    Log.debug('Suffix bytes = {}', slen_bytes)
+
+    -- 调整前缀边界：如果当前位置在字符中间，则向前移动到字符的末尾位置
+    if plen_bytes > 0 and plen_bytes < current_len then
+        plen_bytes = Unicode.find_char_boundary(current_bytes, plen_bytes, false)
+    end
+
+    Log.debug('Prefix bytes = {}, string = {}', plen_bytes, string.sub(current_bytes, 1, plen_bytes))
+
+    -- 调整后缀边界：如果后缀起始位置在字符中间，则向前移动到字符起始位置
+    local suffix_start = current_len - slen_bytes + 1
+    if suffix_start > 1 and suffix_start <= current_len then
+        suffix_start = Unicode.find_char_boundary(current_bytes, suffix_start, true)
+        slen_bytes = current_len - suffix_start + 1
+    end
+
+    Log.debug('Suffix bytes = {}, string = {}', slen_bytes, string.sub(current_bytes, suffix_start, current_len))
+
+    -- 计算前缀的 UTF-16 字符数
+    local plen_utf16 = 0
+    if plen_bytes > 0 then
+        plen_utf16 = Unicode.count_utf16_in_range(current_bytes, 1, plen_bytes)
+    end
+
+    -- 计算后缀的 UTF-16 字符数
+    local slen_utf16 = 0
+    if slen_bytes > 0 then
+        local suffix_start_byte = current_len - slen_bytes + 1
+        slen_utf16 = Unicode.count_utf16_in_range(current_bytes, suffix_start_byte, current_len)
+    end
+
+    -- 5. 提取 diff 部分
+    local diff
+    local diff_start = plen_bytes + 1
+    local diff_end = current_len - slen_bytes
+
+    if diff_start <= diff_end then
+        diff = string.sub(current_bytes, diff_start, diff_end)
+    else
+        diff = ''
+    end
+
+    local diff_meta = {
+        plen = plen_utf16,  -- 前缀 UTF-16 字符数
+        slen = slen_utf16,  -- 后缀 UTF-16 字符数
+        bplen = plen_bytes, -- 前缀字节数
+        bslen = slen_bytes, -- 后缀字节数
+        pmd5 = M.last.ciphertext,
+        diff = diff
+    }
+
+    return diff_meta
+end
+
 --[[
 
 -- TODO：存在 FIM Marker 的话会影响 position 的计算？
@@ -130,10 +227,11 @@ end
 ---@return FittenCode.Promise<{ base: FittenCode.Inline.Prompt.MetaDatas?, text: string, ciphertext: string}>
 local function build_base_prompt(buf, position, options)
     local charscount = F.wordcount(buf).chars
+    local is_full_source = charscount <= MAX_CHARS
     local prefix
     local suffix
 
-    if charscount <= MAX_CHARS then
+    if is_full_source then
         local current_line = assert(F.line_at(buf, position.row))
         local round_curr_col = F.round_col_end(current_line.text, position.col + 1) - 1
         local next_position = Position.new({ row = position.row, col = round_curr_col + 1 })
@@ -171,7 +269,7 @@ local function build_base_prompt(buf, position, options)
             pc_prompt = '',
             pc_prompt_type = '0'
         }
-        return { base = base, text = text, ciphertext = ciphertext }
+        return { base = base, text = text, ciphertext = ciphertext, is_full_source = is_full_source }
     end)
 end
 
@@ -207,8 +305,8 @@ end
 function M.generate(buf, position, options)
     return build_base_prompt(buf, position, options):forward(function(_)
         local diff = {}
-        if options.diff_required then
-            diff = build_diff_metadata(_.text, options.filename, options.version)
+        if _.is_full_source and options.diff_required then
+            diff = build_diff_metadata_op(_.text, options.filename, options.version)
         end
         local edit = build_edit_metadata(options.mode)
         return {

@@ -67,8 +67,8 @@
 ---@field keymaps FittenCode.Keymap[]
 ---@field view FittenCode.Inline.View
 ---@field model FittenCode.Inline.Model
----@field version number
 ---@field headless boolean
+---@field diff_required boolean
 
 --[[
     'start',                      -- 创建了 Session，COMPLETION

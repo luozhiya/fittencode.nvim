@@ -24,6 +24,7 @@ local Protocol = require('fittencode.client.protocol')
 local FimParse = require('fittencode.inline.fim_protocol.parse')
 local Zip = require('fittencode.fn.gzip')
 local StateMachine = require('fittencode.fn.state_machine')
+local F = require('fittencode.fn.buf')
 
 ---@class FittenCode.Inline.Session
 local Session = {}
@@ -50,7 +51,8 @@ function Session:_initialize(options)
     self.requests = {}
     self.keymaps = {}
     self.filename = options.filename
-    self.version = options.version
+    self.version = F.version(self.buf)
+    self.diff_required = options.diff_required
     self.trigger_inline_suggestion = options.trigger_inline_suggestion
     self.is_outdated = options.is_outdated
     self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey' .. Fn.generate_short_id_as_string())
@@ -239,14 +241,14 @@ function Session:set_keymaps()
             { lhs = Config.keymaps.inline[self.mode]['accept_next_line'], rhs = function() self:accept('line') end },
             { lhs = Config.keymaps.inline[self.mode]['accept_next_word'], rhs = function() self:accept('word') end },
             { lhs = Config.keymaps.inline[self.mode]['revoke'],           rhs = function() self:revoke() end },
-            { lhs = Config.keymaps.inline[self.mode]['cancel'],           rhs = function() return self:on_cancel() end, options = { expr = true } }
+            -- { lhs = Config.keymaps.inline[self.mode]['cancel'],           rhs = function() return self:on_cancel() end, options = { expr = true } }
         }
     elseif self.mode == 'editcmp' then
         self.keymaps = {
             { lhs = Config.keymaps.inline[self.mode]['accept_all'],       rhs = function() self:accept('all') end },
             { lhs = Config.keymaps.inline[self.mode]['accept_next_hunk'], rhs = function() self:accept('hunk') end },
             { lhs = Config.keymaps.inline[self.mode]['revoke'],           rhs = function() self:revoke() end },
-            { lhs = Config.keymaps.inline[self.mode]['cancel'],           rhs = function() return self:on_cancel() end, options = { expr = true } }
+            -- { lhs = Config.keymaps.inline[self.mode]['cancel'],           rhs = function() return self:on_cancel() end, options = { expr = true } }
         }
     end
     for _, v in ipairs(self.keymaps) do
@@ -353,7 +355,7 @@ function Session:generate_prompt()
         filename = self.filename,
         version = self.version,
         mode = self.mode,
-        diff_required = false,
+        diff_required = self.diff_required,
     })
 end
 
@@ -383,8 +385,10 @@ function Session:send_completions()
     self.state:transition('requesting')
     return Promise.all({
         self:generate_prompt():forward(function(res)
-            Log.debug('Prompt generated')
-            self.cachedata = res.cachedata
+            Log.debug('Prompt generated {}', res)
+            if self.diff_required then
+                self.cachedata = res.cachedata
+            end
             return self:async_compress_prompt(res.prompt)
         end),
         self:get_completion_version()
@@ -401,11 +405,12 @@ function Session:send_completions()
         return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
         ---@param parse_result FittenCode.Inline.FimProtocol.ParseResult
     end):forward(function(parse_result)
-        -- Todo 重做 Fim 缓存机制
-        -- FimGenerate.update_last_version(self.filename, self.version, self.cachedata)
+        if self.diff_required then
+            FimGenerate.update_last_version(self.filename, self.version, self.cachedata)
+        end
         if parse_result.status == 'no_completion' or parse_result.status == 'repeat_remaining' then
             Log.debug('No more suggestions')
-            return Promise.rejected()
+            return Promise.rejected({ message = 'No more suggestions' })
         end
         Log.debug('Got completion: {}', parse_result.data.completions)
         if self.headless then

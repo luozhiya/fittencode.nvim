@@ -54,9 +54,84 @@ function M.utf8_bytes(byte)
     elseif byte <= 0xF7 then
         return 4
     else
-        -- return 1 -- 处理错误：当作单字节处理
-        error('Invalid UTF-8 byte sequence: invalid first byte')
+        -- error('Invalid UTF-8 byte sequence: invalid first byte')
+        return 0
     end
+end
+
+function M.is_start_of_utf8_char(b)
+    return b < 0x80 or (b >= 0xC0 and b <= 0xDF) or (b >= 0xE0 and b <= 0xEF) or (b >= 0xF0 and b <= 0xF7)
+end
+
+---@param text string
+function M.find_char_boundary(text, pos, forward)
+    if pos <= 0 then
+        return 0
+    end
+    if pos > #text then
+        return #text
+    end
+
+    if forward then
+        -- 向前找到完整的 UTF-8 字符起始位置
+        while pos <= #text do
+            local b = text:byte(pos)
+            if not M.is_start_of_utf8_char(b) then
+                -- 这是 UTF-8 字符的后续字节，继续向前
+                pos = pos + 1
+            else
+                break
+            end
+        end
+    else
+        -- 向后找到完整的 UTF-8 字符末尾位置
+        local next = text:byte(pos + 1)
+        if M.is_start_of_utf8_char(next) then
+            return pos
+        end
+        if pos > 1 then
+            while pos > 1 do
+                local prev = text:byte(pos - 1)
+                if not M.is_start_of_utf8_char(prev) then
+                    pos = pos - 1;
+                else
+                    break
+                end
+            end
+            pos = pos - 1
+        end
+    end
+
+    return pos
+end
+
+function M.count_utf16_in_range(text, start_byte, end_byte)
+    local units = 0
+    local i = start_byte
+
+    while i <= end_byte do
+        local b = text:byte(i)
+
+        if b < 0x80 then
+            -- 单字节 ASCII，UTF-16 中也是 1 个单元
+            units = units + 1
+            i = i + 1
+        elseif b < 0xE0 then
+            -- 双字节 UTF-8
+            i = i + 2
+            units = units + 1
+        elseif b < 0xF0 then
+            -- 三字节 UTF-8
+            i = i + 3
+            units = units + 1
+        else
+            -- 四字节 UTF-8 (代理对)
+            i = i + 4
+            units = units + 2
+        end
+    end
+
+    return units
 end
 
 -- 根据 Unicode 码点判断 UTF-8 编码的字节数
