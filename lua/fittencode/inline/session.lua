@@ -25,6 +25,7 @@ local FimParse = require('fittencode.inline.fim_protocol.parse')
 local Zip = require('fittencode.fn.gzip')
 local StateMachine = require('fittencode.fn.state_machine')
 local F = require('fittencode.fn.buf')
+local ProjectCompletion = require('fittencode.inline.pc.engine')
 
 ---@class FittenCode.Inline.Session
 local Session = {}
@@ -356,6 +357,8 @@ function Session:generate_prompt()
         version = self.version,
         mode = self.mode,
         diff_required = self.diff_required,
+        edit_required = self.mode == 'editcmp',
+        pc_required = ProjectCompletion.check_project_completion_available(self.buf)
     })
 end
 

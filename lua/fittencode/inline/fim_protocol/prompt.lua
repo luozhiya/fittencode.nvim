@@ -20,6 +20,7 @@ local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 local Context = require('fittencode.inline.fim_protocol.context')
+local ProjectCompletion = require('fittencode.inline.pc.engine')
 
 local MAX_CHARS = 220000 -- ~200KB 220000
 local HALF_MAX = MAX_CHARS / 2
@@ -123,13 +124,13 @@ end
 ---@param filename string
 ---@param version number
 ---@return FittenCode.Inline.Prompt.MetaDatas
-local function build_diff_metadata_op(current_text, filename, version)
+local function build_diff_metadata_op(current_text, filename, version, is_full_source, diff_required)
+    if not (is_full_source and diff_required) then
+        return {}
+    end
     if filename ~= M.last.filename or version <= M.last.version or not M.last.once then
         Log.debug('Skip computing diff metadata, last version = {}, current version = {}', M.last.version, version)
-        return {
-            pmd5 = '',
-            diff = current_text
-        }
+        return {}
     end
     M.last.once = false
 
@@ -273,11 +274,13 @@ local function build_base_prompt(buf, position, options)
     end)
 end
 
----@param mode FittenCode.Inline.CompletionMode
 ---@return FittenCode.Inline.Prompt.MetaDatas
-local function build_edit_metadata(mode)
+local function build_edit_metadata(edit_required)
+    if not edit_required then
+        return {}
+    end
     return {
-        edit_mode = mode == 'editcmp' and 'true' or nil,
+        edit_mode = 'true',
         edit_mode_history = '',
         -- Edit mode trigger type
         -- 默认为 0，表示手动触发
@@ -288,7 +291,17 @@ local function build_edit_metadata(mode)
     }
 end
 
-local function build_pc_metadata()
+local function build_pc_metadata(buf, pc_required)
+    if not pc_required then
+        return Promise.resolved({})
+    end
+    return ProjectCompletion.get_prompt(buf):forward(function(_)
+        return Promise.resolved({
+            pc_available = true,
+            pc_prompt = _.pc_prompt,
+            pc_prompt_type = _.pc_prompt_type
+        })
+    end)
 end
 
 ---@class FittenCode.Inline.FimProtocol.GenerateOptions
@@ -296,7 +309,8 @@ end
 ---@field filename string
 ---@field version? number
 ---@field diff_required? boolean
----@field pc? boolean
+---@field pc_required? boolean
+---@field edit_required? boolean
 
 ---@class FittenCode.Inline.PromptWithCacheData
 ---@field prompt FittenCode.Inline.Prompt
@@ -307,26 +321,28 @@ end
 ---@param options FittenCode.Inline.FimProtocol.GenerateOptions
 ---@return FittenCode.Promise<FittenCode.Inline.PromptWithCacheData?>
 function M.build(buf, position, options)
-    return build_base_prompt(buf, position, options):forward(function(_)
-        local diff = {}
-        if _.is_full_source and options.diff_required then
-            diff = build_diff_metadata_op(_.text, options.filename, options.version)
-        end
-        local pc = {}
-        if options.pc then
-            pc = build_pc_metadata()
-        end
-        local edit = build_edit_metadata(options.mode)
-        return {
+    return Promise.all({
+        build_base_prompt(buf, position, options):forward(function(_)
+            local diff = build_diff_metadata_op(_.text, options.filename, options.version, _.is_full_source, options.diff_required)
+            local edit = build_edit_metadata(options.edit_required)
+            return Promise.resolved({ _.base, diff, edit })
+        end),
+        build_pc_metadata(buf, options.pc_required)
+    }):forward(function(_)
+        local base = _[1][1]
+        local diff = _[1][2]
+        local edit = _[1][3]
+        local pc = _[2]
+        return Promise.resolved({
             prompt = {
                 inputs = '',
-                meta_datas = vim.tbl_deep_extend('force', _.base, diff, pc, edit)
+                meta_datas = vim.tbl_deep_extend('force', base, diff, edit, pc)
             },
             cachedata = {
                 text = _.text,
                 ciphertext = _.ciphertext,
             }
-        }
+        })
     end)
 end
 
