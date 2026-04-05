@@ -153,12 +153,19 @@ function M._async_log(options)
         return
     end
 
-    local info = debug.getinfo(stack, 'Snl')
-    local file_name = _filename(info)
-    local line_number = info.currentline
-    local func = info.name or ''
-    if Config.log.trace then
+    local traceback = ''
+    if Config.log.traceback then
+        local info = debug.getinfo(stack, 'Snl')
+        local file_name = _filename(info)
+        local line_number = info.currentline
+        local func = info.name or ''
         func = table.concat(_func(debug.traceback('', stack)), '->')
+        traceback = string.format('%s:%d |%s|',
+            file_name,
+            line_number,
+            func
+        )
+        traceback = traceback .. ' '
     end
 
     local function _write()
@@ -168,11 +175,9 @@ function M._async_log(options)
             write_to_log(prepare_log_header())
             needs_preface = false
         end
-        local log_entry = string.format('[%s %s:%d |%s| %s] %s',
+        local log_entry = string.format('[%s %s%s] %s',
             format_timestamp(),
-            file_name,
-            line_number,
-            func,
+            traceback,
             get_level_name(level),
             message
         )

@@ -234,7 +234,7 @@ local builtin = {
         level = vim.log.levels.WARN,
         -- Notify when log errors occur.
         notify_on_errors = false,
-        trace = false,
+        traceback = false,
         async = false,
     },
     colors = {
