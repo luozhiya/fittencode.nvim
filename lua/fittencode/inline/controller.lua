@@ -150,6 +150,9 @@ function Controller:_initialize(options)
         },
     })
     self.state:subscribe(function(value)
+        if value.to == 'running' then
+            return
+        end
         self:emit({
             ctrl = value.to,
         })

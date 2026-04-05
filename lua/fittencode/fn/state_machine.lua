@@ -1,7 +1,7 @@
 local Log = require('fittencode.log')
 
 ---@class FittenCode.StateMachine
----@field private current string
+---@field private current string?
 ---@field private transitions table<string, string[]>
 ---@field private subscribers function[]
 local StateMachine = {}
@@ -19,7 +19,7 @@ function StateMachine.new(options)
     return self
 end
 
----@return string
+---@return string?
 function StateMachine:state()
     return self.current
 end
