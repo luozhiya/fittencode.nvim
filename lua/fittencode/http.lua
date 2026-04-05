@@ -439,7 +439,7 @@ function M.fetch(url, options)
                         _metadata = {
                             status = response.status,
                             text = response:text(),
-                            response = response
+                            -- response = response
                         }
                     }
                     reject(_)
