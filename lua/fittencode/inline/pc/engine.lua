@@ -86,20 +86,16 @@ local cache = {
     busy = { ctx = false, dep = false },
     dependencies = {},
     context = {},
-    version = {},
-    buffers = {},
+    version = {
+        main = {},
+        context = {},
+    },
 }
 
 local waiting = {
     queue_ctx = UniqueQueue.new(),
     queue_dep = UniqueQueue.new(),
 }
-
--- local working = {
---     dependencies = {},
---     context = {},
---     buffers = {},
--- }
 
 local function is_ok(old_version, new_version)
     return math.abs(old_version - new_version) <= 10
@@ -118,7 +114,7 @@ local function merge_prompt(context, dependencies, uri)
     prompt[#prompt + 1] = ''
     prompt[#prompt + 1] = '# Dependencies Context'
     vim.iter(dependencies[uri]):map(function(dep_uri)
-        prompt[#prompt + 1] = '## ' .. dep_uri
+        prompt[#prompt + 1] = '## Dependency: ' .. dep_uri
         prompt[#prompt + 1] = '```json'
         prompt[#prompt + 1] = stringfy(context[dep_uri] or {})
         prompt[#prompt + 1] = '```'
@@ -135,12 +131,12 @@ function M.get_prompt(bufnr)
         local uri = vim.uri_from_bufnr(bufnr)
         local current_version = vim.api.nvim_buf_get_changedtick(bufnr)
 
-        if cache.version[uri] and is_ok(cache.version[uri], current_version) then
+        if cache.version.main[uri] and is_ok(cache.version.main[uri], current_version) then
             -- 这里返回的仅仅是尽可能多的数据，可能有些依赖来不及解析
             local prompt = merge_prompt(cache.context, cache.dependencies, uri)
             return resolve({ prompt = prompt, type = M.get_chosen_fast() })
         end
-        cache.version[uri] = current_version
+        cache.version.main[uri] = current_version
 
         waiting.queue_dep:push(uri)
         return reject({ _msg = 'Waiting for analysis' })
@@ -336,12 +332,19 @@ local function loop_ctx()
 
     -- ?
     local bufnr = vim.uri_to_bufnr(uri)
+    local current_version = vim.api.nvim_buf_get_changedtick(bufnr)
+    if cache.version.context[uri] and is_ok(cache.version.context[uri], current_version) then
+        cache.busy.ctx = false
+        return
+    end
+    -- LSP 附加需要 bufloaded
     vim.fn.bufload(bufnr)
 
     lsp_request_documentsymbol(bufnr):forward(function(symbols)
         local position_encoding = assert(vim.lsp.get_clients({ bufnr = bufnr })[1]).offset_encoding
         local items = symbols_to_items(symbols, bufnr, position_encoding)
         cache.context[uri] = items
+        cache.version.context[uri] = current_version
     end):finally(function()
         cache.busy.ctx = false
     end)
