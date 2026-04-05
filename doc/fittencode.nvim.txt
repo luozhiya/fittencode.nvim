@@ -1,4 +1,4 @@
-*fittencode.nvim.txt*      For Neovim >= 0.8.0      Last change: 2026 March 27
+*fittencode.nvim.txt*      For Neovim >= 0.8.0      Last change: 2026 April 05
 
 ==============================================================================
 Table of Contents                          *fittencode.nvim-table-of-contents*
@@ -25,6 +25,8 @@ FEATURES                            *fittencode.nvim-fittencode.nvim-features*
 - Enhanced inline completion
     - Inline completion
     - Edit completion
+- Project Completion
+    - C/C++
 - Accept/Revoke by range
     - Char
     - Word
