@@ -270,7 +270,7 @@ local function build_base_prompt(buf, position, options)
             pc_prompt = '',
             pc_prompt_type = '0'
         }
-        return { base = base, text = text, ciphertext = ciphertext, is_full_source = is_full_source }
+        return { prompt = base, text = text, ciphertext = ciphertext, is_full_source = is_full_source }
     end)
 end
 
@@ -293,14 +293,17 @@ end
 
 local function build_pc_metadata(buf, pc_required)
     if not pc_required then
+        Log.debug('Skip computing project completion metadata, pc_required = false')
         return Promise.resolved({})
     end
     return ProjectCompletion.get_prompt(buf):forward(function(_)
         return Promise.resolved({
             pc_available = true,
-            pc_prompt = _.pc_prompt,
-            pc_prompt_type = _.pc_prompt_type
+            pc_prompt = _.prompt,
+            pc_prompt_type = _.type
         })
+    end):catch(function(_)
+        return Promise.resolved({})
     end)
 end
 
@@ -321,14 +324,16 @@ end
 ---@param options FittenCode.Inline.FimProtocol.GenerateOptions
 ---@return FittenCode.Promise<FittenCode.Inline.PromptWithCacheData?>
 function M.build(buf, position, options)
+    Log.debug('Build prompt, buf = {}, position = {}, options = {}', buf, position, options)
     return Promise.all({
-        build_base_prompt(buf, position, options):forward(function(_)
-            local diff = build_diff_metadata_op(_.text, options.filename, options.version, _.is_full_source, options.diff_required)
+        build_base_prompt(buf, position, options):forward(function(base)
+            local diff = build_diff_metadata_op(base.text, options.filename, options.version, base.is_full_source, options.diff_required)
             local edit = build_edit_metadata(options.edit_required)
-            return Promise.resolved({ _.base, diff, edit })
+            return Promise.resolved({ base, diff, edit })
         end),
         build_pc_metadata(buf, options.pc_required)
     }):forward(function(_)
+        Log.debug('prompt build complete = {}', _)
         local base = _[1][1]
         local diff = _[1][2]
         local edit = _[1][3]
@@ -336,11 +341,11 @@ function M.build(buf, position, options)
         return Promise.resolved({
             prompt = {
                 inputs = '',
-                meta_datas = vim.tbl_deep_extend('force', base, diff, edit, pc)
+                meta_datas = vim.tbl_deep_extend('force', base.prompt, diff, edit, pc)
             },
             cachedata = {
-                text = _.text,
-                ciphertext = _.ciphertext,
+                text = base.text,
+                ciphertext = base.ciphertext,
             }
         })
     end)
@@ -350,7 +355,7 @@ end
 ---@param version number
 ---@param cachedata { text: string, ciphertext: string }
 function M.update_last_version(filename, version, cachedata)
-    Log.debug('Update last version, filename = {}, version = {}', filename, version)
+    Log.debug('Update last version, filename = {}, version = {}, cachedata = {}', filename, version, cachedata)
     M.last.filename = filename
     M.last.text = cachedata.text
     M.last.ciphertext = cachedata.ciphertext

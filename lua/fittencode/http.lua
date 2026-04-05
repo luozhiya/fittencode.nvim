@@ -444,7 +444,7 @@ function M.fetch(url, options)
                         message = 'Request error',
                         metadata = {
                             status = response.status,
-                            text =response:text(),
+                            text = response:text(),
                             response = response
                         }
                     }
