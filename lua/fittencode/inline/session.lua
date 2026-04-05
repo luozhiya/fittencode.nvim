@@ -54,6 +54,7 @@ function Session:_initialize(options)
     self.filename = options.filename
     self.version = F.version(self.buf)
     self.diff_required = options.diff_required
+    self.pc_required = options.pc_required
     self.trigger_inline_suggestion = options.trigger_inline_suggestion
     self.is_outdated = options.is_outdated
     self.filter_onkey_ns = vim.api.nvim_create_namespace('FittenCode.Inline.FilterOnKey' .. Fn.generate_short_id_as_string())
@@ -352,7 +353,7 @@ function Session:generate_prompt()
         mode = self.mode,
         diff_required = self.diff_required,
         edit_required = self.mode == 'editcmp',
-        pc_required = ProjectCompletion.check_project_completion_available(self.buf)
+        pc_required = self.pc_required and ProjectCompletion.check_project_completion_available(self.buf)
     })
 end
 

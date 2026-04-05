@@ -53,6 +53,10 @@
 ---@field trigger_inline_suggestion? function
 ---@field on_session_event? function
 ---@field on_session_update_event? function
+---@field diff_required? boolean
+---@field pc_required? boolean
+---@field is_outdated? function
+---@field on? function
 
 ---@alias FittenCode.Inline.Session.Mode 'inccmp' | 'editcmp'
 
@@ -69,6 +73,7 @@
 ---@field model FittenCode.Inline.Model
 ---@field headless boolean
 ---@field diff_required boolean
+---@field pc_required boolean
 
 --[[
     'start',                      -- 创建了 Session，COMPLETION

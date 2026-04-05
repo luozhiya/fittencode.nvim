@@ -8,6 +8,8 @@ The refactored `fittencode.nvim` is ready.
 - ✏️ Enhanced inline completion
   - ✨ Inline completion
   - ✂️ Edit completion
+- 📂 Project Completion
+  - 🧩 C/C++
 - 🔄 Accept/Revoke by range
   - 📝 Char
   - 📖 Word

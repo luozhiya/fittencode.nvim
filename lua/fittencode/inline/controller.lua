@@ -282,6 +282,7 @@ function Controller:trigger_inline_suggestion(options)
         position = position,
         mode = options.mode,
         diff_required = true,
+        pc_required = true,
         id = assert(Fn.generate_short_id(13)),
         trigger_inline_suggestion = function(...) self:trigger_inline_suggestion_auto(...) end,
         is_outdated = function(target)
