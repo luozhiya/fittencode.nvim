@@ -75,12 +75,10 @@ function Session:_initialize(options)
         },
     })
     self.state:subscribe(function(state)
-        if options.on then
-            options.on({
-                id = self.id,
-                state = state
-            })
-        end
+        Fn.check_call(options.on, {
+            id = self.id,
+            state = state
+        })
     end)
 end
 
@@ -406,8 +404,7 @@ function Session:send_completions()
             PromptBuilder.update_last_version(self.filename, self.version, self.cachedata)
         end
         if parse_result.status == 'no_completion' or parse_result.status == 'repeat_remaining' then
-            Log.debug('No more suggestions')
-            return Promise.rejected({ _msg = 'No more suggestions' })
+            return Promise.rejected({ _type = 'no_more_suggestions' })
         end
         Log.debug('Got completion: {}', parse_result.data.completions)
         if self.headless then
@@ -422,10 +419,14 @@ function Session:send_completions()
                 end
             end)
         end
-    end):catch(function(_)
-        Log.error('Failed to send completions: {}', _)
+    end):catch(function(err)
+        if err._type == 'no_more_suggestions' or err._type == 'user_abort' then
+            Log.info('Failed to send completions: {}', err)
+        else
+            Log.error('Failed to send completions: {}', err)
+        end
         self:terminate()
-        return Promise.rejected(_)
+        return Promise.rejected(err)
     end)
 end
 
