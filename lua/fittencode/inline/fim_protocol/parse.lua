@@ -65,7 +65,7 @@ local function build_inccmp_items(response, buf, position)
             col = -1,
         }),
     })))
-    Log.debug('line_remaining = {}', line_remaining)
+    -- Log.debug('line_remaining = {}', line_remaining)
 
     if generated_text == line_remaining then
         -- 有时会返回一样的字符串，需要过滤掉
@@ -76,8 +76,8 @@ local function build_inccmp_items(response, buf, position)
     for _, completion in ipairs(completions) do
         local col_delta = Unicode.utf_to_byteindex(line_remaining, 'utf-16', completion.character_delta)
         local sub = line_remaining:sub(snext.col + 1, snext.col + col_delta)
-        Log.debug('sub = {}', sub)
-        Log.debug('completion.generated_text = {}', completion.generated_text)
+        -- Log.debug('sub = {}', sub)
+        -- Log.debug('completion.generated_text = {}', completion.generated_text)
         if sub == completion.generated_text then
             goto continue
         end
@@ -103,7 +103,7 @@ local function build_editcmp_items(response, buf, position)
     if #response.delete_offsets == 0 and #response.insert_offsets == 0 then
         return nil, 'no_completion'
     end
-    Log.debug('build_editcmp_items, response = {}', response)
+    -- Log.debug('build_editcmp_items, response = {}', response)
 
     local generated_text = response.generated_text
     local ori_start_line = response.ori_start_line

@@ -36,12 +36,9 @@ function View:_initialize(options)
         self.replaced_text = F.get_lines(self.buf, Range.of(self.origin_pos, self.last_insert_pos))
         self.saved_last_insert_pos = vim.deepcopy(self.last_insert_pos)
     end
-    Log.debug('View:_initialize, self = {}', self)
 end
 
 function View:_render_stage(pos, lines)
-    Log.debug('View:render_stage, pos = {}, lines = {}', pos, lines)
-
     local virt_lines = {}
     for _, line in ipairs(lines) do
         virt_lines[#virt_lines + 1] = { { line, Color.FittenCodeSuggestion } }
@@ -75,12 +72,10 @@ function View:clear()
 end
 
 function View:destroy()
-    Log.debug('view destroy, session_id = {}', self.session_id)
     self:clear()
 end
 
 function View:_delete_text(start_pos, end_pos)
-    Log.debug('View:delete_text, start_pos = {}, end_pos = {}', start_pos, end_pos)
     -- Indexing is zero-based. Row indices are end-inclusive, and column indices are end-exclusive.
     if start_pos:is_equal(end_pos) then
         return
@@ -88,12 +83,11 @@ function View:_delete_text(start_pos, end_pos)
     -- Invalid 'start_col': out of range (blink.cmp)
     local _ = pcall(function() vim.api.nvim_buf_set_text(self.buf, start_pos.row, start_pos.col, end_pos.row, end_pos.col, {}) end)
     if not _ then
-        Log.debug('delete_text error, start_pos = {}, end_pos = {}', start_pos, end_pos)
+        -- Log.debug('delete_text error, start_pos = {}, end_pos = {}', start_pos, end_pos)
     end
 end
 
 function View:_insert_text(pos, lines)
-    Log.debug('View:insert_text, pos = {}, lines = {}', pos, lines)
     if vim.tbl_isempty(lines) then
         return
     end
@@ -101,8 +95,6 @@ function View:_insert_text(pos, lines)
 end
 
 function View:update(state)
-    Log.debug('update view, state = {}', state)
-
     local win = vim.api.nvim_get_current_win()
     local function _set_text(lines)
         local old_commit = vim.deepcopy(self.commit)
@@ -122,7 +114,7 @@ function View:update(state)
                     return (j ~= #line_state and is_same_type_inline()) or (i ~= #lines and is_same_type_line());
                 end)
                 if not _ then
-                    Log.debug('eval error, lines = {}, i = {}, line_state = {}, j = {}, lstate = {}', lines, i, line_state, j, lstate)
+                    -- Log.debug('eval error, lines = {}, i = {}, line_state = {}, j = {}, lstate = {}', lines, i, line_state, j, lstate)
                     -- assert(false)
                 end
                 if _ and v then

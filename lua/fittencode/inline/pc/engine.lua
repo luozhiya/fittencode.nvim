@@ -124,12 +124,8 @@ local function merge_prompt(context, dependencies, uri)
 end
 
 function M.get_prompt(bufnr)
-    Log.debug('get_prompt = {}', bufnr)
     return Promise.new(function(resolve, reject)
-        Log.debug('Start analyzing prompt for buffer: {}', bufnr)
-
         if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
-            Log.debug('Invalid buffer handle')
             return reject({ _msg = 'Invalid buffer handle' })
         end
 
@@ -138,16 +134,12 @@ function M.get_prompt(bufnr)
 
         if cache.version[uri] and is_ok(cache.version[uri], current_version) then
             -- 这里返回的仅仅是尽可能多的数据，可能有些依赖来不及解析
-            Log.debug('get_prompt cache = {}', cache)
             local prompt = merge_prompt(cache.context, cache.dependencies, uri)
-            Log.debug('Return cached prompt for uri: {}, prompt = {}', uri, prompt)
             return resolve({ prompt = prompt, type = M.get_chosen_fast() })
         end
         cache.version[uri] = current_version
 
         waiting.queue_dep:push(uri)
-        Log.debug('Waiting for analysis for uri: {}', uri)
-        Log.debug('queue_dep = {}', waiting.queue_dep)
         return reject({ _msg = 'Waiting for analysis' })
     end)
 end
@@ -175,7 +167,6 @@ local function lsp_request_definition(bufnr, pos)
     local params = Lsp.make_position_params(bufnr, pos)
     return Promise.new(function(resolve, reject)
         lsp_client:request('textDocument/definition', params, function(err, result)
-            Log.debug('lsp_request_definition pos = {}, err = {}, result = {}', pos, err, result)
             if err or not result then
                 reject()
             else
@@ -223,19 +214,16 @@ local function lsp_request_documentsymbol(bufnr)
         end,
         vim.lsp.get_clients({ bufnr = bufnr })
     )
-    Log.debug('documentsymbol lsp_client = {}', lsp_clients)
     local lsp_client = lsp_clients[1]
     if lsp_client then
         last_client_id = lsp_client.id
     else
         assert(last_client_id)
         local attched = vim.lsp.buf_attach_client(bufnr, last_client_id)
-        Log.debug('attched bufnr = {} to client = {}, attched = {}', bufnr, last_client_id, attched)
     end
     local params = { textDocument = vim.lsp.util.make_text_document_params(bufnr) }
     return Promise.new(function(resolve, reject)
         lsp_client:request('textDocument/documentSymbol', params, function(err, result)
-            Log.debug('lsp_request_documentsymbol err = {}, result = {}', err, result)
             if err or not result then
                 reject()
             else
@@ -247,17 +235,14 @@ end
 
 local function loop_dep()
     if cache.busy.dep or waiting.queue_dep:is_empty() then
-        -- Log.debug('No more dependencies to analyze')
         return
     end
     cache.busy.dep = true
-    Log.debug('Start analyzing dependencies')
     local uri = waiting.queue_dep:pop()
     assert(uri)
     local bufnr = vim.uri_to_bufnr(uri)
 
     Treesitter.fetch_symbols(bufnr):forward(function(symbols)
-        Log.debug('Got symbols for uri = {}, symbols = {}', uri, symbols)
         if #symbols == 0 then
             return Promise.rejected()
         end
@@ -275,22 +260,18 @@ local function loop_dep()
         end
         return Promise.collect(req)
     end):forward(function(_)
-        Log.debug('loop_dep collect = {}', _)
         local dep_uris = _.resolved
         local dependencies = {}
         vim.iter(dep_uris):map(function(v)
             dependencies[#dependencies + 1] = v
         end)
-        Log.debug('Got dependencies for uri = {}, dependencies = {}', uri, dependencies)
         waiting.queue_ctx:push(uri)
         vim.iter(dependencies):filter(function(v)
             return v ~= uri
         end):map(function(v)
             waiting.queue_ctx:push(v)
         end)
-        Log.debug('queue_ctx = {}', waiting.queue_ctx)
         cache.dependencies[uri] = dependencies
-        Log.debug('cache.dependencies[uri] = {}', cache.dependencies[uri])
     end):finally(function()
         cache.busy.dep = false
     end)
@@ -347,30 +328,21 @@ end
 
 local function loop_ctx()
     if cache.busy.ctx or waiting.queue_ctx:is_empty() then
-        -- Log.debug('No more contexts to analyze')
         return
     end
     cache.busy.ctx = true
-    Log.debug('Start analyzing context')
-    Log.debug('queue_ctx = {}', waiting.queue_ctx)
     local uri = waiting.queue_ctx:pop()
     assert(uri)
-    Log.debug('queue_ctx = {}', waiting.queue_ctx)
 
     -- ?
     local bufnr = vim.uri_to_bufnr(uri)
     vim.fn.bufload(bufnr)
-    Log.debug('loop_ctx, uri = {}, bufnr = {}', uri, bufnr)
 
     lsp_request_documentsymbol(bufnr):forward(function(symbols)
-        Log.debug('Got symbols for uri = {}, symbols = {}', uri, symbols)
         local position_encoding = assert(vim.lsp.get_clients({ bufnr = bufnr })[1]).offset_encoding
         local items = symbols_to_items(symbols, bufnr, position_encoding)
-        Log.debug('loop_ctx, items = {}', items)
         cache.context[uri] = items
-        Log.debug('loop_ctx, cache.context = {}', cache.context)
     end):finally(function()
-        Log.debug('loop_ctx done')
         cache.busy.ctx = false
     end)
 end
@@ -397,7 +369,6 @@ function M.init()
     if _initialized then
         return
     end
-    Log.debug('Initializing Project Completion')
     vim.api.nvim_create_autocmd({ 'BufEnter', 'LspAttach' }, {
         group = vim.api.nvim_create_augroup('FittenCode.Inline.ProjectCompletion.CheckAuth', { clear = true }),
         pattern = '*',

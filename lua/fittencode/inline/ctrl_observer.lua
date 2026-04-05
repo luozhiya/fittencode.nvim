@@ -27,7 +27,7 @@ function StatusObserver:update(data)
     elseif self.ctrl ~= 'running' then
         self.session = ''
     end
-    Log.debug('Inline Status update, ctrl = {}, id = {}, session = {}', self.ctrl, data.current_session_id, self.session)
+    Log.debug('Inline, ctrl = {}, id = {}, session = {}', self.ctrl, data.current_session_id, self.session)
 end
 
 function StatusObserver:get_snapshot()

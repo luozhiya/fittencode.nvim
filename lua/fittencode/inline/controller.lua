@@ -105,7 +105,6 @@ function Controller:_initialize(options)
         group = vim.api.nvim_create_augroup('FittenCode.Inline.TriggerInlineSuggestion', { clear = true }),
         pattern = '*',
         callback = function(args)
-            Log.debug('trigger_inline_suggestion_auto autocmd = {}, args = {}', args.event, args)
             self:trigger_inline_suggestion_auto({ vimev = args, debounced = true })
         end,
     })
@@ -113,7 +112,6 @@ function Controller:_initialize(options)
         group = vim.api.nvim_create_augroup('FittenCode.Inline.EditCompletionCancel', { clear = true }),
         pattern = '*',
         callback = function(args)
-            Log.debug('edit_completion_cancel autocmd = {}, args = {}', args.event, args)
             self:edit_completion_cancel({ vimev = args })
         end,
     })
@@ -247,7 +245,6 @@ end
 ---@param options? FittenCode.Inline.TriggerInlineSuggestionOptions
 ---@return FittenCode.Promise<FittenCode.Inline.FimProtocol.ParseResult.Data?, FittenCode.Error>
 function Controller:trigger_inline_suggestion(options)
-    Log.debug('trigger_inline_suggestion')
     options = options or {}
     options.mode = options.mode or 'inccmp'
 
@@ -441,7 +438,6 @@ end
 
 -- 这个比 VSCode 的情况更复杂，suffixes 支持多个（非当前 buf filetype 也可以）
 function Controller:set_suffix_permissions(enable, suffixes)
-    Log.debug('set_suffix_permissions, enable = {}, suffixes = {}', enable, suffixes)
     local suffix_map = {}
     for _, suffix in ipairs(Config.disable_specific_inline_completion.suffixes or {}) do
         suffix_map[suffix] = true

@@ -35,7 +35,6 @@ function Model.new(options)
     assert(options and options.buf and options.position and options.completion, 'Invalid options')
     local buf, position, completion = options.buf, options.position, options.completion
     local self = setmetatable({}, Model)
-    Log.debug('CompletionModel initializing')
 
     self.completion = completion
     local placeholder_ranges = Placeholder.generate_placeholder_ranges(buf, position, completion)
@@ -44,11 +43,10 @@ function Model.new(options)
     self.cursor = 0 -- 初始位置在文本开始前
     self.commit_history = {}
 
-    -- 新增 placeholder 范围验证
     local merged_ph = Parse.merge_ranges(placeholder_ranges or {})
 
-    Log.debug('Placeholder ranges = {}', placeholder_ranges)
-    Log.debug('Placeholder merge_ranges = {}', merged_ph)
+    -- Log.debug('Placeholder ranges = {}', placeholder_ranges)
+    -- Log.debug('Placeholder merge_ranges = {}', merged_ph)
 
     for _, r in ipairs(merged_ph) do
         if r.start < 1 or r.end_ > #self.source then
@@ -68,17 +66,15 @@ function Model.new(options)
     end
     self.placeholder_ranges = merged_ph
 
-    -- 解析基础结构
     self.chars = Parse.parse_chars(self.source)
     self.words = Parse.parse_words(self.source, self.chars)
     self.lines = Parse.parse_lines(self.source)
 
-    -- 初始化范围
     self.commit_ranges = {}
     self:update_stage_ranges()
 
-    Log.debug('Commit ranges = {}', self.commit_ranges)
-    Log.debug('Stage ranges = {}', self.stage_ranges)
+    -- Log.debug('Commit ranges = {}', self.commit_ranges)
+    -- Log.debug('Stage ranges = {}', self.stage_ranges)
 
     return self
 end
@@ -128,7 +124,6 @@ function Model:find_valid_region(scope)
     end
 
     for _, cand in ipairs(candidates) do
-        -- 创建可修改的副本
         local region = vim.deepcopy(cand)
 
         -- 阶段一：与 placeholder 的交集处理
@@ -281,7 +276,6 @@ function Model:update_segments(segment)
         Log.error('Failed to update words, invalid segment: {}', segment)
         return
     end
-    Log.debug('Update words success with segment: {}', segment)
     self:update_words(words)
 end
 

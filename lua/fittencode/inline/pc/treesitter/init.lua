@@ -61,7 +61,6 @@ local function symbols_from_treesitter(bufnr, lang, query, syntax_tree)
     end
     local get_node_text = vim.treesitter.get_node_text
     for _, matches, metadata in query:iter_matches(syntax_tree:root(), bufnr, nil, nil) do
-        -- Log.debug('symbols_from_treesitter, matches = {}, metadata = {}', matches, metadata)
         --- Matches can overlap. The last match wins.
         local match = vim.tbl_extend('force', {}, metadata)
         for id, nodes in pairs(matches) do
@@ -75,16 +74,12 @@ local function symbols_from_treesitter(bufnr, lang, query, syntax_tree)
                 },
             })
         end
-        -- Log.debug('symbols_from_treesitter, match = {}', match)
 
         local name_match = match.name or {}
         local symbol_node = (match.symbol or {}).node
         if not symbol_node then
-            Log.debug('symbols_from_treesitter, no symbol node')
             goto continue
         end
-
-        Log.debug('symbols_from_treesitter, 2 match = {}', match)
 
         local kind = match.kind
         if not kind then
@@ -108,7 +103,6 @@ local function symbols_from_treesitter(bufnr, lang, query, syntax_tree)
 
         ::continue::
     end
-    Log.debug('symbols_from_treesitter, items = {}', items)
     return items
 end
 
@@ -121,7 +115,6 @@ M.fetch_symbols = function(bufnr)
 
     return Promise.new(function(resolve, reject)
         parser:parse(nil, function(err, syntax_trees)
-            Log.debug('fetch_symbols, err = {}, syntax_trees = {}', err, syntax_trees)
             if err then
                 return reject(err)
             else

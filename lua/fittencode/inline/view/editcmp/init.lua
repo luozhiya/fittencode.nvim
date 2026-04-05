@@ -39,7 +39,6 @@ function View:clear()
 end
 
 function View:destroy()
-    Log.debug('view destroy, session_id = {}', self.session_id)
     self:clear()
 end
 
@@ -52,7 +51,6 @@ function View:_render_inserted(pos, lines, hlgroup)
     else
         virt_lines = lines
     end
-    Log.debug('View:_render_add = {}', { pos = pos, lines = lines, hlgroup = hlgroup })
     vim.api.nvim_buf_set_extmark(
         self.buf,
         self.completion_ns,
@@ -213,8 +211,6 @@ end
 function View:_update(state, update_state)
     update_state = update_state == nil and true or update_state
     self:clear()
-
-    Log.debug('View:update = {}', state)
 
     if update_state then
         self.state = vim.deepcopy(state)

@@ -28,7 +28,6 @@ function Model.new(options)
     assert(options and options.buf and options.position and options.completion, 'Invalid options')
     local buf, position, completion = options.buf, options.position, options.completion
     local self = setmetatable({}, Model)
-    Log.debug('Edit completion model created, completion = {}', completion)
     assert(completion.lines)
 
     self.lines = vim.deepcopy(completion.lines)

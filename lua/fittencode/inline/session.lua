@@ -108,7 +108,6 @@ end
 function Session:_segments()
     local text = self.model:get_text()
     if _is_ascii_only(text) then
-        Log.debug('text is ascii only, skip segments request')
         return Promise.resolved()
     end
     local res, request = Segment.send_segments(text)
@@ -215,7 +214,6 @@ function Session:accept(scope)
     -- vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCodeInlineAccepted', data = { scope = scope } })
     -- vim.api.nvim_exec_autocmds('User', { pattern = 'FittenCodeInlineAccepted', data = { scope = scope } })
     -- local autocmds = vim.api.nvim_get_autocmds({ event = 'User', pattern = 'FittenCodeInlineAccepted' })
-    -- Log.debug('FittenCodeInlineAccepted autocmds = {}', autocmds)
     return true
 end
 
@@ -225,13 +223,10 @@ function Session:revoke()
 end
 
 function Session:on_cancel()
-    Log.debug('Cancel inline completion')
     if self:is_interactive() then
-        Log.debug('Cancel inline completion in interactive mode')
         self:terminate()
         return
     end
-    Log.debug('Cancel inline completion in non-interactive mode, return EXPR cancel termcode')
     return vim.api.nvim_replace_termcodes(Config.keymaps.inline[self.mode]['cancel'], true, false, true)
 end
 
@@ -318,7 +313,6 @@ function Session:terminate()
         -- 但是 editcmp 没有 placeholder 概念
         -- 在 inccmp 中，当生成的 generated_text 和 remaining_text 长度一样，且没有产生 placeholders 时，需要恢复原状
         if not self.model:any_accepted() and self.model:overwritten() then
-            Log.debug('No accepted completion, cancel inline completion')
             self.view:on_cancel()
         end
         self.view:destroy()
@@ -388,7 +382,6 @@ function Session:send_completions()
     self.state:transition('requesting')
     return Promise.all({
         self:generate_prompt():forward(function(res)
-            Log.debug('Prompt generated {}', res)
             if self.diff_required then
                 self.cachedata = res.cachedata
             end
