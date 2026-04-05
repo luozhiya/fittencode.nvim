@@ -246,10 +246,10 @@ local function refresh_refresh_token(last_refresh_token)
         ---@type FittenCode.Protocol.Methods.RefreshRefreshToken.Response|FittenCode.Protocol.Methods.RefreshRefreshToken.Error?
         local data = response:json()
         if not data then
-            return Promise.rejected({ message = 'refresh_refresh_token has no response' })
+            return Promise.rejected({ _msg = 'refresh_refresh_token has no response' })
         end
         if not data.refresh_token or not data.refresh_token_expires then
-            return Promise.rejected({ message = data.msg or 'refresh_refresh_token has no valid fields in response' })
+            return Promise.rejected({ _msg = data.msg or 'refresh_refresh_token has no valid fields in response' })
         end
         return data
     end)
@@ -276,7 +276,7 @@ local function handle_unauthorized(protocol, option, req)
             return new_req:async()
         end)
     else
-        return Promise.rejected({ message = '' })
+        return Promise.rejected({ _msg = '' })
     end
 end
 
@@ -294,7 +294,7 @@ function M.make_request_auth(protocol, options)
             return response
         end):catch(function(err) ---@param err FittenCode.Error
             -- Log.error('make_request_auth err = {}', err)
-            if err.metadata and err.metadata.status and err.metadata.status[#err.metadata.status] == 401 then
+            if err._metadata and err._metadata.status and err._metadata.status[#err._metadata.status] == 401 then
                 return handle_unauthorized(protocol, options, req)
             else
                 return Promise.rejected(err)

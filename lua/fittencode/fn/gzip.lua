@@ -21,8 +21,7 @@ function M.compress(options)
     return Promise.new(function(resolve, reject)
         if type(options.source) ~= 'string' then
             return reject({
-                code = 'GZIP_INVALID_SOURCE',
-                message = 'Source must be a string'
+                _msg = 'Source must be a string'
             })
         end
 
@@ -63,9 +62,10 @@ function M.compress(options)
         p:on('exit', function(code)
             if code ~= 0 then
                 return reject({
-                    code = 'GZIP_ERROR',
-                    message = table.concat(errors, '\n'),
-                    exit_code = code
+                    _msg = table.concat(errors, '\n'),
+                    _metadata = {
+                        exit_code = code
+                    }
                 })
             end
             local result = {

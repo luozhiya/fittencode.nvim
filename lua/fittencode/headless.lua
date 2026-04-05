@@ -40,7 +40,7 @@ function M.request_chat(payload, strict)
     })
     if not request then
         return Promise.rejected({
-            message = 'Failed to make request',
+            _msg = 'Failed to make request',
         })
     end
     ---@param ee FittenCode.HTTP.Request.Stream.EndEvent
@@ -59,7 +59,7 @@ function M.request_chat(payload, strict)
                 end
             else
                 if strict then
-                    return Promise.rejected({ message = 'Invalid chunk: ' .. line })
+                    return Promise.rejected({ _msg = 'Invalid chunk: ' .. line })
                 end
                 Log.debug('Invalid chunk: {} >> {}', line, chunk)
             end

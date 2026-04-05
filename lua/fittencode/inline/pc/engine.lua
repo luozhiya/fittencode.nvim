@@ -396,7 +396,7 @@ function M.update_chosen()
     local request = Client.make_request_auth(Protocol.Methods.pc_check_auth)
     if not request then
         return Promise.rejected({
-            message = 'Failed to make pc_check_auth request',
+            _msg = 'Failed to make pc_check_auth request',
         })
     end
     pc_check_auth_request = request
@@ -412,7 +412,7 @@ function M.update_chosen()
             M.last_chosen_prompt_type = type
             return Promise.resolved(type)
         end
-        return Promise.rejected({ message = 'Invalid response from server' })
+        return Promise.rejected({ _msg = 'Invalid response from server' })
     end)
 end
 

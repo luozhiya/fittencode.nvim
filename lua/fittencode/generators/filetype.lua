@@ -61,7 +61,7 @@ function M.send_filetype(text)
     ---@param chunks string[]
     return res:forward(function(chunks)
         if #chunks == 0 then
-            return Promise.rejected({ message = 'No response from server' })
+            return Promise.rejected({ _msg = 'No response from server' })
         end
         return table.concat(chunks)
     end), request

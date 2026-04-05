@@ -97,9 +97,8 @@ local function run(process)
     if not state.uv_process then
         ---@type FittenCode.Error
         local _ = {
-            type = 'spawn_error',
-            message = 'Failed to spawn process',
-            metadata = {
+            _type = 'spawn_error',
+            _metadata = {
                 command = command,
                 args = args,
                 env = options.env,
@@ -145,9 +144,8 @@ local function run(process)
             if vim.uv.is_active(state.uv_process) then
                 ---@type FittenCode.Error
                 local _ = {
-                    type = 'timeout',
-                    message = 'Process timeout',
-                    metadata = {
+                    _type = 'timeout',
+                    _metadata = {
                         timeout = options.timeout,
                     }
                 }

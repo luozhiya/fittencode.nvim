@@ -390,9 +390,9 @@ function M.fetch(url, options)
             end
             ---@type FittenCode.HTTP.Request.Stream.ErrorEvent
             local _ = {
-                type = 'curl_error',
-                message = err_lines,
-                metadata = {
+                _type = 'curl_error',
+                _msg = err_lines,
+                _metadata = {
                     code = code,
                     signal = signal,
                     timing = timing,
@@ -404,22 +404,18 @@ function M.fetch(url, options)
     end)
 
     process:on('error', function(err)
-        -- Log.error('curl error: {}', err)
         ---@type FittenCode.Error
         local _ = {
-            type = 'process_error',
-            message = 'Process error',
-            cause = err
+            _type = 'process_error',
+            _cause = err
         }
         stream:_emit('error', _)
     end)
 
     process:on('abort', function()
-        -- Log.debug('curl aborted')
         ---@type FittenCode.Error
         local _ = {
-            type = 'user_abort',
-            message = 'User aborted'
+            _type = 'user_abort',
         }
         stream:_emit('abort', _)
     end)
@@ -427,7 +423,6 @@ function M.fetch(url, options)
     handle.abort = function(self)
         if not handle.aborted then
             handle.aborted = true
-            -- Log.debug('aborting curl process = {}', process)
             pcall(function() process:abort() end)
         end
     end
@@ -440,9 +435,8 @@ function M.fetch(url, options)
                 else
                     ---@type FittenCode.Error
                     local _ = {
-                        type = 'http_request_error',
-                        message = 'Request error',
-                        metadata = {
+                        _type = 'http_request_error',
+                        _metadata = {
                             status = response.status,
                             text = response:text(),
                             response = response

@@ -114,12 +114,12 @@ function M.send_segments(text)
     ---@param chunks string[]
     return res:forward(function(chunks)
         if #chunks == 0 then
-            return Promise.rejected({ message = 'No segments found in response' })
+            return Promise.rejected({ _msg = 'No segments found in response' })
         end
         local segments = table.concat(chunks)
         local _, obj = pcall(vim.fn.json_decode, segments)
         if not _ then
-            return Promise.rejected({ message = 'Failed to decode segment', meta_datas = { segments = segments } })
+            return Promise.rejected({ _msg = 'Failed to decode segment', _metadata = { segments = segments } })
         end
         return obj
     end), request

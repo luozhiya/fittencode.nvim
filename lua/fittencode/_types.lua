@@ -1,8 +1,8 @@
 ---@class FittenCode.Error
----@field type string @错误类型标识
----@field message string|string[] @错误描述
----@field cause? FittenCode.Error @错误原因
----@field metadata? table<string, any> @附加信息
+---@field _type? string @错误类型标识
+---@field _msg? string|string[] @错误描述
+---@field _cause? FittenCode.Error @错误原因
+---@field _metadata? table<string, any> @附加信息
 
 ---@class FittenCode.HTTP.RequestOptions
 ---@field method? string @HTTP 方法 (默认: 'GET')
@@ -51,7 +51,7 @@
 ---@field readable_code string @可读错误类型
 
 ---@class FittenCode.HTTP.Request.Stream.ErrorEvent : FittenCode.Error
----@field metadata? FittenCode.HTTP.Request.Stream.ErrorEvent.Metadata @附加信息
+---@field _metadata? FittenCode.HTTP.Request.Stream.ErrorEvent.Metadata @附加信息
 
 ---@class FittenCode.HTTP.Timing
 ---@field dns number      @DNS 查询耗时（毫秒）

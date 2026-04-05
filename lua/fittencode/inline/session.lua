@@ -113,7 +113,7 @@ function Session:_segments()
     local res, request = Segment.send_segments(text)
     if not request then
         return Promise.rejected({
-            message = 'Failed to send segments request',
+            _msg = 'Failed to send segments request',
         })
     end
     self:_add_request(request)
@@ -362,8 +362,8 @@ function Session:async_compress_prompt(prompt)
     local _, data = pcall(vim.fn.json_encode, prompt)
     if not _ then
         return Promise.rejected({
-            message = 'Failed to encode prompt to JSON',
-            metadata = {
+            _msg = 'Failed to encode prompt to JSON',
+            _metadata = {
                 prompt = prompt,
             }
         })
@@ -395,7 +395,7 @@ function Session:send_completions()
         Log.debug('Compressed prompt length: {}', #compressed_prompt_binary)
         if not compressed_prompt_binary or not completion_version then
             return Promise.rejected({
-                message = 'Failed to generate prompt or get completion version',
+                _msg = 'Failed to generate prompt or get completion version',
             })
         end
         return self:generate_one_stage_auth(completion_version, compressed_prompt_binary)
@@ -406,7 +406,7 @@ function Session:send_completions()
         end
         if parse_result.status == 'no_completion' or parse_result.status == 'repeat_remaining' then
             Log.debug('No more suggestions')
-            return Promise.rejected({ message = 'No more suggestions' })
+            return Promise.rejected({ _msg = 'No more suggestions' })
         end
         Log.debug('Got completion: {}', parse_result.data.completions)
         if self.headless then
@@ -434,7 +434,7 @@ function Session:get_completion_version()
     local request = Client.make_request(Protocol.Methods.get_completion_version)
     if not request then
         return Promise.rejected({
-            message = 'Failed to make get_completion_version request',
+            _msg = 'Failed to make get_completion_version request',
         })
     end
     self:_add_request(request)
@@ -445,8 +445,8 @@ function Session:get_completion_version()
         local response = _.json()
         if not response then
             return Promise.rejected({
-                message = 'Failed to decode completion version response',
-                metadata = {
+                _msg = 'Failed to decode completion version response',
+                _metadata = {
                     response = _,
                 }
             })
@@ -476,7 +476,7 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
     })
     if not request then
         return Promise.rejected({
-            message = 'Failed to make generate_one_stage_auth request',
+            _msg = 'Failed to make generate_one_stage_auth request',
         })
     end
     self:_add_request(request)
@@ -487,8 +487,8 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
         local response = _.json()
         if not response then
             return Promise.rejected({
-                message = 'Failed to decode completion response',
-                metadata = {
+                _msg = 'Failed to decode completion response',
+                _metadata = {
                     response = _,
                 }
             })
@@ -500,7 +500,7 @@ function Session:generate_one_stage_auth(completion_version, compressed_prompt_b
         })
         if parse_result.status == 'error' then
             return Promise.rejected({
-                message = parse_result.message or 'Parsed completion response error',
+                _msg = parse_result.message or 'Parsed completion response error',
             })
         end
         return parse_result
