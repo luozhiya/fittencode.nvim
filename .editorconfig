@@ -11,3 +11,6 @@ indent_style = space
 indent_size = 4
 quote_style = single
 max_line_length = 300
+
+[i18n/locales/**]
+max_line_length = 1000
