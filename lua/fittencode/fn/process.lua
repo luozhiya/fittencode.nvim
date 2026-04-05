@@ -72,8 +72,6 @@ local function run(process)
         kill(signal or 'sigterm')
     end
 
-    Log.debug('Starting process, command = {}, args = {}', command, args)
-
     ---@diagnostic disable-next-line: missing-fields
     state.uv_process, state.pid = vim.uv.spawn(command, {
         args = args,

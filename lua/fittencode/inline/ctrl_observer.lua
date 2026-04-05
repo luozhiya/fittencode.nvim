@@ -2,8 +2,8 @@ local Log = require('fittencode.log')
 local Fn = require('fittencode.fn.core')
 
 ---@class FittenCode.Inline.StatusObserver
----@field ctrl string
----@field session string
+---@field current { ctrl: string, session: string }
+---@field prev { ctrl: string, session: string }
 local StatusObserver = {}
 StatusObserver.__index = StatusObserver
 
@@ -11,8 +11,14 @@ StatusObserver.__index = StatusObserver
 function StatusObserver.new()
     ---@type FittenCode.Inline.StatusObserver
     local self = {
-        ctrl = '',
-        session = ''
+        current = {
+            ctrl = '',
+            session = '',
+        },
+        prev = {
+            ctrl = '',
+            session = '',
+        }
     }
     setmetatable(self, StatusObserver)
     return self
@@ -20,20 +26,25 @@ end
 
 function StatusObserver:update(data)
     if data.ctrl then
-        self.ctrl = data.ctrl
+        self.current.ctrl = data.ctrl
     end
     if data.session and data.current_session_id == data.session.id then
-        self.session = data.session.state.to
-    elseif self.ctrl ~= 'running' then
-        self.session = ''
+        self.current.session = data.session.state.to
+    elseif self.current.ctrl ~= 'running' then
+        self.current.session = ''
     end
-    Log.debug('Inline, ctrl = {}, id = {}, session = {}', self.ctrl, data.current_session_id, self.session)
+    if data.current_session_id then
+        Log.debug('Inline ctrl = {}, id = {}, session = {}', self.current.ctrl, data.current_session_id, self.current.session)
+    elseif self.prev.ctrl ~= self.current.ctrl then
+        Log.debug('Inline ctrl = {}', self.current.ctrl)
+    end
+    self.prev = vim.deepcopy(self.current)
 end
 
 function StatusObserver:get_snapshot()
     return {
-        inline = self.ctrl,
-        completion = self.session
+        inline = self.current.ctrl,
+        completion = self.current.session
     }
 end
 
