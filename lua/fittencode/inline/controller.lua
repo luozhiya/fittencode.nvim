@@ -250,8 +250,9 @@ end
 function Controller:trigger_inline_suggestion(options)
     options = options or {}
     options.mode = options.mode or 'inccmp'
+    local force = (options.force == nil) and false or options.force
 
-    if options.vimev and options.vimev.event and options.vimev.event == 'CompleteDone' then
+    if force or (options.vimev and options.vimev.event and options.vimev.event == 'CompleteDone') then
         self:terminate_session()
     end
 
@@ -259,7 +260,6 @@ function Controller:trigger_inline_suggestion(options)
     local api_key_manager = Client.get_api_key_manager()
     local position = F.position(vim.api.nvim_get_current_win())
     assert(position)
-    local force = (options.force == nil) and false or options.force
 
     local is_insert_mode = vim.api.nvim_get_mode().mode:sub(1, 1) == 'i'
     local is_enabled = not self.state:is('disabled')
@@ -396,12 +396,10 @@ function Controller:trigger_inline_suggestion_by_shortcut()
     self:trigger_inline_suggestion({
         force = true,
         mode = 'inccmp'
-    }):forward(function(_)
-        if not _ then
-            return Promise.rejected()
+    }):catch((function(err)
+        if err._type == 'no_more_suggestions' then
+            self:_show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000, self.last_trigger_timestamp)
         end
-    end):catch((function()
-        self:_show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000, self.last_trigger_timestamp)
     end))
 end
 
@@ -410,12 +408,10 @@ function Controller:trigger_edit_completion_by_shortcut()
     self:trigger_inline_suggestion({
         force = true,
         mode = 'editcmp',
-    }):forward(function(_)
-        if not _ then
-            return Promise.rejected()
+    }):catch((function(err)
+        if err._type == 'no_more_suggestions' then
+            self:_show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000, self.last_trigger_timestamp)
         end
-    end):catch((function()
-        self:_show_no_more_suggestion(i18n.tr('  (Currently no completion options available)'), 2000, self.last_trigger_timestamp)
     end))
 end
 
