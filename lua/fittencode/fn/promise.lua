@@ -422,6 +422,53 @@ function Promise.all(promises)
     end)
 end
 
+-- 输入一组 Promise 并返回一个 Promise，该 Promise 包含所有输入 Promise 的结果，包括成功和失败。
+-- - 所有的 Promise 都会执行完
+-- - 有一个成功就会 resolve
+-- - 所有的都失败才会 reject
+---@param promises FittenCode.Promise[]
+---@return FittenCode.Promise
+function Promise.collect(promises)
+    if type(promises) ~= 'table' or #promises == 0 then
+        return Promise.resolved({})
+    end
+
+    return Promise.new(function(resolve, reject)
+        local results = {
+            resolved = {},
+            rejected = {}
+        }
+        local remaining = #promises
+
+        for i, promise in ipairs(promises) do
+            if not Promise.is_promise(promise) then
+                promise = Promise.resolved(promise)
+            end
+
+            promise:forward(
+                function(value)
+                    results.resolved[i] = value
+                    remaining = remaining - 1
+                    if remaining == 0 then
+                        resolve(results)
+                    end
+                end,
+                function(reason)
+                    results.resolved[i] = reason
+                    remaining = remaining - 1
+                    if remaining == 0 then
+                        if #results.resolved == 0 then
+                            reject(results)
+                        else
+                            resolve(results)
+                        end
+                    end
+                end
+            )
+        end
+    end)
+end
+
 ---@param timeout? number 超时时间（毫秒）
 ---@param interval? number 检查间隔（毫秒），默认10ms
 ---@return FittenCode.Promise?
