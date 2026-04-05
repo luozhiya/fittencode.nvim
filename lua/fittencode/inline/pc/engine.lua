@@ -79,6 +79,9 @@ local Log = require('fittencode.log')
 
 local M = {}
 
+-- local filter_kinds = { 'Class', 'Function', 'Method' }
+local filter_kinds = {}
+
 local cache = {
     busy = { ctx = false, dep = false },
     dependencies = {},
@@ -277,9 +280,6 @@ local function loop_dep()
     end)
 end
 
--- local filter_kinds = { 'Class', 'Function', 'Method' }
-local filter_kinds = {}
-
 local function symbols_to_items(symbols, bufnr, position_encoding)
     local items = {}
     for _, symbol in ipairs(symbols) do
@@ -297,7 +297,7 @@ local function symbols_to_items(symbols, bufnr, position_encoding)
         local item = {}
         if filename and range then
             local kind = vim.lsp.protocol.SymbolKind[symbol.kind] or 'Unknown'
-            if #filter_kinds == 0 or not vim.tbl_contains(filter_kinds, kind) then
+            if #filter_kinds > 0 and not vim.tbl_contains(filter_kinds, kind) then
                 goto continue
             end
             local is_deprecated = symbol.deprecated
@@ -430,6 +430,10 @@ function M.check_project_completion_available(buf)
     end
 
     return enable;
+end
+
+function M.set_filter_kinds(kinds)
+    filter_kinds = vim.deepcopy(kinds)
 end
 
 return M
