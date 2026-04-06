@@ -97,6 +97,19 @@ local waiting = {
     queue_dep = UniqueQueue.new(),
 }
 
+local working = {
+    dep = nil,
+    ctx = nil,
+}
+
+local function is_working(uri)
+    return working.dep and working.dep == uri or working.ctx and working.ctx == uri
+end
+
+local function is_queued(uri)
+    return waiting.queue_dep:contains(uri) or waiting.queue_ctx:contains(uri)
+end
+
 local function is_ok(old_version, new_version)
     return math.abs(old_version - new_version) <= 10
 end
@@ -132,8 +145,9 @@ function M.get_prompt(bufnr)
 
         local uri = vim.uri_from_bufnr(bufnr)
         local current_version = vim.api.nvim_buf_get_changedtick(bufnr)
+        local ver_ok = is_ok(cache.version.main[uri], current_version)
 
-        if cache.version.main[uri] and is_ok(cache.version.main[uri], current_version) then
+        if cache.version.main[uri] and (ver_ok or (not ver_ok and (is_working(uri) or is_queued(uri)))) then
             Log.debug('get_prompt: cache hit, uri = {}, ctx = {}, dep = {}', uri, cache.context, cache.dependencies)
             -- 这里返回的仅仅是尽可能多的数据，可能有些依赖来不及解析
             local prompt = merge_prompt(cache.context, cache.dependencies, uri)
@@ -162,6 +176,7 @@ local function loop_dep()
     end
     cache.busy.dep = true
     local uri = waiting.queue_dep:pop()
+    working.dep = uri
     assert(uri)
     local bufnr = vim.uri_to_bufnr(uri)
 
@@ -196,6 +211,7 @@ local function loop_dep()
         end)
         cache.dependencies[uri] = dependencies
     end):finally(function()
+        working.dep = nil
         cache.busy.dep = false
     end)
 end
@@ -215,12 +231,14 @@ local function loop_ctx()
     cache.busy.ctx = true
     local uri = waiting.queue_ctx:pop()
     assert(uri)
+    working.ctx = uri
     Log.debug('loop_ctx uri = {}', uri)
 
     -- ?
     local bufnr = vim.uri_to_bufnr(uri)
     local current_version = vim.api.nvim_buf_get_changedtick(bufnr)
     if cache.version.context[uri] and is_ok(cache.version.context[uri], current_version) then
+        working.ctx = nil
         cache.busy.ctx = false
         return
     end
@@ -238,6 +256,7 @@ local function loop_ctx()
     end):catch(function(err)
         Log.debug('loop_ctx: err = {}', err)
     end):finally(function()
+        working.ctx = nil
         cache.busy.ctx = false
     end)
 end
