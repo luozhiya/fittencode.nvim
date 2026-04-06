@@ -34,9 +34,9 @@ function StatusObserver:update(data)
         self.current.session = ''
     end
     if data.current_session_id then
-        Log.debug('Inline ctrl = {}, id = {}, session = {}', self.current.ctrl, data.current_session_id, self.current.session)
+        Log.debug('Inline = {}, id = {}, session = {}', self.current.ctrl, data.current_session_id, self.current.session)
     elseif self.current.session == '' and self.prev.ctrl ~= self.current.ctrl then
-        Log.debug('Inline ctrl = {}', self.current.ctrl)
+        Log.debug('Inline = {}', self.current.ctrl)
     end
     self.prev = vim.deepcopy(self.current)
 end
