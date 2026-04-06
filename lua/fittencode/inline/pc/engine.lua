@@ -124,18 +124,6 @@ end
 
 local lsp_config = {}
 
--- vim.lsp.buf_request_all
-local function get_lsp_by_method(bufnr, method)
-    ---@type vim.lsp.Client
-    local lsp_client = vim.tbl_filter(
-        function(client)
-            return client:supports_method(method)
-        end,
-        vim.lsp.get_clients({ bufnr = bufnr })
-    )[1]
-    return lsp_client
-end
-
 function M.get_prompt(bufnr)
     return Promise.new(function(resolve, reject)
         if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
@@ -157,7 +145,7 @@ function M.get_prompt(bufnr)
         -- 对于后续动态load的buffer，可以使用同样的lsp config来初始化一个lsp client
         local ft = vim.api.nvim_get_option_value('filetype', { buf = bufnr })
         if not lsp_config[ft] then
-            local lsp_client = get_lsp_by_method(bufnr, 'textDocument/definition')
+            local lsp_client = Lsp.get_lsp_by_method(bufnr, 'textDocument/definition')
             assert(lsp_client)
             lsp_config[ft] = vim.deepcopy(lsp_client.config)
         end
@@ -165,80 +153,6 @@ function M.get_prompt(bufnr)
         cache.version.main[uri] = current_version
         waiting.queue_dep:push(uri)
         return reject({ _msg = 'Waiting for analysis' })
-    end)
-end
-
---[[
-
-textDocument/definition
-
-interface Location {
-	uri: DocumentUri;
-	range: Range;
-}
-
-]]
----@return FittenCode.Promise
-local function lsp_request_definition(bufnr, pos)
-    -- vim.lsp.buf_request_all
-    ---@type vim.lsp.Client
-    local lsp_client = get_lsp_by_method(bufnr, 'textDocument/definition')
-    local params = Lsp.make_position_params(bufnr, pos)
-    return Promise.new(function(resolve, reject)
-        lsp_client:request('textDocument/definition', params, function(err, result)
-            if err or not result then
-                reject()
-            else
-                local uri = result.uri or result.targetUri
-                for _, location in ipairs(result) do
-                    if location.uri then -- Location
-                        uri = location.uri
-                    end
-                    if location.targetUri then
-                        uri = location.targetUri
-                    end
-                end
-                if uri then
-                    resolve(uri)
-                else
-                    reject()
-                end
-            end
-        end, bufnr)
-    end)
-end
-
---[[
-
-textDocument/documentSymbol
-
-DocumentSymbol[]
-interface DocumentSymbol {
-    name: string;
-    detail?: string;
-    kind: SymbolKind;
-    deprecated?: boolean;
-    children?: DocumentSymbol[];
-
-]]
----@return FittenCode.Promise
-local function lsp_request_documentsymbol(bufnr)
-    local lsp_client = get_lsp_by_method(bufnr, 'textDocument/documentSymbol')
-    if not lsp_client then
-        local ft = vim.api.nvim_get_option_value('filetype', { buf = bufnr })
-        local client_cfg = lsp_config[ft]
-        -- client_cfg.root_dir = nil
-        lsp_client = assert(vim.lsp.get_client_by_id(assert(vim.lsp.start(client_cfg, { bufnr = bufnr }))))
-    end
-    local params = { textDocument = vim.lsp.util.make_text_document_params(bufnr) }
-    return Promise.new(function(resolve, reject)
-        lsp_client:request('textDocument/documentSymbol', params, function(err, result)
-            if err or not result then
-                reject()
-            else
-                resolve(result)
-            end
-        end, bufnr)
     end)
 end
 
@@ -259,7 +173,7 @@ local function loop_dep()
         for _, symbol in ipairs(symbols) do
             local promise = Promise.new(function(resolve, reject)
                 local pos = { symbol.range.lnum, symbol.range.col }
-                lsp_request_definition(bufnr, pos):forward(function(dep_uri)
+                Lsp.lsp_request_definition(bufnr, pos):forward(function(dep_uri)
                     resolve(dep_uri)
                 end):catch(function(_)
                     reject()
@@ -286,50 +200,12 @@ local function loop_dep()
     end)
 end
 
-local function symbols_to_items(symbols, bufnr, position_encoding)
-    local items = {}
-    for _, symbol in ipairs(symbols) do
-        --- @type string?, lsp.Range?
-        local filename, range
-        if symbol.location then
-            --- @cast symbol lsp.SymbolInformation
-            filename = vim.uri_to_fname(symbol.location.uri)
-            range = symbol.location.range
-        elseif symbol.selectionRange then
-            --- @cast symbol lsp.DocumentSymbol
-            filename = vim.api.nvim_buf_get_name(bufnr)
-            range = symbol.selectionRange
-        end
-        local item = {}
-        if filename and range then
-            local kind = vim.lsp.protocol.SymbolKind[symbol.kind] or 'Unknown'
-            if #filter_kinds > 0 and not vim.tbl_contains(filter_kinds, kind) then
-                goto continue
-            end
-            local is_deprecated = symbol.deprecated
-                or (symbol.tags and vim.tbl_contains(symbol.tags, vim.lsp.protocol.SymbolTag.Deprecated))
-            local text = string.format(
-                '[%s] %s%s%s',
-                kind,
-                symbol.name,
-                symbol.containerName and ' in ' .. symbol.containerName or '',
-                is_deprecated and ' (deprecated)' or ''
-            )
-            item = {
-                -- filename = filename,
-                kind = kind,
-                text = text,
-                detail = symbol.detail or '',
-                -- children = {}
-            }
-        end
-        if symbol.children then
-            item.children = symbols_to_items(symbol.children, bufnr, position_encoding)
-        end
-        items[#items + 1] = item
-        ::continue::
-    end
-    return items
+local function fallback_client(bufnr)
+    local ft = vim.api.nvim_get_option_value('filetype', { buf = bufnr })
+    local client_cfg = lsp_config[ft]
+    -- client_cfg.root_dir = nil
+    local lsp_client = assert(vim.lsp.get_client_by_id(assert(vim.lsp.start(client_cfg, { bufnr = bufnr }))))
+    return lsp_client
 end
 
 local function loop_ctx()
@@ -354,9 +230,9 @@ local function loop_ctx()
         vim.fn.bufload(bufnr)
     end
 
-    lsp_request_documentsymbol(bufnr):forward(function(symbols)
+    Lsp.lsp_request_documentsymbol(bufnr, fallback_client):forward(function(symbols)
         local position_encoding = assert(vim.lsp.get_clients({ bufnr = bufnr })[1]).offset_encoding
-        local items = symbols_to_items(symbols, bufnr, position_encoding)
+        local items = Lsp.symbols_to_items(symbols, bufnr, position_encoding, filter_kinds)
         cache.context[uri] = items
         cache.version.context[uri] = current_version
     end):catch(function(err)
@@ -450,10 +326,6 @@ function M.check_project_completion_available(buf)
     end
 
     return enable;
-end
-
-function M.set_filter_kinds(kinds)
-    filter_kinds = vim.deepcopy(kinds)
 end
 
 return M
