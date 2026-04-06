@@ -415,12 +415,12 @@ function Session:send_completions()
                 if self:set_interactive() then
                     return Promise.resolved(parse_result.data)
                 else
-                    return Promise.rejected()
+                    return Promise.rejected({ _type = 'outdated' })
                 end
             end)
         end
     end):catch(function(err)
-        if err._type == 'no_more_suggestions' or err._type == 'user_abort' then
+        if err and (err._type == 'no_more_suggestions' or err._type == 'user_abort' or err._type == 'outdated') then
             Log.info('Failed to send completions: {}', err)
         else
             Log.error('Failed to send completions: {}', err)
