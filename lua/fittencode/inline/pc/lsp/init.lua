@@ -128,7 +128,7 @@ function M.symbols_to_items(symbols, bufnr, position_encoding, filter_kinds)
         local item = {}
         if filename and range then
             local kind = vim.lsp.protocol.SymbolKind[symbol.kind] or 'Unknown'
-            if #filter_kinds > 0 and not vim.tbl_contains(filter_kinds, kind) then
+            if filter_kinds and #filter_kinds > 0 and not vim.tbl_contains(filter_kinds, kind) then
                 goto continue
             end
             local is_deprecated = symbol.deprecated
