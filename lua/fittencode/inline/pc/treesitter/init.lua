@@ -29,15 +29,16 @@ local Promise = require('fittencode.fn.promise')
 local M = {}
 
 ---@param bufnr integer
+---@param mode 'dep' | 'ctx'
 ---@return nil|vim.treesitter.LanguageTree parser
 ---@return nil|vim.treesitter.Query query
-local function get_lang_and_query(bufnr)
+local function get_lang_and_query(bufnr, mode)
     local parser = helpers.get_parser(bufnr)
     if not parser then
         return
     end
     local lang = parser:lang()
-    local query = helpers.get_query(lang)
+    local query = helpers.get_query(lang, mode)
     if not query then
         return
     end
@@ -46,8 +47,8 @@ end
 
 ---@param bufnr integer
 ---@return boolean
-M.is_supported = function(bufnr)
-    return get_lang_and_query(bufnr) ~= nil
+M.is_supported = function(bufnr, mode)
+    return get_lang_and_query(bufnr, mode) ~= nil
 end
 
 ---@param bufnr integer
@@ -59,7 +60,6 @@ local function symbols_from_treesitter(bufnr, lang, query, syntax_tree)
     if not syntax_tree then
         return items
     end
-    local get_node_text = vim.treesitter.get_node_text
     for _, matches, metadata in query:iter_matches(syntax_tree:root(), bufnr, nil, nil) do
         --- Matches can overlap. The last match wins.
         local match = vim.tbl_extend('force', {}, metadata)
@@ -90,7 +90,7 @@ local function symbols_from_treesitter(bufnr, lang, query, syntax_tree)
         local range = helpers.range_from_nodes(symbol_node, symbol_node)
         local name
         if name_match.node then
-            name = get_node_text(name_match.node, bufnr, name_match) or '<parse error>'
+            name = vim.treesitter.get_node_text(name_match.node, bufnr, name_match) or '<parse error>'
         else
             name = '<Anonymous>'
         end
@@ -108,8 +108,8 @@ end
 
 ---@param bufnr integer
 ---@return FittenCode.Promise
-M.fetch_symbols = function(bufnr)
-    local parser, query = get_lang_and_query(bufnr)
+M.fetch_symbols = function(bufnr, mode)
+    local parser, query = get_lang_and_query(bufnr, mode)
     assert(parser)
     assert(query)
 

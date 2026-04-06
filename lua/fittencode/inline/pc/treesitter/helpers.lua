@@ -5,10 +5,16 @@ aerial.nvim/lua/aerial/backends/treesitter/helpers.lua
 ]]
 
 local M = {}
-local query_cache = {}
+local query_cache = {
+    dep = {},
+    ctx = {},
+}
 
 M.clear_query_cache = function()
-    query_cache = {}
+    query_cache = {
+        dep = {},
+        ctx = {},
+    }
 end
 
 ---@param start_node TSNode
@@ -42,12 +48,12 @@ end
 ---@param lang string
 ---@return vim.treesitter.Query|nil
 ---@note caches queries to avoid filesystem hits on neovim 0.9+
-M.get_query = function(lang)
-    if not query_cache[lang] then
-        query_cache[lang] = { query = vim.treesitter.query.get(lang, 'fittencode') }
+M.get_query = function(lang, mode)
+    if not query_cache[mode][lang] then
+        query_cache[mode][lang] = { query = vim.treesitter.query.get(lang, 'fc-' .. mode) }
     end
 
-    return query_cache[lang].query
+    return query_cache[mode][lang].query
 end
 
 ---@param lang string

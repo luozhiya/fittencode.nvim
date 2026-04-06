@@ -122,6 +122,20 @@ local function merge_prompt(context, dependencies, uri)
     return table.concat(prompt, '\n')
 end
 
+local lsp_config = {}
+
+-- vim.lsp.buf_request_all
+local function get_lsp_by_method(bufnr, method)
+    ---@type vim.lsp.Client
+    local lsp_client = vim.tbl_filter(
+        function(client)
+            return client:supports_method(method)
+        end,
+        vim.lsp.get_clients({ bufnr = bufnr })
+    )[1]
+    return lsp_client
+end
+
 function M.get_prompt(bufnr)
     return Promise.new(function(resolve, reject)
         if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
@@ -132,12 +146,23 @@ function M.get_prompt(bufnr)
         local current_version = vim.api.nvim_buf_get_changedtick(bufnr)
 
         if cache.version.main[uri] and is_ok(cache.version.main[uri], current_version) then
+            Log.debug('get_prompt: cache hit, uri = {}, ctx = {}, dep = {}', uri, cache.context, cache.dependencies)
             -- 这里返回的仅仅是尽可能多的数据，可能有些依赖来不及解析
             local prompt = merge_prompt(cache.context, cache.dependencies, uri)
             return resolve({ prompt = prompt, type = M.get_chosen_fast() })
         end
-        cache.version.main[uri] = current_version
 
+        -- 从当前 bufnr 触发的pc
+        -- 可以认为该bufnr引用的都是同样类型的文件
+        -- 对于后续动态load的buffer，可以使用同样的lsp config来初始化一个lsp client
+        local ft = vim.api.nvim_get_option_value('filetype', { buf = bufnr })
+        if not lsp_config[ft] then
+            local lsp_client = get_lsp_by_method(bufnr, 'textDocument/definition')
+            assert(lsp_client)
+            lsp_config[ft] = vim.deepcopy(lsp_client.config)
+        end
+
+        cache.version.main[uri] = current_version
         waiting.queue_dep:push(uri)
         return reject({ _msg = 'Waiting for analysis' })
     end)
@@ -157,12 +182,7 @@ interface Location {
 local function lsp_request_definition(bufnr, pos)
     -- vim.lsp.buf_request_all
     ---@type vim.lsp.Client
-    local lsp_client = vim.tbl_filter(
-        function(client)
-            return client:supports_method('textDocument/definition')
-        end,
-        vim.lsp.get_clients({ bufnr = bufnr })
-    )[1]
+    local lsp_client = get_lsp_by_method(bufnr, 'textDocument/definition')
     local params = Lsp.make_position_params(bufnr, pos)
     return Promise.new(function(resolve, reject)
         lsp_client:request('textDocument/definition', params, function(err, result)
@@ -188,11 +208,9 @@ local function lsp_request_definition(bufnr, pos)
     end)
 end
 
-local last_client_id = nil
-
 --[[
 
-textDocument/documentSymbo
+textDocument/documentSymbol
 
 DocumentSymbol[]
 interface DocumentSymbol {
@@ -205,20 +223,12 @@ interface DocumentSymbol {
 ]]
 ---@return FittenCode.Promise
 local function lsp_request_documentsymbol(bufnr)
-    -- vim.lsp.buf_request_all
-    ---@type vim.lsp.Client
-    local lsp_clients = vim.tbl_filter(
-        function(client)
-            return client:supports_method('textDocument/documentSymbol')
-        end,
-        vim.lsp.get_clients({ bufnr = bufnr })
-    )
-    local lsp_client = lsp_clients[1]
-    if lsp_client then
-        last_client_id = lsp_client.id
-    else
-        assert(last_client_id)
-        local attched = vim.lsp.buf_attach_client(bufnr, last_client_id)
+    local lsp_client = get_lsp_by_method(bufnr, 'textDocument/documentSymbol')
+    if not lsp_client then
+        local ft = vim.api.nvim_get_option_value('filetype', { buf = bufnr })
+        local client_cfg = lsp_config[ft]
+        -- client_cfg.root_dir = nil
+        lsp_client = assert(vim.lsp.get_client_by_id(assert(vim.lsp.start(client_cfg, { bufnr = bufnr }))))
     end
     local params = { textDocument = vim.lsp.util.make_text_document_params(bufnr) }
     return Promise.new(function(resolve, reject)
@@ -241,7 +251,7 @@ local function loop_dep()
     assert(uri)
     local bufnr = vim.uri_to_bufnr(uri)
 
-    Treesitter.fetch_symbols(bufnr):forward(function(symbols)
+    Treesitter.fetch_symbols(bufnr, 'dep'):forward(function(symbols)
         if #symbols == 0 then
             return Promise.rejected()
         end
@@ -329,6 +339,7 @@ local function loop_ctx()
     cache.busy.ctx = true
     local uri = waiting.queue_ctx:pop()
     assert(uri)
+    Log.debug('loop_ctx uri = {}', uri)
 
     -- ?
     local bufnr = vim.uri_to_bufnr(uri)
@@ -337,14 +348,19 @@ local function loop_ctx()
         cache.busy.ctx = false
         return
     end
+
     -- LSP 附加需要 bufloaded
-    vim.fn.bufload(bufnr)
+    if not vim.api.nvim_buf_is_loaded(bufnr) then
+        vim.fn.bufload(bufnr)
+    end
 
     lsp_request_documentsymbol(bufnr):forward(function(symbols)
         local position_encoding = assert(vim.lsp.get_clients({ bufnr = bufnr })[1]).offset_encoding
         local items = symbols_to_items(symbols, bufnr, position_encoding)
         cache.context[uri] = items
         cache.version.context[uri] = current_version
+    end):catch(function(err)
+        Log.debug('loop_ctx: err = {}', err)
     end):finally(function()
         cache.busy.ctx = false
     end)
@@ -420,14 +436,15 @@ function M.check_project_completion_available(buf)
     local mode = Config.use_project_completion.open
 
     local pc_check = M.get_chosen_fast()
-    local has_ts = Treesitter.is_supported(buf)
+    local has_ts_dep = Treesitter.is_supported(buf, 'dep')
     local has_lsp = #vim.lsp.get_clients({ bufnr = buf }) > 0
+    local env_ok = has_ts_dep and has_lsp
 
     local enable = false;
     if mode == 'on' then
-        enable = has_ts and has_lsp;
+        enable = env_ok;
     elseif mode == 'auto' then
-        enable = (pc_check >= 1) and has_ts and has_lsp;
+        enable = (pc_check >= 1) and env_ok;
     elseif mode == 'off' then
         enable = false;
     end
