@@ -149,7 +149,7 @@ function M.symbols_to_items(symbols, bufnr, position_encoding, filter_kinds)
             }
         end
         if symbol.children then
-            item.children = symbols_to_items(symbol.children, bufnr, position_encoding)
+            item.children = M.symbols_to_items(symbol.children, bufnr, position_encoding)
         end
         items[#items + 1] = item
         ::continue::
