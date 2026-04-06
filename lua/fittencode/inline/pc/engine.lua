@@ -330,7 +330,7 @@ end
 function M.check_project_completion_available(buf)
     local mode = Config.use_project_completion.open
 
-    local pc_check = M.get_chosen_fast()
+    local pc_check = tonumber(M.get_chosen_fast()) or 0
     local has_ts_dep = Treesitter.is_supported(buf, 'dep')
     local has_lsp = #vim.lsp.get_clients({ bufnr = buf }) > 0
     local env_ok = has_ts_dep and has_lsp
