@@ -148,10 +148,11 @@ function M._async_log(options)
     assert(options)
     local stack = assert(options.stack)
     local level = assert(options.level)
-    local message = options.message or ''
+
     if level < Config.log.level or Config.log.level == LOG_LEVELS.OFF then
         return
     end
+    local message = options.message or Format.nothrow_format(unpack(options.args)) or ''
 
     local traceback = ''
     if Config.log.traceback then
@@ -203,7 +204,8 @@ for _, level_name in ipairs(LOG_LEVEL_NAMES) do
     local method_name = level_name:lower()
 
     M[method_name] = function(msg, ...)
-        M._async_log({ stack = 3, level = level, message = Format.nothrow_format(msg, ...) })
+        local args = { msg, ... }
+        M._async_log({ stack = 3, level = level, args = args })
     end
 
     M['notify_' .. method_name] = function(msg, ...)
