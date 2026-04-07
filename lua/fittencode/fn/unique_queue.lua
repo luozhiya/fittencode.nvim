@@ -1,6 +1,13 @@
 local UniqueQueue = {}
 UniqueQueue.__index = UniqueQueue
 
+local function get_unique_key(item)
+    if type(item) == 'table' then
+        return tostring(item)
+    end
+    return item
+end
+
 function UniqueQueue.new()
     local self = setmetatable({}, UniqueQueue)
     self.items = {}
@@ -10,8 +17,9 @@ end
 
 function UniqueQueue:push(item)
     if item == nil then return false end
-    if not self.exists[item] then
-        self.exists[item] = true
+    local key = get_unique_key(item)
+    if not self.exists[key] then
+        self.exists[key] = true
         table.insert(self.items, item)
         return true
     end
@@ -19,9 +27,10 @@ function UniqueQueue:push(item)
 end
 
 function UniqueQueue:pop()
-    if #self.items == 0 then return nil end
+    if self:is_empty() then return nil end
     local item = table.remove(self.items, 1)
-    self.exists[item] = nil
+    local key = get_unique_key(item)
+    self.exists[key] = nil
     return item
 end
 
@@ -38,7 +47,12 @@ function UniqueQueue:is_empty()
 end
 
 function UniqueQueue:contains(item)
-    return self.exists[item] == true
+    local key = get_unique_key(item)
+    return self.exists[key] == true
+end
+
+function UniqueQueue:containsbykey(key)
+    return self.exists[key] == true
 end
 
 function UniqueQueue:clear()

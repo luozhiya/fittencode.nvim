@@ -25,7 +25,7 @@ local FimParse = require('fittencode.inline.fim_protocol.parse')
 local Zip = require('fittencode.fn.gzip')
 local StateMachine = require('fittencode.fn.state_machine')
 local F = require('fittencode.fn.buf')
-local ProjectCompletion = require('fittencode.inline.pc.engine')
+local ProjectCompletion = require('fittencode.inline.pc')
 
 ---@class FittenCode.Inline.Session
 local Session = {}

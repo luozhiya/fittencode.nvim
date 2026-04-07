@@ -122,24 +122,7 @@ function M.get_chosen_fast()
     return M.last_chosen_prompt_type
 end
 
-local _initialized = false
-
-function M.init()
-    if Config.use_project_completion.open == 'off' then
-        return
-    end
-    if _initialized then
-        return
-    end
-    vim.api.nvim_create_autocmd({ 'BufEnter', 'LspAttach' }, {
-        group = vim.api.nvim_create_augroup('FittenCode.Inline.ProjectCompletion.CheckAuth', { clear = true }),
-        pattern = '*',
-        callback = function()
-            M.update_chosen()
-        end,
-    })
-    _initialized = true
-end
+local autocmd = nil
 
 ---@type FittenCode.HTTP.Request?
 local pc_check_auth_request = nil
@@ -172,8 +155,18 @@ function M.update_chosen()
 end
 
 function M.check_project_completion_available(buf)
-    local mode = Config.use_project_completion.open
+    if not autocmd then
+        M.update_chosen()
+        autocmd = vim.api.nvim_create_autocmd({ 'BufEnter' }, {
+            group = vim.api.nvim_create_augroup('FittenCode.Inline.ProjectCompletion.CheckAuth', { clear = true }),
+            pattern = '*',
+            callback = function()
+                M.update_chosen()
+            end,
+        })
+    end
 
+    local mode = Config.use_project_completion.open
     local pc_check = tonumber(M.get_chosen_fast()) or 0
     local has_ts_dep = Treesitter.is_supported(buf, 'dep')
     local has_lsp = #vim.lsp.get_clients({ bufnr = buf }) > 0

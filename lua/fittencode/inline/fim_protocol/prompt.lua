@@ -20,7 +20,7 @@ local Promise = require('fittencode.fn.promise')
 local Unicode = require('fittencode.fn.unicode')
 local Log = require('fittencode.log')
 local Context = require('fittencode.inline.fim_protocol.context')
-local ProjectCompletion = require('fittencode.inline.pc.engine')
+local ProjectCompletion = require('fittencode.inline.pc')
 
 local MAX_CHARS = 220000 -- ~200KB 220000
 local HALF_MAX = MAX_CHARS / 2
