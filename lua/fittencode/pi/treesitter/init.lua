@@ -22,7 +22,7 @@ query.iter_group_results return values:
 
 ]]
 
-local helpers = require('fittencode.inline.pc.treesitter.helpers')
+local helpers = require('fittencode.pi.treesitter.helpers')
 local Log = require('fittencode.log')
 local Promise = require('fittencode.fn.promise')
 
