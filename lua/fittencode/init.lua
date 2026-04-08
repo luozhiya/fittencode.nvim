@@ -16,6 +16,10 @@ function M.setup(options)
     require('fittencode.commands')
 
     local function _loading()
+        if _initialized then
+            return
+        end
+        _initialized = true
         require('fittencode.inline')
         require('fittencode.integrations')
     end
@@ -43,13 +47,11 @@ function M.setup(options)
             vim.api.nvim_feedkeys(feed, 'i', false)
         end, { expr = true })
     end
-
-    _initialized = true
 end
 
 return setmetatable(M, {
     __index = function(_, key)
-        assert(_initialized, 'FittenCode is not initialized. Please call `require("fittencode").setup()` first.')
+        assert(_initialized, 'FittenCode is not initialized')
         return function(...)
             return require('fittencode.api')[key](...)
         end
