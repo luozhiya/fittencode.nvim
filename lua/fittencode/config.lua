@@ -104,6 +104,8 @@ local builtin = {
         commit_message = false,
         -- Detect filetype.
         filetype = false,
+        -- Translate
+        translate = false,
     },
     language_preference = {
         -- Language preference for display and responses in Fitten Code (excluding "Fitten Code - Document Code" function).

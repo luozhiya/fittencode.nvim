@@ -24,3 +24,7 @@ end
 if Config.integrations.filetype then
     require('fittencode.integrations.filetype').setup()
 end
+
+if Config.integrations.translate then
+    require('fittencode.integrations.translate').setup()
+end

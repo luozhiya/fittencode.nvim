@@ -5,6 +5,8 @@ local Perf = require('fittencode.fn.perf')
 ---@field uri string
 ---@field state_machine FittenCode.StateMachine
 ---@field children FittenCode.ProjectInsight.Task[]
+---@field timestamp number
+---@field children_completed number
 local Task = {}
 Task.__index = Task
 
