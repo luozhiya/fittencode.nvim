@@ -218,7 +218,7 @@ local builtin = {
                 ['accept_all'] = '<Tab>',
                 ['accept_next_hunk'] = '<C-Down>',
                 ['revoke'] = { '<C-Left>', '<C-Up>' },
-                -- ['cancel'] = '<Esc>',
+                ['cancel'] = '<Esc>',
             }
         },
         chat = {

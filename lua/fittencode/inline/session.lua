@@ -243,7 +243,7 @@ function Session:set_keymaps()
             { lhs = Config.keymaps.inline[self.mode]['accept_all'],       rhs = function() self:accept('all') end },
             { lhs = Config.keymaps.inline[self.mode]['accept_next_hunk'], rhs = function() self:accept('hunk') end },
             { lhs = Config.keymaps.inline[self.mode]['revoke'],           rhs = function() self:revoke() end },
-            -- { lhs = Config.keymaps.inline[self.mode]['cancel'],           rhs = function() return self:on_cancel() end, options = { expr = true } }
+            { lhs = Config.keymaps.inline[self.mode]['cancel'],           rhs = function() return self:on_cancel() end, options = { expr = true } }
         }
     end
     for _, v in ipairs(self.keymaps) do
