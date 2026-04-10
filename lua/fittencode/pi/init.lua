@@ -12,8 +12,9 @@ local Perf = require('fittencode.fn.perf')
 
 local M = {}
 
--- local filter_kinds = { 'Class', 'Function', 'Method' }
-local filter_kinds = {}
+-- 减少信息量
+local filter_kinds = { 'Class', 'Function', 'Method' }
+-- local filter_kinds = {}
 
 local cache = {
     busy = { ctx = false, dep = false },
@@ -101,6 +102,8 @@ local function loop_dep()
     end)
 end
 
+-- 如果只考虑当前 root 的话，不需要 fallback_client
+-- 这样的话，就不会去获取标准库或第三方库的信息
 local function fallback_client(bufnr)
     local ft = vim.api.nvim_get_option_value('filetype', { buf = bufnr })
     Log.debug('fallback_client: ft = {}', ft)
@@ -138,7 +141,7 @@ local function loop_ctx()
         vim.fn.bufload(bufnr)
     end
 
-    Lsp.lsp_request_documentsymbol(bufnr, fallback_client):forward(function(symbols)
+    Lsp.lsp_request_documentsymbol(bufnr):forward(function(symbols)
         local position_encoding = assert(vim.lsp.get_clients({ bufnr = bufnr })[1]).offset_encoding
         local items = Lsp.symbols_to_items(symbols, bufnr, position_encoding, filter_kinds)
         cache.context[uri] = items

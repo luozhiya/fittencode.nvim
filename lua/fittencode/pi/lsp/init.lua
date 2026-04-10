@@ -29,7 +29,7 @@ function M.make_position_params(bufnr, pos, position_encoding)
 end
 
 -- vim.lsp.buf_request_all
-function M.get_lsp_by_method(bufnr, method)
+function M.get_lsp_by_method(bufnr, method, fallback_client)
     ---@type vim.lsp.Client
     local lsp_client = vim.tbl_filter(
         function(client)
@@ -37,6 +37,9 @@ function M.get_lsp_by_method(bufnr, method)
         end,
         vim.lsp.get_clients({ bufnr = bufnr })
     )[1]
+    if not lsp_client and fallback_client then
+        lsp_client = fallback_client(bufnr)
+    end
     return lsp_client
 end
 
@@ -51,10 +54,10 @@ interface Location {
 
 ]]
 ---@return FittenCode.Promise
-function M.lsp_request_definition(bufnr, pos)
+function M.lsp_request_definition(bufnr, pos, fallback_client)
     -- vim.lsp.buf_request_all
     ---@type vim.lsp.Client
-    local lsp_client = M.get_lsp_by_method(bufnr, 'textDocument/definition')
+    local lsp_client = M.get_lsp_by_method(bufnr, 'textDocument/definition', fallback_client)
     local params = M.make_position_params(bufnr, pos)
     return Promise.new(function(resolve, reject)
         lsp_client:request('textDocument/definition', params, function(err, result)
@@ -95,10 +98,7 @@ interface DocumentSymbol {
 ]]
 ---@return FittenCode.Promise
 function M.lsp_request_documentsymbol(bufnr, fallback_client)
-    local lsp_client = M.get_lsp_by_method(bufnr, 'textDocument/documentSymbol')
-    if not lsp_client and fallback_client then
-        lsp_client = fallback_client(bufnr)
-    end
+    local lsp_client = M.get_lsp_by_method(bufnr, 'textDocument/documentSymbol', fallback_client)
     local params = { textDocument = vim.lsp.util.make_text_document_params(bufnr) }
     return Promise.new(function(resolve, reject)
         lsp_client:request('textDocument/documentSymbol', params, function(err, result)
