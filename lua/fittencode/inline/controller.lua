@@ -119,9 +119,8 @@ function Controller:_initialize(options)
         group = vim.api.nvim_create_augroup('FittenCode.Inline.ServiceUpdate', { clear = true }),
         pattern = '*',
         callback = function(args)
-            local filters = { 'BufFilePost', 'FileType' }
-            local current_buf = vim.api.nvim_get_current_buf()
-            if vim.tbl_contains(filters, args.event) and current_buf ~= args.buf then
+            -- integrations.filetype
+            if args.event == 'FileType' and not vim.startswith(vim.api.nvim_get_mode().mode, 'i') then
                 return
             end
             self:sync_state()
