@@ -115,14 +115,10 @@ function Controller:_initialize(options)
             self:edit_completion_cancel({ vimev = args })
         end,
     })
-    vim.api.nvim_create_autocmd({ 'BufEnter', 'BufFilePost', 'FileType' }, {
+    vim.api.nvim_create_autocmd({ 'BufEnter', 'BufFilePost' }, {
         group = vim.api.nvim_create_augroup('FittenCode.Inline.ServiceUpdate', { clear = true }),
         pattern = '*',
         callback = function(args)
-            -- integrations.filetype
-            if args.event == 'FileType' and not vim.startswith(vim.api.nvim_get_mode().mode, 'i') then
-                return
-            end
             self:sync_state()
         end,
     })
