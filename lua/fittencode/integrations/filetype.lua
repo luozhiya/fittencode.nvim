@@ -12,6 +12,9 @@ local debound_send_filetype
 local pre_request
 
 local function check(buffer)
+    if not vim.api.nvim_buf_is_valid(buffer) then
+        return false
+    end
     local name = vim.api.nvim_buf_get_name(buffer)
     if #name > 0 then
         return false
@@ -57,6 +60,7 @@ local function send_filetype(buffer)
         end
         vim.api.nvim_set_option_value('filetype', lang, { buf = buffer, })
         vim.api.nvim_buf_set_var(buffer, 'FittenCode.FileType', lang)
+        require('fittencode.inline'):sync_state()
     end)
     pre_request = request
 end
