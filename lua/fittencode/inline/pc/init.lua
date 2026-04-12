@@ -77,34 +77,13 @@ local Fn = require('fittencode.fn.core')
 
 local M = {}
 
-local function stringfy(content)
-    return vim.json.encode(content)
-end
-
-local function merge_prompt(context, dependencies, uri)
-    local prompt = {}
-    prompt[#prompt + 1] = '# Main Context'
-    prompt[#prompt + 1] = '```json'
-    prompt[#prompt + 1] = stringfy(context[uri] or {})
-    prompt[#prompt + 1] = '```'
-    prompt[#prompt + 1] = ''
-    prompt[#prompt + 1] = '# Dependencies Context'
-    vim.iter(dependencies[uri]):map(function(dep_uri)
-        prompt[#prompt + 1] = '## Dependency: ' .. dep_uri
-        prompt[#prompt + 1] = '```json'
-        prompt[#prompt + 1] = stringfy(context[dep_uri] or {})
-        prompt[#prompt + 1] = '```'
-    end)
-    return table.concat(prompt, '\n')
-end
-
 function M.get_prompt(bufnr)
     if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
         return Promise.rejected({ _msg = 'Invalid buffer handle' })
     end
     local uri = vim.uri_from_bufnr(bufnr)
     return ProjectInsight.request_fast(uri):forward(function(result)
-        local prompt = merge_prompt(result.context, result.dependencies, uri)
+        local prompt = ProjectInsight.stringfy_general(result.context, result.dependencies, uri)
         return Promise.resolved({ prompt = prompt, type = M.get_chosen_fast() })
     end)
 end

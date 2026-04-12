@@ -58,6 +58,7 @@ local function loop_dep()
     ---@type FittenCode.ProjectInsight.Task
     local task = assert(waiting.queue_dep:pop())
     local uri = task.uri
+    Log.debug('loop_dep uri = {}', uri)
 
     working.dep = uri
     local bufnr = vim.uri_to_bufnr(uri)
@@ -85,6 +86,8 @@ local function loop_dep()
         vim.iter(dep_uris):map(function(v)
             dependencies[#dependencies + 1] = v
         end)
+        vim.list.unique(dependencies)
+        Log.debug('URI = {}, #dependencies = {}', uri, #dependencies)
         local _ = Task.new(uri)
         task:add_child(_)
         waiting.queue_ctx:push(_)
@@ -174,6 +177,7 @@ local function _request(task, fast)
         local bufnr = vim.uri_to_bufnr(uri)
         local current_version = vim.api.nvim_buf_get_changedtick(bufnr)
         local ver_ok = cache.version.main[uri] and is_ok(cache.version.main[uri], current_version)
+        Log.debug('_request: uri = {}, ver_ok = {}, is_working = {}, is_queued = {}', uri, ver_ok, is_working(uri), is_queued(uri))
 
         if ver_ok or (not ver_ok and (is_working(uri) or is_queued(uri))) then
             Log.debug('_request: cache hit, uri = {}, ctx = {}, dep = {}', uri, cache.context, cache.dependencies)
@@ -190,7 +194,9 @@ local function _request(task, fast)
         local ft = vim.api.nvim_get_option_value('filetype', { buf = bufnr })
         if not lsp_config[ft] then
             local lsp_client = Lsp.get_lsp_by_method(bufnr, 'textDocument/definition')
-            assert(lsp_client)
+            if not lsp_client then
+                return task.state_machine:transition('completed')
+            end
             lsp_config[ft] = vim.deepcopy(lsp_client.config)
         end
 
@@ -220,6 +226,28 @@ function M.request(uri)
         end)
         _request(t)
     end)
+end
+
+local function stringfy(content)
+    return vim.json.encode(content)
+end
+
+function M.stringfy_general(context, dependencies, uri, heading_level)
+    heading_level = heading_level or 1
+    local prompt = {}
+    prompt[#prompt + 1] = string.rep('#', heading_level) .. ' Main Context'
+    prompt[#prompt + 1] = '```json'
+    prompt[#prompt + 1] = stringfy(context[uri] or {})
+    prompt[#prompt + 1] = '```'
+    prompt[#prompt + 1] = ''
+    prompt[#prompt + 1] = string.rep('#', heading_level) .. ' Dependencies Context'
+    vim.iter(dependencies[uri] or {}):map(function(dep_uri)
+        prompt[#prompt + 1] = string.rep('#', heading_level + 1) .. ' Dependency: ' .. dep_uri
+        prompt[#prompt + 1] = '```json'
+        prompt[#prompt + 1] = stringfy(context[dep_uri] or {})
+        prompt[#prompt + 1] = '```'
+    end)
+    return table.concat(prompt, '\n')
 end
 
 return M

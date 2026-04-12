@@ -28,3 +28,7 @@ end
 if Config.integrations.translate then
     require('fittencode.integrations.translate').setup()
 end
+
+if Config.integrations.commit_message then
+    require('fittencode.integrations.commit_message').setup()
+end

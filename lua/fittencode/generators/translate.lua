@@ -7,24 +7,21 @@ local M = {}
 local translation_template = [[<|system|>
 Please reply directly to the code without any explanation.
 Please do not use markdown when replying.
-<|end|>
-<|user|>
-请将以下内容翻译成{{target_language}}：
 
-```
-{{content}}
-```
-
-翻译要求：
+## 翻译要求
 0. 保持原文格式（如代码块、缩进、换行）
 1. 如果是代码，保持代码结构和术语准确
 2. 如果是自然语言，保持原文风格和语气
 3. 如果是专业术语，使用行业标准译法
 4. 如果原文有歧义，保留原文的多种可能含义
 5. 如果无法确定目标语言，默认使用中文
-6. 输出不能放入markdown-block中，请直接回复原文
+<|end|>
+<|user|>
+请将以下内容翻译成目标语言：{{target_language}}：
 
-目标语言：{{target_language}}
+```
+{{content}}
+```
 <|end|>
 <|assistant|>]]
 
