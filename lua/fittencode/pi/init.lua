@@ -7,8 +7,6 @@ local Treesitter = require('fittencode.pi.treesitter')
 local Lsp = require('fittencode.pi.lsp')
 local UniqueQueue = require('fittencode.fn.unique_queue')
 local Log = require('fittencode.log')
-local Task = require('fittencode.pi.task')
-local Perf = require('fittencode.fn.perf')
 
 local M = {}
 
@@ -17,7 +15,6 @@ local filter_kinds = { 'Class', 'Function', 'Method' }
 -- local filter_kinds = {}
 
 local cache = {
-    busy = { ctx = false, dep = false },
     dependencies = {},
     context = {},
     version = {
@@ -51,16 +48,13 @@ end
 local lsp_config = {}
 
 local function loop_dep()
-    if cache.busy.dep or waiting.queue_dep:is_empty() then
+    if working.dep or waiting.queue_dep:is_empty() then
         return
     end
-    cache.busy.dep = true
-    ---@type FittenCode.ProjectInsight.Task
-    local task = assert(waiting.queue_dep:pop())
-    local uri = task.uri
+    local uri = assert(waiting.queue_dep:pop())
     Log.debug('loop_dep uri = {}', uri)
-
     working.dep = uri
+
     local bufnr = vim.uri_to_bufnr(uri)
 
     Treesitter.fetch_symbols(bufnr, 'dep'):forward(function(symbols)
@@ -88,20 +82,15 @@ local function loop_dep()
         end)
         vim.list.unique(dependencies)
         Log.debug('URI = {}, #dependencies = {}', uri, #dependencies)
-        local _ = Task.new(uri)
-        task:add_child(_)
-        waiting.queue_ctx:push(_)
+        waiting.queue_ctx:push(uri)
         vim.iter(dependencies):filter(function(v)
             return v ~= uri
         end):map(function(v)
-            local _ = Task.new(v)
-            task:add_child(_)
-            waiting.queue_ctx:push(_)
+            waiting.queue_ctx:push(v)
         end)
         cache.dependencies[uri] = dependencies
     end):finally(function()
         working.dep = nil
-        cache.busy.dep = false
     end)
 end
 
@@ -117,13 +106,10 @@ local function fallback_client(bufnr)
 end
 
 local function loop_ctx()
-    if cache.busy.ctx or waiting.queue_ctx:is_empty() then
+    if working.ctx or waiting.queue_ctx:is_empty() then
         return
     end
-    cache.busy.ctx = true
-    ---@type FittenCode.ProjectInsight.Task
-    local task = assert(waiting.queue_ctx:pop())
-    local uri = task.uri
+    local uri = assert(waiting.queue_ctx:pop())
     working.ctx = uri
     Log.debug('loop_ctx uri = {}', uri)
 
@@ -132,12 +118,8 @@ local function loop_ctx()
     local current_version = vim.api.nvim_buf_get_changedtick(bufnr)
     if cache.version.context[uri] and is_ok(cache.version.context[uri], current_version) then
         working.ctx = nil
-        cache.busy.ctx = false
-        task.state_machine:transition('completed')
         return
     end
-
-    task.state_machine:transition('running')
 
     -- LSP 附加需要 bufloaded
     if not vim.api.nvim_buf_is_loaded(bufnr) then
@@ -153,8 +135,6 @@ local function loop_ctx()
         Log.debug('loop_ctx: err = {}', err)
     end):finally(function()
         working.ctx = nil
-        cache.busy.ctx = false
-        task.state_machine:transition('completed')
     end)
 end
 
@@ -169,11 +149,9 @@ local function _try_init()
     end)
 end
 
----@param task FittenCode.ProjectInsight.Task
-local function _request(task, fast)
+function M.request(uri)
     _try_init()
     return Promise.new(function(resolve, reject)
-        local uri = task.uri
         local bufnr = vim.uri_to_bufnr(uri)
         local current_version = vim.api.nvim_buf_get_changedtick(bufnr)
         local ver_ok = cache.version.main[uri] and is_ok(cache.version.main[uri], current_version)
@@ -182,11 +160,7 @@ local function _request(task, fast)
         if ver_ok or (not ver_ok and (is_working(uri) or is_queued(uri))) then
             Log.debug('_request: cache hit, uri = {}, ctx = {}, dep = {}', uri, cache.context, cache.dependencies)
             -- 这里返回的仅仅是尽可能多的数据，可能有些依赖来不及解析
-            if fast then
-                return resolve({ context = cache.context, dependencies = cache.dependencies, uri = uri })
-            else
-                return task.state_machine:transition('completed')
-            end
+            return resolve({ context = cache.context, dependencies = cache.dependencies, uri = uri })
         end
         -- 从当前 bufnr 触发的pc
         -- 可以认为该bufnr引用的都是同样类型的文件
@@ -195,36 +169,15 @@ local function _request(task, fast)
         if not lsp_config[ft] then
             local lsp_client = Lsp.get_lsp_by_method(bufnr, 'textDocument/definition')
             if not lsp_client then
-                return task.state_machine:transition('completed')
+                return reject({ _msg = 'No LSP client found' })
             end
             lsp_config[ft] = vim.deepcopy(lsp_client.config)
         end
 
         cache.version.main[uri] = current_version
-        waiting.queue_dep:push(task)
+        waiting.queue_dep:push(uri)
 
-        if fast then
-            return reject({ _msg = 'Waiting for analysis' })
-        end
-    end)
-end
-
-function M.request_fast(uri)
-    return _request(Task.new(uri), true)
-end
-
--- 返回cache或者等待全部分析完成
-function M.request(uri)
-    return Promise.new(function(resolve, reject)
-        local t = Task.new(uri)
-        t.state_machine:subscribe(function(state)
-            if state.to == 'completed' then
-                local ms = Perf.tok(t.timestamp)
-                Log.debug('request completed: uri = {}, time = {}ms', uri, ms)
-                resolve({ context = cache.context, dependencies = cache.dependencies, uri = uri })
-            end
-        end)
-        _request(t)
+        return reject({ _msg = 'Waiting for analysis' })
     end)
 end
 
