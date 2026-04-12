@@ -23,7 +23,7 @@ local function generate_patch()
 end
 
 local function get_log()
-    return Git.get_log({ count = 10 })
+    return Git.get_log({ count = 3 })
 end
 
 local function get_staged_file_paths()
@@ -36,12 +36,11 @@ local function get_staged_file_paths()
 end
 
 local function get_lsp_ctx(uris)
-    Log.debug('Getting LSP context for uris: {}', uris)
     local promises = {}
     vim.tbl_map(function(uri)
         promises[#promises + 1] = ProjectInsight.request(uri)
     end, uris)
-    return Promise.all(promises):catch(function(err) Log.debug('Error getting LSP context: {}', err) end)
+    return Promise.all(promises):catch(function() return Promise.resolved({}) end)
 end
 
 local function get_source_fragments(uri, range)
@@ -49,15 +48,15 @@ local function get_source_fragments(uri, range)
     if not vim.api.nvim_buf_is_loaded(buf) then
         vim.fn.bufload(buf)
     end
-    local pos = Position.of(range.new_start + range.count / 2, 0)
-    local fragments = Context.retrieve_context_fragments(buf, pos, range.count + 10)
+    local pos = Position.of(range.start + range.count / 2, 0)
+    local fragments = Context.retrieve_context_fragments(buf, pos, 100)
     return fragments.prefix .. fragments.suffix
 end
 
 local function stringfiy_sourcefragments(uris, sourcefragments)
     local result = {}
     for i, uri in ipairs(uris) do
-        result[#result + 1] = '### URI(hunk source fragments)' .. uri
+        result[#result + 1] = '### URI(hunk source fragments) ' .. uri
         for j, fragment in ipairs(sourcefragments[i] or {}) do
             result[#result + 1] = '```'
             result[#result + 1] = fragment
@@ -98,7 +97,6 @@ local function generate_options()
             sourcefragments[i] = subfrags
         end
         return get_lsp_ctx(uris):forward(function(content)
-            Log.debug('Project insight content: {}', content)
             return { patch = patch, log = log, abs_paths = abs_paths, sourcefragments = stringfiy_sourcefragments(uris, sourcefragments), content = content }
         end)
     end):forward(function(_)

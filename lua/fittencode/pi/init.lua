@@ -155,13 +155,13 @@ function M.request(uri)
         local bufnr = vim.uri_to_bufnr(uri)
         local current_version = vim.api.nvim_buf_get_changedtick(bufnr)
         local ver_ok = cache.version.main[uri] and is_ok(cache.version.main[uri], current_version)
-        Log.debug('_request: uri = {}, ver_ok = {}, is_working = {}, is_queued = {}', uri, ver_ok, is_working(uri), is_queued(uri))
 
         if ver_ok or (not ver_ok and (is_working(uri) or is_queued(uri))) then
             Log.debug('_request: cache hit, uri = {}, ctx = {}, dep = {}', uri, cache.context, cache.dependencies)
             -- 这里返回的仅仅是尽可能多的数据，可能有些依赖来不及解析
             return resolve({ context = cache.context, dependencies = cache.dependencies, uri = uri })
         end
+
         -- 从当前 bufnr 触发的pc
         -- 可以认为该bufnr引用的都是同样类型的文件
         -- 对于后续动态load的buffer，可以使用同样的lsp config来初始化一个lsp client

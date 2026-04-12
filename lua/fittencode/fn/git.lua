@@ -192,36 +192,44 @@ end
 ---@field file string 文件路径（相对路径，来自 diff 输出中的 +++ b/...）
 ---@field hunks FittenCode.Fn.GitHunk[] 该文件包含的所有 hunk 信息
 
---- 解析 Git diff 输出，提取每个文件的 hunk 信息（相对路径与行范围）
---- 适用于 unified diff 格式（如 git diff、git diff --cached 的输出）
----@param diff_output string 完整的 `git diff` 输出内容
----@return FittenCode.Fn.GitFileHunks[] 每个有修改的文件及其 hunk 列表
+--- 解析 unified diff 输出，提取每个文件及其 hunk 的行范围信息
+---@param diff_output string git diff 输出（可包含多个文件）
+---@return table[] 格式：{ { file = string, hunks = { { old_start, old_count, new_start, new_count } } } }
 function M.parse_diff_hunks(diff_output)
     local files = {}
+    local current_file = nil
+    local current_hunks = {}
 
-    -- 按文件分割 diff（每个文件以 "diff --git" 开头）
-    for file_block in diff_output:gmatch('diff %-%-git[^\n]-\n(.-)(?=diff %-%-git|$)') do
-        -- 提取新文件路径（通常在 +++ b/ 之后）
-        local new_file = file_block:match('^%+%+%+ b/([^\n]+)')
-        if new_file then
-            local file_hunks = { file = new_file, hunks = {} }
-
-            -- 匹配所有 hunk 头信息
-            for old_start, old_count, new_start, new_count in file_block:gmatch('@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@') do
+    for line in diff_output:gmatch('[^\r\n]+') do
+        -- 新文件开始：diff --git a/... b/...
+        local new_file_path = line:match('^diff %-%-git a/.+ b/(.+)$')
+        if new_file_path then
+            -- 保存上一个文件（如果有）
+            if current_file and current_hunks and #current_hunks > 0 then
+                table.insert(files, { file = current_file, hunks = current_hunks })
+            end
+            current_file = new_file_path
+            current_hunks = {}
+        elseif current_file then
+            -- 确认进入新文件的实际内容（跳过 --- / +++ 行）
+            -- 更准确的方式是找到以 "@@" 开头的 hunk 头
+            local old_start, old_count, new_start, new_count =
+                line:match('^@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@')
+            if old_start then
                 local hunk = {
                     old_start = tonumber(old_start),
                     old_count = old_count ~= '' and tonumber(old_count) or 1,
                     new_start = tonumber(new_start),
                     new_count = new_count ~= '' and tonumber(new_count) or 1,
                 }
-                table.insert(file_hunks.hunks, hunk)
-            end
-
-            -- 只添加至少有一个 hunk 的文件
-            if #file_hunks.hunks > 0 then
-                table.insert(files, file_hunks)
+                table.insert(current_hunks, hunk)
             end
         end
+    end
+
+    -- 处理最后一个文件
+    if current_file and #current_hunks > 0 then
+        table.insert(files, { file = current_file, hunks = current_hunks })
     end
 
     return files
