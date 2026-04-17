@@ -158,7 +158,7 @@ function M.login3rd(source, options)
         return
     end
 
-    local client_token = Fn.uuid_v4()
+    local client_token = Fn.uuid()
     if not client_token then
         Log.error('Failed to generate client token')
         return
