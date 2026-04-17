@@ -89,6 +89,9 @@ local function build_inccmp_items(response, buf, position)
         ::continue::
     end
 
+    if #computed == 0 then
+        return nil, 'repeat_remaining'
+    end
     return computed, 'success'
 end
 
