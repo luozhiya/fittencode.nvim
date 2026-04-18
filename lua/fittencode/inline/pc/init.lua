@@ -82,7 +82,7 @@ function M.get_prompt(bufnr)
         return Promise.rejected({ _msg = 'Invalid buffer handle' })
     end
     local uri = vim.uri_from_bufnr(bufnr)
-    return ProjectInsight.request_fast(uri):forward(function(result)
+    return ProjectInsight.request(uri):forward(function(result)
         local prompt = ProjectInsight.stringfy_general(result.context, result.dependencies, uri)
         return Promise.resolved({ prompt = prompt, type = M.get_chosen_fast() })
     end)
