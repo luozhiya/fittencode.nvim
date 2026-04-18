@@ -480,6 +480,32 @@ function Controller:set_suffix_permissions(enable, suffixes)
     self:sync_state()
 end
 
+function Controller:set_completion_enabled(enable, suffixes)
+    suffixes = suffixes or {}
+    if enable then
+        if #suffixes == 0 then
+            self:set_suffix_permissions(true)
+            Log.notify_info(i18n.tr('Global completions are activated'))
+        else
+            local prev = Config.inline_completion.enable
+            self:set_suffix_permissions(true, suffixes)
+            if not prev then
+                Log.notify_info(i18n.tr('Completions for files with the extensions of {} are enabled, global completions have been automatically activated'), suffixes)
+            else
+                Log.notify_info(i18n.tr('Completions for files with the extensions of {} are enabled'), suffixes)
+            end
+        end
+    else
+        if #suffixes == 0 then
+            self:set_suffix_permissions(false)
+            Log.notify_info(i18n.tr('Gloabl completions are deactivated'))
+        else
+            self:set_suffix_permissions(false, suffixes)
+            Log.notify_info(i18n.tr('Completions for files with the extensions of {} are disabled'), suffixes)
+        end
+    end
+end
+
 function Controller:get_status()
     return self.status_observer:get_snapshot()
     -- if self:is_enabled() then

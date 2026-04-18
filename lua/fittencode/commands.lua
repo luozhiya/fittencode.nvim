@@ -1,4 +1,4 @@
-local BASE = {
+local base = {
     -- Account
     register = { execute = function() require('fittencode.auth').register() end },
     login = { execute = function() require('fittencode.auth').login() end },
@@ -13,17 +13,15 @@ local BASE = {
     user_guide = { execute = function() require('fittencode.auth').tutor() end },
 }
 
-local INLINE = {
+local inline = {
     enable_completions = {
-        execute = function()
-            require('fittencode.inline'):set_suffix_permissions(true)
-            require('fittencode.log').notify_info(require('fittencode.i18n').tr('Global completions are activated'))
+        execute = function(suffixes)
+            require('fittencode.inline'):set_completion_enabled(true, suffixes)
         end
     },
     disable_completions = {
-        execute = function()
-            require('fittencode.inline'):set_suffix_permissions(false)
-            require('fittencode.log').notify_info(require('fittencode.i18n').tr('Gloabl completions are deactivated'))
+        execute = function(suffixes)
+            require('fittencode.inline'):set_completion_enabled(false, suffixes)
         end
     },
     toggle_completions = {
@@ -35,26 +33,9 @@ local INLINE = {
             end
         end
     },
-    onlyenable_completions = {
-        execute = function(suffixes)
-            local prev = require('fittencode.config').inline_completion.enable
-            require('fittencode.inline'):set_suffix_permissions(true, suffixes)
-            if not prev then
-                require('fittencode.log').notify_info(require('fittencode.i18n').tr('Completions for files with the extensions of {} are enabled, global completions have been automatically activated'), suffixes)
-            else
-                require('fittencode.log').notify_info(require('fittencode.i18n').tr('Completions for files with the extensions of {} are enabled'), suffixes)
-            end
-        end
-    },
-    onlydisable_completions = {
-        execute = function(suffixes)
-            require('fittencode.inline'):set_suffix_permissions(false, suffixes)
-            require('fittencode.log').notify_info(require('fittencode.i18n').tr('Completions for files with the extensions of {} are disabled'), suffixes)
-        end
-    }
 }
 
-local commands = vim.tbl_deep_extend('error', {}, BASE, INLINE)
+local commands = vim.tbl_deep_extend('error', {}, base, inline)
 
 local function execute(input)
     if not commands[input.fargs[1]] then
