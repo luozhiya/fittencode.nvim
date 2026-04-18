@@ -26,6 +26,15 @@ local INLINE = {
             require('fittencode.log').notify_info(require('fittencode.i18n').tr('Gloabl completions are deactivated'))
         end
     },
+    toggle_completions = {
+        execute = function()
+            if require('fittencode.config').inline_completion.enable then
+                vim.cmd('FittenCode disable_completions')
+            else
+                vim.cmd('FittenCode enable_completions')
+            end
+        end
+    },
     onlyenable_completions = {
         execute = function(suffixes)
             local prev = require('fittencode.config').inline_completion.enable
