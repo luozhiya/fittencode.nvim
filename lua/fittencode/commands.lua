@@ -13,6 +13,88 @@ local base = {
     user_guide = { execute = function() require('fittencode.auth').tutor() end },
 }
 
+local chat = {
+    chat_stop = {
+        execute = function()
+            local ctrl = require('fittencode.chat')
+            if ctrl then
+                local conv_id = ctrl.model.selected_conversation_id
+                if conv_id then
+                    ctrl:receive_msg({ type = 'stop_waiting', data = { id = conv_id } })
+                end
+            end
+        end
+    },
+    chat_toggle = {
+        execute = function()
+            local ctrl = require('fittencode.chat')
+            if ctrl then
+                if ctrl:is_visible() then
+                    ctrl:hide_view()
+                else
+                    ctrl:show_view()
+                end
+            end
+        end
+    },
+    chat_select = { execute = function()
+        require('fittencode.chat'):select_conversation_prompt()
+    end },
+    chat_new = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then
+            ctrl:receive_msg({ type = 'start_chat' })
+        end
+    end },
+    start_chat = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('chat', true) end
+    end },
+    document_code = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('document-code', true) end
+    end },
+    edit_code = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('edit-code', true) end
+    end },
+    explain_code = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('explain-code', true) end
+    end },
+    find_bugs = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('find-bugs', true) end
+    end },
+    generate_unit_test = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('generate-unit-test', true) end
+    end },
+    optimize_code = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('optimize-code', true) end
+    end },
+    model = {
+        execute = function(sources)
+            local ctrl = require('fittencode.chat')
+            if ctrl and sources[1] then
+                ctrl:set_model(sources[1])
+            end
+        end,
+        complete = function()
+            return { 'default_llm', 'deepseek_v3', 'deepseek_r1' }
+        end,
+    },
+    search = {
+        execute = function()
+            local ctrl = require('fittencode.chat')
+            if ctrl then
+                ctrl:toggle_search()
+            end
+        end,
+    },
+}
+
 local inline = {
     enable_completions = {
         execute = function(suffixes)
@@ -35,7 +117,7 @@ local inline = {
     },
 }
 
-local commands = vim.tbl_deep_extend('error', {}, base, inline)
+local commands = vim.tbl_deep_extend('error', {}, base, chat, inline)
 
 local function execute(input)
     if not commands[input.fargs[1]] then
@@ -81,3 +163,13 @@ end, {
     end,
     desc = 'FittenCode',
 })
+
+vim.cmd([[
+    anoremenu PopUp.Fitten\ Code\ -\ Document\ Code  <Cmd>FittenCode document_code<CR>
+    anoremenu PopUp.Fitten\ Code\ -\ Edit\ Code  <Cmd>FittenCode edit_code<CR>
+    anoremenu PopUp.Fitten\ Code\ -\ Explain\ Code  <Cmd>FittenCode explain_code<CR>
+    anoremenu PopUp.Fitten\ Code\ -\ Find\ Bugs  <Cmd>FittenCode find_bugs<CR>
+    anoremenu PopUp.Fitten\ Code\ -\ Generate\ UnitTest  <Cmd>FittenCode generate_unit_test<CR>
+    anoremenu PopUp.Fitten\ Code\ -\ Optimize\ Code  <Cmd>FittenCode optimize_code<CR>
+    anoremenu PopUp.Fitten\ Code\ -\ Start\ Chat  <Cmd>FittenCode start_chat<CR>
+]])

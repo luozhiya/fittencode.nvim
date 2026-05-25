@@ -190,5 +190,12 @@ return {
     ["Password must be at least 8 characters long and contain at least two of the following: one uppercase letter, one lowercase letter, one number, and one special character. Special characters include: ~`!@#$%^&*()_-+={[}]|:;\"'<,>.?/"] = "密码必须至少8个字符，且包含以下至少两种字符类型：大写字母、小写字母、数字和特殊字符。特殊字符包括：~`!@#$%^&*()_-+={[}]|:;\"'<,>.?/",
     ["Reply same language as the user's input."] = '请完全使用中文回答。',
     ['Enter master password: '] = '请输入主密码：',
-    ['Error encountered. Refer to error message for troubleshooting or file an issue on {}.'] = '检测到错误。请根据错误信息进行排查，或在 {} 上提交问题。'
+    ['Error encountered. Refer to error message for troubleshooting or file an issue on {}.'] = '检测到错误。请根据错误信息进行排查，或在 {} 上提交问题。',
+    ['CURL not found, please check your installation.'] = '未找到 CURL，请检查您的安装。',
+    ['Failed to execute curl.'] = '执行 CURL 失败。',
+    ['Process unexpectedly exited.'] = '进程意外退出。',
+    ['CURL internal error.'] = 'CURL 内部错误。',
+    ['[Fitten Code] Invalid username or password'] = '[Fitten Code] 无效的用户名或密码',
+    ['[Fitten Code] Internal error'] = '[Fitten Code] 内部错误',
+    ['Failed to login, response is invalid'] = '登录失败，响应无效',
 }

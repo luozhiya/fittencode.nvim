@@ -2,10 +2,7 @@
 -- Part 2 - Parser
 -- Part 3 - Compiler
 
--- local Log = require('fittencode.log')
-local Log = {
-    debug = function(...) end
-}
+local Log = require('fittencode.log')
 
 ---@param name string
 ---@param content string
