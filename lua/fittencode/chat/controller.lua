@@ -4,29 +4,62 @@ local Fn = require('fittencode.fn.core')
 local ProgressIndicator = require('fittencode.fn.progress_indicator')
 local CtrlObserver = require('fittencode.chat.ctrl_observer')
 local State = require('fittencode.chat.view.state')
+local View = require('fittencode.chat.view')
+local Model = require('fittencode.chat.model')
+local ConversationTypesProvider = require('fittencode.chat.conversation_types_provider')
+
+local Config = require('fittencode.config')
+local Extension = require('fittencode.client.extension')
 
 ---@class FittenCode.Chat.Controller
 local Controller = {}
 Controller.__index = Controller
 
----@param options { view: FittenCode.Chat.View, model: FittenCode.Chat.Model, conversation_types_provider: FittenCode.Chat.ConversationTypesProvider, basic_chat_template_id: string }
 ---@return FittenCode.Chat.Controller
-function Controller.new(options)
+function Controller.new()
     local self = setmetatable({}, Controller)
-    self:_initialize(options)
+    self:_initialize()
     return self
 end
 
-function Controller:_initialize(options)
-    self.view = options.view
-    self.model = options.model
-    self.conversation_types_provider = options.conversation_types_provider
-    self.basic_chat_template_id = options.basic_chat_template_id
+function Controller:_initialize()
+    self.conversation_types_provider = ConversationTypesProvider.new({
+        extension_uri = Extension.uri(),
+    })
+    self.conversation_types_provider:scan_builtin_templates()
+    self.conversation_types_provider.template_ready = true
 
-    -- Observer side channel
+    self.view = View.new()
+    self.model = Model.new()
+    self.basic_chat_template_id = 'chat'
+
     self.observers = {}
     self:on(CtrlObserver.StatusObserver.new())
     self:on(CtrlObserver.ProgressIndicatorObserver.new({ pi = ProgressIndicator.new() }))
+
+    self.view.send_msg = function(msg)
+        self:receive_msg(msg)
+    end
+
+    self:_register_keymaps()
+end
+
+function Controller:_register_keymaps()
+    local chat_keymaps = Config.keymaps.chat
+    for action, key in pairs(chat_keymaps) do
+        if not key or key == '' then
+            -- skip
+        elseif action == 'add_selection_context_to_input' then
+            vim.keymap.set('x', key, function()
+                -- TODO: add selection context
+            end, { noremap = true, silent = true, desc = 'FittenCode: Add selection to input' })
+        else
+            local template_id = action == 'start_chat' and 'chat' or action:gsub('_', '-')
+            vim.keymap.set({ 'n', 'x' }, key, function()
+                self:create_conversation(template_id, true)
+            end, { noremap = true, silent = true, desc = 'FittenCode: ' .. action })
+        end
+    end
 end
 
 --[[ observer ]]
@@ -56,6 +89,9 @@ function Controller:update_view()
 end
 
 function Controller:show_view()
+    if not self.model.selected_conversation_id then
+        self:create_conversation(self.basic_chat_template_id)
+    end
     self.view:show()
 end
 
@@ -73,7 +109,6 @@ end
 function Controller:add_and_show_conversation(conv, show)
     show = show ~= false
     self.model:add_and_select_conversation(conv)
-    self.view:select_conversation(conv.id)
     self:update_view()
     if show then
         self:show_view()
@@ -106,7 +141,6 @@ function Controller:receive_msg(msg)
             return
         end
         self.model:select_conversation(msg.data.id)
-        self.view:select_conversation(msg.data.id)
         self:update_view()
     elseif msg.type == 'delete_conversation' then
         self.model:delete_conversation(msg.data.id)
@@ -260,6 +294,35 @@ function Controller:_build_observer_data()
         current_conversation_id = self.model.selected_conversation_id,
         conversation = conv_data,
     }
+end
+
+function Controller:select_conversation_prompt()
+    local items = {}
+    for _, conv in ipairs(self.model.conversations) do
+        local title = conv:get_title()
+        if title and #title > 60 then
+            title = title:sub(1, 60) .. '...'
+        end
+        local prefix = conv.id == self.model.selected_conversation_id and '* ' or '  '
+        items[#items + 1] = {
+            title = prefix .. (title or conv.id),
+            id = conv.id,
+        }
+    end
+
+    if #items == 0 then
+        vim.notify('No conversations', vim.log.levels.INFO)
+        return
+    end
+
+    vim.ui.select(items, {
+        prompt = 'Chat sessions',
+        format_item = function(item) return item.title end,
+    }, function(choice)
+        if choice then
+            self:receive_msg({ type = 'select_conversation', data = { id = choice.id } })
+        end
+    end)
 end
 
 return Controller

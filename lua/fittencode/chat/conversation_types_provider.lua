@@ -3,7 +3,6 @@ local ConversationType = require('fittencode.chat.conversation_type')
 local Promise = require('fittencode.fn.promise')
 local Log = require('fittencode.log')
 local Path = require('fittencode.fn.path')
-local TEMPLATE_CATEGORIES = require('fittencode.chat.builtin_templates').TEMPLATE_CATEGORIES
 
 ---@class FittenCode.Chat.ConversationTypesProvider
 local ConversationTypesProvider = {}
@@ -21,6 +20,7 @@ function ConversationTypesProvider:_initialize(options)
     assert(options and options.extension_uri)
     self.extension_templates = {}
     self.conversation_types = {}
+    self.template_registry = {}
     self.extension_uri = options.extension_uri
     self.template_ready = false
 end
@@ -28,7 +28,19 @@ end
 ---@param id string
 ---@return FittenCode.Chat.ConversationType?
 function ConversationTypesProvider:get_by_id(id)
-    return self.conversation_types[id]
+    if self.conversation_types[id] then
+        return self.conversation_types[id]
+    end
+    local entry = self.template_registry[id]
+    if entry then
+        local t = TemplateResolver.load_from_file(entry.path)
+        if t then
+            local ct = ConversationType.new({ template = t, source = 'built-in' })
+            self.conversation_types[id] = ct
+            return ct
+        end
+    end
+    return nil
 end
 
 ---@return table<string, FittenCode.Chat.ConversationType>
@@ -41,42 +53,18 @@ function ConversationTypesProvider:register_extension_template(options)
     table.insert(self.extension_templates, options.template)
 end
 
-function ConversationTypesProvider:load_conversation_types()
-    self.conversation_types = {}
-    self:load_builtin_templates()
-    self:load_extension_templates()
-    self:load_workspace_templates()
-end
-
-function ConversationTypesProvider:async_load_conversation_types()
-    return Promise.new(function(resolve)
-        vim.defer_fn(function()
-            self:load_conversation_types()
-            resolve()
-        end, 10)
-    end)
-end
-
-function ConversationTypesProvider:load_builtin_templates()
+function ConversationTypesProvider:scan_builtin_templates()
     local list = require('fittencode.chat.builtin_templates').builtin_templates
     for category, files in pairs(list) do
         for _, file in ipairs(files) do
-            local ct = self:load_builtin_template(category, file)
-            if ct then
-                self.conversation_types[ct.template.id] = ct
+            local resource = Path.join(self.extension_uri, 'template', category, file)
+            if vim.fn.filereadable(resource) == 1 then
+                local id = file:match('^(.+)%.rdt%.md$')
+                if id then
+                    self.template_registry[id] = { path = resource }
+                end
             end
         end
-    end
-end
-
----@param category string
----@param file string
----@return FittenCode.Chat.ConversationType?
-function ConversationTypesProvider:load_builtin_template(category, file)
-    local resource = Path.join(self.extension_uri, 'template', category, file)
-    local t = TemplateResolver.load_from_file(resource)
-    if t then
-        return ConversationType.new({ template = t, source = 'built-in' })
     end
 end
 

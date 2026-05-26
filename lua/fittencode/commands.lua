@@ -14,10 +14,9 @@ local base = {
 }
 
 local chat = {
-    chat_start = { execute = function() require('fittencode.chat').init() end },
     chat_stop = {
         execute = function()
-            local ctrl = require('fittencode.chat').get_controller()
+            local ctrl = require('fittencode.chat')
             if ctrl then
                 local conv_id = ctrl.model.selected_conversation_id
                 if conv_id then
@@ -28,7 +27,7 @@ local chat = {
     },
     chat_toggle = {
         execute = function()
-            local ctrl = require('fittencode.chat').get_controller()
+            local ctrl = require('fittencode.chat')
             if ctrl then
                 if ctrl:is_visible() then
                     ctrl:hide_view()
@@ -38,11 +37,13 @@ local chat = {
             end
         end
     },
+    chat_select = { execute = function()
+        require('fittencode.chat'):select_conversation_prompt()
+    end },
     chat_new = { execute = function()
-        local ctrl = require('fittencode.chat').get_controller()
+        local ctrl = require('fittencode.chat')
         if ctrl then
             ctrl:receive_msg({ type = 'start_chat' })
-            ctrl:show_view()
         end
     end },
 }

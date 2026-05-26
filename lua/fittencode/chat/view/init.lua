@@ -53,11 +53,13 @@ end
 
 function View:update(state)
     local conv_id = state.selected_conversation_id
+    Log.debug('[Chat.View] update selected_id={} current_conv_id={}', conv_id, self.current_conv_id)
     if not conv_id then return end
     local conv = state.conversations[conv_id]
     if not conv then return end
 
     if self.current_conv_id ~= conv_id then
+        Log.debug('[Chat.View] full_render switching from {} to {}', self.current_conv_id, conv_id)
         self:_full_render(conv)
         self.current_conv_id = conv_id
         self.last_msg_count = conv.content.messages and #conv.content.messages or 0
@@ -281,7 +283,7 @@ end
 
 function View:show()
     if self:is_visible() then
-        vim.api.nvim_set_current_win(self.msg_win)
+        vim.api.nvim_set_current_win(self.inp_win)
         return
     end
 
@@ -363,6 +365,7 @@ function View:_setup_input()
         callback = function()
             local lines = vim.api.nvim_buf_get_lines(self.inp_buf, 0, -1, false)
             local text = vim.trim(table.concat(lines, '\n'))
+            Log.debug('[Chat.View] <CR> text_len={} send_msg={} conv_id={} state={}', #text, tostring(self.send_msg ~= nil), self.current_conv_id, self.current_state_type)
             if text == '' then return end
             if not self.send_msg then return end
 
@@ -380,6 +383,7 @@ function View:_setup_input()
                 end
                 self:_show_pending(self.pending_text)
             else
+                Log.debug('[Chat.View] sending send_message id={} text={}', self.current_conv_id, text)
                 self.send_msg({
                     type = 'send_message',
                     data = { id = self.current_conv_id, message = text },
