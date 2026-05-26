@@ -77,12 +77,15 @@ function View:update(state)
     self.current_state_type = st and st.type
 
     if st and st.type == 'botAnswerStreaming' then
+        Log.debug('[Chat.View] update STREAMING partial_len={} was_streaming={} anchor={}', #(st.partialAnswer or ''), self.was_streaming, self.streaming_anchor ~= nil)
         self:_render_streaming(st.partialAnswer or '')
     elseif self.was_streaming then
+        Log.debug('[Chat.View] update was_streaming->false, reset anchor')
         self.was_streaming = false
         self.streaming_anchor = nil
         self.last_msg_count = #conv.content.messages
     else
+        Log.debug('[Chat.View] update INCREMENTAL msg_count={} last={}', #conv.content.messages, self.last_msg_count)
         local msg_count = #conv.content.messages
         for i = self.last_msg_count + 1, msg_count do
             self:_append_message(conv.content.messages[i])
@@ -193,11 +196,16 @@ function View:_append_message(msg)
 end
 
 function View:_render_streaming(partial)
-    if self.streaming_pending then return end
+    Log.debug('[Chat.View] _render_streaming len={} pending={}', #partial, self.streaming_pending)
+    self._pending_streaming_text = partial
+    if self.streaming_pending then
+        Log.debug('[Chat.View] _render_streaming SKIPPED (debounce)')
+        return
+    end
     self.streaming_pending = true
     vim.schedule(function()
         self.streaming_pending = false
-        self:_do_render_streaming(partial)
+        self:_do_render_streaming(self._pending_streaming_text)
     end)
 end
 
@@ -205,6 +213,7 @@ function View:_do_render_streaming(partial)
     self.was_streaming = true
     set_modifiable(self.msg_buf, true)
     if not self.streaming_anchor then
+        Log.debug('[Chat.View] _do_render_streaming NEW header len={}', #partial)
         local last = vim.api.nvim_buf_line_count(self.msg_buf)
         vim.api.nvim_buf_set_lines(self.msg_buf, last, last, false, { '## Fitten Code', '' })
         self.streaming_anchor = { last + 1, 0 }
@@ -213,7 +222,7 @@ function View:_do_render_streaming(partial)
         self.msg_buf,
         self.streaming_anchor[1], self.streaming_anchor[2],
         -1, -1,
-        vim.split(partial, '\n', { trimempty = false })
+        vim.split(partial or '', '\n', { trimempty = false })
     )
     set_modifiable(self.msg_buf, false)
     self:_scroll_to_bottom()

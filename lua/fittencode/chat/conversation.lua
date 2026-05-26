@@ -125,6 +125,7 @@ function Conversation:add_bot_message(content)
 end
 
 function Conversation:update_partial_bot_message(partial)
+    Log.debug('[Chat.Conv] update_partial_bot_message len={}', #(partial or ''))
     self.state = { type = 'botAnswerStreaming', partialAnswer = partial }
     self.update_view()
 end
@@ -311,6 +312,7 @@ function Conversation:_run_agent_pipeline(inputs, agents)
                             msg = agent.message or msg
                             if agent._state then
                                 self:update_partial_bot_message(agent._state)
+                                agent._state = nil
                             end
                         end
                         self:update_partial_bot_message(msg)
@@ -326,6 +328,7 @@ function Conversation:_run_agent_pipeline(inputs, agents)
                 accumulated = agent.message or accumulated
                 if agent._state then
                     self:update_partial_bot_message(agent._state)
+                    agent._state = nil
                 end
             end
 
@@ -372,7 +375,9 @@ function Conversation:_run_agent_pipeline(inputs, agents)
             agent:on_chat_start()
             inputs = agent.inputs or inputs
             if agent._state then
+                Log.debug('[Chat.Conv] pipeline on_chat_start agent_state={}', agent._state)
                 self:update_partial_bot_message(agent._state)
+                agent._state = nil
             end
         end
 

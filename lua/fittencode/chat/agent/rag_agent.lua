@@ -305,11 +305,11 @@ function RAGAgent:add_rag_refs(msg, ft_token)
 
         if #ref < self.max_length then
             Log.debug('[Chat.RAG] project fits in max_length, returning direct ref len={}', #ref)
-            return Promise.resolve(ref)
+            return Promise.resolved(ref)
         end
         if #self.file_and_directory_names == 0 then
             Log.debug('[Chat.RAG] no files found in project')
-            return Promise.resolve('')
+            return Promise.resolved('')
         end
 
         local last_user = msg
@@ -440,8 +440,13 @@ end
 
 function RAGAgent:on_chat_end()
     if self.workspace_ref_str ~= '' then
-        Log.debug('[Chat.RAG] prepending workspace_ref_str len={}', #self.workspace_ref_str)
-        self.message = self.workspace_ref_str .. (self.message or '')
+        local file_count = #self.chunk_paths
+        if file_count == 0 then
+            file_count = #self.file_and_directory_names
+        end
+        local summary = string.format('[context: %d project files]', file_count)
+        Log.debug('[Chat.RAG] appending context summary: {}', summary)
+        self.message = summary .. '\n' .. (self.message or '')
         self.workspace_ref_str = ''
     end
 end
