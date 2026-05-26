@@ -51,6 +51,7 @@ function View:_ensure_conv(conv_id)
         current_state_type = nil,
         _pending_streaming_text = nil,
     }
+    Log.debug('[Chat.View] _ensure_conv conv_id={} buf={}', conv_id, buf)
     return buf
 end
 
@@ -97,11 +98,16 @@ function View:update(state)
             vim.api.nvim_win_set_buf(self.msg_win, buf)
             vim.api.nvim_win_set_option(self.msg_win, 'winfixbuf', true)
         end
-        self:_full_render(conv, buf)
-        cs.last_msg_count = conv.content.messages and #conv.content.messages or 0
-        cs.was_streaming = false
-        cs.streaming_anchor = nil
-        cs.current_state_type = conv.content.state and conv.content.state.type
+        -- only full-render if buf is brand new (never written to)
+        local line_count = vim.api.nvim_buf_line_count(buf)
+        Log.debug('[Chat.View] switch buf={} line_count={}', buf, line_count)
+        if line_count == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == '' then
+            self:_full_render(conv, buf)
+            cs.last_msg_count = conv.content.messages and #conv.content.messages or 0
+            cs.was_streaming = false
+            cs.streaming_anchor = nil
+            cs.current_state_type = conv.content.state and conv.content.state.type
+        end
         self:_update_ref(conv.reference)
         self:_try_flush_pending(cs)
         return
@@ -209,9 +215,11 @@ function View:_full_render(conv, buf)
     for _, msg in ipairs(msgs) do
         self:_build_message_lines(lines, msg)
     end
+    Log.debug('[Chat.View] _full_render buf={} msg_count={} line_count={} first_line={}', buf, #msgs, #lines, lines[1] or '<nil>')
     set_modifiable(buf, true)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
     set_modifiable(buf, false)
+    Log.debug('[Chat.View] _full_render done buf={} line_count={}', buf, vim.api.nvim_buf_line_count(buf))
     self:_scroll_to_bottom(buf)
 end
 
@@ -234,10 +242,16 @@ end
 function View:_append_message(msg, buf)
     local lines = {}
     self:_build_message_lines(lines, msg)
+    Log.debug('[Chat.View] _append_message buf={} author={} line_count={} first_line={}', buf, msg.author, #lines, lines[1] or '<nil>')
     set_modifiable(buf, true)
     local last = vim.api.nvim_buf_line_count(buf)
-    vim.api.nvim_buf_set_lines(buf, last, last, false, lines)
+    if last == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == '' then
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    else
+        vim.api.nvim_buf_set_lines(buf, last, last, false, lines)
+    end
     set_modifiable(buf, false)
+    Log.debug('[Chat.View] _append_message done buf={} insert_pos={} after_line_count={}', buf, last, vim.api.nvim_buf_line_count(buf))
     self:_scroll_to_bottom(buf)
 end
 
@@ -259,7 +273,7 @@ function View:_do_render_streaming(partial, buf, cs)
     cs.was_streaming = true
     set_modifiable(buf, true)
     if not cs.streaming_anchor then
-        Log.debug('[Chat.View] _do_render_streaming NEW header len={}', #partial)
+        Log.debug('[Chat.View] _do_render_streaming NEW header buf={} len={}', buf, #partial)
         local last = vim.api.nvim_buf_line_count(buf)
         vim.api.nvim_buf_set_lines(buf, last, last, false, { '## Fitten Code', '' })
         cs.streaming_anchor = { last + 1, 0 }
