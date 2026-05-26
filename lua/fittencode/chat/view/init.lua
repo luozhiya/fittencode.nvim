@@ -80,6 +80,13 @@ end
 
 --[[ render ]]
 
+local function set_modifiable(buf, enable)
+    local cur = vim.api.nvim_buf_get_option(buf, 'modifiable')
+    if cur ~= enable then
+        vim.api.nvim_buf_set_option(buf, 'modifiable', enable)
+    end
+end
+
 function View:update(state)
     local conv_id = state.selected_conversation_id
     Log.debug('[Chat.View] update selected_id={} current_conv_id={}', conv_id, self.current_conv_id)
@@ -125,6 +132,9 @@ function View:update(state)
         Log.debug('[Chat.View] update was_streaming->false, reset anchor')
         cs.was_streaming = false
         cs.streaming_anchor = nil
+        set_modifiable(buf, true)
+        vim.api.nvim_buf_set_lines(buf, -1, -1, false, { '' })
+        set_modifiable(buf, false)
         local msg_count = #conv.content.messages
         for i = cs.last_msg_count + 1, msg_count do
             local msg = conv.content.messages[i]
@@ -200,13 +210,6 @@ function View:_hide_pending()
     end
     self.pending_win = nil
     self.pending_buf = nil
-end
-
-local function set_modifiable(buf, enable)
-    local cur = vim.api.nvim_buf_get_option(buf, 'modifiable')
-    if cur ~= enable then
-        vim.api.nvim_buf_set_option(buf, 'modifiable', enable)
-    end
 end
 
 function View:_full_render(conv, buf)
