@@ -3,6 +3,7 @@ local Protocol = require('fittencode.client.protocol')
 local OPL = require('fittencode.opl')
 local i18n = require('fittencode.i18n')
 local Log = require('fittencode.log')
+local ModelToken = require('fittencode.chat.model_token')
 
 ---@class FittenCode.Chat.Conversation
 local Conversation = {}
@@ -46,7 +47,7 @@ end
 function Conversation:get_title()
     local header = self.template.header
     if header.useFirstMessageAsTitle and self.messages[1] then
-        return self.messages[1].content
+        return ModelToken.strip_suffix(self.messages[1].content)
     end
     local evaluated = self:evaluate_template(header.title)
     return evaluated or header.title

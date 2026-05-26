@@ -1,5 +1,6 @@
 ---@class FittenCode.Chat.ViewState.Builder
 local M = {}
+local ModelToken = require('fittencode.chat.model_token')
 
 ---@param model FittenCode.Chat.Model
 ---@return FittenCode.Chat.ViewState
@@ -16,6 +17,10 @@ function M.get_state_from_model(model)
                 ref = { filename = bufname }
             end
         end
+        local display_messages = {}
+        for i, msg in ipairs(conv.messages) do
+            display_messages[i] = { author = msg.author, content = ModelToken.strip_suffix(msg.content) }
+        end
         conversations[conv.id] = {
             id = conv.id,
             reference = ref,
@@ -26,7 +31,7 @@ function M.get_state_from_model(model)
             },
             content = {
                 type = 'messageExchange',
-                messages = conv.messages,
+                messages = display_messages,
                 state = conv.state,
                 error = conv.error,
             },

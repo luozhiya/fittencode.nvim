@@ -10,6 +10,7 @@ local ConversationTypesProvider = require('fittencode.chat.conversation_types_pr
 
 local Config = require('fittencode.config')
 local Extension = require('fittencode.client.extension')
+local ModelToken = require('fittencode.chat.model_token')
 
 ---@class FittenCode.Chat.Controller
 local Controller = {}
@@ -40,6 +41,9 @@ function Controller:_initialize()
     self.view.send_msg = function(msg)
         self:receive_msg(msg)
     end
+
+    self.selected_model = 'default_llm'
+    self.search_enabled = false
 
     self:_register_keymaps()
 end
@@ -131,7 +135,8 @@ function Controller:receive_msg(msg)
         local conv = self.model:get_by_id(msg.data.id)
         Log.debug('[Chat.Controller] conv found={}', tostring(conv ~= nil))
         if conv then
-            conv:answer(msg.data.message)
+            local suffix = ModelToken.build_suffix(self.selected_model, self.search_enabled)
+            conv:answer(msg.data.message .. suffix)
             Log.debug('[Chat.Controller] answer() returned')
         end
     elseif msg.type == 'start_chat' then
@@ -379,6 +384,16 @@ function Controller:_capture_editor_context()
         text_after_cursor = get_text(crow, ccol, after_end, -1),
         selection = selection,
     }
+end
+
+--[[ model selection ]]
+
+function Controller:set_model(model)
+    self.selected_model = model
+end
+
+function Controller:toggle_search()
+    self.search_enabled = not self.search_enabled
 end
 
 function Controller:select_conversation_prompt()

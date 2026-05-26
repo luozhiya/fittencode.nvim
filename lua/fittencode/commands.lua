@@ -74,6 +74,25 @@ local chat = {
         local ctrl = require('fittencode.chat')
         if ctrl then ctrl:create_conversation('optimize-code', true) end
     end },
+    model = {
+        execute = function(sources)
+            local ctrl = require('fittencode.chat')
+            if ctrl and sources[1] then
+                ctrl:set_model(sources[1])
+            end
+        end,
+        complete = function()
+            return { 'default_llm', 'deepseek_v3', 'deepseek_r1' }
+        end,
+    },
+    search = {
+        execute = function()
+            local ctrl = require('fittencode.chat')
+            if ctrl then
+                ctrl:toggle_search()
+            end
+        end,
+    },
 }
 
 local inline = {
