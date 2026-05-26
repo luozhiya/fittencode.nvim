@@ -11,25 +11,15 @@ function View.new()
 end
 
 function View:_initialize()
+    self.conv_bufs = {}
+    self.conv_state = {}
     self.current_conv_id = nil
-    self.last_msg_count = 0
-    self.was_streaming = false
-    self.streaming_anchor = nil
-    self.streaming_pending = false
     self.send_msg = nil
-    self.current_state_type = nil
     self.pending_text = nil
     self.pending_win = nil
     self.pending_buf = nil
     self.ref_win = nil
     self.ref_buf = nil
-
-    self.msg_buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_option(self.msg_buf, 'filetype', 'markdown')
-    vim.api.nvim_buf_set_option(self.msg_buf, 'buftype', 'nofile')
-    vim.api.nvim_buf_set_option(self.msg_buf, 'buflisted', false)
-    vim.api.nvim_buf_set_option(self.msg_buf, 'swapfile', false)
-    vim.api.nvim_buf_set_option(self.msg_buf, 'modifiable', false)
 
     self.inp_buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_option(self.inp_buf, 'buftype', 'nofile')
@@ -39,13 +29,49 @@ function View:_initialize()
     self:_setup_input()
 end
 
+---@param conv_id string
+---@return integer buf
+function View:_ensure_conv(conv_id)
+    if not conv_id then return end
+    if self.conv_bufs[conv_id] then
+        return self.conv_bufs[conv_id]
+    end
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_option(buf, 'filetype', 'markdown')
+    vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
+    vim.api.nvim_buf_set_option(buf, 'buflisted', false)
+    vim.api.nvim_buf_set_option(buf, 'swapfile', false)
+    vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    self.conv_bufs[conv_id] = buf
+    self.conv_state[conv_id] = {
+        last_msg_count = 0,
+        was_streaming = false,
+        streaming_anchor = nil,
+        streaming_pending = false,
+        current_state_type = nil,
+        _pending_streaming_text = nil,
+    }
+    return buf
+end
+
+---@param conv_id string
+function View:delete_conv(conv_id)
+    local buf = self.conv_bufs[conv_id]
+    if buf and vim.api.nvim_buf_is_valid(buf) then
+        vim.api.nvim_buf_set_option(buf, 'modifiable', true)
+        vim.api.nvim_buf_delete(buf, { force = true })
+    end
+    self.conv_bufs[conv_id] = nil
+    self.conv_state[conv_id] = nil
+end
+
 function View:select_conversation(id)
+    if self.current_conv_id == id then return end
     self.current_conv_id = id
-    self.last_msg_count = 0
-    self.was_streaming = false
-    self.streaming_anchor = nil
-    self.streaming_pending = false
-    self.current_state_type = nil
+    self:_ensure_conv(id)
+    if self.msg_win and vim.api.nvim_win_is_valid(self.msg_win) then
+        vim.api.nvim_win_set_buf(self.msg_win, self.conv_bufs[id])
+    end
     self:_clear_pending()
 end
 
@@ -58,49 +84,62 @@ function View:update(state)
     local conv = state.conversations[conv_id]
     if not conv then return end
 
+    local buf = self:_ensure_conv(conv_id)
+    local cs = self.conv_state[conv_id]
+
     if self.current_conv_id ~= conv_id then
         Log.debug('[Chat.View] full_render switching from {} to {}', self.current_conv_id, conv_id)
-        self:_full_render(conv)
         self.current_conv_id = conv_id
-        self.last_msg_count = conv.content.messages and #conv.content.messages or 0
-        self.was_streaming = false
-        self.streaming_anchor = nil
-        self.current_state_type = conv.content.state and conv.content.state.type
+        if self.msg_win and vim.api.nvim_win_is_valid(self.msg_win) then
+            vim.api.nvim_win_set_buf(self.msg_win, buf)
+        end
+        self:_full_render(conv, buf)
+        cs.last_msg_count = conv.content.messages and #conv.content.messages or 0
+        cs.was_streaming = false
+        cs.streaming_anchor = nil
+        cs.current_state_type = conv.content.state and conv.content.state.type
         self:_update_ref(conv.reference)
-        self:_try_flush_pending()
+        self:_try_flush_pending(cs)
         return
     end
 
     if conv.content.type ~= 'messageExchange' then return end
 
     local st = conv.content.state
-    self.current_state_type = st and st.type
+    cs.current_state_type = st and st.type
 
     if st and st.type == 'botAnswerStreaming' then
-        Log.debug('[Chat.View] update STREAMING partial_len={} was_streaming={} anchor={}', #(st.partialAnswer or ''), self.was_streaming, self.streaming_anchor ~= nil)
-        self:_render_streaming(st.partialAnswer or '')
-    elseif self.was_streaming then
+        Log.debug('[Chat.View] update STREAMING partial_len={} was_streaming={} anchor={}', #(st.partialAnswer or ''), cs.was_streaming, cs.streaming_anchor ~= nil)
+        self:_render_streaming(st.partialAnswer or '', buf, cs)
+    elseif cs.was_streaming then
         Log.debug('[Chat.View] update was_streaming->false, reset anchor')
-        self.was_streaming = false
-        self.streaming_anchor = nil
-        self.last_msg_count = #conv.content.messages
-    else
-        Log.debug('[Chat.View] update INCREMENTAL msg_count={} last={}', #conv.content.messages, self.last_msg_count)
+        cs.was_streaming = false
+        cs.streaming_anchor = nil
         local msg_count = #conv.content.messages
-        for i = self.last_msg_count + 1, msg_count do
-            self:_append_message(conv.content.messages[i])
+        for i = cs.last_msg_count + 1, msg_count do
+            local msg = conv.content.messages[i]
+            if msg.author ~= 'bot' then
+                self:_append_message(msg, buf)
+            end
         end
-        self.last_msg_count = msg_count
-        self.streaming_anchor = nil
+        cs.last_msg_count = msg_count
+    else
+        Log.debug('[Chat.View] update INCREMENTAL msg_count={} last={}', #conv.content.messages, cs.last_msg_count)
+        local msg_count = #conv.content.messages
+        for i = cs.last_msg_count + 1, msg_count do
+            self:_append_message(conv.content.messages[i], buf)
+        end
+        cs.last_msg_count = msg_count
+        cs.streaming_anchor = nil
     end
 
-    self:_try_flush_pending()
+    self:_try_flush_pending(cs)
 end
 
 --[[ pending queue ]]
 
-function View:_try_flush_pending()
-    if self.current_state_type == 'userCanReply' and self.pending_text and self.send_msg then
+function View:_try_flush_pending(cs)
+    if cs and cs.current_state_type == 'userCanReply' and self.pending_text and self.send_msg then
         local text = self.pending_text
         Log.debug('[Chat.View] Flushing pending: {}', text)
         self.pending_text = nil
@@ -160,21 +199,24 @@ local function set_modifiable(buf, enable)
     end
 end
 
-function View:_full_render(conv)
+function View:_full_render(conv, buf)
     local msgs = conv.content.messages or {}
     local lines = {}
     for _, msg in ipairs(msgs) do
         self:_build_message_lines(lines, msg)
     end
-    set_modifiable(self.msg_buf, true)
-    vim.api.nvim_buf_set_lines(self.msg_buf, 0, -1, false, lines)
-    set_modifiable(self.msg_buf, false)
-    self:_scroll_to_bottom()
+    set_modifiable(buf, true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    set_modifiable(buf, false)
+    self:_scroll_to_bottom(buf)
 end
 
 function View:_build_message_lines(out, msg)
     if msg.author == 'user' then
         out[#out + 1] = '## You'
+    elseif msg.author == 'meta' then
+        out[#out + 1] = '--- ' .. msg.content
+        return
     else
         out[#out + 1] = '## Fitten Code'
     end
@@ -185,52 +227,52 @@ function View:_build_message_lines(out, msg)
     out[#out + 1] = ''
 end
 
-function View:_append_message(msg)
+function View:_append_message(msg, buf)
     local lines = {}
     self:_build_message_lines(lines, msg)
-    set_modifiable(self.msg_buf, true)
-    local last = vim.api.nvim_buf_line_count(self.msg_buf)
-    vim.api.nvim_buf_set_lines(self.msg_buf, last, last, false, lines)
-    set_modifiable(self.msg_buf, false)
-    self:_scroll_to_bottom()
+    set_modifiable(buf, true)
+    local last = vim.api.nvim_buf_line_count(buf)
+    vim.api.nvim_buf_set_lines(buf, last, last, false, lines)
+    set_modifiable(buf, false)
+    self:_scroll_to_bottom(buf)
 end
 
-function View:_render_streaming(partial)
-    Log.debug('[Chat.View] _render_streaming len={} pending={}', #partial, self.streaming_pending)
-    self._pending_streaming_text = partial
-    if self.streaming_pending then
+function View:_render_streaming(partial, buf, cs)
+    Log.debug('[Chat.View] _render_streaming len={} pending={}', #partial, cs.streaming_pending)
+    cs._pending_streaming_text = partial
+    if cs.streaming_pending then
         Log.debug('[Chat.View] _render_streaming SKIPPED (debounce)')
         return
     end
-    self.streaming_pending = true
+    cs.streaming_pending = true
     vim.schedule(function()
-        self.streaming_pending = false
-        self:_do_render_streaming(self._pending_streaming_text)
+        cs.streaming_pending = false
+        self:_do_render_streaming(cs._pending_streaming_text, buf, cs)
     end)
 end
 
-function View:_do_render_streaming(partial)
-    self.was_streaming = true
-    set_modifiable(self.msg_buf, true)
-    if not self.streaming_anchor then
+function View:_do_render_streaming(partial, buf, cs)
+    cs.was_streaming = true
+    set_modifiable(buf, true)
+    if not cs.streaming_anchor then
         Log.debug('[Chat.View] _do_render_streaming NEW header len={}', #partial)
-        local last = vim.api.nvim_buf_line_count(self.msg_buf)
-        vim.api.nvim_buf_set_lines(self.msg_buf, last, last, false, { '## Fitten Code', '' })
-        self.streaming_anchor = { last + 1, 0 }
+        local last = vim.api.nvim_buf_line_count(buf)
+        vim.api.nvim_buf_set_lines(buf, last, last, false, { '## Fitten Code', '' })
+        cs.streaming_anchor = { last + 1, 0 }
     end
     vim.api.nvim_buf_set_text(
-        self.msg_buf,
-        self.streaming_anchor[1], self.streaming_anchor[2],
+        buf,
+        cs.streaming_anchor[1], cs.streaming_anchor[2],
         -1, -1,
         vim.split(partial or '', '\n', { trimempty = false })
     )
-    set_modifiable(self.msg_buf, false)
-    self:_scroll_to_bottom()
+    set_modifiable(buf, false)
+    self:_scroll_to_bottom(buf)
 end
 
-function View:_scroll_to_bottom()
+function View:_scroll_to_bottom(buf)
     if self.msg_win and vim.api.nvim_win_is_valid(self.msg_win) then
-        local last = vim.api.nvim_buf_line_count(self.msg_buf)
+        local last = vim.api.nvim_buf_line_count(buf)
         vim.api.nvim_win_set_cursor(self.msg_win, { last, 0 })
     end
 end
@@ -301,11 +343,15 @@ function View:show()
         return
     end
 
+    if not self.current_conv_id or not self.conv_bufs[self.current_conv_id] then
+        return
+    end
+
     Log.debug('[Chat.View] Opening chat panel')
     local width = 40
     local height = vim.o.lines - vim.o.cmdheight
 
-    self.msg_win = vim.api.nvim_open_win(self.msg_buf, true, {
+    self.msg_win = vim.api.nvim_open_win(self.conv_bufs[self.current_conv_id], true, {
         vertical = true,
         split = 'left',
         width = width,
@@ -381,7 +427,9 @@ function View:_setup_input()
         callback = function()
             local lines = vim.api.nvim_buf_get_lines(self.inp_buf, 0, -1, false)
             local text = vim.trim(table.concat(lines, '\n'))
-            Log.debug('[Chat.View] <CR> text_len={} send_msg={} conv_id={} state={}', #text, tostring(self.send_msg ~= nil), self.current_conv_id, self.current_state_type)
+            local cs = self.current_conv_id and self.conv_state[self.current_conv_id]
+            local state_type = cs and cs.current_state_type
+            Log.debug('[Chat.View] <CR> text_len={} send_msg={} conv_id={} state={}', #text, tostring(self.send_msg ~= nil), self.current_conv_id, state_type)
             if text == '' then return end
             if not self.send_msg then return end
 
@@ -390,8 +438,8 @@ function View:_setup_input()
                 vim.api.nvim_win_set_cursor(self.inp_win, { 1, 0 })
             end
 
-            if self.current_state_type ~= nil and self.current_state_type ~= 'userCanReply' then
-                Log.debug('[Chat.View] Pending input during state={}', self.current_state_type)
+            if state_type ~= nil and state_type ~= 'userCanReply' then
+                Log.debug('[Chat.View] Pending input during state={}', state_type)
                 if self.pending_text then
                     self.pending_text = self.pending_text .. '\n' .. text
                 else

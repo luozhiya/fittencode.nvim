@@ -143,6 +143,7 @@ function Controller:receive_msg(msg)
         self.model:select_conversation(msg.data.id)
         self:update_view()
     elseif msg.type == 'delete_conversation' then
+        self.view:delete_conv(msg.data.id)
         self.model:delete_conversation(msg.data.id)
         self:update_view()
     elseif msg.type == 'stop_waiting' then
@@ -151,6 +152,9 @@ function Controller:receive_msg(msg)
             conv:stop_waiting()
         end
     elseif msg.type == 'delete_all_conversations' then
+        for _, conv in ipairs(self.model.conversations) do
+            self.view:delete_conv(conv.id)
+        end
         self.model:delete_all_conversations()
         self:update_view()
     elseif msg.type == 'retry' then
@@ -164,6 +168,7 @@ function Controller:receive_msg(msg)
         if conv then
             conv:delete_conversation_round(msg.data.index)
             if self.model:is_empty(conv.id) then
+                self.view:delete_conv(conv.id)
                 self.model:delete_conversation(conv.id)
                 self:update_view()
             end
