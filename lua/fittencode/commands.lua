@@ -46,6 +46,34 @@ local chat = {
             ctrl:receive_msg({ type = 'start_chat' })
         end
     end },
+    start_chat = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('chat', true) end
+    end },
+    document_code = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('document-code', true) end
+    end },
+    edit_code = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('edit-code', true) end
+    end },
+    explain_code = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('explain-code', true) end
+    end },
+    find_bugs = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('find-bugs', true) end
+    end },
+    generate_unit_test = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('generate-unit-test', true) end
+    end },
+    optimize_code = { execute = function()
+        local ctrl = require('fittencode.chat')
+        if ctrl then ctrl:create_conversation('optimize-code', true) end
+    end },
 }
 
 local inline = {
@@ -116,3 +144,13 @@ end, {
     end,
     desc = 'FittenCode',
 })
+
+vim.cmd([[
+    anoremenu PopUp.Fitten\ Code\ -\ Document\ Code  <Cmd>FittenCode document_code<CR>
+    anoremenu PopUp.Fitten\ Code\ -\ Edit\ Code  <Cmd>FittenCode edit_code<CR>
+    anoremenu PopUp.Fitten\ Code\ -\ Explain\ Code  <Cmd>FittenCode explain_code<CR>
+    anoremenu PopUp.Fitten\ Code\ -\ Find\ Bugs  <Cmd>FittenCode find_bugs<CR>
+    anoremenu PopUp.Fitten\ Code\ -\ Generate\ UnitTest  <Cmd>FittenCode generate_unit_test<CR>
+    anoremenu PopUp.Fitten\ Code\ -\ Optimize\ Code  <Cmd>FittenCode optimize_code<CR>
+    anoremenu PopUp.Fitten\ Code\ -\ Start\ Chat  <Cmd>FittenCode start_chat<CR>
+]])

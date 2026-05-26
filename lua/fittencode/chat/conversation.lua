@@ -147,35 +147,62 @@ local function is_heartbeat(delta)
     return delta:match('^heartbeat') ~= nil
 end
 
+function Conversation:cut_input(inputs)
+    while #inputs > 307200 do
+        local first_close = inputs:find('<|end|>', 1, true)
+        if not first_close then break end
+        local second_close = inputs:find('<|end|>', first_close + 7, true)
+        if not second_close then break end
+        local last_close = inputs:reverse():find('>|dne|<')
+        if last_close then
+            last_close = #inputs - last_close + 1 - 6
+        end
+        if last_close and last_close == second_close then break end
+        inputs = inputs:sub(1, first_close + 6) .. inputs:sub(second_close + 6)
+    end
+    return inputs
+end
+
 function Conversation:execute_chat()
     Log.debug('[Chat.Conversation] execute_chat, conv_id={}', self.id)
-    local last_msg = self.messages[#self.messages]
 
     local ir = self.template.response
-    if self.messages[1] == nil and self.template.initialMessage ~= nil then
+    local using_initial = self.messages[1] == nil and self.template.initialMessage ~= nil
+    if using_initial then
         ir = self.template.initialMessage
     end
+    Log.debug('[Chat.Conversation] using_initial={}', using_initial)
 
     local variables = self:resolve_variables_at_message_time()
     local inputs = self:evaluate_template(ir.template, variables)
+    if not inputs then
+        Log.error('[Chat.Conv] template evaluation returned nil, conv_id={}', self.id)
+        self:set_error('Failed to evaluate template')
+        return
+    end
+    inputs = self:cut_input(inputs)
     Log.debug('[Chat.Conversation] template evaluated, inputs_len={}', #(inputs or ''))
 
+    local Agent = require('fittencode.chat.agent')
+    local agents = Agent.build_agents(self)
+
+    if #agents == 0 then
+        self:_execute_chat_simple(inputs)
+    else
+        self:_run_agent_pipeline(inputs, agents)
+    end
+end
+
+function Conversation:_execute_chat_simple(inputs)
     local protocol = Protocol.Methods.chat_auth
-    ---@type table
-    local payload = {
+    local payload = vim.json.encode({
         inputs = inputs,
         ft_token = Client.get_api_key_manager():get_fitten_user_id() or '',
-        meta_datas = {
-            project_id = '',
-        }
-    }
-
-    self.request_handle = Client.make_request_auth(protocol, {
-        payload = vim.json.encode(payload),
+        meta_datas = { project_id = '' },
     })
 
+    self.request_handle = Client.make_request_auth(protocol, { payload = payload })
     if not self.request_handle then
-        Log.error('[Chat.Conversation] Failed to create request for conv_id={}', self.id)
         self:set_error('Failed to create request')
         return
     end
@@ -209,9 +236,113 @@ function Conversation:execute_chat()
     end)
 end
 
----@param completion string[]
+function Conversation:_run_agent_pipeline(inputs, agents)
+    local max_rounds = 10
+    local round = 0
+    local accumulated
+
+    setmetatable(agents, nil) -- unwrap to plain array if needed
+
+    local function run_round()
+        round = round + 1
+        if round > max_rounds then return end
+
+        for _, agent in ipairs(agents) do
+            agent.inputs = inputs
+            agent.messages = self.messages
+            agent.ide_state = self.context or {}
+            agent.run_cnt = round - 1
+            agent._task = nil
+            agent._state = nil
+        end
+
+        for _, agent in ipairs(agents) do
+            agent.inputs = inputs
+            agent:on_chat_start()
+            inputs = agent.inputs or inputs
+            if agent._state then
+                self:update_partial_bot_message(agent._state)
+            end
+        end
+
+        local protocol = Protocol.Methods.chat_auth
+        local payload = vim.json.encode({
+            inputs = inputs,
+            ft_token = Client.get_api_key_manager():get_fitten_user_id() or '',
+            meta_datas = { project_id = '' },
+        })
+
+        self.request_handle = Client.make_request_auth(protocol, { payload = payload })
+        if not self.request_handle then
+            self:set_error('Failed to create request')
+            return
+        end
+
+        accumulated = ''
+        self.request_handle.stream:on('data', vim.schedule_wrap(function(chunk_data)
+            local lines = vim.split(chunk_data.chunk, '\n', { trimempty = true })
+            for _, line in ipairs(lines) do
+                local ok, chunk = pcall(vim.json.decode, line)
+                if ok and chunk then
+                    local delta = chunk.delta
+                    if delta and not is_heartbeat(delta) and validate_delta(delta) then
+                        accumulated = accumulated .. delta
+                        local msg = accumulated
+                        for _, agent in ipairs(agents) do
+                            agent.message = msg
+                            agent:on_chat_message()
+                            msg = agent.message or msg
+                            if agent._state then
+                                self:update_partial_bot_message(agent._state)
+                            end
+                        end
+                        self:update_partial_bot_message(msg)
+                    end
+                end
+            end
+        end))
+
+        self.request_handle:async():forward(function()
+            for _, agent in ipairs(agents) do
+                agent.message = accumulated
+                agent:on_chat_end()
+                inputs = agent.inputs or inputs
+                accumulated = agent.message or accumulated
+                if agent._state then
+                    self:update_partial_bot_message(agent._state)
+                end
+            end
+
+            local should_rerun = false
+            for _, agent in ipairs(agents) do
+                if agent._task == 'rerun' then
+                    should_rerun = true
+                    break
+                end
+            end
+
+            self.request_handle = nil
+
+            if should_rerun then
+                run_round()
+            else
+                self:handle_completion(accumulated)
+            end
+        end):catch(function(err)
+            Log.debug('[Chat.Conv] pipeline error round={} err={}', round, vim.inspect(err))
+            self.request_handle = nil
+            if err and err ~= 'stop' then
+                self:set_error(err._msg or 'Unknown error')
+            end
+        end)
+    end
+
+    run_round()
+end
+
+---@param completion string|string[]
 function Conversation:handle_completion(completion)
-    local content = table.concat(completion, '')
+    local content = type(completion) == 'table' and table.concat(completion, '') or (completion or '')
     self:add_bot_message(content)
 end
 
@@ -244,6 +375,36 @@ function Conversation:abort()
     if self.request_handle then
         self.request_handle:abort()
         self.request_handle = nil
+    end
+end
+
+function Conversation:retry()
+    Log.debug('[Chat.Conv] retry, conv_id={}', self.id)
+    self.state = { type = 'waitingForBotAnswer' }
+    self:dismiss_error()
+    self:execute_chat()
+end
+
+function Conversation:regenerate()
+    Log.debug('[Chat.Conv] regenerate, conv_id={}', self.id)
+    if #self.messages > 0 and self.messages[#self.messages].author == 'bot' then
+        self.messages[#self.messages] = nil
+    end
+    self.state = { type = 'waitingForBotAnswer' }
+    self:execute_chat()
+end
+
+function Conversation:delete_conversation_round(index)
+    Log.debug('[Chat.Conv] delete_round, conv_id={} index={}', self.id, index)
+    if index < 1 or index > #self.messages then return end
+    if self.messages[index] and self.messages[index].author == 'user' then
+        self:dismiss_error()
+        local has_bot = index + 1 <= #self.messages and self.messages[index + 1].author == 'bot'
+        table.remove(self.messages, index)
+        if has_bot then
+            table.remove(self.messages, index)
+        end
+        self.update_view()
     end
 end
 

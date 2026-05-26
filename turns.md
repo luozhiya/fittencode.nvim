@@ -151,23 +151,127 @@
 
 ---
 
+## Turn 13 — 启动优化：去掉 chat_start 命令，对标 inline 延迟初始化
+
+**需求**: 将 chat 初始化改成和 inline 一样——`init.lua` 不导出函数，直接返回 controller。不需要 `FittenCode chat_start` 命令。
+
+**改动**:
+- `chat/init.lua`: 78 行精简为 `return require('fittencode.chat.controller').new()`
+- `chat/controller.lua`: `_initialize` 自包含创建 View/Model/Provider，迁入 keymap 注册、`send_msg` 绑定
+- `commands.lua`: 删除 `chat_start` 命令，3 处 `.get_controller()` 改为直接 `require('fittencode.chat')`
+
+---
+
+## Turn 14 — 模板懒加载
+
+**需求**: `load_builtin_template` 太重（treesitter 解析 28 个 .rdt.md），改为第一阶段只匹配文件名，用户创建时再解析。
+
+**改动**:
+- `conversation_types_provider.lua`: 新增 `template_registry`（lightweight，仅存 path），`scan_builtin_templates()` 替换 `load_builtin_templates()`，`get_by_id()` 首次访问时 treesitter 解析并缓存
+- 删 `load_conversation_types()`、`async_load_conversation_types()`
+
+**效果**: 启动 0 解析，首次 `create_conversation` 只解析目标模板（1 个），后续命中缓存。
+
+---
+
+## Turn 15 — 去掉中间映射表
+
+**需求**: 去掉 `TEMPLATE_CATEGORIES`（6 键映射表，值即字面量）和 `KEYMAP_TO_CATEGORY`（35 行 if/elseif 链）。
+
+**改动**:
+- `builtin_templates.lua`: 删 `TEMPLATE_CATEGORIES` 定义和导出
+- `controller.lua`: `_register_keymaps()` 用命名约定 `action:gsub('_', '-')` 自动推导 template_id，仅 `start_chat → 'chat'` 特例
+- `conversation_types_provider.lua`: 删未使用的 import
+
+---
+
+## Turn 16 — MVC 回退
+
+**需求**: "为了更好的体现MVC，应该把VM放到 init.lua"。后来发现拆出去只是形式解耦没有实际收益，回退。
+
+**结论**: controller 内部创建 V+M 在当前架构下最清晰——V 和 M 不会在别处复用。
+
+---
+
+## Turn 17 — 焦点修复
+
+**Bug**: `chat_new` 后 message 窗口获取焦点而不是 input。
+
+**根因**: `View:show()` 已可见路径 `set_current_win(msg_win)`。
+
+**修复**: 改为 `set_current_win(inp_win)`。
+
+---
+
+## Turn 18 — 字面 `i` 输出
+
+**Bug**: 第二次 `chat_new` 后在输入框出现字面 `i`。
+
+**根因**: `chat_new` 命令在 `receive_msg('start_chat')`（内部 `create_conversation` → `show_view` → `feedkeys('i')`）后又调了一次 `ctrl:show_view()`。
+
+第一次 `feedkeys('i')` 进入 insert mode，第二次 `feedkeys('i')` 在 insert mode 中输出字面 `i`。
+
+**修复**:
+- `chat_new` 命令删除冗余的 `ctrl:show_view()`
+- `show()` 已可见路径去掉 `feedkeys('i')`
+
+---
+
+## Turn 19 — 第二次 chat_new 不渲染新会话
+
+**Bug**: 第二次 `chat_new` 后 msg 窗口仍显示旧内容。
+
+**根因**: `add_and_show_conversation` 在 `update_view()` 之前调用 `view:select_conversation(id)`，提前将 `current_conv_id` 设为新值，导致 `View:update()` 中 `self.current_conv_id ~= conv_id` 检测不到切换，不触发 `_full_render`。
+
+**修复**: 从 `add_and_show_conversation` 和 `select_conversation` handler 移除 `view:select_conversation()` 调用，由 `View:update()` 自行检测切换。
+
+---
+
+## Turn 20 — 首次 chat 输入无反应
+
+**Bug**: 第一次打开 chat 面板，输入内容按 Enter 无反应。日志: `conv found="false"`。
+
+**根因**: 去掉 `start_chat` 自动创建后，`show_view()` 打开面板时没有 conversation，`current_conv_id = nil`。Enter 发送时 `model:get_by_id(nil)` 返回 nil，消息被丢弃。
+
+**修复**: `Controller:show_view()` 无 `selected_conversation_id` 时自动 `create_conversation`。
+
+---
+
+## Turn 21 — 会话选择功能
+
+**需求**: 提供 chat 会话选择 UI。
+
+**实现**:
+- `controller.lua`: 新增 `select_conversation_prompt()` — 调用 `vim.ui.select` 列出所有会话，当前选中带 `*` 前缀
+- `commands.lua`: 新增 `:FittenCode chat_select` 命令
+
+---
+
+## Turn 22 — 日志
+
+**改动**:
+- `View:_setup_input()` 的 `<CR>` 回调新增 `text_len` / `send_msg` / `conv_id` / `state` 日志
+- `View:update()` 新增 `selected_id` vs `current_conv_id` 对比日志
+
+---
+
 ## 文件清单
 
 ```
 lua/fittencode/chat/
-├── init.lua                          (71)  入口: 组装 + 命令/键位注册
-├── controller.lua                    (259) receive_msg + update_view + on/emit
+├── init.lua                          (1)   直接返回 Controller.new()
+├── controller.lua                    (321) receive_msg + update_view + select_prompt + keymaps
 ├── ctrl_observer.lua                 (75)  StatusObserver + ProgressIndicatorObserver
-├── conversation.lua                  (247) 核心: 状态机 + NDJSON 流 + abort
+├── conversation.lua                  (250) 核心: 状态机 + NDJSON 流 + abort
 ├── conversation_type.lua             (46)  工厂: Template → Conversation
-├── conversation_types_provider.lua   (115) 模板加载 (builtin/extension/workspace)
+├── conversation_types_provider.lua   (104) 模板加载 (registry + lazy parse)
 ├── model.lua                         (89)  会话列表 (max 100)
-├── builtin_templates.lua             (46)  模板清单 + 分类映射
+├── builtin_templates.lua             (35)  模板清单
 ├── template_resolver.lua             (141) .rdt.md treesitter 解析
 ├── _types.lua                        (128) LuaLS 类型标注
 └── view/
-    ├── init.lua                      (310) UI: 2-window + pending 浮动 + 引用浮动
-    └── state.lua                     (50)  Model → ViewState 序列化
+    ├── init.lua                      (397) UI: 2-window + pending 浮动 + 引用浮动
+    └── state.lua                     (45)  Model → ViewState 序列化
 ```
 
 ## 架构图
@@ -203,6 +307,17 @@ Observer 侧通道:
                      → ProgressIndicatorObserver.pi:start/stop
 ```
 
+## 已修复 Bug 记录
+
+| # | Bug | 根因 | 修复 | Turn |
+|---|-----|------|------|------|
+| 1 | 启动需手动 `chat_start` | chat 需要独立命令初始化 | 去掉 `chat_start`，`init.lua` 直接返回 controller | 13 |
+| 2 | `load_builtin_template` 太重 | 启动时 treesitter 解析 28 个 `.rdt.md` | `scan_builtin_templates` 仅检查文件存在，`get_by_id` 首次访问才解析 | 14 |
+| 3 | `chat_new` 后焦点在 message 窗口 | `show()` 已可见路径 `set_current_win(msg_win)` | 改为 `set_current_win(inp_win)` | 17 |
+| 4 | 第二次 `chat_new` 输入框输出字面 `i` | 冗余 `show_view()` 导致两次 `feedkeys('i')` | 删冗余调用 + 已可见路径去掉 `feedkeys` | 18 |
+| 5 | 第二次 `chat_new` msg 窗口仍显示旧内容 | `select_conversation` 在 `update_view` 前调用，`current_conv_id` 提前更新 | 移除多余的 `view:select_conversation()` | 19 |
+| 6 | 首次打开 chat 输入无反应 | `show_view()` 无 conversation，`conv_id=nil` | `show_view()` 无会话时自动 `create_conversation` | 20 |
+
 ## 待做
 
 - `add_selection_context_to_input` 选区添加上下文（keymap 已注册，回调空实现）
@@ -210,4 +325,3 @@ Observer 侧通道:
 - 会话持久化（当前纯内存）
 - `@workspace` RAG 支持
 - Agent pipeline（ProjectAgent/ReferenceAgent 等，当前只做简单字符串拼接）
-- 模板语言后缀 fallback 从 `-en` 扩展到其他语言

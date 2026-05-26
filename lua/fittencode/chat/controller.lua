@@ -153,6 +153,21 @@ function Controller:receive_msg(msg)
     elseif msg.type == 'delete_all_conversations' then
         self.model:delete_all_conversations()
         self:update_view()
+    elseif msg.type == 'retry' then
+        local conv = self.model:get_by_id(msg.data.id)
+        if conv then conv:retry() end
+    elseif msg.type == 'regenerate' then
+        local conv = self.model:get_by_id(msg.data.id)
+        if conv then conv:regenerate() end
+    elseif msg.type == 'delete_conversation_round' then
+        local conv = self.model:get_by_id(msg.data.id)
+        if conv then
+            conv:delete_conversation_round(msg.data.index)
+            if self.model:is_empty(conv.id) then
+                self.model:delete_conversation(conv.id)
+                self:update_view()
+            end
+        end
     end
 end
 
@@ -169,21 +184,30 @@ function Controller:create_conversation(template_id, show, mode)
     show = show ~= false
     mode = mode or 'chat'
 
+    Log.debug('[Chat.Controller] create_conversation template_id={} show={} mode={}', template_id, show, mode)
+
     local conv_type = self:_find_conversation_type(template_id)
     if not conv_type then
         Log.notify_error('No conversation type found for: ' .. template_id)
         return
     end
 
+    Log.debug('[Chat.Controller] conv_type found, id={} label={}', conv_type.template.id, conv_type.template.label)
+
     local variables = self:_resolve_variables(conv_type.template.variables or {}, {
         time = 'conversation-start',
         messages = {},
     })
 
+    Log.debug('[Chat.Controller] variables resolved, keys={}', vim.inspect(vim.tbl_keys(variables)))
+
+    local context = self:_capture_editor_context()
+
     local result = conv_type:create_conversation({
         conversation_id = self:generate_conversation_id(),
         template_id = template_id,
         init_variables = variables,
+        context = context,
         update_view = function()
             self:update_view()
         end,
@@ -201,6 +225,7 @@ function Controller:create_conversation(template_id, show, mode)
     self:add_and_show_conversation(result.conversation, show)
 
     if result.should_immediately_answer then
+        Log.debug('[Chat.Controller] initialMessage present, calling answer()')
         result.conversation:answer()
     end
 end
@@ -242,15 +267,30 @@ function Controller:_resolve_variable(v, event)
             return messages[index][v.property]
         end
     elseif v.type == 'selected-text' then
-        -- TODO: selection support
-        return ''
+        local _, sl, sc, _ = unpack(vim.fn.getpos("'<"))
+        local _, el, ec, _ = unpack(vim.fn.getpos("'>"))
+        if sl == 0 then
+            return ''
+        end
+        local lines = vim.api.nvim_buf_get_text(0, sl - 1, sc - 1, el - 1, ec, {})
+        return table.concat(lines, '\n')
     elseif v.type == 'filename' then
         return vim.api.nvim_buf_get_name(0)
     elseif v.type == 'language' then
         return vim.api.nvim_get_option_value('filetype', { buf = 0 })
     elseif v.type == 'comment-snippet' then
         return ''
+    elseif v.type == 'context' then
+        return {}
+    elseif v.type == 'selected-location-text' then
+        local _, sl, sc = unpack(vim.fn.getpos("'<"))
+        local _, el, ec = unpack(vim.fn.getpos("'>"))
+        if sl > 0 then
+            return string.format('%s:%d:%d-%d:%d', vim.api.nvim_buf_get_name(0), sl, sc, el, ec)
+        end
+        return ''
     end
+    return ''
 end
 
 ---@param template_id string
@@ -293,6 +333,46 @@ function Controller:_build_observer_data()
         ctrl = ctrl,
         current_conversation_id = self.model.selected_conversation_id,
         conversation = conv_data,
+    }
+end
+
+function Controller:_capture_editor_context()
+    local buf = vim.api.nvim_get_current_buf()
+    local name = vim.api.nvim_buf_get_name(buf)
+    if not name or name == '' then
+        return {}
+    end
+
+    local line_count = vim.api.nvim_buf_line_count(buf)
+    local cursor = vim.api.nvim_win_get_cursor(0)
+    local crow, ccol = cursor[1] - 1, cursor[2] -- 0-indexed
+
+    local before_start = math.max(0, crow - 20)
+    local after_end = math.min(line_count - 1, crow + 20)
+
+    local function get_text(bl, bc, el, ec)
+        local lines = vim.api.nvim_buf_get_text(buf, bl, bc, el, ec, {})
+        return table.concat(lines, '\n')
+    end
+
+    local selection = nil
+    local _, sl, sc = unpack(vim.fn.getpos("'<"))
+    local _, el, ec = unpack(vim.fn.getpos("'>"))
+    if sl > 0 then
+        selection = {
+            text = get_text(sl - 1, sc - 1, el - 1, ec),
+            range = string.format('%d:%d-%d:%d', sl, sc, el, ec),
+        }
+    end
+
+    return {
+        buf = buf,
+        filename = name,
+        language = vim.api.nvim_get_option_value('filetype', { buf = buf }),
+        full_text = get_text(0, 0, line_count - 1, -1),
+        text_before_cursor = get_text(before_start, 0, crow, ccol),
+        text_after_cursor = get_text(crow, ccol, after_end, -1),
+        selection = selection,
     }
 end
 
