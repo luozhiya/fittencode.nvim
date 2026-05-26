@@ -284,6 +284,11 @@ end
 function View:show()
     if self:is_visible() then
         vim.api.nvim_set_current_win(self.inp_win)
+        if vim.api.nvim_get_mode().mode:sub(1, 1) ~= 'i' then
+            vim.api.nvim_win_call(self.inp_win, function()
+                vim.cmd('startinsert')
+            end)
+        end
         return
     end
 
@@ -306,7 +311,9 @@ function View:show()
     vim.api.nvim_win_set_option(self.inp_win, 'winfixheight', true)
     vim.api.nvim_win_set_option(self.inp_win, 'winfixbuf', true)
 
-    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('i', true, true, true), 'n', false)
+    vim.api.nvim_win_call(self.inp_win, function()
+        vim.cmd('startinsert')
+    end)
 end
 
 function View:hide()

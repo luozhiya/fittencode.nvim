@@ -243,6 +243,44 @@ function Conversation:_run_agent_pipeline(inputs, agents)
 
     setmetatable(agents, nil) -- unwrap to plain array if needed
 
+    -- Inject blocking sub-chat helper for keyword extraction
+    local function blocking_chat(sys, prompt, token)
+        local payload = vim.json.encode({
+            inputs = '<|system|>\n' .. (sys or '') .. '\n<|end|>\n<|user|>\n' .. (prompt or '') .. '\n<|end|>\n<|assistant|>',
+            ft_token = token or Client.get_api_key_manager():get_fitten_user_id() or '',
+            meta_datas = { project_id = '' },
+        })
+        local protocol = Protocol.Methods.chat_auth
+        local req = Client.make_request_auth(protocol, { payload = payload })
+        if not req then return nil end
+
+        local result = nil
+        local done = false
+        local completion = {}
+        req.stream:on('data', function(chunk_data)
+            local lines = vim.split(chunk_data.chunk, '\n', { trimempty = true })
+            for _, line in ipairs(lines) do
+                local ok, chunk = pcall(vim.json.decode, line)
+                if ok and chunk and chunk.delta then
+                    completion[#completion + 1] = chunk.delta
+                end
+            end
+        end)
+        req:async():forward(function()
+            result = table.concat(completion, '')
+            done = true
+        end):catch(function()
+            done = true
+        end)
+        vim.wait(30000, function() return done end)
+        return result
+    end
+
+    for _, agent in ipairs(agents) do
+        agent._call_chat = blocking_chat
+        agent._get_files = function() return {} end
+    end
+
     local function run_round()
         round = round + 1
         if round > max_rounds then return end
