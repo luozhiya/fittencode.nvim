@@ -70,7 +70,9 @@ function View:select_conversation(id)
     self.current_conv_id = id
     self:_ensure_conv(id)
     if self.msg_win and vim.api.nvim_win_is_valid(self.msg_win) then
+        vim.api.nvim_win_set_option(self.msg_win, 'winfixbuf', false)
         vim.api.nvim_win_set_buf(self.msg_win, self.conv_bufs[id])
+        vim.api.nvim_win_set_option(self.msg_win, 'winfixbuf', true)
     end
     self:_clear_pending()
 end
@@ -91,7 +93,9 @@ function View:update(state)
         Log.debug('[Chat.View] full_render switching from {} to {}', self.current_conv_id, conv_id)
         self.current_conv_id = conv_id
         if self.msg_win and vim.api.nvim_win_is_valid(self.msg_win) then
+            vim.api.nvim_win_set_option(self.msg_win, 'winfixbuf', false)
             vim.api.nvim_win_set_buf(self.msg_win, buf)
+            vim.api.nvim_win_set_option(self.msg_win, 'winfixbuf', true)
         end
         self:_full_render(conv, buf)
         cs.last_msg_count = conv.content.messages and #conv.content.messages or 0
