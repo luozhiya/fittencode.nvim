@@ -241,21 +241,20 @@ function Conversation:_run_agent_pipeline(inputs, agents)
     local round = 0
     local accumulated
 
-    setmetatable(agents, nil) -- unwrap to plain array if needed
-
-    -- Inject blocking sub-chat helper for keyword extraction
-    local function blocking_chat(sys, prompt, token)
+    -- Inject sub-chat helper (returns Promise)
+    local function sub_chat(sys, prompt, token)
+        Log.debug('[Chat.Conv] sub_chat sys_len={} prompt_len={}', #(sys or ''), #(prompt or ''))
         local payload = vim.json.encode({
             inputs = '<|system|>\n' .. (sys or '') .. '\n<|end|>\n<|user|>\n' .. (prompt or '') .. '\n<|end|>\n<|assistant|>',
             ft_token = token or Client.get_api_key_manager():get_fitten_user_id() or '',
             meta_datas = { project_id = '' },
         })
-        local protocol = Protocol.Methods.chat_auth
-        local req = Client.make_request_auth(protocol, { payload = payload })
-        if not req then return nil end
+        local req = Client.make_request_auth(Protocol.Methods.chat_auth, { payload = payload })
+        if not req then
+            Log.debug('[Chat.Conv] sub_chat failed to create request')
+            return nil
+        end
 
-        local result = nil
-        local done = false
         local completion = {}
         req.stream:on('data', function(chunk_data)
             local lines = vim.split(chunk_data.chunk, '\n', { trimempty = true })
@@ -266,46 +265,26 @@ function Conversation:_run_agent_pipeline(inputs, agents)
                 end
             end
         end)
-        req:async():forward(function()
-            result = table.concat(completion, '')
-            done = true
-        end):catch(function()
-            done = true
+
+        return req:async():forward(function()
+            local result = table.concat(completion, '')
+            Log.debug('[Chat.Conv] sub_chat completed len={}', #result)
+            return result
+        end):catch(function(err)
+            Log.debug('[Chat.Conv] sub_chat failed err={}', vim.inspect(err))
+            return nil
         end)
-        vim.wait(30000, function() return done end)
-        return result
     end
 
     for _, agent in ipairs(agents) do
-        agent._call_chat = blocking_chat
+        agent._call_chat = sub_chat
         agent._get_files = function() return {} end
     end
 
-    local function run_round()
-        round = round + 1
-        if round > max_rounds then return end
-
-        for _, agent in ipairs(agents) do
-            agent.inputs = inputs
-            agent.messages = self.messages
-            agent.ide_state = self.context or {}
-            agent.run_cnt = round - 1
-            agent._task = nil
-            agent._state = nil
-        end
-
-        for _, agent in ipairs(agents) do
-            agent.inputs = inputs
-            agent:on_chat_start()
-            inputs = agent.inputs or inputs
-            if agent._state then
-                self:update_partial_bot_message(agent._state)
-            end
-        end
-
+    local function run_http_stream(inputs_arg)
         local protocol = Protocol.Methods.chat_auth
         local payload = vim.json.encode({
-            inputs = inputs,
+            inputs = inputs_arg,
             ft_token = Client.get_api_key_manager():get_fitten_user_id() or '',
             meta_datas = { project_id = '' },
         })
@@ -344,7 +323,6 @@ function Conversation:_run_agent_pipeline(inputs, agents)
             for _, agent in ipairs(agents) do
                 agent.message = accumulated
                 agent:on_chat_end()
-                inputs = agent.inputs or inputs
                 accumulated = agent.message or accumulated
                 if agent._state then
                     self:update_partial_bot_message(agent._state)
@@ -362,6 +340,7 @@ function Conversation:_run_agent_pipeline(inputs, agents)
             self.request_handle = nil
 
             if should_rerun then
+                inputs = inputs_arg
                 run_round()
             else
                 self:handle_completion(accumulated)
@@ -373,6 +352,47 @@ function Conversation:_run_agent_pipeline(inputs, agents)
                 self:set_error(err._msg or 'Unknown error')
             end
         end)
+    end
+
+    local function run_round()
+        round = round + 1
+        if round > max_rounds then return end
+
+        for _, agent in ipairs(agents) do
+            agent.inputs = inputs
+            agent.messages = self.messages
+            agent.ide_state = self.context or {}
+            agent.run_cnt = round - 1
+            agent._task = nil
+            agent._state = nil
+        end
+
+        for _, agent in ipairs(agents) do
+            agent.inputs = inputs
+            agent:on_chat_start()
+            inputs = agent.inputs or inputs
+            if agent._state then
+                self:update_partial_bot_message(agent._state)
+            end
+        end
+
+        local pending = agents[1] and agents[1]._pending
+        if pending then
+            Log.debug('[Chat.Conv] pipeline waiting for RAG agent...')
+            agents[1]._pending = nil
+            pending:forward(function()
+                inputs = agents[1].inputs or inputs
+                Log.debug('[Chat.Conv] RAG completed, inputs_len={}', #(inputs or ''))
+                self:update_partial_bot_message('')  -- clear "analyzing project..."
+                run_http_stream(inputs)
+            end):catch(function(err)
+                Log.debug('[Chat.Conv] RAG failed, fallback err={}', vim.inspect(err))
+                self:update_partial_bot_message('')
+                run_http_stream(inputs)
+            end)
+        else
+            run_http_stream(inputs)
+        end
     end
 
     run_round()
