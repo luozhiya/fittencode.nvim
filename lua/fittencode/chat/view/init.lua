@@ -1,4 +1,6 @@
 local Log = require('fittencode.log')
+local Format = require('fittencode.chat.view.format')
+local Layout = require('fittencode.chat.view.layout')
 
 ---@class FittenCode.Chat.View
 local View = {}
@@ -20,6 +22,8 @@ function View:_initialize()
     self.pending_buf = nil
     self.ref_win = nil
     self.ref_buf = nil
+
+    Format:define_highlights()
 
     self.inp_buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_option(self.inp_buf, 'buftype', 'nofile')
@@ -50,6 +54,7 @@ function View:_ensure_conv(conv_id)
         streaming_pending = false,
         current_state_type = nil,
         _pending_streaming_text = nil,
+        layout = Layout.new(),
     }
     Log.debug('[Chat.View] _ensure_conv conv_id={} buf={}', conv_id, buf)
     return buf
@@ -59,6 +64,7 @@ end
 function View:delete_conv(conv_id)
     local buf = self.conv_bufs[conv_id]
     if buf and vim.api.nvim_buf_is_valid(buf) then
+        Format:clear_extmarks(buf)
         vim.api.nvim_buf_set_option(buf, 'modifiable', true)
         vim.api.nvim_buf_delete(buf, { force = true })
     end
@@ -78,7 +84,7 @@ function View:select_conversation(id)
     self:_clear_pending()
 end
 
---[[ render ]]
+--[[ render helpers ]]
 
 local function set_modifiable(buf, enable)
     local cur = vim.api.nvim_buf_get_option(buf, 'modifiable')
@@ -86,6 +92,97 @@ local function set_modifiable(buf, enable)
         vim.api.nvim_buf_set_option(buf, 'modifiable', enable)
     end
 end
+
+---Push a message slot using format + layout, write to buffer
+---@param buf integer
+---@param cs table conv_state entry
+---@param msg table { author, content }
+---@param msg_idx integer 1-based index in conversation.messages
+function View:_push_message(buf, cs, msg, msg_idx)
+    local msg_lines, marks = Format:render_message(msg)
+    local slot = cs.layout:push('msg-' .. msg_idx, 'message', msg_lines, marks, msg.author, msg_idx)
+
+    set_modifiable(buf, true)
+    vim.api.nvim_buf_set_lines(buf, slot.start, slot.start, false, msg_lines)
+    set_modifiable(buf, false)
+
+    Format:apply_extmarks(buf, marks, slot.start)
+    self:_scroll_to_bottom(buf)
+end
+
+---Push a divider slot
+---@param buf integer
+---@param cs table
+---@param before_msg_idx integer the msg_idx of the message following the divider
+function View:_push_divider(buf, cs, before_msg_idx)
+    local d_lines = Format:render_divider()
+    local slot = cs.layout:push('divider-' .. before_msg_idx, 'divider', d_lines, {})
+
+    set_modifiable(buf, true)
+    vim.api.nvim_buf_set_lines(buf, slot.start, slot.start, false, d_lines)
+    set_modifiable(buf, false)
+
+    local divider_line = slot.start + Format.divider.pad_before
+    Format:apply_region_hl(buf, divider_line, divider_line + 1, Format.HL_GROUP_DIVIDER)
+    self:_scroll_to_bottom(buf)
+end
+
+---Precisely delete message slots for a given msg_idx round
+---@param buf integer
+---@param cs table
+---@param msg_idx integer
+function View:_delete_message_slots(buf, cs, msg_idx)
+    local slot_indices = cs.layout:find_round(msg_idx)
+    if #slot_indices == 0 then
+        Log.debug('[Chat.View] _delete_message_slots no slots found for msg_idx={}', msg_idx)
+        return
+    end
+
+    -- delete from end to start to keep indices valid
+    for i = #slot_indices, 1, -1 do
+        local info = cs.layout:remove(slot_indices[i])
+        if info and info.line_count > 0 then
+            Log.debug('[Chat.View] _delete_message_slots deleting lines start={} count={}', info.start, info.line_count)
+            set_modifiable(buf, true)
+            vim.api.nvim_buf_set_lines(buf, info.start, info.start + info.line_count, false, {})
+            set_modifiable(buf, false)
+        end
+    end
+
+    Format:clear_extmarks(buf)
+    self:_reapply_all_extmarks(buf, cs)
+end
+
+---Reapply all extmarks for the current layout
+---@param buf integer
+---@param cs table
+function View:_reapply_all_extmarks(buf, cs)
+    for _, slot in ipairs(cs.layout.slots) do
+        if #slot.marks > 0 then
+            Format:apply_extmarks(buf, slot.marks, slot.start or 0)
+        elseif slot.kind == 'divider' then
+            local divider_line = (slot.start or 0) + Format.divider.pad_before
+            Format:apply_region_hl(buf, divider_line, divider_line + 1, Format.HL_GROUP_DIVIDER)
+        end
+    end
+end
+
+---Decide if a divider should be inserted before a given message
+---@param cs table
+---@param msg table
+---@param msg_idx integer
+---@return boolean
+function View:_should_insert_divider(cs, msg, msg_idx)
+    if msg.author ~= 'user' then
+        return false
+    end
+    if cs.layout:get_slot_count() == 0 then
+        return false
+    end
+    return true
+end
+
+--[[ render ]]
 
 function View:update(state)
     local conv_id = state.selected_conversation_id
@@ -105,11 +202,10 @@ function View:update(state)
             vim.api.nvim_win_set_buf(self.msg_win, buf)
             vim.api.nvim_win_set_option(self.msg_win, 'winfixbuf', true)
         end
-        -- only full-render if buf is brand new (never written to)
         local line_count = vim.api.nvim_buf_line_count(buf)
         Log.debug('[Chat.View] switch buf={} line_count={}', buf, line_count)
         if line_count == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == '' then
-            self:_full_render(conv, buf)
+            self:_full_render(conv, buf, cs)
             cs.last_msg_count = conv.content.messages and #conv.content.messages or 0
             cs.was_streaming = false
             cs.streaming_anchor = nil
@@ -129,28 +225,27 @@ function View:update(state)
         Log.debug('[Chat.View] update STREAMING partial_len={} was_streaming={} anchor={}', #(st.partialAnswer or ''), cs.was_streaming, cs.streaming_anchor ~= nil)
         self:_render_streaming(st.partialAnswer or '', buf, cs)
     elseif cs.was_streaming then
-        Log.debug('[Chat.View] update was_streaming->false, reset anchor')
-        cs.was_streaming = false
-        cs.streaming_anchor = nil
-        set_modifiable(buf, true)
-        vim.api.nvim_buf_set_lines(buf, -1, -1, false, { '' })
-        set_modifiable(buf, false)
-        local msg_count = #conv.content.messages
-        for i = cs.last_msg_count + 1, msg_count do
-            local msg = conv.content.messages[i]
-            if msg.author ~= 'bot' then
-                self:_append_message(msg, buf)
-            end
-        end
-        cs.last_msg_count = msg_count
+        Log.debug('[Chat.View] update was_streaming->false, streaming ended')
+        self:_handle_streaming_end(conv, buf, cs)
     else
-        Log.debug('[Chat.View] update INCREMENTAL msg_count={} last={}', #conv.content.messages, cs.last_msg_count)
         local msg_count = #conv.content.messages
-        for i = cs.last_msg_count + 1, msg_count do
-            self:_append_message(conv.content.messages[i], buf)
+        if msg_count < cs.last_msg_count then
+            Log.debug('[Chat.View] update DELETION detected msg_count={} last={}', msg_count, cs.last_msg_count)
+            self:_full_render(conv, buf, cs)
+            cs.last_msg_count = msg_count
+            cs.streaming_anchor = nil
+        else
+            Log.debug('[Chat.View] update INCREMENTAL msg_count={} last={}', msg_count, cs.last_msg_count)
+            for i = cs.last_msg_count + 1, msg_count do
+                local msg = conv.content.messages[i]
+                if self:_should_insert_divider(cs, msg, i) then
+                    self:_push_divider(buf, cs, i)
+                end
+                self:_push_message(buf, cs, msg, i)
+            end
+            cs.last_msg_count = msg_count
+            cs.streaming_anchor = nil
         end
-        cs.last_msg_count = msg_count
-        cs.streaming_anchor = nil
     end
 
     self:_try_flush_pending(cs)
@@ -212,51 +307,98 @@ function View:_hide_pending()
     self.pending_buf = nil
 end
 
-function View:_full_render(conv, buf)
+--[[ full render ]]
+
+function View:_full_render(conv, buf, cs)
     local msgs = conv.content.messages or {}
-    local lines = {}
-    for _, msg in ipairs(msgs) do
-        self:_build_message_lines(lines, msg)
+    Log.debug('[Chat.View] _full_render msg_count={}', #msgs)
+
+    cs.layout:clear()
+    Format:clear_extmarks(buf)
+
+    local all_lines = {}
+    local extmark_data = {}
+
+    for i, msg in ipairs(msgs) do
+        if self:_should_insert_divider(cs, msg, i) then
+            local d_lines = Format:render_divider()
+            cs.layout:push('divider-' .. i, 'divider', d_lines, {})
+            for _, l in ipairs(d_lines) do
+                all_lines[#all_lines + 1] = l
+            end
+            extmark_data[#extmark_data + 1] = {
+                base_row = #all_lines - #d_lines,
+                marks = {},
+                kind = 'divider',
+            }
+        end
+
+        local msg_lines, marks = Format:render_message(msg)
+        cs.layout:push('msg-' .. i, 'message', msg_lines, marks, msg.author, i)
+        local base_row = #all_lines
+        for _, l in ipairs(msg_lines) do
+            all_lines[#all_lines + 1] = l
+        end
+        extmark_data[#extmark_data + 1] = {
+            base_row = base_row,
+            marks = marks,
+            kind = 'message',
+        }
     end
-    Log.debug('[Chat.View] _full_render buf={} msg_count={} line_count={} first_line={}', buf, #msgs, #lines, lines[1] or '<nil>')
+
+    Log.debug('[Chat.View] _full_render buf={} total_lines={}', buf, #all_lines)
+
     set_modifiable(buf, true)
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, all_lines)
     set_modifiable(buf, false)
+
+    for _, data in ipairs(extmark_data) do
+        if data.kind == 'divider' then
+            local divider_line = data.base_row + Format.divider.pad_before
+            Format:apply_region_hl(buf, divider_line, divider_line + 1, Format.HL_GROUP_DIVIDER)
+        elseif #data.marks > 0 then
+            Format:apply_extmarks(buf, data.marks, data.base_row)
+        end
+    end
+
+    Format:ensure_treesitter(buf)
+    cs.layout:recalculate_positions()
+
     Log.debug('[Chat.View] _full_render done buf={} line_count={}', buf, vim.api.nvim_buf_line_count(buf))
     self:_scroll_to_bottom(buf)
 end
 
-function View:_build_message_lines(out, msg)
-    if msg.author == 'user' then
-        out[#out + 1] = '## You'
-    elseif msg.author == 'meta' then
-        out[#out + 1] = '--- ' .. msg.content
-        return
-    else
-        out[#out + 1] = '## Fitten Code'
+--[[ streaming end handler ]]
+
+function View:_handle_streaming_end(conv, buf, cs)
+    cs.was_streaming = false
+    local header_row = cs.streaming_anchor and (cs.streaming_anchor[1] - 1) or nil
+    cs.streaming_anchor = nil
+
+    local msg_count = #conv.content.messages
+    Log.debug('[Chat.View] _handle_streaming_end header_row={} msg_count={} last={}', header_row, msg_count, cs.last_msg_count)
+
+    -- delete the unformatted streaming content from the buffer
+    if header_row and header_row >= 0 then
+        set_modifiable(buf, true)
+        local buf_end = vim.api.nvim_buf_line_count(buf)
+        Log.debug('[Chat.View] _handle_streaming_end deleting buf rows {} to {}', header_row, buf_end)
+        vim.api.nvim_buf_set_lines(buf, header_row, buf_end, false, {})
+        set_modifiable(buf, false)
     end
-    out[#out + 1] = ''
-    for _, line in ipairs(vim.split(msg.content, '\n', { trimempty = false })) do
-        out[#out + 1] = line
+
+    -- push all new messages through the layout system with proper formatting
+    for i = cs.last_msg_count + 1, msg_count do
+        local msg = conv.content.messages[i]
+        if self:_should_insert_divider(cs, msg, i) then
+            self:_push_divider(buf, cs, i)
+        end
+        self:_push_message(buf, cs, msg, i)
     end
-    out[#out + 1] = ''
+    cs.last_msg_count = msg_count
 end
 
-function View:_append_message(msg, buf)
-    local lines = {}
-    self:_build_message_lines(lines, msg)
-    Log.debug('[Chat.View] _append_message buf={} author={} line_count={} first_line={}', buf, msg.author, #lines, lines[1] or '<nil>')
-    set_modifiable(buf, true)
-    local last = vim.api.nvim_buf_line_count(buf)
-    if last == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == '' then
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-    else
-        vim.api.nvim_buf_set_lines(buf, last, last, false, lines)
-    end
-    set_modifiable(buf, false)
-    Log.debug('[Chat.View] _append_message done buf={} insert_pos={} after_line_count={}', buf, last, vim.api.nvim_buf_line_count(buf))
-    self:_scroll_to_bottom(buf)
-end
+--[[ streaming render ]]
 
 function View:_render_streaming(partial, buf, cs)
     Log.debug('[Chat.View] _render_streaming len={} pending={}', #partial, cs.streaming_pending)
