@@ -53,7 +53,8 @@ function View:_ensure_conv(conv_id)
         streaming_anchor = nil,
         streaming_pending = false,
         current_state_type = nil,
-        _pending_streaming_text = nil,
+        _streaming_end_row = nil,
+        _pending_deltas = '',
         layout = Layout.new(),
     }
     Log.debug('[Chat.View] _ensure_conv conv_id={} buf={}', conv_id, buf)
@@ -209,6 +210,8 @@ function View:update(state)
             cs.last_msg_count = conv.content.messages and #conv.content.messages or 0
             cs.was_streaming = false
             cs.streaming_anchor = nil
+            cs._streaming_end_row = nil
+            cs._pending_deltas = ''
             cs.current_state_type = conv.content.state and conv.content.state.type
         end
         self:_update_ref(conv.reference)
@@ -222,8 +225,8 @@ function View:update(state)
     cs.current_state_type = st and st.type
 
     if st and st.type == 'botAnswerStreaming' then
-        Log.debug('[Chat.View] update STREAMING partial_len={} was_streaming={} anchor={}', #(st.partialAnswer or ''), cs.was_streaming, cs.streaming_anchor ~= nil)
-        self:_render_streaming(st.partialAnswer or '', buf, cs)
+        Log.debug('[Chat.View] update STREAMING delta_len={} was_streaming={} anchor={}', #(st.delta or ''), cs.was_streaming, cs.streaming_anchor ~= nil)
+        self:_render_streaming(st.delta or '', buf, cs)
     elseif cs.was_streaming then
         Log.debug('[Chat.View] update was_streaming->false, streaming ended')
         self:_handle_streaming_end(conv, buf, cs)
@@ -245,6 +248,8 @@ function View:update(state)
             end
             cs.last_msg_count = msg_count
             cs.streaming_anchor = nil
+            cs._streaming_end_row = nil
+            cs._pending_deltas = ''
         end
     end
 
@@ -363,6 +368,8 @@ function View:_full_render(conv, buf, cs)
 
     Format:ensure_treesitter(buf)
     cs.layout:recalculate_positions()
+    cs._streaming_end_row = nil
+    cs._pending_deltas = ''
 
     Log.debug('[Chat.View] _full_render done buf={} line_count={}', buf, vim.api.nvim_buf_line_count(buf))
     self:_scroll_to_bottom(buf)
@@ -372,6 +379,8 @@ end
 
 function View:_handle_streaming_end(conv, buf, cs)
     cs.was_streaming = false
+    cs._streaming_end_row = nil
+    cs._pending_deltas = ''
     local header_row = cs.streaming_anchor and (cs.streaming_anchor[1] - 1) or nil
     cs.streaming_anchor = nil
 
@@ -400,35 +409,50 @@ end
 
 --[[ streaming render ]]
 
-function View:_render_streaming(partial, buf, cs)
-    Log.debug('[Chat.View] _render_streaming len={} pending={}', #partial, cs.streaming_pending)
-    cs._pending_streaming_text = partial
+function View:_render_streaming(delta, buf, cs)
+    cs._pending_deltas = (cs._pending_deltas or '') .. (delta or '')
     if cs.streaming_pending then
-        Log.debug('[Chat.View] _render_streaming SKIPPED (debounce)')
         return
     end
     cs.streaming_pending = true
     vim.schedule(function()
         cs.streaming_pending = false
-        self:_do_render_streaming(cs._pending_streaming_text, buf, cs)
+        local accumulated = cs._pending_deltas
+        cs._pending_deltas = ''
+        self:_do_render_streaming(accumulated, buf, cs)
     end)
 end
 
-function View:_do_render_streaming(partial, buf, cs)
+function View:_do_render_streaming(delta, buf, cs)
     cs.was_streaming = true
     set_modifiable(buf, true)
+
     if not cs.streaming_anchor then
-        Log.debug('[Chat.View] _do_render_streaming NEW header buf={} len={}', buf, #partial)
         local last = vim.api.nvim_buf_line_count(buf)
         vim.api.nvim_buf_set_lines(buf, last, last, false, { '## Fitten Code', '' })
         cs.streaming_anchor = { last + 1, 0 }
+        Format:apply_region_hl(buf, last, last + 1, Format.HL_GROUP_BOT_HEADER)
+        cs._streaming_end_row = last + 1
     end
-    vim.api.nvim_buf_set_text(
-        buf,
-        cs.streaming_anchor[1], cs.streaming_anchor[2],
-        -1, -1,
-        vim.split(partial or '', '\n', { trimempty = false })
-    )
+
+    if not delta or #delta == 0 then
+        set_modifiable(buf, false)
+        return
+    end
+
+    local new_lines = vim.split(delta, '\n', { trimempty = false })
+    if #new_lines == 0 then
+        set_modifiable(buf, false)
+        return
+    end
+
+    local cur = cs._streaming_end_row
+    local cur_text = vim.api.nvim_buf_get_lines(buf, cur, cur + 1, false)[1] or ''
+    new_lines[1] = cur_text .. new_lines[1]
+
+    vim.api.nvim_buf_set_lines(buf, cur, cur + 1, false, new_lines)
+    cs._streaming_end_row = cur + #new_lines - 1
+
     set_modifiable(buf, false)
     self:_scroll_to_bottom(buf)
 end

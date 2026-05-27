@@ -1,7 +1,7 @@
 ---@class FittenCode.Chat.Conversation.State
 ---@field type '"userCanReply"' | '"waitingForBotAnswer"' | '"botAnswerStreaming"'
 ---@field botAction? string
----@field partialAnswer? string
+---@field delta? string
 ---@field responsePlaceholder? string
 
 ---@class FittenCode.Chat.Message

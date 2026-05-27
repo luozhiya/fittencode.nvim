@@ -125,9 +125,10 @@ function Conversation:add_bot_message(content)
     self.update_view()
 end
 
-function Conversation:update_partial_bot_message(partial)
-    Log.debug('[Chat.Conv] update_partial_bot_message len={}', #(partial or ''))
-    self.state = { type = 'botAnswerStreaming', partialAnswer = partial }
+function Conversation:update_partial_bot_message(delta)
+    if not delta or #delta == 0 then return end
+    Log.debug('[Chat.Conv] update_partial_bot_message delta_len={}', #delta)
+    self.state = { type = 'botAnswerStreaming', delta = delta }
     self.update_view()
 end
 
@@ -213,15 +214,19 @@ function Conversation:_execute_chat_simple(inputs)
     local completion = {}
     self.request_handle.stream:on('data', vim.schedule_wrap(function(chunk_data)
         local lines = vim.split(chunk_data.chunk, '\n', { trimempty = true })
+        local batch = {}
         for _, line in ipairs(lines) do
             local ok, chunk = pcall(vim.json.decode, line)
             if ok and chunk then
                 local delta = chunk.delta
                 if delta and not is_heartbeat(delta) and validate_delta(delta) then
                     completion[#completion + 1] = delta
-                    self:update_partial_bot_message(table.concat(completion, ''))
+                    batch[#batch + 1] = delta
                 end
             end
+        end
+        if #batch > 0 then
+            self:update_partial_bot_message(table.concat(batch, ''))
         end
     end))
 
@@ -300,25 +305,29 @@ function Conversation:_run_agent_pipeline(inputs, agents)
         accumulated = ''
         self.request_handle.stream:on('data', vim.schedule_wrap(function(chunk_data)
             local lines = vim.split(chunk_data.chunk, '\n', { trimempty = true })
+            local batch = {}
             for _, line in ipairs(lines) do
                 local ok, chunk = pcall(vim.json.decode, line)
                 if ok and chunk then
                     local delta = chunk.delta
                     if delta and not is_heartbeat(delta) and validate_delta(delta) then
                         accumulated = accumulated .. delta
-                        local msg = accumulated
-                        for _, agent in ipairs(agents) do
-                            agent.message = msg
-                            agent:on_chat_message()
-                            msg = agent.message or msg
-                            if agent._state then
-                                self:update_partial_bot_message(agent._state)
-                                agent._state = nil
-                            end
-                        end
-                        self:update_partial_bot_message(msg)
+                        batch[#batch + 1] = delta
                     end
                 end
+            end
+            if #batch > 0 then
+                local msg = accumulated
+                for _, agent in ipairs(agents) do
+                    agent.message = msg
+                    agent:on_chat_message()
+                    msg = agent.message or msg
+                    if agent._state then
+                        self:update_partial_bot_message(agent._state)
+                        agent._state = nil
+                    end
+                end
+                self:update_partial_bot_message(table.concat(batch, ''))
             end
         end))
 
