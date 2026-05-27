@@ -20,10 +20,9 @@ function View:_initialize()
     self.pending_text = nil
     self.pending_win = nil
     self.pending_buf = nil
-    self.ref_win = nil
-    self.ref_buf = nil
 
     Format:define_highlights()
+    vim.api.nvim_set_hl(0, 'FCChatReference', { fg = '#808080', italic = true, default = true })
 
     self.inp_buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_option(self.inp_buf, 'buftype', 'nofile')
@@ -55,6 +54,7 @@ function View:_ensure_conv(conv_id)
         current_state_type = nil,
         _streaming_end_row = nil,
         _pending_deltas = '',
+        _input_ref = nil,
         layout = Layout.new(),
     }
     Log.debug('[Chat.View] _ensure_conv conv_id={} buf={}', conv_id, buf)
@@ -227,7 +227,9 @@ function View:update(state)
             cs._pending_deltas = ''
             cs.current_state_type = conv.content.state and conv.content.state.type
         end
-        self:_update_ref(conv.reference)
+        if cs._input_ref then
+            self:_restore_ref_placeholder(cs._input_ref.filename, cs._input_ref.range)
+        end
         self:_try_flush_pending(cs)
         return
     end
@@ -479,57 +481,38 @@ function View:_scroll_to_bottom(buf)
     end
 end
 
---[[ reference floating window ]]
+--[[ reference placeholder in input ]]
 
-function View:_update_ref(ref)
-    if ref then
-        self:_show_ref(ref)
-    else
-        self:_hide_ref()
-    end
+function View:set_ref_placeholder(filename, range)
+    local conv_id = self.current_conv_id
+    if not conv_id then return end
+    local cs = self.conv_state[conv_id]
+    if not cs then return end
+
+    cs._input_ref = { filename = filename, range = range }
+    self:_restore_ref_placeholder(filename, range)
 end
 
-function View:_show_ref(ref)
-    local lines = { ref.filename }
-    if ref.range then
-        table.insert(lines, ref.range)
+function View:_restore_ref_placeholder(filename, range)
+    if not self.inp_buf or not vim.api.nvim_buf_is_valid(self.inp_buf) then return end
+
+    local ref_line = '## Reference: ' .. filename
+    if range then
+        ref_line = ref_line .. ':' .. range
     end
 
-    if not self.ref_buf then
-        self.ref_buf = vim.api.nvim_create_buf(false, true)
-        vim.api.nvim_buf_set_option(self.ref_buf, 'buftype', 'nofile')
-        vim.api.nvim_buf_set_option(self.ref_buf, 'buflisted', false)
+    local user_lines = vim.api.nvim_buf_get_lines(self.inp_buf, 0, -1, false)
+    local existing_user_text = {}
+    local start = (user_lines[1] and user_lines[1]:match('^## Reference: ')) and 2 or 1
+    for i = start, #user_lines do
+        existing_user_text[#existing_user_text + 1] = user_lines[i]
     end
-    vim.api.nvim_buf_set_lines(self.ref_buf, 0, -1, false, lines)
+    if #existing_user_text == 0 then existing_user_text = { '' } end
 
-    if not self.ref_win or not vim.api.nvim_win_is_valid(self.ref_win) then
-        self.ref_win = vim.api.nvim_open_win(self.ref_buf, false, {
-            relative = 'editor',
-            row = 0,
-            col = vim.o.columns - 50,
-            width = 50,
-            height = #lines,
-            style = 'minimal',
-            focusable = false,
-            zindex = 10,
-        })
-        vim.api.nvim_win_set_option(self.ref_win, 'winhl', 'Normal:FloatBorder')
-    else
-        vim.api.nvim_win_set_config(self.ref_win, {
-            relative = 'editor',
-            row = 0,
-            col = vim.o.columns - 50,
-            width = 50,
-            height = #lines,
-        })
+    vim.api.nvim_buf_set_lines(self.inp_buf, 0, -1, false, { ref_line, unpack(existing_user_text) })
+    if self.inp_win and vim.api.nvim_win_is_valid(self.inp_win) then
+        vim.api.nvim_win_set_cursor(self.inp_win, { #existing_user_text + 1, 0 })
     end
-end
-
-function View:_hide_ref()
-    if self.ref_win and vim.api.nvim_win_is_valid(self.ref_win) then
-        vim.api.nvim_win_close(self.ref_win, true)
-    end
-    self.ref_win = nil
 end
 
 --[[ window ]]
@@ -574,7 +557,6 @@ function View:show()
 end
 
 function View:hide()
-    self:_hide_ref()
     self:_hide_pending()
     self:_destroy_windows()
 end
@@ -628,7 +610,15 @@ function View:_setup_input()
         desc = 'FittenCode Chat: Send',
         callback = function()
             local lines = vim.api.nvim_buf_get_lines(self.inp_buf, 0, -1, false)
-            local text = vim.trim(table.concat(lines, '\n'))
+            local msg_start = 1
+            if lines[1] and lines[1]:match('^## Reference: ') then
+                msg_start = 2
+            end
+            local msg_lines = {}
+            for i = msg_start, #lines do
+                msg_lines[#msg_lines + 1] = lines[i]
+            end
+            local text = vim.trim(table.concat(msg_lines, '\n'))
             local cs = self.current_conv_id and self.conv_state[self.current_conv_id]
             local state_type = cs and cs.current_state_type
             Log.debug('[Chat.View] <CR> text_len={} send_msg={} conv_id={} state={}', #text, tostring(self.send_msg ~= nil), self.current_conv_id, state_type)
@@ -636,6 +626,9 @@ function View:_setup_input()
             if not self.send_msg then return end
 
             vim.api.nvim_buf_set_lines(self.inp_buf, 0, -1, false, { '' })
+            if cs and cs._input_ref then
+                cs._input_ref = nil
+            end
             if self.inp_win and vim.api.nvim_win_is_valid(self.inp_win) then
                 vim.api.nvim_win_set_cursor(self.inp_win, { 1, 0 })
             end

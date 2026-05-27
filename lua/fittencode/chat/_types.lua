@@ -119,10 +119,8 @@
 
 ---@class FittenCode.Chat.View
 ---@field messages_buf integer
----@field reference_buf integer
 ---@field input_buf integer
 ---@field messages_win integer?
----@field reference_win integer?
 ---@field input_win integer?
 ---@field current_conv_id string?
 ---@field send_msg fun(msg: table)

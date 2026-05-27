@@ -18,8 +18,16 @@ function M.get_state_from_model(model)
             end
         end
         local display_messages = {}
+        if conv._show_ref_message and conv.context and conv.context.selection then
+            local ref_bufname = vim.api.nvim_buf_get_name(conv.context.buf)
+            local ref_range = tostring(conv.context.selection.range)
+            display_messages[1] = {
+                author = 'user',
+                content = '## Reference: ' .. ref_bufname .. ':' .. ref_range,
+            }
+        end
         for i, msg in ipairs(conv.messages) do
-            display_messages[i] = { author = msg.author, content = ModelToken.strip_suffix(msg.content) }
+            display_messages[#display_messages + 1] = { author = msg.author, content = ModelToken.strip_suffix(msg.content) }
         end
         conversations[conv.id] = {
             id = conv.id,

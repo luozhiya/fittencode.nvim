@@ -55,7 +55,7 @@ function Controller:_register_keymaps()
             -- skip
         elseif action == 'add_selection_context_to_input' then
             vim.keymap.set('x', key, function()
-                -- TODO: add selection context
+                self:add_selection_to_input()
             end, { noremap = true, silent = true, desc = 'FittenCode: Add selection to input' })
         else
             local template_id = action == 'start_chat' and 'chat' or action:gsub('_', '-')
@@ -232,12 +232,38 @@ function Controller:create_conversation(template_id, show, mode)
     end
 
     result.conversation.mode = mode
+    if result.should_immediately_answer and context.selection then
+        result.conversation._show_ref_message = true
+    end
     self:add_and_show_conversation(result.conversation, show)
 
     if result.should_immediately_answer then
         Log.debug('[Chat.Controller] initialMessage present, calling answer()')
         result.conversation:answer()
     end
+end
+
+function Controller:add_selection_to_input()
+    if not self.view:is_visible() then
+        self.view:show()
+    end
+
+    local context = self:_capture_editor_context()
+    if not context.selection then
+        return
+    end
+
+    local conv_id = self.model.selected_conversation_id
+    if not conv_id then
+        self:create_conversation('chat', true)
+        conv_id = self.model.selected_conversation_id
+    end
+
+    local conv = self.model:get_by_id(conv_id)
+    if not conv then return end
+
+    conv.context = vim.tbl_deep_extend('force', conv.context or {}, context)
+    self.view:set_ref_placeholder(context.filename, context.selection.range)
 end
 
 --[[ variable resolution ]]
