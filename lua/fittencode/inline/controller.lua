@@ -498,7 +498,7 @@ function Controller:set_completion_enabled(enable, suffixes)
     else
         if #suffixes == 0 then
             self:set_suffix_permissions(false)
-            Log.notify_info(i18n.tr('Gloabl completions are deactivated'))
+            Log.notify_info(i18n.tr('Global completions are deactivated'))
         else
             self:set_suffix_permissions(false, suffixes)
             Log.notify_info(i18n.tr('Completions for files with the extensions of {} are disabled'), suffixes)

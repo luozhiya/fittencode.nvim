@@ -434,7 +434,7 @@ function Conversation:stop_waiting()
         end
         self.messages[#self.messages + 1] = {
             author = 'bot',
-            content = 'Response was cancelled by the user.',
+            content = i18n.tr('⚠ Response was cancelled by the user.'),
         }
         self.state = { type = 'userCanReply' }
         self.update_view()
