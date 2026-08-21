@@ -15,9 +15,10 @@ function PlainStorage.new(options)
     self._data_file = Path.join(self._storage_dir, self._filename)
 
     -- 创建存储目录
-    local ok, err = pcall(vim.uv.fs_mkdir, self._storage_dir, 448)
-    if not ok and err ~= 'EEXIST' then
-        error('Create directory failed: ' .. err)
+    local full_dir = vim.fn.expand(self._storage_dir) -- 处理 ~ 和 $VAR
+    local ok = vim.fn.mkdir(full_dir, 'p', '0700')
+    if ok ~= 1 then
+        error('Failed to create directory: ' .. full_dir)
     end
 
     ---@diagnostic disable-next-line: return-type-mismatch

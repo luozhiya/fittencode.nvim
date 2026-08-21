@@ -82,7 +82,10 @@ end
 function APIKeyManager:update(keyring)
     if keyring then
         self.keyring = keyring
-        self.storage:store(self.key, vim.fn.json_encode(keyring))
+        local ok, err = self.storage:store(self.key, vim.fn.json_encode(keyring))
+        if not ok then
+            Log.error('Failed to store API key: {}', err)
+        end
     end
 end
 
